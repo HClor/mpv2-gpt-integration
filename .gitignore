@@ -1,5 +1,6 @@
 # MODX Core
 /core/cache/*
+!/core/sql/
 !/core/cache/.htaccess
 !/core/cache/index.html
 /core/config/config.inc.php
