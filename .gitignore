@@ -16,10 +16,13 @@
 /setup/
 /connectors/
 
-# Assets (кроме своих компонентов и шаблонов)
+# Assets
 /assets/*
+!/assets/components/
+/assets/components/*/
 !/assets/components/testsystem/
 !/assets/templates/
+
 
 # Временные файлы
 *.log
