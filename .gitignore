@@ -17,7 +17,7 @@
 /connectors/
 
 # Assets (кроме своих компонентов и шаблонов)
-/assets/components/*/
+/assets/*
 !/assets/components/testsystem/
 !/assets/templates/
 
