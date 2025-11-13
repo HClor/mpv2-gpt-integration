@@ -222,6 +222,9 @@ if ($knowledgeAreaId > 0) {
     // CSRF Protection: Добавляем meta тег с токеном для JavaScript
     $output .= CsrfProtection::getTokenMeta();
 
+    // XSS Protection: Подключаем DOMPurify для санитизации HTML
+    $output .= '<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>';
+
     $output .= '<link rel="stylesheet" href="' . htmlspecialchars($cssPath, ENT_QUOTES, 'UTF-8') . '">';
     $output .= '<script src="' . htmlspecialchars($jsPath, ENT_QUOTES, 'UTF-8') . '"></script>';
 
@@ -692,6 +695,9 @@ $jsPath = $assetsUrl . 'components/testsystem/js/tsrunner.js';
 
 // CSRF Protection: Добавляем meta тег с токеном для JavaScript
 $output .= CsrfProtection::getTokenMeta();
+
+// XSS Protection: Подключаем DOMPurify для санитизации HTML
+$output .= '<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>';
 
 $output .= '<link rel="stylesheet" href="' . htmlspecialchars($cssPath, ENT_QUOTES, 'UTF-8') . '">';
 $output .= '<script src="' . htmlspecialchars($jsPath, ENT_QUOTES, 'UTF-8') . '"></script>';
