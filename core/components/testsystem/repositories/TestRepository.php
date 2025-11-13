@@ -156,14 +156,14 @@ class TestRepository
      * @param int $testId ID теста
      * @param int $userId ID пользователя для проверки
      * @return array Данные теста и информация о правах
-     * @throws Exception Если теста не существует или нет прав
+     * @throws NotFoundException Если теста не существует
      */
     public static function getTestWithOwnerCheck($modx, $testId, $userId)
     {
         $test = self::getTestById($modx, $testId);
 
         if (!$test) {
-            throw new Exception('Test not found');
+            throw new NotFoundException('Test not found');
         }
 
         $isOwner = ((int)$test['created_by'] === (int)$userId);
@@ -182,7 +182,8 @@ class TestRepository
      * @param int $userId ID пользователя
      * @param string|null $errorMessage Сообщение об ошибке
      * @return array Данные теста
-     * @throws Exception Если не владелец
+     * @throws NotFoundException Если тест не найден
+     * @throws PermissionException Если не владелец
      */
     public static function requireTestOwner($modx, $testId, $userId, $errorMessage = null)
     {
@@ -190,7 +191,7 @@ class TestRepository
 
         if (!$result['isOwner']) {
             $message = $errorMessage ?? 'Access denied: not test owner';
-            throw new Exception($message);
+            throw new PermissionException($message);
         }
 
         return $result['test'];

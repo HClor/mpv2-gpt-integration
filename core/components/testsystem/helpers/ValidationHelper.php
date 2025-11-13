@@ -20,7 +20,7 @@ class ValidationHelper
      * @param bool $required Обязательное поле (по умолчанию true)
      * @param int $min Минимальное значение (по умолчанию 1)
      * @return int
-     * @throws Exception Если валидация не прошла
+     * @throws ValidationException Если валидация не прошла
      */
     public static function requireInt($data, $key, $errorMessage = null, $required = true, $min = 1)
     {
@@ -28,7 +28,7 @@ class ValidationHelper
 
         if ($required && $value < $min) {
             $message = $errorMessage ?? ucfirst($key) . ' is required and must be at least ' . $min;
-            throw new Exception($message);
+            throw new ValidationException($message);
         }
 
         return $value;
@@ -42,7 +42,7 @@ class ValidationHelper
      * @param string|null $errorMessage Сообщение об ошибке
      * @param bool $required Обязательное поле (по умолчанию true)
      * @return string
-     * @throws Exception Если валидация не прошла
+     * @throws ValidationException Если валидация не прошла
      */
     public static function requireString($data, $key, $errorMessage = null, $required = true)
     {
@@ -50,7 +50,7 @@ class ValidationHelper
 
         if ($required && empty($value)) {
             $message = $errorMessage ?? ucfirst($key) . ' is required';
-            throw new Exception($message);
+            throw new ValidationException($message);
         }
 
         return $value;
@@ -90,7 +90,7 @@ class ValidationHelper
      * @param int $minItems Минимальное количество элементов
      * @param string|null $errorMessage Сообщение об ошибке
      * @return array
-     * @throws Exception Если валидация не прошла
+     * @throws ValidationException Если валидация не прошла
      */
     public static function requireArray($data, $key, $minItems = 1, $errorMessage = null)
     {
@@ -98,12 +98,12 @@ class ValidationHelper
 
         if (!is_array($value)) {
             $message = $errorMessage ?? ucfirst($key) . ' must be an array';
-            throw new Exception($message);
+            throw new ValidationException($message);
         }
 
         if (count($value) < $minItems) {
             $message = $errorMessage ?? ucfirst($key) . ' must contain at least ' . $minItems . ' items';
-            throw new Exception($message);
+            throw new ValidationException($message);
         }
 
         return $value;
@@ -115,7 +115,7 @@ class ValidationHelper
      * @param int|string $testId ID теста
      * @param string|null $errorMessage Сообщение об ошибке
      * @return int
-     * @throws Exception Если ID невалиден
+     * @throws ValidationException Если ID невалиден
      */
     public static function validateTestId($testId, $errorMessage = null)
     {
@@ -123,7 +123,7 @@ class ValidationHelper
 
         if ($id <= 0) {
             $message = $errorMessage ?? 'Invalid test ID';
-            throw new Exception($message);
+            throw new ValidationException($message);
         }
 
         return $id;
@@ -135,7 +135,7 @@ class ValidationHelper
      * @param int|string $questionId ID вопроса
      * @param string|null $errorMessage Сообщение об ошибке
      * @return int
-     * @throws Exception Если ID невалиден
+     * @throws ValidationException Если ID невалиден
      */
     public static function validateQuestionId($questionId, $errorMessage = null)
     {
@@ -143,7 +143,7 @@ class ValidationHelper
 
         if ($id <= 0) {
             $message = $errorMessage ?? 'Invalid question ID';
-            throw new Exception($message);
+            throw new ValidationException($message);
         }
 
         return $id;
@@ -155,7 +155,7 @@ class ValidationHelper
      * @param string $email Email для проверки
      * @param string|null $errorMessage Сообщение об ошибке
      * @return string Валидный email
-     * @throws Exception Если email невалиден
+     * @throws ValidationException Если email невалиден
      */
     public static function validateEmail($email, $errorMessage = null)
     {
@@ -163,7 +163,7 @@ class ValidationHelper
 
         if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
             $message = $errorMessage ?? 'Invalid email address';
-            throw new Exception($message);
+            throw new ValidationException($message);
         }
 
         return $email;
@@ -174,7 +174,7 @@ class ValidationHelper
      *
      * @param string $questionType Тип вопроса
      * @return string
-     * @throws Exception Если тип невалиден
+     * @throws ValidationException Если тип невалиден
      */
     public static function validateQuestionType($questionType)
     {
@@ -182,7 +182,7 @@ class ValidationHelper
         $type = trim($questionType);
 
         if (!in_array($type, $allowedTypes, true)) {
-            throw new Exception('Invalid question type. Allowed: ' . implode(', ', $allowedTypes));
+            throw new ValidationException('Invalid question type. Allowed: ' . implode(', ', $allowedTypes));
         }
 
         return $type;
@@ -193,7 +193,7 @@ class ValidationHelper
      *
      * @param string $status Статус публикации
      * @return string
-     * @throws Exception Если статус невалиден
+     * @throws ValidationException Если статус невалиден
      */
     public static function validatePublicationStatus($status)
     {
@@ -201,7 +201,7 @@ class ValidationHelper
         $status = trim($status);
 
         if (!in_array($status, $allowedStatuses, true)) {
-            throw new Exception('Invalid publication status. Allowed: ' . implode(', ', $allowedStatuses));
+            throw new ValidationException('Invalid publication status. Allowed: ' . implode(', ', $allowedStatuses));
         }
 
         return $status;
@@ -212,7 +212,7 @@ class ValidationHelper
      *
      * @param array $answers Массив ответов
      * @return bool
-     * @throws Exception Если нет правильного ответа
+     * @throws ValidationException Если нет правильного ответа
      */
     public static function requireCorrectAnswer($answers)
     {
@@ -226,7 +226,7 @@ class ValidationHelper
         }
 
         if (!$hasCorrect) {
-            throw new Exception('At least one correct answer is required');
+            throw new ValidationException('At least one correct answer is required');
         }
 
         return true;

@@ -2687,9 +2687,15 @@ if (empty($allQuestionIds)) {
                 throw new Exception('Unknown action: ' . $action);
         }
         
+    } catch (TestSystemException $e) {
+        // Специализированные исключения с правильными HTTP кодами
+        http_response_code($e->getHttpCode());
+        $response = $e->toArray();
     } catch (Exception $e) {
-        http_response_code(400);
-        $response = ResponseHelper::error($e->getMessage());
+        // Обработка неожиданных исключений
+        http_response_code(500);
+        $response = ResponseHelper::error('Internal server error');
+        $modx->log(modX::LOG_LEVEL_ERROR, '[testsystem.php] Unexpected error: ' . $e->getMessage());
     }
 
 header('Content-Type: application/json; charset=utf-8');

@@ -176,7 +176,7 @@ class PermissionHelper
      * @param object $modx MODX объект
      * @param string|null $errorMessage Сообщение об ошибке
      * @return void
-     * @throws Exception Если нет прав
+     * @throws PermissionException Если нет прав
      */
     public static function requireEditRights($modx, $errorMessage = null)
     {
@@ -184,7 +184,7 @@ class PermissionHelper
 
         if (!$rights['canEdit']) {
             $message = $errorMessage ?? 'No permission to perform this action';
-            throw new Exception($message);
+            throw new PermissionException($message);
         }
     }
 
@@ -195,13 +195,13 @@ class PermissionHelper
      * @param int $testId ID теста
      * @param string|null $errorMessage Сообщение об ошибке
      * @return void
-     * @throws Exception Если нет прав
+     * @throws PermissionException Если нет прав
      */
     public static function requireTestEditRights($modx, $testId, $errorMessage = null)
     {
         if (!self::canEditTest($modx, $testId)) {
             $message = $errorMessage ?? 'No permission to edit this test';
-            throw new Exception($message);
+            throw new PermissionException($message);
         }
     }
 
@@ -212,7 +212,7 @@ class PermissionHelper
      * @param array $test Данные теста
      * @param string|null $errorMessage Сообщение об ошибке
      * @return array Результат проверки ['hasAccess' => bool, 'canEdit' => bool]
-     * @throws Exception Если нет доступа
+     * @throws PermissionException Если нет доступа
      */
     public static function requireTestAccess($modx, $test, $errorMessage = null)
     {
@@ -220,7 +220,7 @@ class PermissionHelper
 
         if (!$access['hasAccess']) {
             $message = $errorMessage ?? 'Access denied to this test';
-            throw new Exception($message);
+            throw new PermissionException($message);
         }
 
         return $access;
@@ -279,13 +279,13 @@ class PermissionHelper
      * @param object $modx MODX объект
      * @param string|null $errorMessage Сообщение об ошибке
      * @return void
-     * @throws Exception Если не авторизован
+     * @throws AuthenticationException Если не авторизован
      */
     public static function requireAuthentication($modx, $errorMessage = null)
     {
         if (!self::isAuthenticated($modx)) {
             $message = $errorMessage ?? 'Authentication required';
-            throw new Exception($message);
+            throw new AuthenticationException($message);
         }
     }
 }
