@@ -531,19 +531,17 @@ try {
         
 
         case 'submitAnswer':
-            $sessionId = (int)($data['session_id'] ?? 0);
-            $questionId = (int)($data['question_id'] ?? 0);
+            // Валидация входных данных
+            $sessionId = ValidationHelper::requireInt($data, 'session_id', 'Session ID required');
+            $questionId = ValidationHelper::requireInt($data, 'question_id', 'Question ID required');
             $answerIds = $data['answer_ids'] ?? [];
-            
-            if (!$sessionId || !$questionId) {
-                throw new Exception('Invalid data');
-            }
-            
+
+            // Приводим к массиву если нужно
             if (!is_array($answerIds)) {
                 $answerIds = [$answerIds];
             }
-            
-            // ИСПРАВЛЕНИЕ: Приводим все ID к int
+
+            // Приводим все ID к int
             $answerIds = array_map('intval', $answerIds);
             
             $stmt = $modx->prepare("
@@ -659,18 +657,12 @@ try {
                 }
             }
 
-            $response = [
-                'success' => true,
-                'data' => $responseData
-            ];
+            $response = ResponseHelper::success($responseData);
             break;
-        
+
         case 'finishTest':
-            $sessionId = (int)($data['session_id'] ?? 0);
-            
-            if (!$sessionId) {
-                throw new Exception('Session ID required');
-            }
+            // Валидация входных данных
+            $sessionId = ValidationHelper::requireInt($data, 'session_id', 'Session ID required');
             
             $stmt = $modx->prepare("
                 SELECT s.test_id, s.mode, s.status, t.pass_score
@@ -746,28 +738,22 @@ try {
                 }
             }
 
-            $response = [
-                'success' => true,
-                'data' => [
-                    'score' => $score,
-                    'passed' => $passed,
-                    'correct_count' => $correct,
-                    'incorrect_count' => $total - $correct,
-                    'total_count' => $total,
-                    'pass_score' => (int)$session['pass_score']
-                ]
-            ];
+            $response = ResponseHelper::success([
+                'score' => $score,
+                'passed' => $passed,
+                'correct_count' => $correct,
+                'incorrect_count' => $total - $correct,
+                'total_count' => $total,
+                'pass_score' => (int)$session['pass_score']
+            ]);
             break;
-        
+
 
 
         case 'getAllQuestions':
-            $testId = (int)($data['test_id'] ?? 0);
-            
-            if (!$testId) {
-                throw new Exception('Test ID required');
-            }
-            
+            // Валидация входных данных
+            $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
+
             // ВАЖНО: НЕ фильтруем по is_learning здесь, показываем ВСЕ вопросы
             $stmt = $modx->prepare("
                 SELECT id, question_text, explanation, question_type, published, is_learning
@@ -780,35 +766,23 @@ try {
             
             // Логирование для отладки
             //error_log('getAllQuestions: testId=' . $testId . ', count=' . count($questions));
-            
-            $response = [
-                'success' => true,
-                'data' => $questions
-            ];
+
+            $response = ResponseHelper::success($questions);
             break;
 
 
         case 'checkEditRights':
-            $rights = checkUserRights($modx);
-            
-            $response = [
-                'success' => true,
-                'data' => $rights
-            ];
+            $rights = PermissionHelper::getUserRights($modx);
+
+            $response = ResponseHelper::success($rights);
             break;
         
         case 'getQuestion':
-            $rights = checkUserRights($modx);
-            
-            if (!$rights['canEdit']) {
-                throw new Exception('No permission to edit questions');
-            }
-            
-            $questionId = (int)($data['question_id'] ?? 0);
-            
-            if (!$questionId) {
-                throw new Exception('Question ID required');
-            }
+            // Проверка прав доступа
+            PermissionHelper::requireEditRights($modx, 'No permission to edit questions');
+
+            // Валидация входных данных
+            $questionId = ValidationHelper::requireQuestionId($data['question_id'] ?? 0, 'Question ID required');
             
             $stmt = $modx->prepare("
                 SELECT id, question_text, question_type, explanation, test_id,
@@ -841,37 +815,31 @@ try {
             ");
             $stmt->execute([$questionId]);
             $answers = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
+
             $question['answers'] = $answers;
-            
-            $response = [
-                'success' => true,
-                'data' => $question
-            ];
+
+            $response = ResponseHelper::success($question);
             break;
         
 
 
         case 'updateQuestion':
-            $rights = checkUserRights($modx);
-            
-            if (!$rights['canEdit']) {
-                throw new Exception('No permission to edit questions');
-            }
-            
-            $questionId = (int)($data['question_id'] ?? 0);
-            $questionText = trim($data['question_text'] ?? '');
-            $questionType = trim($data['question_type'] ?? 'single');
-            $explanation = trim($data['explanation'] ?? '');
-            $questionImage = trim($data['question_image'] ?? '');
-            $explanationImage = trim($data['explanation_image'] ?? '');
-            $published = (int)($data['published'] ?? 1);
-            $isLearning = (int)($data['is_learning'] ?? 0); // ИЗМЕНИТЬ: было 1, теперь 0
+            // Проверка прав доступа
+            PermissionHelper::requireEditRights($modx, 'No permission to edit questions');
+
+            // Валидация входных данных
+            $questionId = ValidationHelper::requireQuestionId($data['question_id'] ?? 0, 'Question ID required');
+            $questionText = ValidationHelper::requireString($data, 'question_text', 'Question text is required');
+            $questionType = ValidationHelper::optionalString($data, 'question_type', 'single');
+            $explanation = ValidationHelper::optionalString($data, 'explanation');
+            $questionImage = ValidationHelper::optionalString($data, 'question_image');
+            $explanationImage = ValidationHelper::optionalString($data, 'explanation_image');
+            $published = ValidationHelper::optionalInt($data, 'published', 1);
+            $isLearning = ValidationHelper::optionalInt($data, 'is_learning', 0);
             $answers = $data['answers'] ?? [];
 
-            if (!$questionId || empty($questionText)) {
-                throw new Exception('Invalid data');
-            }
+            // Валидация типа вопроса
+            $questionType = ValidationHelper::validateQuestionType($questionType);
             
             $stmt = $modx->prepare("
                 UPDATE modx_test_questions 
@@ -892,9 +860,9 @@ try {
             
             foreach ($answers as $answer) {
                 if (empty($answer['id'])) continue;
-                
+
                 $stmt = $modx->prepare("
-                    UPDATE modx_test_answers 
+                    UPDATE modx_test_answers
                     SET answer_text = ?, is_correct = ?
                     WHERE id = ?
                 ");
@@ -904,28 +872,19 @@ try {
                     $answer['id']
                 ]);
             }
-            
-            $response = [
-                'success' => true,
-                'message' => 'Question updated'
-            ];
+
+            $response = ResponseHelper::success(null, 'Question updated');
             break;
         
 
 
         case 'deleteQuestion':
-            $rights = checkUserRights($modx);
-            
-            if (!$rights['canEdit']) {
-                throw new Exception('No permission to delete questions');
-            }
-            
-            $questionId = (int)($data['question_id'] ?? 0);
-            $sessionId = (int)($data['session_id'] ?? 0);
+            // Проверка прав доступа
+            PermissionHelper::requireEditRights($modx, 'No permission to delete questions');
 
-            if (!$questionId) {
-                throw new Exception('Question ID required');
-            }
+            // Валидация входных данных
+            $questionId = ValidationHelper::requireQuestionId($data['question_id'] ?? 0, 'Question ID required');
+            $sessionId = ValidationHelper::optionalInt($data, 'session_id', 0);
 
             // IDOR Protection: получаем test_id вопроса и проверяем право на редактирование
             $stmt = $modx->prepare("SELECT test_id FROM modx_test_questions WHERE id = ?");
@@ -967,25 +926,16 @@ try {
             
             $stmt = $modx->prepare("DELETE FROM modx_test_questions WHERE id = ?");
             $stmt->execute([$questionId]);
-            
-            $response = [
-                'success' => true,
-                'message' => 'Question deleted'
-            ];
+
+            $response = ResponseHelper::success(null, 'Question deleted');
             break;
-        
+
         case 'getTestSettings':
-            $rights = checkUserRights($modx);
-            
-            if (!$rights['canEdit']) {
-                throw new Exception('No permission to edit test settings');
-            }
-            
-            $testId = (int)($data['test_id'] ?? 0);
-            
-            if (!$testId) {
-                throw new Exception('Test ID required');
-            }
+            // Проверка прав доступа
+            PermissionHelper::requireEditRights($modx, 'No permission to edit test settings');
+
+            // Валидация входных данных
+            $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
             
             $stmt = $modx->prepare("
                 SELECT id, title, description, is_active, is_learning_material,
