@@ -26,7 +26,7 @@ $modx->initialize('web');
 $modx->getService('error','error.modError');
 
 // Подключаем bootstrap для автозагрузки классов безопасности
-require_once dirname(dirname(dirname(dirname(__FILE__)))) . '/core/components/testsystem/bootstrap.php';
+require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
 
 $prefix = $modx->getOption('table_prefix', null, 'modx_');
 
