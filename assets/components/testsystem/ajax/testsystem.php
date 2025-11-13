@@ -105,16 +105,13 @@ try {
         
 
         case 'getTestInfo':
-            $testId = (int)($data['test_id'] ?? 0);
-            if (!$testId) {
-                throw new Exception('Test ID required');
-            }
-            
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = (int)$modx->user->get('id');
+            // Валидация входных данных
+            $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
+
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
             
             // Загружаем тест
             $stmt = $modx->prepare("
@@ -129,61 +126,18 @@ try {
             if (!$test) {
                 throw new Exception('Test not found');
             }
-            
-            // Проверка доступа
-            $hasAccess = false;
-            $canEdit = false;
-            
-            $rights = checkUserRights($modx);
-            
-            // Админы и эксперты видят все
-            if ($rights['isAdmin'] || $rights['isExpert']) {
-                $hasAccess = true;
-                $canEdit = true;
-            }
-            // Владелец теста
-            elseif ((int)$test['created_by'] === $userId) {
-                $hasAccess = true;
-                $canEdit = true;
-            }
-            // Public тесты
-            elseif ($test['publication_status'] === 'public') {
-                $hasAccess = true;
-            }
-            // Unlisted тесты (по прямой ссылке)
-            elseif ($test['publication_status'] === 'unlisted') {
-                $hasAccess = true;
-            }
-            // Проверяем permissions для private
-            elseif ($test['publication_status'] === 'private') {
-                $stmt = $modx->prepare("
-                    SELECT can_edit 
-                    FROM modx_test_permissions 
-                    WHERE test_id = ? AND user_id = ?
-                ");
-                $stmt->execute([$testId, $userId]);
-                $perm = $stmt->fetch(PDO::FETCH_ASSOC);
-                
-                if ($perm) {
-                    $hasAccess = true;
-                    $canEdit = (bool)$perm['can_edit'];
-                }
-            }
-            
-            if (!$hasAccess) {
-                throw new Exception('Access denied');
-            }
+
+            // Проверка доступа с использованием PermissionHelper
+            $access = PermissionHelper::requireTestAccess($modx, $test, 'Access denied');
+            $canEdit = $access['canEdit'];
             
             // Подсчет вопросов
             $stmt = $modx->prepare("SELECT COUNT(*) FROM modx_test_questions WHERE test_id = ? AND published = 1");
             $stmt->execute([$testId]);
             $test['total_questions'] = (int)$stmt->fetchColumn();
             $test['can_edit'] = $canEdit;
-            
-            $response = [
-                'success' => true,
-                'data' => $test
-            ];
+
+            $response = ResponseHelper::success($test);
             break;
 
 
@@ -950,22 +904,16 @@ try {
             if (!$test) {
                 throw new Exception('Test not found');
             }
-            
-            $response = [
-                'success' => true,
-                'data' => $test
-            ];
+
+            $response = ResponseHelper::success($test);
             break;
 
 
 
         case 'getQuestionAnswers':
-            $questionId = (int)($data['question_id'] ?? 0);
-            $sessionId = (int)($data['session_id'] ?? 0);
-            
-            if (!$questionId || !$sessionId) {
-                throw new Exception('Question ID and Session ID required');
-            }
+            // Валидация входных данных
+            $questionId = ValidationHelper::requireQuestionId($data['question_id'] ?? 0, 'Question ID required');
+            $sessionId = ValidationHelper::requireInt($data, 'session_id', 'Session ID required');
             
             // Получаем сессию для проверки режима
             $stmt = $modx->prepare("
@@ -1042,29 +990,20 @@ try {
                 //error_log('getQuestionAnswers feedback: ' . json_encode($responseData['feedback']));
             }
             
-            $response = [
-                'success' => true,
-                'data' => $responseData
-            ];
+            $response = ResponseHelper::success($responseData);
             break;
 
-        
+
         case 'updateTestSettings':
-            $rights = checkUserRights($modx);
-            
-            if (!$rights['canEdit']) {
-                throw new Exception('No permission to edit test settings');
-            }
-            
-            $testId = (int)($data['test_id'] ?? 0);
-            $title = trim($data['title'] ?? '');
-            $description = trim($data['description'] ?? '');
-            $isActive = (int)($data['is_active'] ?? 1);
-            $isLearningMaterial = (int)($data['is_learning_material'] ?? 0);
-            
-            if (!$testId || empty($title)) {
-                throw new Exception('Invalid data');
-            }
+            // Проверка прав доступа
+            PermissionHelper::requireEditRights($modx, 'No permission to edit test settings');
+
+            // Валидация входных данных
+            $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
+            $title = ValidationHelper::requireString($data, 'title', 'Title is required');
+            $description = ValidationHelper::optionalString($data, 'description');
+            $isActive = ValidationHelper::optionalInt($data, 'is_active', 1);
+            $isLearningMaterial = ValidationHelper::optionalInt($data, 'is_learning_material', 0);
             
             $stmt = $modx->prepare("
                 UPDATE modx_test_tests 
@@ -1075,24 +1014,17 @@ try {
                 WHERE id = ?
             ");
             $stmt->execute([$title, $description, $isActive, $isLearningMaterial, $testId]);
-            
-            $response = [
-                'success' => true,
-                'message' => 'Test settings updated'
-            ];
+
+            $response = ResponseHelper::success(null, 'Test settings updated');
             break;
 
         case 'toggleFavorite':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $questionId = (int)($data['question_id'] ?? 0);
-            $userId = $modx->user->id;
-            
-            if (!$questionId) {
-                throw new Exception('Question ID required');
-            }
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            // Валидация входных данных
+            $questionId = ValidationHelper::requireQuestionId($data['question_id'] ?? 0, 'Question ID required');
+            $userId = PermissionHelper::getCurrentUserId($modx);
             
             // Проверяем существование
             $stmt = $modx->prepare("
@@ -1119,25 +1051,19 @@ try {
                 $stmt->execute([$userId, $questionId]);
                 $isFavorite = true;
             }
-            
-            $response = [
-                'success' => true,
-                'is_favorite' => $isFavorite
-            ];
+
+            $response = ResponseHelper::success(['is_favorite' => $isFavorite]);
             break;
-        
+
         case 'getFavoriteStatus':
             if (!$modx->user->hasSessionContext('web')) {
-                $response = ['success' => true, 'is_favorite' => false];
+                $response = ResponseHelper::success(['is_favorite' => false]);
                 break;
             }
-            
-            $questionId = (int)($data['question_id'] ?? 0);
-            $userId = $modx->user->id;
-            
-            if (!$questionId) {
-                throw new Exception('Question ID required');
-            }
+
+            // Валидация входных данных
+            $questionId = ValidationHelper::requireQuestionId($data['question_id'] ?? 0, 'Question ID required');
+            $userId = PermissionHelper::getCurrentUserId($modx);
             
             $stmt = $modx->prepare("
                 SELECT COUNT(*) FROM modx_test_favorites 
@@ -1145,19 +1071,15 @@ try {
             ");
             $stmt->execute([$userId, $questionId]);
             $isFavorite = (int)$stmt->fetchColumn() > 0;
-            
-            $response = [
-                'success' => true,
-                'is_favorite' => $isFavorite
-            ];
+
+            $response = ResponseHelper::success(['is_favorite' => $isFavorite]);
             break;
 
         case 'getFavoriteQuestions':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Требуется авторизация');
-            }
-            
-            $userId = $modx->user->id;
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Требуется авторизация');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
             
             $stmt = $modx->prepare("
                 SELECT 
@@ -1178,25 +1100,20 @@ try {
             
             $stmt->execute([$userId]);
             $favorites = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            $response = [
-                'success' => true,
-                'data' => $favorites
-            ];
+
+            $response = ResponseHelper::success($favorites);
             break;
-            
-            
+
+
         // ============================================
         // KNOWLEDGE AREAS API
         // ============================================
-        
+
         case 'getKnowledgeAreas':
-            // Только для авторизованных
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = $modx->user->id;
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
             
             $stmt = $modx->prepare("
                 SELECT ka.id, ka.name, ka.description, ka.test_ids, 
