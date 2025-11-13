@@ -4,6 +4,9 @@
  * Управление областями знаний пользователя
  */
 
+// Подключаем bootstrap для CSRF защиты
+require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
+
 if (!$modx instanceof modX) {
     return '<div class="alert alert-danger">MODX context required</div>';
 }
@@ -32,7 +35,8 @@ $assetsUrl = rtrim($modx->getOption('assets_url', null, MODX_ASSETS_URL), '/') .
 $cssPath = $assetsUrl . 'components/testsystem/css/tsrunner.css';
 $jsPath = $assetsUrl . 'components/testsystem/js/knowledge-areas.js';
 
-$output = '';
+// CSRF Protection: добавляем meta тег с токеном для JavaScript
+$output = CsrfProtection::getTokenMeta();
 
 // Подключаем стили и скрипты
 $output .= '<link rel="stylesheet" href="' . htmlspecialchars($cssPath, ENT_QUOTES, 'UTF-8') . '">';

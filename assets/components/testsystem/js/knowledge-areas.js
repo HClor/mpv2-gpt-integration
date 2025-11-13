@@ -2,7 +2,13 @@
 
 (function() {
     const API_URL = "/assets/components/testsystem/ajax/testsystem.php";
-    
+
+    // CSRF Protection: получаем токен из meta тега
+    function getCsrfToken() {
+        const metaTag = document.querySelector('meta[name="csrf-token"]');
+        return metaTag ? metaTag.content : null;
+    }
+
     const container = document.getElementById('knowledge-areas-container');
     const testPageUrl = container ? container.dataset.testPageUrl : '/tests/oblast-znanij/';
     const managePageUrl = container ? container.dataset.managePageUrl : '/moi-oblasti-znanij/';
@@ -56,6 +62,12 @@
     // API вызовы
     async function apiCall(action, data = {}) {
         try {
+            // CSRF Protection: добавляем токен в данные
+            const csrfToken = getCsrfToken();
+            if (csrfToken) {
+                data.csrf_token = csrfToken;
+            }
+
             const response = await fetch(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
