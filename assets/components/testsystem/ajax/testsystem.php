@@ -1469,10 +1469,6 @@ try {
             $userId = PermissionHelper::getCurrentUserId($modx);
             $areaId = ValidationHelper::requireInt($data, 'area_id', 'Area ID required');
 
-            if (false) {
-                throw new Exception('Area ID required');
-            }
-            
             // Загружаем область знаний
             $stmt = $modx->prepare("
                 SELECT test_ids, questions_per_session, name, question_distribution_mode, 
@@ -1613,37 +1609,32 @@ if (empty($allQuestionIds)) {
             }
             
             $sessionId = (int)$modx->lastInsertId();
-            
-            $response = [
-                'success' => true,
-                'data' => [
-                    'session_id' => $sessionId,
-                    'area_name' => $area['name'],
-                    'total_questions' => count($allQuestionIds),
-                    'is_knowledge_area' => true,
-                    'distribution' => $distribution
-                ]
-            ];
+
+            $response = ResponseHelper::success([
+                'session_id' => $sessionId,
+                'area_name' => $area['name'],
+                'total_questions' => count($allQuestionIds),
+                'is_knowledge_area' => true,
+                'distribution' => $distribution
+            ]);
             break;
-        
+
         case 'publishTest':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $currentUserId = (int)$modx->user->get('id');
-            $testId = (int)($data['test_id'] ?? 0);
-            $publicationStatus = $data['status'] ?? 'private'; // draft, private, unlisted, public
-            
-            if (!$testId) {
-                throw new Exception('Test ID required');
-            }
-            
-            if (!in_array($publicationStatus, ['draft', 'private', 'unlisted', 'public'])) {
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $currentUserId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация входных данных
+            $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
+            $publicationStatus = ValidationHelper::optionalString($data, 'status', 'private');
+
+            // Валидация статуса
+            if (!in_array($publicationStatus, ['draft', 'private', 'unlisted', 'public'], true)) {
                 throw new Exception('Invalid publication status');
             }
-            
-            $rights = checkUserRights($modx);
+
+            $rights = PermissionHelper::getUserRights($modx);
             
             // Загружаем тест
             $stmt = $modx->prepare("
@@ -1756,24 +1747,17 @@ if (empty($allQuestionIds)) {
                 }
             }
             
-            $response = [
-                'success' => true,
-                'message' => 'Publication status updated',
-                'data' => [
-                    'status' => $publicationStatus,
-                    'slug' => $slug,
-                    'public_url' => $slug ? $modx->makeUrl($modx->getOption('lms.public_test_page', null, 0), 'web', ['slug' => $slug], 'full') : null
-                ]
-            ];
+            $response = ResponseHelper::success([
+                'status' => $publicationStatus,
+                'slug' => $slug,
+                'public_url' => $slug ? $modx->makeUrl($modx->getOption('lms.public_test_page', null, 0), 'web', ['slug' => $slug], 'full') : null
+            ], 'Publication status updated');
             break;
 
 
         case 'getPublicTestBySlug':
-            $slug = trim($data['slug'] ?? '');
-            
-            if (empty($slug)) {
-                throw new Exception('Slug required');
-            }
+            // Валидация входных данных
+            $slug = ValidationHelper::requireString($data, 'slug', 'Slug required');
             
             // Загружаем тест
             $stmt = $modx->prepare("
@@ -1811,53 +1795,45 @@ if (empty($allQuestionIds)) {
             ");
             $stmt->execute([$test['id']]);
             $test['statistics'] = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            $response = [
-                'success' => true,
-                'data' => $test
-            ];
+
+            $response = ResponseHelper::success($test);
             break;            
 
-// ДИАГНОСТИКА: Проверяем права пользователя
-case 'checkResourcePermissions':
-    if (!$modx->user->hasSessionContext('web')) {
-        throw new Exception('Not logged in');
-    }
-    
-    $userId = (int)$modx->user->get('id');
-    $user = $modx->getObject('modUser', $userId);
-    
-    if (!$user) {
-        throw new Exception('User not found');
-    }
-    
-    // Проверяем может ли пользователь создавать документы
-    $canCreate = $user->hasPermission('new_document');
-    $canSave = $user->hasPermission('save_document');
-    
-    $response = [
-        'success' => true,
-        'user_id' => $userId,
-        'can_create' => $canCreate,
-        'can_save' => $canSave,
-        'groups' => array_keys($user->getUserGroups())
-    ];
-    break;
+        // ДИАГНОСТИКА: Проверяем права пользователя
+        case 'checkResourcePermissions':
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Not logged in');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+            $user = $modx->getObject('modUser', $userId);
+
+            if (!$user) {
+                throw new Exception('User not found');
+            }
+
+            // Проверяем может ли пользователь создавать документы
+            $canCreate = $user->hasPermission('new_document');
+            $canSave = $user->hasPermission('save_document');
+
+            $response = ResponseHelper::success([
+                'user_id' => $userId,
+                'can_create' => $canCreate,
+                'can_save' => $canSave,
+                'groups' => array_keys($user->getUserGroups())
+            ]);
+            break;
 
         case 'createTestWithPage':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = (int)$modx->user->get('id');
-            $title = trim($data['title'] ?? '');
-            $description = trim($data['description'] ?? '');
-            $publicationStatus = $data['publication_status'] ?? 'draft';
-            
-            if (empty($title)) {
-                throw new Exception('Title is required');
-            }
-            
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация входных данных
+            $title = ValidationHelper::requireString($data, 'title', 'Title is required');
+            $description = ValidationHelper::optionalString($data, 'description');
+            $publicationStatus = ValidationHelper::optionalString($data, 'publication_status', 'draft');
+
             // Валидация статуса
             $allowedStatuses = ['draft', 'private', 'unlisted', 'public'];
             if (!in_array($publicationStatus, $allowedStatuses, true)) {
@@ -2032,13 +2008,11 @@ case 'checkResourcePermissions':
                     }
                 }
                 
-                $response = [
-                    'success' => true,
-                    'message' => 'Test and page created successfully',
+                $response = ResponseHelper::success([
                     'test_id' => $testId,
                     'resource_id' => $resourceId,
                     'test_url' => $testUrl
-                ];
+                ], 'Test and page created successfully');
                 
             } catch (Exception $e) {
                 $modx->log(modX::LOG_LEVEL_ERROR, '[createTestWithPage] Error: ' . $e->getMessage() . ' | Trace: ' . $e->getTraceAsString());
@@ -2047,24 +2021,21 @@ case 'checkResourcePermissions':
             break;
 
         case 'createTest':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = (int)$modx->user->get('id');
-            $title = trim($data['title'] ?? '');
-            $description = trim($data['description'] ?? '');
-            $publicationStatus = $data['publication_status'] ?? 'private';
-            
-            $rights = checkUserRights($modx);
-            
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация входных данных
+            $title = ValidationHelper::requireString($data, 'title', 'Title required');
+            $description = ValidationHelper::optionalString($data, 'description');
+            $publicationStatus = ValidationHelper::optionalString($data, 'publication_status', 'private');
+
+            $rights = PermissionHelper::getUserRights($modx);
+
             // Обычные пользователи могут создавать только private и draft
             if (!$rights['canEdit'] && !in_array($publicationStatus, ['private', 'draft'])) {
                 $publicationStatus = 'private';
-            }
-            
-            if (empty($title)) {
-                throw new Exception('Title required');
             }
             
             // Ограничение для обычных пользователей
@@ -2099,26 +2070,19 @@ case 'checkResourcePermissions':
             ]);
             
             $testId = (int)$modx->lastInsertId();
-            
-            $response = [
-                'success' => true, 
-                'message' => 'Test created', 
-                'test_id' => $testId
-            ];
+
+            $response = ResponseHelper::success(['test_id' => $testId], 'Test created');
             break;
 
 
         case 'createTestPage':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $testId = (int)($data['test_id'] ?? 0);
-            $userId = (int)$modx->user->get('id');
-            
-            if (!$testId) {
-                throw new Exception('Test ID required');
-            }
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация входных данных
+            $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
             
             // Проверяем владельца теста + ЗАГРУЖАЕМ resource_id
             $stmt = $modx->prepare("
@@ -2168,12 +2132,10 @@ case 'checkResourcePermissions':
                     $existingUrl = $modx->getOption('site_url') . 'resource-' . $existingResourceId;
                 }
                 
-                $response = [
-                    'success' => true,
-                    'message' => 'Page already exists',
+                $response = ResponseHelper::success([
                     'test_url' => $existingUrl,
                     'resource_id' => $existingResourceId
-                ];
+                ], 'Page already exists');
                 break;
             }
             
@@ -2287,12 +2249,10 @@ case 'checkResourcePermissions':
                     $testUrl = $siteUrl . '/' . $alias;
                 }
                 
-                $response = [
-                    'success' => true,
-                    'message' => 'Test page created successfully',
+                $response = ResponseHelper::success([
                     'resource_id' => $resourceId,
                     'test_url' => $testUrl
-                ];
+                ], 'Test page created successfully');
                 
             } catch (Exception $e) {
                 $modx->log(modX::LOG_LEVEL_ERROR, '[createTestPage] Error: ' . $e->getMessage());
@@ -2301,11 +2261,10 @@ case 'checkResourcePermissions':
             break;
 
         case 'getMyTests':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = (int)$modx->user->get('id');
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
             
             $stmt = $modx->prepare("
                 SELECT 
@@ -2355,16 +2314,15 @@ case 'checkResourcePermissions':
                 }
             }
             
-            $response = ['success' => true, 'data' => $tests];
+            $response = ResponseHelper::success($tests);
             break;
 
 
         case 'getSharedWithMe':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = (int)$modx->user->get('id');
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
             
             $stmt = $modx->prepare("
                 SELECT 
@@ -2416,25 +2374,24 @@ case 'checkResourcePermissions':
                     $test['test_url'] = '#';
                 }
             }
-            
-            $response = ['success' => true, 'data' => $tests];
+
+            $response = ResponseHelper::success($tests);
             break;
     
         case 'searchUsers':
-            $rights = checkUserRights($modx);
-            
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $query = trim($data['query'] ?? '');
-            $testId = (int)($data['test_id'] ?? 0);
-            
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $currentUserId = PermissionHelper::getCurrentUserId($modx);
+            $rights = PermissionHelper::getUserRights($modx);
+
+            // Валидация входных данных
+            $query = ValidationHelper::requireString($data, 'query', 'Search query required');
+            $testId = ValidationHelper::optionalInt($data, 'test_id', 0);
+
             if (strlen($query) < 2) {
                 throw new Exception('Search query too short (min 2 chars)');
             }
-            
-            $currentUserId = (int)$modx->user->get('id');
             
             if ($testId > 0) {
                 $stmt = $modx->prepare("SELECT created_by FROM modx_test_tests WHERE id = ?");
@@ -2492,24 +2449,20 @@ case 'checkResourcePermissions':
                 }
             }
             
-            $response = ['success' => true, 'data' => $users];
+            $response = ResponseHelper::success($users);
             break;
-        
+
         case 'grantAccess':
-            $rights = checkUserRights($modx);
-            
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $currentUserId = (int)$modx->user->get('id');
-            $testId = (int)($data['test_id'] ?? 0);
-            $targetUserId = (int)($data['user_id'] ?? 0);
-            $canEdit = (int)($data['can_edit'] ?? 0);
-            
-            if (!$testId || !$targetUserId) {
-                throw new Exception('Test ID and User ID required');
-            }
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $currentUserId = PermissionHelper::getCurrentUserId($modx);
+            $rights = PermissionHelper::getUserRights($modx);
+
+            // Валидация входных данных
+            $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
+            $targetUserId = ValidationHelper::requireInt($data, 'user_id', 'User ID required');
+            $canEdit = ValidationHelper::optionalInt($data, 'can_edit', 0);
             
             $stmt = $modx->prepare("SELECT created_by, title FROM modx_test_tests WHERE id = ?");
             $stmt->execute([$testId]);
@@ -2545,24 +2498,20 @@ case 'checkResourcePermissions':
                 VALUES (?, 'access_granted', ?, ?, ?)
             ");
             $stmt->execute([$targetUserId, $testId, $currentUserId, $message]);
-            
-            $response = ['success' => true, 'message' => 'Access granted'];
+
+            $response = ResponseHelper::success(null, 'Access granted');
             break;
-        
+
         case 'revokeAccess':
-            $rights = checkUserRights($modx);
-            
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $currentUserId = (int)$modx->user->get('id');
-            $testId = (int)($data['test_id'] ?? 0);
-            $targetUserId = (int)($data['user_id'] ?? 0);
-            
-            if (!$testId || !$targetUserId) {
-                throw new Exception('Test ID and User ID required');
-            }
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $currentUserId = PermissionHelper::getCurrentUserId($modx);
+            $rights = PermissionHelper::getUserRights($modx);
+
+            // Валидация входных данных
+            $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
+            $targetUserId = ValidationHelper::requireInt($data, 'user_id', 'User ID required');
             
             $stmt = $modx->prepare("SELECT created_by FROM modx_test_tests WHERE id = ?");
             $stmt->execute([$testId]);
@@ -2580,23 +2529,19 @@ case 'checkResourcePermissions':
             
             $stmt = $modx->prepare("DELETE FROM modx_test_permissions WHERE test_id = ? AND user_id = ?");
             $stmt->execute([$testId, $targetUserId]);
-            
-            $response = ['success' => true, 'message' => 'Access revoked'];
+
+            $response = ResponseHelper::success(null, 'Access revoked');
             break;
-        
+
         case 'getTestPermissions':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $currentUserId = (int)$modx->user->get('id');
-            $testId = (int)($data['test_id'] ?? 0);
-            
-            if (!$testId) {
-                throw new Exception('Test ID required');
-            }
-            
-            $rights = checkUserRights($modx);
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $currentUserId = PermissionHelper::getCurrentUserId($modx);
+            $rights = PermissionHelper::getUserRights($modx);
+
+            // Валидация входных данных
+            $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
             
             $stmt = $modx->prepare("SELECT created_by FROM modx_test_tests WHERE id = ?");
             $stmt->execute([$testId]);
@@ -2627,16 +2572,17 @@ case 'checkResourcePermissions':
             
             $stmt->execute([$testId]);
             $permissions = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            $response = ['success' => true, 'data' => $permissions];
+
+            $response = ResponseHelper::success($permissions);
             break;
-        
+
         case 'getNotifications':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = (int)$modx->user->get('id');
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация входных данных
             $unreadOnly = (bool)($data['unread_only'] ?? false);
             $limit = min((int)($data['limit'] ?? 20), 50);
             
@@ -2662,77 +2608,67 @@ case 'checkResourcePermissions':
             $stmt = $modx->prepare("SELECT COUNT(*) FROM modx_test_notifications WHERE user_id = ? AND is_read = 0");
             $stmt->execute([$userId]);
             $unreadCount = (int)$stmt->fetchColumn();
-            
-            $response = ['success' => true, 'data' => ['notifications' => $notifications, 'unread_count' => $unreadCount]];
+
+            $response = ResponseHelper::success([
+                'notifications' => $notifications,
+                'unread_count' => $unreadCount
+            ]);
             break;
         
         case 'markNotificationRead':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = (int)$modx->user->get('id');
-            $notificationId = (int)($data['notification_id'] ?? 0);
-            
-            if (!$notificationId) {
-                throw new Exception('Notification ID required');
-            }
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация входных данных
+            $notificationId = ValidationHelper::requireInt($data, 'notification_id', 'Notification ID required');
             
             $stmt = $modx->prepare("UPDATE modx_test_notifications SET is_read = 1 WHERE id = ? AND user_id = ?");
             $stmt->execute([$notificationId, $userId]);
-            
-            $response = ['success' => true, 'message' => 'Notification marked as read'];
+
+            $response = ResponseHelper::success(null, 'Notification marked as read');
             break;
-        
+
         case 'markAllNotificationsRead':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = (int)$modx->user->get('id');
-            
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+
             $stmt = $modx->prepare("UPDATE modx_test_notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0");
             $stmt->execute([$userId]);
-            
-            $response = ['success' => true, 'message' => 'All notifications marked as read'];
+
+            $response = ResponseHelper::success(null, 'All notifications marked as read');
             break;
 
         case 'checkSiteSettings':
-            $response = [
-                'success' => true,
-                'data' => [
-                    'site_url' => $modx->getOption('site_url'),
-                    'base_url' => $modx->getOption('base_url'),
-                    'friendly_urls' => $modx->getOption('friendly_urls'),
-                    'use_alias_path' => $modx->getOption('use_alias_path'),
-                    'site_start' => $modx->getOption('site_start')
-                ]
-            ];
+            $response = ResponseHelper::success([
+                'site_url' => $modx->getOption('site_url'),
+                'base_url' => $modx->getOption('base_url'),
+                'friendly_urls' => $modx->getOption('friendly_urls'),
+                'use_alias_path' => $modx->getOption('use_alias_path'),
+                'site_start' => $modx->getOption('site_start')
+            ]);
             break;
 
         case 'getParentUri':
-            $resourceId = (int)($data['resource_id'] ?? 0);
-            
-            if (!$resourceId) {
-                throw new Exception('Resource ID required');
-            }
+            // Валидация входных данных
+            $resourceId = ValidationHelper::requireInt($data, 'resource_id', 'Resource ID required');
             
             $resource = $modx->getObject('modResource', $resourceId);
             
             if (!$resource) {
                 throw new Exception('Resource not found');
             }
-            
-            $response = [
-                'success' => true,
-                'data' => [
-                    'id' => $resource->get('id'),
-                    'pagetitle' => $resource->get('pagetitle'),
-                    'alias' => $resource->get('alias'),
-                    'uri' => $resource->get('uri'),
-                    'parent' => $resource->get('parent')
-                ]
-            ];
+
+            $response = ResponseHelper::success([
+                'id' => $resource->get('id'),
+                'pagetitle' => $resource->get('pagetitle'),
+                'alias' => $resource->get('alias'),
+                'uri' => $resource->get('uri'),
+                'parent' => $resource->get('parent')
+            ]);
             break;
             
             
@@ -2747,16 +2683,13 @@ case 'checkResourcePermissions':
          */
 
         case 'deleteTest':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Требуется авторизация');
-            }
-            
-            $userId = (int)$modx->user->get('id');
-            $testId = isset($data['test_id']) ? (int)$data['test_id'] : 0;
-            
-            if (!$testId) {
-                throw new Exception('Не указан ID теста');
-            }
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Требуется авторизация');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация входных данных
+            $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Не указан ID теста');
             
             // Проверяем владельца теста
             $stmt = $modx->prepare("SELECT created_by, resource_id FROM {$prefix}test_tests WHERE id = ?");
@@ -2806,11 +2739,8 @@ case 'checkResourcePermissions':
                 
                 // 8. Удаляем сам тест
                 $modx->exec("DELETE FROM {$prefix}test_tests WHERE id = {$testId}");
-                
-                $response = [
-                    'success' => true,
-                    'message' => 'Тест успешно удален'
-                ];
+
+                $response = ResponseHelper::success(null, 'Тест успешно удален');
                 
             } catch (Exception $e) {
                 $modx->log(modX::LOG_LEVEL_ERROR, 'Ошибка при удалении теста: ' . $e->getMessage());
@@ -2819,20 +2749,17 @@ case 'checkResourcePermissions':
             break;
 
         case 'updateTest':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = (int)$modx->user->get('id');
-            $testId = (int)($data['test_id'] ?? 0);
-            $title = trim($data['title'] ?? '');
-            $description = trim($data['description'] ?? '');
-            $publicationStatus = $data['publication_status'] ?? 'private';
-            
-            if (!$testId || empty($title)) {
-                throw new Exception('Test ID and title required');
-            }
-            
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация входных данных
+            $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
+            $title = ValidationHelper::requireString($data, 'title', 'Title required');
+            $description = ValidationHelper::optionalString($data, 'description');
+            $publicationStatus = ValidationHelper::optionalString($data, 'publication_status', 'private');
+
             // Валидация статуса
             $allowedStatuses = ['draft', 'private', 'unlisted', 'public'];
             if (!in_array($publicationStatus, $allowedStatuses, true)) {
@@ -2873,11 +2800,8 @@ case 'checkResourcePermissions':
                 $stmt = $modx->prepare("UPDATE {$prefix}site_content SET pagetitle = ? WHERE id = ?");
                 $stmt->execute([$title, $resourceId]);
             }
-            
-            $response = [
-                'success' => true,
-                'message' => 'Test updated successfully'
-            ];
+
+            $response = ResponseHelper::success(null, 'Test updated successfully');
             break;
             
 
@@ -2887,10 +2811,7 @@ case 'checkResourcePermissions':
         
     } catch (Exception $e) {
         http_response_code(400);
-        $response = [
-            'success' => false,
-            'message' => $e->getMessage()
-        ];
+        $response = ResponseHelper::error($e->getMessage());
     }
 
 header('Content-Type: application/json; charset=utf-8');
