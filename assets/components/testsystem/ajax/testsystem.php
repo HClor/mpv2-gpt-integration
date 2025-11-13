@@ -1147,30 +1147,20 @@ try {
                 $area['questions_count'] = (int)$stmt->fetchColumn();
             }
             
-            $response = [
-                'success' => true,
-                'data' => $areas
-            ];
+            $response = ResponseHelper::success($areas);
             break;
-        
+
         case 'createKnowledgeArea':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = $modx->user->id;
-            $name = trim($data['name'] ?? '');
-            $description = trim($data['description'] ?? '');
-            $testIds = $data['test_ids'] ?? [];
-            $questionsPerSession = (int)($data['questions_per_session'] ?? 20);
-            
-            if (empty($name)) {
-                throw new Exception('Name is required');
-            }
-            
-            if (!is_array($testIds) || empty($testIds)) {
-                throw new Exception('At least one test must be selected');
-            }
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация входных данных
+            $name = ValidationHelper::requireString($data, 'name', 'Name is required');
+            $description = ValidationHelper::optionalString($data, 'description');
+            $testIds = ValidationHelper::requireArray($data, 'test_ids', 1, 'At least one test must be selected');
+            $questionsPerSession = ValidationHelper::optionalInt($data, 'questions_per_session', 20);
             
             // Валидация: все тесты должны существовать и быть активными
             $placeholders = implode(',', array_fill(0, count($testIds), '?'));
@@ -1214,104 +1204,91 @@ try {
             ]);
             
             $areaId = $modx->lastInsertId();
-            
-            $response = [
-                'success' => true,
-                'message' => 'Knowledge area created',
-                'area_id' => $areaId
-            ];
+
+            $response = ResponseHelper::success(
+                ['area_id' => $areaId],
+                'Knowledge area created'
+            );
             break;
-        
-case 'updateKnowledgeArea':
-    if (!$modx->user->hasSessionContext('web')) {
-        throw new Exception('Login required');
-    }
-    
-    $userId = $modx->user->id;
-    $areaId = (int)($data['area_id'] ?? 0);
-    $name = trim($data['name'] ?? '');
-    $description = trim($data['description'] ?? '');
-    $testIds = $data['test_ids'] ?? [];
-    $questionsPerSession = (int)($data['questions_per_session'] ?? 20);
-    $distributionMode = $data['question_distribution_mode'] ?? 'proportional';
-    $minQuestionsPerTest = (int)($data['min_questions_per_test'] ?? 3);
-    
-    if (!$areaId || empty($name)) {
-        throw new Exception('Invalid data');
-    }
-    
-    if (!is_array($testIds) || empty($testIds)) {
-        throw new Exception('At least one test must be selected');
-    }
-    
-    if (!in_array($distributionMode, ['proportional', 'equal'])) {
-        $distributionMode = 'proportional';
-    }
-    
-    // Проверяем что область принадлежит текущему пользователю
-    $stmt = $modx->prepare("
-        SELECT user_id 
-        FROM modx_test_knowledge_areas 
-        WHERE id = ?
-    ");
-    $stmt->execute([$areaId]);
-    $ownerId = (int)$stmt->fetchColumn();
-    
-    if ($ownerId !== $userId) {
-        throw new Exception('Access denied');
-    }
-    
-    // Валидация тестов
-    $placeholders = implode(',', array_fill(0, count($testIds), '?'));
-    $stmt = $modx->prepare("
-        SELECT COUNT(*) 
-        FROM modx_test_tests 
-        WHERE id IN ($placeholders) AND is_active = 1
-    ");
-    $stmt->execute($testIds);
-    $validCount = (int)$stmt->fetchColumn();
-    
-    if ($validCount !== count($testIds)) {
-        throw new Exception('Some tests are invalid or inactive');
-    }
-    
-    // Обновляем
-    $stmt = $modx->prepare("
-        UPDATE modx_test_knowledge_areas 
-        SET name = ?, description = ?, test_ids = ?, questions_per_session = ?, 
-            question_distribution_mode = ?, min_questions_per_test = ?
-        WHERE id = ? AND user_id = ?
-    ");
-    $stmt->execute([
-        $name,
-        $description,
-        json_encode(array_map('intval', $testIds)),
-        $questionsPerSession,
-        $distributionMode,
-        $minQuestionsPerTest,
-        $areaId,
-        $userId
-    ]);
-    
-    $response = [
-        'success' => true,
-        'message' => 'Knowledge area updated'
-    ];
-    break;
+
+        case 'updateKnowledgeArea':
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация входных данных
+            $areaId = ValidationHelper::requireInt($data, 'area_id', 'Area ID required');
+            $name = ValidationHelper::requireString($data, 'name', 'Name is required');
+            $description = ValidationHelper::optionalString($data, 'description');
+            $testIds = ValidationHelper::requireArray($data, 'test_ids', 1, 'At least one test must be selected');
+            $questionsPerSession = ValidationHelper::optionalInt($data, 'questions_per_session', 20);
+            $distributionMode = ValidationHelper::optionalString($data, 'question_distribution_mode', 'proportional');
+            $minQuestionsPerTest = ValidationHelper::optionalInt($data, 'min_questions_per_test', 3);
+
+            // Валидация режима распределения
+            if (!in_array($distributionMode, ['proportional', 'equal'], true)) {
+                $distributionMode = 'proportional';
+            }
+
+                    // Проверяем что область принадлежит текущему пользователю
+            $stmt = $modx->prepare("
+                SELECT user_id
+                FROM modx_test_knowledge_areas
+                WHERE id = ?
+            ");
+            $stmt->execute([$areaId]);
+            $ownerId = (int)$stmt->fetchColumn();
+
+            if ($ownerId !== $userId) {
+                throw new Exception('Access denied');
+            }
+
+            // Валидация тестов
+            $placeholders = implode(',', array_fill(0, count($testIds), '?'));
+            $stmt = $modx->prepare("
+                SELECT COUNT(*)
+                FROM modx_test_tests
+                WHERE id IN ($placeholders) AND is_active = 1
+            ");
+            $stmt->execute($testIds);
+            $validCount = (int)$stmt->fetchColumn();
+
+            if ($validCount !== count($testIds)) {
+                throw new Exception('Some tests are invalid or inactive');
+            }
+
+            // Обновляем
+            $stmt = $modx->prepare("
+                UPDATE modx_test_knowledge_areas
+                SET name = ?, description = ?, test_ids = ?, questions_per_session = ?,
+                    question_distribution_mode = ?, min_questions_per_test = ?
+                WHERE id = ? AND user_id = ?
+            ");
+            $stmt->execute([
+                $name,
+                $description,
+                json_encode(array_map('intval', $testIds)),
+                $questionsPerSession,
+                $distributionMode,
+                $minQuestionsPerTest,
+                $areaId,
+                $userId
+            ]);
+
+            $response = ResponseHelper::success(null, 'Knowledge area updated');
+            break;
     
     
         case 'deleteKnowledgeArea':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = $modx->user->id;
-            $areaId = (int)($data['area_id'] ?? 0);
-            
-            if (!$areaId) {
-                throw new Exception('Area ID required');
-            }
-            
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация входных данных
+            $areaId = ValidationHelper::requireInt($data, 'area_id', 'Area ID required');
+
             // КРИТИЧНО: Проверяем владельца
             $stmt = $modx->prepare("
                 SELECT user_id 
@@ -1327,29 +1304,23 @@ case 'updateKnowledgeArea':
             
             // Мягкое удаление (is_active = 0)
             $stmt = $modx->prepare("
-                UPDATE modx_test_knowledge_areas 
-                SET is_active = 0 
+                UPDATE modx_test_knowledge_areas
+                SET is_active = 0
                 WHERE id = ? AND user_id = ?
             ");
             $stmt->execute([$areaId, $userId]);
-            
-            $response = [
-                'success' => true,
-                'message' => 'Knowledge area deleted'
-            ];
+
+            $response = ResponseHelper::success(null, 'Knowledge area deleted');
             break;
-        
+
         case 'getKnowledgeAreaDetails':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = $modx->user->id;
-            $areaId = (int)($data['area_id'] ?? 0);
-            
-            if (!$areaId) {
-                throw new Exception('Area ID required');
-            }
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация входных данных
+            $areaId = ValidationHelper::requireInt($data, 'area_id', 'Area ID required');
             
             // КРИТИЧНО: Проверяем владельца
 
