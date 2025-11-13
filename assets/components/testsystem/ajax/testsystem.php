@@ -86,17 +86,89 @@ function checkUserRights($modx) {
     if (!$modx->user->hasSessionContext('web')) {
         return ['canEdit' => false, 'isAdmin' => false, 'isExpert' => false];
     }
-    
+
     $userId = (int)$modx->user->get('id');
     $userGroups = $modx->user->getUserGroupNames();
     $isExpert = in_array('LMS Experts', $userGroups, true);
     $isAdmin = in_array('LMS Admins', $userGroups, true) || $userId === 1;
-    
+
     return [
         'canEdit' => $isExpert || $isAdmin,
         'isAdmin' => $isAdmin,
         'isExpert' => $isExpert
     ];
+}
+
+/**
+ * Проверяет, имеет ли пользователь право редактировать конкретный тест
+ * IDOR Protection: проверяет владение тестом и явные разрешения
+ *
+ * @param modX $modx
+ * @param int $testId ID теста
+ * @return bool
+ */
+function canUserEditTest($modx, $testId) {
+    if (!$modx->user->hasSessionContext('web')) {
+        return false;
+    }
+
+    $userId = (int)$modx->user->get('id');
+    $testId = (int)$testId;
+
+    if ($testId <= 0) {
+        return false;
+    }
+
+    // Суперадмин может всё
+    if ($userId === 1) {
+        return true;
+    }
+
+    // Проверяем роль LMS Admins
+    $userGroups = $modx->user->getUserGroupNames();
+    if (in_array('LMS Admins', $userGroups, true)) {
+        return true;
+    }
+
+    // Получаем информацию о тесте
+    $stmt = $modx->prepare("
+        SELECT created_by, publication_status
+        FROM modx_test_tests
+        WHERE id = ?
+    ");
+
+    if (!$stmt || !$stmt->execute([$testId])) {
+        return false;
+    }
+
+    $test = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$test) {
+        return false;
+    }
+
+    // Владелец теста может редактировать
+    if ((int)$test['created_by'] === $userId) {
+        return true;
+    }
+
+    // Для приватных тестов проверяем явные разрешения
+    if ($test['publication_status'] === 'private') {
+        $stmt = $modx->prepare("
+            SELECT can_edit
+            FROM modx_test_permissions
+            WHERE test_id = ? AND user_id = ? AND can_edit = 1
+        ");
+
+        if ($stmt && $stmt->execute([$testId, $userId])) {
+            $permission = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($permission) {
+                return true;
+            }
+        }
+    }
+
+    // В остальных случаях запрещаем
+    return false;
 }
 
 try {
@@ -875,11 +947,16 @@ try {
             
             $stmt->execute([$questionId]);
             $question = $stmt->fetch(PDO::FETCH_ASSOC);
-            
+
             if (!$question) {
                 throw new Exception('Question not found');
             }
-            
+
+            // IDOR Protection: проверяем право редактировать тест, которому принадлежит вопрос
+            if (!canUserEditTest($modx, $question['test_id'])) {
+                throw new Exception('You do not have permission to edit this test');
+            }
+
             $stmt = $modx->prepare("
                 SELECT id, answer_text, is_correct, sort_order
                 FROM modx_test_answers 
@@ -969,11 +1046,27 @@ try {
             
             $questionId = (int)($data['question_id'] ?? 0);
             $sessionId = (int)($data['session_id'] ?? 0);
-            
+
             if (!$questionId) {
                 throw new Exception('Question ID required');
             }
-            
+
+            // IDOR Protection: получаем test_id вопроса и проверяем право на редактирование
+            $stmt = $modx->prepare("SELECT test_id FROM modx_test_questions WHERE id = ?");
+            if (!$stmt || !$stmt->execute([$questionId])) {
+                throw new Exception('Database error');
+            }
+
+            $question = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$question) {
+                throw new Exception('Question not found');
+            }
+
+            // Проверяем право редактировать тест, которому принадлежит вопрос
+            if (!canUserEditTest($modx, $question['test_id'])) {
+                throw new Exception('You do not have permission to delete questions from this test');
+            }
+
             if ($sessionId > 0) {
                 $stmt = $modx->prepare("SELECT question_order FROM modx_test_sessions WHERE id = ?");
                 $stmt->execute([$sessionId]);
