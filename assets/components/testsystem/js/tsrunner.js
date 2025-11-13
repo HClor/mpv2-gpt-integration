@@ -65,6 +65,15 @@
     
     async function apiCall(action, data) {
         try {
+            // CSRF Protection: Получаем токен из meta тега
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+            if (csrfToken) {
+                // Добавляем CSRF токен к данным
+                data = data || {};
+                data.csrf_token = csrfToken;
+            }
+
             const response = await fetch(API_URL, {
                 method: "POST",
                 headers: {
@@ -72,7 +81,7 @@
                 },
                 body: JSON.stringify({ action, data })
             });
-            
+
             const text = await response.text();
             try {
                 return JSON.parse(text);

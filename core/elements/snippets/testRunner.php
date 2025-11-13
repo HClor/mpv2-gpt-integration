@@ -1,8 +1,12 @@
 <?php
 /**
- * TS TEST RUNNER v4.2 - WITH CSV IMPORT BUTTON
+ * TS TEST RUNNER v4.2 - WITH CSV IMPORT BUTTON + CSRF PROTECTION
  * Теперь тест определяется автоматически по resource_id текущей страницы
  */
+
+// Подключаем bootstrap для CSRF защиты
+require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
+
 if (!$modx instanceof modX) {
     return '<div class="alert alert-danger">MODX context required</div>';
 }
@@ -211,17 +215,20 @@ if ($knowledgeAreaId > 0) {
     // Подключение ресурсов
     $assetsUrl = $modx->getOption('assets_url', null, MODX_ASSETS_URL);
     $assetsUrl = rtrim($assetsUrl, '/') . '/';
-    
+
     $cssPath = $assetsUrl . 'components/testsystem/css/tsrunner.css';
     $jsPath = $assetsUrl . 'components/testsystem/js/tsrunner.js';
-    
+
+    // CSRF Protection: Добавляем meta тег с токеном для JavaScript
+    $output .= CsrfProtection::getTokenMeta();
+
     $output .= '<link rel="stylesheet" href="' . htmlspecialchars($cssPath, ENT_QUOTES, 'UTF-8') . '">';
     $output .= '<script src="' . htmlspecialchars($jsPath, ENT_QUOTES, 'UTF-8') . '"></script>';
-    
+
     // Подключение Quill (если нужно для редактирования)
     $output .= '<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">';
     $output .= '<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>';
-    
+
     return $output;
 }
 
@@ -682,6 +689,9 @@ $assetsUrl = rtrim($assetsUrl, '/') . '/';
 
 $cssPath = $assetsUrl . 'components/testsystem/css/tsrunner.css';
 $jsPath = $assetsUrl . 'components/testsystem/js/tsrunner.js';
+
+// CSRF Protection: Добавляем meta тег с токеном для JavaScript
+$output .= CsrfProtection::getTokenMeta();
 
 $output .= '<link rel="stylesheet" href="' . htmlspecialchars($cssPath, ENT_QUOTES, 'UTF-8') . '">';
 $output .= '<script src="' . htmlspecialchars($jsPath, ENT_QUOTES, 'UTF-8') . '"></script>';

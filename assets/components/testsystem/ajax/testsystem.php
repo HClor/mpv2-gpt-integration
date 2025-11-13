@@ -25,7 +25,9 @@ $modx = new modX();
 $modx->initialize('web');
 $modx->getService('error','error.modError');
 
-// ← ДОБАВИТЬ ЭТУ СТРОКУ
+// Подключаем bootstrap для автозагрузки классов безопасности
+require_once dirname(dirname(dirname(dirname(__FILE__)))) . '/core/components/testsystem/bootstrap.php';
+
 $prefix = $modx->getOption('table_prefix', null, 'modx_');
 
 header('Content-Type: application/json; charset=utf-8');
@@ -49,6 +51,36 @@ if (empty($data)) {
 }
 
 $response = ['success' => false, 'message' => 'Unknown action'];
+
+// ============================================
+// CSRF PROTECTION
+// ============================================
+// Список actions, которые НЕ требуют CSRF проверки (только чтение данных)
+$csrfExemptActions = [
+    'getTestInfo',
+    'getQuestion',
+    'getTestSettings',
+    'checkEditRights',
+    'getUserTestHistory',
+    'getDetailedResults',
+    'getKnowledgeAreas',
+    'getTestPermissions',
+    'getAllQuestionsForTest'
+];
+
+// Если это POST запрос и action требует CSRF проверки
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !in_array($action, $csrfExemptActions, true)) {
+    try {
+        // Проверяем CSRF токен
+        CsrfProtection::requireValidToken($data);
+    } catch (Exception $e) {
+        // CSRF токен невалиден
+        die(json_encode([
+            'success' => false,
+            'message' => 'CSRF token validation failed. Please refresh the page and try again.'
+        ]));
+    }
+}
 
 function checkUserRights($modx) {
     if (!$modx->user->hasSessionContext('web')) {
