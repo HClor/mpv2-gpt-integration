@@ -17,7 +17,14 @@ defined('TESTSYSTEM_PATH') or define('TESTSYSTEM_PATH', __DIR__);
 spl_autoload_register(function ($className) {
     // Маппинг классов на файлы
     $classMap = [
+        // Security
         'CsrfProtection' => TESTSYSTEM_PATH . '/security/CsrfProtection.php',
+
+        // Helpers
+        'ResponseHelper' => TESTSYSTEM_PATH . '/helpers/ResponseHelper.php',
+        'ValidationHelper' => TESTSYSTEM_PATH . '/helpers/ValidationHelper.php',
+        'PermissionHelper' => TESTSYSTEM_PATH . '/helpers/PermissionHelper.php',
+
         // Здесь можно добавить другие классы по мере создания
         // 'AccessService' => TESTSYSTEM_PATH . '/services/AccessService.php',
         // 'TestService' => TESTSYSTEM_PATH . '/services/TestService.php',

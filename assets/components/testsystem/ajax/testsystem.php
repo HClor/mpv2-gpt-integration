@@ -82,93 +82,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !in_array($action, $csrfExemptActio
     }
 }
 
+/**
+ * Legacy функция для обратной совместимости
+ * @deprecated Используйте PermissionHelper::getUserRights() напрямую
+ */
 function checkUserRights($modx) {
-    if (!$modx->user->hasSessionContext('web')) {
-        return ['canEdit' => false, 'isAdmin' => false, 'isExpert' => false];
-    }
-
-    $userId = (int)$modx->user->get('id');
-    $userGroups = $modx->user->getUserGroupNames();
-    $isExpert = in_array('LMS Experts', $userGroups, true);
-    $isAdmin = in_array('LMS Admins', $userGroups, true) || $userId === 1;
-
-    return [
-        'canEdit' => $isExpert || $isAdmin,
-        'isAdmin' => $isAdmin,
-        'isExpert' => $isExpert
-    ];
+    return PermissionHelper::getUserRights($modx);
 }
 
 /**
- * Проверяет, имеет ли пользователь право редактировать конкретный тест
+ * Legacy функция для обратной совместимости
  * IDOR Protection: проверяет владение тестом и явные разрешения
- *
- * @param modX $modx
- * @param int $testId ID теста
- * @return bool
+ * @deprecated Используйте PermissionHelper::canEditTest() напрямую
  */
 function canUserEditTest($modx, $testId) {
-    if (!$modx->user->hasSessionContext('web')) {
-        return false;
-    }
-
-    $userId = (int)$modx->user->get('id');
-    $testId = (int)$testId;
-
-    if ($testId <= 0) {
-        return false;
-    }
-
-    // Суперадмин может всё
-    if ($userId === 1) {
-        return true;
-    }
-
-    // Проверяем роль LMS Admins
-    $userGroups = $modx->user->getUserGroupNames();
-    if (in_array('LMS Admins', $userGroups, true)) {
-        return true;
-    }
-
-    // Получаем информацию о тесте
-    $stmt = $modx->prepare("
-        SELECT created_by, publication_status
-        FROM modx_test_tests
-        WHERE id = ?
-    ");
-
-    if (!$stmt || !$stmt->execute([$testId])) {
-        return false;
-    }
-
-    $test = $stmt->fetch(PDO::FETCH_ASSOC);
-    if (!$test) {
-        return false;
-    }
-
-    // Владелец теста может редактировать
-    if ((int)$test['created_by'] === $userId) {
-        return true;
-    }
-
-    // Для приватных тестов проверяем явные разрешения
-    if ($test['publication_status'] === 'private') {
-        $stmt = $modx->prepare("
-            SELECT can_edit
-            FROM modx_test_permissions
-            WHERE test_id = ? AND user_id = ? AND can_edit = 1
-        ");
-
-        if ($stmt && $stmt->execute([$testId, $userId])) {
-            $permission = $stmt->fetch(PDO::FETCH_ASSOC);
-            if ($permission) {
-                return true;
-            }
-        }
-    }
-
-    // В остальных случаях запрещаем
-    return false;
+    return PermissionHelper::canEditTest($modx, $testId);
 }
 
 try {
@@ -261,42 +189,25 @@ try {
 
 
         case 'createQuestion':
-            $rights = checkUserRights($modx);
-            
-            if (!$rights['canEdit']) {
-                throw new Exception('No permission to create questions');
-            }
-            
-            $testId = (int)($data['test_id'] ?? 0);
-            $questionText = trim($data['question_text'] ?? '');
-            $questionType = trim($data['question_type'] ?? 'single');
-            $explanation = trim($data['explanation'] ?? '');
-            $questionImage = trim($data['question_image'] ?? '');
-            $explanationImage = trim($data['explanation_image'] ?? '');
-            $published = (int)($data['published'] ?? 1);
-            $isLearning = (int)($data['is_learning'] ?? 0);
-            $answers = $data['answers'] ?? [];
-            
-            if (!$testId || empty($questionText)) {
-                throw new Exception('Test ID and question text are required');
-            }
-            
-            if (count($answers) < 2) {
-                throw new Exception('At least 2 answers required');
-            }
-            
-            // Проверяем наличие правильного ответа
-            $hasCorrect = false;
-            foreach ($answers as $answer) {
-                if (isset($answer['is_correct']) && $answer['is_correct'] == 1) {
-                    $hasCorrect = true;
-                    break;
-                }
-            }
-            
-            if (!$hasCorrect) {
-                throw new Exception('At least one correct answer is required');
-            }
+            // Проверка прав доступа
+            PermissionHelper::requireEditRights($modx, 'No permission to create questions');
+
+            // Валидация входных данных
+            $testId = ValidationHelper::requireInt($data, 'test_id', 'Test ID is required');
+            $questionText = ValidationHelper::requireString($data, 'question_text', 'Question text is required');
+            $questionType = ValidationHelper::optionalString($data, 'question_type', 'single');
+            $explanation = ValidationHelper::optionalString($data, 'explanation');
+            $questionImage = ValidationHelper::optionalString($data, 'question_image');
+            $explanationImage = ValidationHelper::optionalString($data, 'explanation_image');
+            $published = ValidationHelper::optionalInt($data, 'published', 1);
+            $isLearning = ValidationHelper::optionalInt($data, 'is_learning', 0);
+            $answers = ValidationHelper::requireArray($data, 'answers', 2, 'At least 2 answers required');
+
+            // Валидация типа вопроса
+            $questionType = ValidationHelper::validateQuestionType($questionType);
+
+            // Проверка наличия правильного ответа
+            ValidationHelper::requireCorrectAnswer($answers);
             
             try {
                 // Получаем максимальный sort_order
@@ -382,12 +293,11 @@ try {
                     $modx->prepare("DELETE FROM modx_test_questions WHERE id = ?")->execute([$questionId]);
                     throw new Exception('Failed to add minimum 2 answers');
                 }
-                
-                $response = [
-                    'success' => true,
-                    'message' => 'Question created successfully',
-                    'question_id' => $questionId
-                ];
+
+                $response = ResponseHelper::success(
+                    ['question_id' => $questionId],
+                    'Question created successfully'
+                );
                 
             } catch (PDOException $e) {
                 throw new Exception('Database error: ' . $e->getMessage());
