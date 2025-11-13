@@ -1,5 +1,8 @@
 <?php
-/* TS AUTH HANDLER v2.2 FINAL */
+/* TS AUTH HANDLER v2.2 FINAL + CSRF PROTECTION */
+
+// Подключаем bootstrap для CSRF защиты
+require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
@@ -7,6 +10,10 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // ВЫХОД
 if (isset($_POST["login_logout"])) {
+    // CSRF Protection для выхода
+    if (!CsrfProtection::validateRequest($_POST)) {
+        die('CSRF token validation failed');
+    }
     $modx->user->endSession();
     $modx->sendRedirect($modx->makeUrl($modx->getOption("site_start")));
     return;
@@ -20,6 +27,7 @@ if ($modx->user->hasSessionContext("web") && $modx->user->id > 0) {
     $output .= "<h4>Вы авторизованы: " . htmlspecialchars($modx->user->username) . "</h4>";
     $output .= "<p><a href=\"" . $testsUrl . "\" class=\"btn btn-primary\">Перейти к тестам</a></p>";
     $output .= "<form method=\"post\">";
+    $output .= CsrfProtection::getTokenField(); // CSRF Protection
     $output .= "<input type=\"hidden\" name=\"login_logout\" value=\"1\">";
     $output .= "<button type=\"submit\" class=\"btn btn-danger\">Выйти</button>";
     $output .= "</form>";
@@ -33,12 +41,16 @@ $mode = $_POST["mode"] ?? "login";
 
 // ВХОД
 if ($_POST && $mode === "login") {
-    $username = trim($_POST["username"] ?? "");
-    $password = trim($_POST["password"] ?? "");
-    $rememberme = !empty($_POST["rememberme"]);
-    
-    if (empty($username)) $errors[] = "Введите логин";
-    if (empty($password)) $errors[] = "Введите пароль";
+    // CSRF Protection
+    if (!CsrfProtection::validateRequest($_POST)) {
+        $errors[] = "Ошибка безопасности. Обновите страницу и попробуйте снова.";
+    } else {
+        $username = trim($_POST["username"] ?? "");
+        $password = trim($_POST["password"] ?? "");
+        $rememberme = !empty($_POST["rememberme"]);
+
+        if (empty($username)) $errors[] = "Введите логин";
+        if (empty($password)) $errors[] = "Введите пароль";
     
     if (empty($errors)) {
         $response = $modx->runProcessor("security/login", [
@@ -56,21 +68,26 @@ if ($_POST && $mode === "login") {
             exit;
         }
     }
+    } // Закрываем else блок CSRF проверки
 }
 
 // РЕГИСТРАЦИЯ
 if ($_POST && $mode === "register") {
-    $username = trim($_POST["username"] ?? "");
-    $email = trim($_POST["email"] ?? "");
-    $password = trim($_POST["password"] ?? "");
-    $passwordConfirm = trim($_POST["password_confirm"] ?? "");
-    
-    if (empty($username)) $errors[] = "Введите логин";
-    if (empty($email)) $errors[] = "Введите email";
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = "Неверный формат email";
-    if (empty($password)) $errors[] = "Введите пароль";
-    if (strlen($password) < 6) $errors[] = "Пароль минимум 6 символов";
-    if ($password !== $passwordConfirm) $errors[] = "Пароли не совпадают";
+    // CSRF Protection
+    if (!CsrfProtection::validateRequest($_POST)) {
+        $errors[] = "Ошибка безопасности. Обновите страницу и попробуйте снова.";
+    } else {
+        $username = trim($_POST["username"] ?? "");
+        $email = trim($_POST["email"] ?? "");
+        $password = trim($_POST["password"] ?? "");
+        $passwordConfirm = trim($_POST["password_confirm"] ?? "");
+
+        if (empty($username)) $errors[] = "Введите логин";
+        if (empty($email)) $errors[] = "Введите email";
+        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = "Неверный формат email";
+        if (empty($password)) $errors[] = "Введите пароль";
+        if (strlen($password) < 6) $errors[] = "Пароль минимум 6 символов";
+        if ($password !== $passwordConfirm) $errors[] = "Пароли не совпадают";
     
     if (empty($errors)) {
         if ($modx->getObject("modUser", ["username" => $username])) {
@@ -149,6 +166,7 @@ if ($_POST && $mode === "register") {
             }
         }
     }
+    } // Закрываем else блок CSRF проверки
 }
 
 $output = "";
@@ -176,6 +194,7 @@ $output .= "<div class=\"tab-content\">";
 
 $output .= "<div class=\"tab-pane fade " . ($activeTab === "login" ? "show active" : "") . "\" id=\"login-tab\">";
 $output .= "<form method=\"POST\">";
+$output .= CsrfProtection::getTokenField(); // CSRF Protection
 $output .= "<input type=\"hidden\" name=\"mode\" value=\"login\">";
 
 $output .= "<div class=\"mb-3\">";
@@ -199,6 +218,7 @@ $output .= "</div>";
 
 $output .= "<div class=\"tab-pane fade " . ($activeTab === "register" ? "show active" : "") . "\" id=\"register-tab\">";
 $output .= "<form method=\"POST\">";
+$output .= CsrfProtection::getTokenField(); // CSRF Protection
 $output .= "<input type=\"hidden\" name=\"mode\" value=\"register\">";
 
 $output .= "<div class=\"mb-3\">";

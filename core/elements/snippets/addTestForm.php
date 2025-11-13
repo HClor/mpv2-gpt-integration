@@ -1,6 +1,9 @@
 <?php
 /* TS ADD TEST FORM v4.9 - FIXED FOR RESOURCE HIERARCHY + EXCEL SUPPORT */
 
+// Подключаем bootstrap для CSRF защиты
+require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
+
 // ============================================
 // НАСТРОЙКИ (ID ресурсов)
 // ============================================
@@ -56,6 +59,10 @@ $errors = [];
 // ОБРАБОТКА СОЗДАНИЯ ТЕСТА
 // ============================================
 if ($_POST && isset($_POST["add_test"])) {
+    // CSRF Protection
+    if (!CsrfProtection::validateRequest($_POST)) {
+        $errors[] = "Ошибка безопасности. Обновите страницу и попробуйте снова.";
+    } else {
     $parentId = (int)($_POST["category_id"] ?? 0);
     $title = trim($_POST["title"] ?? "");
     $description = trim($_POST["description"] ?? "");
@@ -220,6 +227,7 @@ if ($_POST && isset($_POST["add_test"])) {
             }
         }
     }
+    } // Закрываем else блок CSRF проверки
 }
 
 // ============================================
@@ -256,6 +264,7 @@ $output .= "<h4 class=\"mb-0\">Создать новый тест</h4>";
 $output .= "</div>";
 $output .= "<div class=\"card-body\">";
 $output .= "<form method=\"POST\" enctype=\"multipart/form-data\">";
+$output .= CsrfProtection::getTokenField(); // CSRF Protection
 $output .= "<input type=\"hidden\" name=\"add_test\" value=\"1\">";
 
 $output .= "<div class=\"mb-3\">";

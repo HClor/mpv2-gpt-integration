@@ -1,6 +1,9 @@
 <?php
 /* TS CSV/EXCEL IMPORT v5.2 - REFACTORED */
 
+// Подключаем bootstrap для CSRF защиты
+require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
+
 if (!$modx->user->hasSessionContext("web")) {
     $authUrl = $modx->makeUrl($modx->getOption("lms.auth_page", null, 0));
     return "<div class=\"alert alert-warning\"><a href=\"{$authUrl}\">Войдите</a> для импорта вопросов</div>";
@@ -163,6 +166,10 @@ if ($preloadedFile) {
 
 // Обработка загрузки через POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
+    // CSRF Protection
+    if (!CsrfProtection::validateRequest($_POST)) {
+        $errors[] = "Ошибка безопасности. Обновите страницу и попробуйте снова.";
+    } else {
     $file = $_FILES['csv_file'];
     
     if ($file['error'] !== UPLOAD_ERR_OK) {
@@ -184,6 +191,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['csv_file'])) {
             $importedCount = $result['imported'];
         }
     }
+    } // Закрываем else блок CSRF проверки
 }
 
 // Обработка автозагрузки
@@ -434,6 +442,7 @@ $output .= '</div>';
 $output .= '<div class="card-body">';
 
 $output .= '<form method="POST" enctype="multipart/form-data">';
+$output .= CsrfProtection::getTokenField(); // CSRF Protection
 $output .= '<input type="hidden" name="test_id" value="' . $testId . '">';
 
 $output .= '<div class="mb-3">';
