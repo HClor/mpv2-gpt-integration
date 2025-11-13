@@ -2278,42 +2278,10 @@ if (empty($allQuestionIds)) {
             
             $stmt->execute([$userId]);
             $tests = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // ИСПРАВЛЕНО: Добавляем URL для каждого теста
-            $siteUrl = rtrim($modx->getOption('site_url'), '/');
-            $testsParentId = (int)$modx->getOption('lms.user_tests_folder', null, 129);
-            
-            // Получаем URI родительской папки один раз
-            $parentUri = '';
-            if ($testsParentId > 0) {
-                $parent = $modx->getObject('modResource', $testsParentId);
-                if ($parent) {
-                    $parentUri = trim($parent->get('uri'), '/');
-                }
-            }
-            
-            foreach ($tests as &$test) {
-                $resourceId = (int)($test['resource_id'] ?? 0);
-                
-                if ($resourceId > 0) {
-                    $resource = $modx->getObject('modResource', $resourceId);
-                    
-                    if ($resource) {
-                        $alias = $resource->get('alias');
-                        
-                        if (!empty($parentUri)) {
-                            $test['test_url'] = $siteUrl . '/' . $parentUri . '/' . $alias;
-                        } else {
-                            $test['test_url'] = $siteUrl . '/' . $alias;
-                        }
-                    } else {
-                        $test['test_url'] = '#';
-                    }
-                } else {
-                    $test['test_url'] = '#';
-                }
-            }
-            
+
+            // Добавляем URL для каждого теста
+            UrlHelper::addUrlsToTests($modx, $tests);
+
             $response = ResponseHelper::success($tests);
             break;
 
@@ -2339,41 +2307,9 @@ if (empty($allQuestionIds)) {
             
             $stmt->execute([$userId]);
             $tests = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // ИСПРАВЛЕНО: Добавляем URL для каждого теста
-            $siteUrl = rtrim($modx->getOption('site_url'), '/');
-            $testsParentId = (int)$modx->getOption('lms.user_tests_folder', null, 129);
-            
-            // Получаем URI родительской папки один раз
-            $parentUri = '';
-            if ($testsParentId > 0) {
-                $parent = $modx->getObject('modResource', $testsParentId);
-                if ($parent) {
-                    $parentUri = trim($parent->get('uri'), '/');
-                }
-            }
-            
-            foreach ($tests as &$test) {
-                $resourceId = (int)($test['resource_id'] ?? 0);
-                
-                if ($resourceId > 0) {
-                    $resource = $modx->getObject('modResource', $resourceId);
-                    
-                    if ($resource) {
-                        $alias = $resource->get('alias');
-                        
-                        if (!empty($parentUri)) {
-                            $test['test_url'] = $siteUrl . '/' . $parentUri . '/' . $alias;
-                        } else {
-                            $test['test_url'] = $siteUrl . '/' . $alias;
-                        }
-                    } else {
-                        $test['test_url'] = '#';
-                    }
-                } else {
-                    $test['test_url'] = '#';
-                }
-            }
+
+            // Добавляем URL для каждого теста
+            UrlHelper::addUrlsToTests($modx, $tests);
 
             $response = ResponseHelper::success($tests);
             break;
@@ -2394,16 +2330,14 @@ if (empty($allQuestionIds)) {
             }
             
             if ($testId > 0) {
-                $stmt = $modx->prepare("SELECT created_by FROM modx_test_tests WHERE id = ?");
-                $stmt->execute([$testId]);
-                $test = $stmt->fetch(PDO::FETCH_ASSOC);
-                
-                if (!$test) {
+                $testOwnerId = TestRepository::getTestOwner($modx, $testId);
+
+                if ($testOwnerId === false) {
                     throw new Exception('Test not found');
                 }
-                
-                $canSearch = $rights['canEdit'] || ((int)$test['created_by'] === $currentUserId);
-                
+
+                $canSearch = $rights['canEdit'] || ($testOwnerId === $currentUserId);
+
                 if (!$canSearch) {
                     throw new Exception('Permission denied');
                 }
@@ -2512,17 +2446,15 @@ if (empty($allQuestionIds)) {
             // Валидация входных данных
             $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
             $targetUserId = ValidationHelper::requireInt($data, 'user_id', 'User ID required');
-            
-            $stmt = $modx->prepare("SELECT created_by FROM modx_test_tests WHERE id = ?");
-            $stmt->execute([$testId]);
-            $test = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if (!$test) {
+
+            $testOwnerId = TestRepository::getTestOwner($modx, $testId);
+
+            if ($testOwnerId === false) {
                 throw new Exception('Test not found');
             }
-            
-            $canRevoke = $rights['canEdit'] || ((int)$test['created_by'] === $currentUserId);
-            
+
+            $canRevoke = $rights['canEdit'] || ($testOwnerId === $currentUserId);
+
             if (!$canRevoke) {
                 throw new Exception('Permission denied');
             }
@@ -2542,17 +2474,15 @@ if (empty($allQuestionIds)) {
 
             // Валидация входных данных
             $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
-            
-            $stmt = $modx->prepare("SELECT created_by FROM modx_test_tests WHERE id = ?");
-            $stmt->execute([$testId]);
-            $test = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if (!$test) {
+
+            $testOwnerId = TestRepository::getTestOwner($modx, $testId);
+
+            if ($testOwnerId === false) {
                 throw new Exception('Test not found');
             }
-            
-            $canView = $rights['canEdit'] || ((int)$test['created_by'] === $currentUserId);
-            
+
+            $canView = $rights['canEdit'] || ($testOwnerId === $currentUserId);
+
             if (!$canView) {
                 throw new Exception('Permission denied');
             }
@@ -2690,62 +2620,24 @@ if (empty($allQuestionIds)) {
 
             // Валидация входных данных
             $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Не указан ID теста');
-            
-            // Проверяем владельца теста
-            $stmt = $modx->prepare("SELECT created_by, resource_id FROM {$prefix}test_tests WHERE id = ?");
-            $stmt->execute([$testId]);
-            $test = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if (!$test) {
-                throw new Exception('Тест не найден');
-            }
-            
-            if ((int)$test['created_by'] !== $userId) {
-                throw new Exception('У вас нет прав на удаление этого теста');
-            }
-            
-            try {
-                // 1. Удаляем ответы на вопросы
-                $modx->exec("
-                    DELETE ua FROM {$prefix}test_user_answers ua
-                    INNER JOIN {$prefix}test_questions q ON q.id = ua.question_id
-                    WHERE q.test_id = {$testId}
-                ");
-                
-                // 2. Удаляем варианты ответов
-                $modx->exec("
-                    DELETE a FROM {$prefix}test_answers a
-                    INNER JOIN {$prefix}test_questions q ON q.id = a.question_id
-                    WHERE q.test_id = {$testId}
-                ");
-                
-                // 3. Удаляем вопросы
-                $modx->exec("DELETE FROM {$prefix}test_questions WHERE test_id = {$testId}");
-                
-                // 4. Удаляем разрешения
-                $modx->exec("DELETE FROM {$prefix}test_permissions WHERE test_id = {$testId}");
-                
-                // 5. Удаляем сессии
-                $modx->exec("DELETE FROM {$prefix}test_sessions WHERE test_id = {$testId}");
-                
-                // 6. Удаляем избранное
-                $modx->exec("DELETE FROM {$prefix}test_favorites WHERE test_id = {$testId}");
-                
-                // 7. Удаляем страницу MODX
-                if (!empty($test['resource_id'])) {
-                    $resourceId = (int)$test['resource_id'];
-                    $modx->exec("DELETE FROM {$prefix}site_content WHERE id = {$resourceId}");
-                }
-                
-                // 8. Удаляем сам тест
-                $modx->exec("DELETE FROM {$prefix}test_tests WHERE id = {$testId}");
 
-                $response = ResponseHelper::success(null, 'Тест успешно удален');
-                
-            } catch (Exception $e) {
-                $modx->log(modX::LOG_LEVEL_ERROR, 'Ошибка при удалении теста: ' . $e->getMessage());
+            // Проверяем права владельца и получаем данные теста
+            $test = TestRepository::requireTestOwner($modx, $testId, $userId, 'У вас нет прав на удаление этого теста');
+
+            // Удаляем тест и все связанные данные
+            $success = TestRepository::deleteTest($modx, $testId);
+
+            if (!$success) {
                 throw new Exception('Произошла ошибка при удалении теста');
             }
+
+            // Удаляем страницу MODX если она существует
+            if (!empty($test['resource_id'])) {
+                $resourceId = (int)$test['resource_id'];
+                $modx->exec("DELETE FROM {$prefix}site_content WHERE id = {$resourceId}");
+            }
+
+            $response = ResponseHelper::success(null, 'Тест успешно удален');
             break;
 
         case 'updateTest':
@@ -2765,19 +2657,9 @@ if (empty($allQuestionIds)) {
             if (!in_array($publicationStatus, $allowedStatuses, true)) {
                 $publicationStatus = 'private';
             }
-            
-            // Проверяем владельца теста
-            $stmt = $modx->prepare("SELECT created_by FROM {$prefix}test_tests WHERE id = ?");
-            $stmt->execute([$testId]);
-            $test = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if (!$test) {
-                throw new Exception('Test not found');
-            }
-            
-            if ((int)$test['created_by'] !== $userId) {
-                throw new Exception('Access denied: not test owner');
-            }
+
+            // Проверяем права владельца
+            $test = TestRepository::requireTestOwner($modx, $testId, $userId, 'Access denied: not test owner');
             
             // Обновляем тест
             $stmt = $modx->prepare("
@@ -2789,14 +2671,10 @@ if (empty($allQuestionIds)) {
             if (!$stmt || !$stmt->execute([$title, $description, $publicationStatus, $testId])) {
                 throw new Exception('Failed to update test');
             }
-            
+
             // Обновляем pagetitle страницы если она есть
-            $stmt = $modx->prepare("SELECT resource_id FROM {$prefix}test_tests WHERE id = ?");
-            $stmt->execute([$testId]);
-            $testData = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if ($testData && $testData['resource_id']) {
-                $resourceId = (int)$testData['resource_id'];
+            if (!empty($test['resource_id'])) {
+                $resourceId = (int)$test['resource_id'];
                 $stmt = $modx->prepare("UPDATE {$prefix}site_content SET pagetitle = ? WHERE id = ?");
                 $stmt->execute([$title, $resourceId]);
             }

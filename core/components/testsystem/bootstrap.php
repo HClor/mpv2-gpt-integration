@@ -24,6 +24,10 @@ spl_autoload_register(function ($className) {
         'ResponseHelper' => TESTSYSTEM_PATH . '/helpers/ResponseHelper.php',
         'ValidationHelper' => TESTSYSTEM_PATH . '/helpers/ValidationHelper.php',
         'PermissionHelper' => TESTSYSTEM_PATH . '/helpers/PermissionHelper.php',
+        'UrlHelper' => TESTSYSTEM_PATH . '/helpers/UrlHelper.php',
+
+        // Repositories
+        'TestRepository' => TESTSYSTEM_PATH . '/repositories/TestRepository.php',
 
         // Здесь можно добавить другие классы по мере создания
         // 'AccessService' => TESTSYSTEM_PATH . '/services/AccessService.php',
