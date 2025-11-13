@@ -1357,20 +1357,16 @@ try {
             } else {
                 $area['tests'] = [];
             }
-            
-            $response = [
-                'success' => true,
-                'data' => $area
-            ];
+
+            $response = ResponseHelper::success($area);
             break;
-        
+
 
         case 'getAvailableTestsTree':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = (int)$modx->user->get('id');
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
             
             // Получаем тесты с учетом publication_status
             $stmt = $modx->prepare("
@@ -1462,22 +1458,18 @@ try {
                 return 0;
             });
             
-            $response = [
-                'success' => true,
-                'data' => array_values($tree)
-            ];
+            $response = ResponseHelper::success(array_values($tree));
             break;
 
 
         case 'startKnowledgeAreaSession':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = (int)$modx->user->get('id');
-            $areaId = (int)($data['area_id'] ?? 0);
-            
-            if (!$areaId) {
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+            $areaId = ValidationHelper::requireInt($data, 'area_id', 'Area ID required');
+
+            if (false) {
                 throw new Exception('Area ID required');
             }
             
