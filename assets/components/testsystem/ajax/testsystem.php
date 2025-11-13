@@ -309,19 +309,15 @@ try {
 
 
         case 'startSession':
-            $testId = (int)($data['test_id'] ?? 0);
-            $mode = $data['mode'] ?? 'training';
-            $requestedCount = isset($data['questions_count']) ? (int)$data['questions_count'] : null;
-            
-            if (!$testId) {
-                throw new Exception('Test ID required');
-            }
-            
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Please login first');
-            }
-            
-            $userId = $modx->user->id;
+            // Валидация входных данных
+            $testId = ValidationHelper::requireInt($data, 'test_id', 'Test ID required');
+            $mode = ValidationHelper::optionalString($data, 'mode', 'training');
+            $requestedCount = isset($data['questions_count']) ? ValidationHelper::requireInt($data, 'questions_count', null, false, 1) : null;
+
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Please login first');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
             
     
             // ДОБАВЬ ЭТО: Очистка старых сессий всех пользователей (не только текущего)
@@ -380,36 +376,30 @@ try {
             ");
             $stmt->execute([$testId, $userId, $mode, json_encode($questionIds)]);
             $sessionId = $modx->lastInsertId();
-            
-            $response = [
-                'success' => true,
-                'data' => [
-                    'session_id' => $sessionId,
-                    'mode' => $mode,
-                    'total_questions' => count($questionIds)
-                ]
-            ];
+
+            $response = ResponseHelper::success([
+                'session_id' => $sessionId,
+                'mode' => $mode,
+                'total_questions' => count($questionIds)
+            ]);
             break;
 
         case 'cleanupOldSessions':
             // Удаляем сессии старше 24 часов
             $modx->exec("
-                UPDATE {$prefix}test_sessions 
-                SET status = 'expired' 
-                WHERE status = 'active' 
+                UPDATE {$prefix}test_sessions
+                SET status = 'expired'
+                WHERE status = 'active'
                 AND started_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)
             ");
-            
-            $response = ['success' => true];
+
+            $response = ResponseHelper::success();
             break;
         
 
         case 'getNextQuestion':
-            $sessionId = (int)($data['session_id'] ?? 0);
-            
-            if (!$sessionId) {
-                throw new Exception('Session ID required');
-            }
+            // Валидация входных данных
+            $sessionId = ValidationHelper::requireInt($data, 'session_id', 'Session ID required');
             
             // ИСПРАВЛЕНИЕ: Добавляем поддержку областей знаний (test_id = -1)
             $stmt = $modx->prepare("
@@ -445,10 +435,7 @@ try {
             }
             
             if (!$nextQuestionId) {
-                $response = [
-                    'success' => true,
-                    'data' => ['finished' => true]
-                ];
+                $response = ResponseHelper::success(['finished' => true]);
                 break;
             }
             
@@ -493,29 +480,20 @@ try {
             $answers = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             // ИСПРАВЛЕНИЕ: правильная структура ответа
-            $response = [
-                'success' => true,
-                'data' => [
-                    'question' => $question,
-                    'answers' => $answers,
-                    'current' => count($answeredIds) + 1,
-                    'total' => count($questionOrder)
-                ]
-            ];
+            $response = ResponseHelper::success([
+                'question' => $question,
+                'answers' => $answers,
+                'current' => count($answeredIds) + 1,
+                'total' => count($questionOrder)
+            ]);
             break;
         
         case 'togglePublished':
-            $rights = checkUserRights($modx);
-            
-            if (!$rights['canEdit']) {
-                throw new Exception('No permission');
-            }
-            
-            $questionId = (int)($data['question_id'] ?? 0);
-            
-            if (!$questionId) {
-                throw new Exception('Question ID required');
-            }
+            // Проверка прав доступа
+            PermissionHelper::requireEditRights($modx, 'No permission');
+
+            // Валидация входных данных
+            $questionId = ValidationHelper::requireQuestionId($data['question_id'] ?? 0, 'Question ID required');
             
             // Получаем текущий статус
             $stmt = $modx->prepare("SELECT published FROM modx_test_questions WHERE id = ?");
@@ -526,25 +504,16 @@ try {
             $newStatus = $current ? 0 : 1;
             $stmt = $modx->prepare("UPDATE modx_test_questions SET published = ? WHERE id = ?");
             $stmt->execute([$newStatus, $questionId]);
-            
-            $response = [
-                'success' => true,
-                'published' => $newStatus
-            ];
-            break;        
+
+            $response = ResponseHelper::success(['published' => $newStatus]);
+            break;
 
         case 'toggleLearning':
-            $rights = checkUserRights($modx);
-            
-            if (!$rights['canEdit']) {
-                throw new Exception('No permission');
-            }
-            
-            $questionId = (int)($data['question_id'] ?? 0);
-            
-            if (!$questionId) {
-                throw new Exception('Question ID required');
-            }
+            // Проверка прав доступа
+            PermissionHelper::requireEditRights($modx, 'No permission');
+
+            // Валидация входных данных
+            $questionId = ValidationHelper::requireQuestionId($data['question_id'] ?? 0, 'Question ID required');
             
             // Получаем текущий статус
             $stmt = $modx->prepare("SELECT is_learning FROM modx_test_questions WHERE id = ?");
@@ -555,11 +524,8 @@ try {
             $newStatus = $current ? 0 : 1;
             $stmt = $modx->prepare("UPDATE modx_test_questions SET is_learning = ? WHERE id = ?");
             $stmt->execute([$newStatus, $questionId]);
-            
-            $response = [
-                'success' => true,
-                'is_learning' => $newStatus
-            ];
+
+            $response = ResponseHelper::success(['is_learning' => $newStatus]);
             break;
         
         
