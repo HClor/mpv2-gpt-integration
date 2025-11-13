@@ -96,10 +96,11 @@
             }
         } catch (error) {
             console.error('Load areas error:', error);
+            // XSS Protection: экранируем сообщение об ошибке
             document.getElementById('areas-list-container').innerHTML = `
                 <div class="col-12">
                     <div class="alert alert-danger">
-                        Ошибка загрузки областей знаний: ${error.message}
+                        Ошибка загрузки областей знаний: ${escapeHtml(error.message)}
                     </div>
                 </div>
             `;

@@ -67,8 +67,9 @@ async function loadSharedTests() {
             renderSharedTests(result.data);
         } else {
             console.error('Error loading shared tests:', result.message);
-            document.getElementById('shared').innerHTML = 
-                '<div class="alert alert-danger">Ошибка загрузки: ' + result.message + '</div>';
+            // XSS Protection: экранируем сообщение об ошибке
+            document.getElementById('shared').innerHTML =
+                '<div class="alert alert-danger">Ошибка загрузки: ' + escapeHtml(result.message) + '</div>';
         }
     } catch (error) {
         console.error('Error loading shared tests:', error);
@@ -626,9 +627,10 @@ function renderSearchResults(users, testId) {
     
     users.forEach(user => {
         const userDisplay = user.fullname || user.username;
-        const email = user.email ? `(${user.email})` : '';
+        // XSS Protection: экранируем email
+        const email = user.email ? `(${escapeHtml(user.email)})` : '';
         const hasAccess = user.has_access;
-        
+
         if (hasAccess) {
             html += `
                 <div class="list-group-item">
@@ -646,11 +648,11 @@ function renderSearchResults(users, testId) {
                     <div class="d-flex justify-content-between align-items-center">
                         <div>${escapeHtml(userDisplay)} ${email}</div>
                         <div class="btn-group">
-                            <button class="btn btn-sm btn-success" 
+                            <button class="btn btn-sm btn-success"
                                     onclick="grantAccessToUser(${testId}, ${user.id}, 0)">
                                 <i class="bi bi-eye"></i> Просмотр
                             </button>
-                            <button class="btn btn-sm btn-warning" 
+                            <button class="btn btn-sm btn-warning"
                                     onclick="grantAccessToUser(${testId}, ${user.id}, 1)">
                                 <i class="bi bi-pencil"></i> Редактирование
                             </button>
