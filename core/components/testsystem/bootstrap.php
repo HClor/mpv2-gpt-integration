@@ -29,16 +29,16 @@ spl_autoload_register(function ($className) {
         // Repositories
         'TestRepository' => TESTSYSTEM_PATH . '/repositories/TestRepository.php',
 
+        // Services
+        'TestService' => TESTSYSTEM_PATH . '/services/TestService.php',
+        'SessionService' => TESTSYSTEM_PATH . '/services/SessionService.php',
+
         // Exceptions
         'TestSystemException' => TESTSYSTEM_PATH . '/exceptions/TestSystemException.php',
         'NotFoundException' => TESTSYSTEM_PATH . '/exceptions/NotFoundException.php',
         'ValidationException' => TESTSYSTEM_PATH . '/exceptions/ValidationException.php',
         'PermissionException' => TESTSYSTEM_PATH . '/exceptions/PermissionException.php',
         'AuthenticationException' => TESTSYSTEM_PATH . '/exceptions/AuthenticationException.php',
-
-        // Здесь можно добавить другие классы по мере создания
-        // 'AccessService' => TESTSYSTEM_PATH . '/services/AccessService.php',
-        // 'TestService' => TESTSYSTEM_PATH . '/services/TestService.php',
     ];
 
     if (isset($classMap[$className])) {
