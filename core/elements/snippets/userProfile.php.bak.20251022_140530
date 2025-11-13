@@ -1,0 +1,358 @@
+<?php
+/* TS USER PROFILE v1.0 */
+
+if (!$modx->user->hasSessionContext("web")) {
+    $authUrl = $modx->makeUrl(24);
+    return "<div class=\"alert alert-warning\">
+        <a href=\"" . $authUrl . "\">Войдите</a>, чтобы просмотреть профиль
+    </div>";
+}
+
+$userId = $modx->user->id;
+$errors = [];
+$success = "";
+
+// ОБНОВЛЕНИЕ ПРОФИЛЯ
+if ($_POST && isset($_POST["update_profile"])) {
+    $fullname = trim($_POST["fullname"] ?? "");
+    $email = trim($_POST["email"] ?? "");
+    
+    if (empty($email)) {
+        $errors[] = "Email обязателен";
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors[] = "Неверный формат email";
+    } else {
+        // Проверяем занят ли email
+        $stmt = $modx->prepare("
+            SELECT COUNT(*) FROM modx_user_attributes 
+            WHERE email = ? AND internalKey != ?
+        ");
+        $stmt->execute([$email, $userId]);
+        
+        if ($stmt->fetchColumn() > 0) {
+            $errors[] = "Email уже используется другим пользователем";
+        } else {
+            $profile = $modx->user->getOne("Profile");
+            if ($profile) {
+                $profile->set("email", $email);
+                $profile->set("fullname", $fullname);
+                $profile->save();
+                
+                $success = "Профиль обновлён";
+            }
+        }
+    }
+}
+
+// СМЕНА ПАРОЛЯ
+if ($_POST && isset($_POST["change_password"])) {
+    $oldPassword = $_POST["old_password"] ?? "";
+    $newPassword = $_POST["new_password"] ?? "";
+    $confirmPassword = $_POST["confirm_password"] ?? "";
+    
+    if (empty($oldPassword) || empty($newPassword)) {
+        $errors[] = "Заполните все поля пароля";
+    } elseif (strlen($newPassword) < 6) {
+        $errors[] = "Новый пароль минимум 6 символов";
+    } elseif ($newPassword !== $confirmPassword) {
+        $errors[] = "Пароли не совпадают";
+    } else {
+        // Проверяем старый пароль
+        $stmt = $modx->prepare("SELECT password FROM modx_users WHERE id = ?");
+        $stmt->execute([$userId]);
+        $currentHash = $stmt->fetchColumn();
+        
+        if (password_verify($oldPassword, $currentHash)) {
+            $newHash = password_hash($newPassword, PASSWORD_DEFAULT);
+            
+            $stmt = $modx->prepare("
+                UPDATE modx_users 
+                SET password = ?, hash_class = \"hashing.modNative\", salt = \"\"
+                WHERE id = ?
+            ");
+            
+            if ($stmt->execute([$newHash, $userId])) {
+                $success = "Пароль изменён";
+            } else {
+                $errors[] = "Ошибка изменения пароля";
+            }
+        } else {
+            $errors[] = "Неверный текущий пароль";
+        }
+    }
+}
+
+// Получаем данные пользователя
+$profile = $modx->user->getOne("Profile");
+
+$username = $modx->user->username;
+$email = $profile ? $profile->email : "";
+$fullname = $profile ? $profile->fullname : "";
+
+// Получаем роли
+$stmt = $modx->prepare("
+    SELECT ug.name 
+    FROM modx_user_groups ug
+    JOIN modx_member_groups mg ON mg.user_group = ug.id
+    WHERE mg.member = ? AND ug.name LIKE ?
+");
+$stmt->execute([$userId, "LMS %"]);
+$groups = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+$roleBadge = "secondary";
+$roleLabel = "Нет роли";
+
+if (in_array("LMS Admins", $groups)) {
+    $roleBadge = "danger";
+    $roleLabel = "Администратор";
+} elseif (in_array("LMS Experts", $groups)) {
+    $roleBadge = "warning";
+    $roleLabel = "Эксперт";
+} elseif (in_array("LMS Students", $groups)) {
+    $roleBadge = "info";
+    $roleLabel = "Студент";
+}
+
+// Статистика
+$stmt = $modx->prepare("
+    SELECT 
+        tests_completed,
+        tests_passed,
+        avg_score_pct
+    FROM modx_test_user_stats
+    WHERE user_id = ?
+");
+$stmt->execute([$userId]);
+$stats = $stmt->fetch(PDO::FETCH_ASSOC);
+
+$testsCompleted = $stats ? $stats["tests_completed"] : 0;
+$testsPassed = $stats ? $stats["tests_passed"] : 0;
+$avgScore = $stats ? round($stats["avg_score_pct"]) : 0;
+
+// История последних 10 попыток
+$stmt = $modx->prepare("
+    SELECT 
+        s.id,
+        s.started_at,
+        s.finished_at,
+        s.score,
+        s.max_score,
+        s.mode,
+        t.title as test_title,
+        ROUND((s.score / s.max_score) * 100) as score_pct
+    FROM modx_test_sessions s
+    JOIN modx_test_tests t ON t.id = s.test_id
+    WHERE s.user_id = ? AND s.status = \"completed\"
+    ORDER BY s.finished_at DESC
+    LIMIT 10
+");
+$stmt->execute([$userId]);
+$history = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// ФОРМИРУЕМ HTML
+$output = "";
+
+if ($success) {
+    $output .= "<div class=\"alert alert-success alert-dismissible fade show\">";
+    $output .= $success;
+    $output .= "<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"alert\"></button>";
+    $output .= "</div>";
+}
+
+if (!empty($errors)) {
+    $output .= "<div class=\"alert alert-danger\"><ul class=\"mb-0\">";
+    foreach ($errors as $error) {
+        $output .= "<li>" . htmlspecialchars($error) . "</li>";
+    }
+    $output .= "</ul></div>";
+}
+
+$output .= "<div class=\"row\">";
+
+// ЛЕВАЯ КОЛОНКА - Инфо и статистика
+$output .= "<div class=\"col-md-4\">";
+
+// Карточка профиля
+$output .= "<div class=\"card mb-4\">";
+$output .= "<div class=\"card-body text-center\">";
+$output .= "<div class=\"mb-3\">";
+$output .= "<div style=\"width: 100px; height: 100px; border-radius: 50%; background: #6c757d; color: white; display: flex; align-items: center; justify-content: center; font-size: 48px; margin: 0 auto;\">";
+$output .= strtoupper(substr($username, 0, 1));
+$output .= "</div>";
+$output .= "</div>";
+$output .= "<h4>" . htmlspecialchars($username) . "</h4>";
+$output .= "<p class=\"text-muted mb-2\">" . htmlspecialchars($email) . "</p>";
+$output .= "<span class=\"badge bg-" . $roleBadge . "\">" . $roleLabel . "</span>";
+$output .= "</div>";
+$output .= "</div>";
+
+// Статистика
+$output .= "<div class=\"card\">";
+$output .= "<div class=\"card-header\">";
+$output .= "<h5 class=\"mb-0\">Статистика</h5>";
+$output .= "</div>";
+$output .= "<div class=\"card-body\">";
+
+$output .= "<div class=\"mb-3\">";
+$output .= "<div class=\"d-flex justify-content-between mb-1\">";
+$output .= "<span class=\"text-muted\">Пройдено тестов</span>";
+$output .= "<strong>" . $testsCompleted . "</strong>";
+$output .= "</div>";
+$output .= "</div>";
+
+$output .= "<div class=\"mb-3\">";
+$output .= "<div class=\"d-flex justify-content-between mb-1\">";
+$output .= "<span class=\"text-muted\">Сдано успешно</span>";
+$output .= "<strong class=\"text-success\">" . $testsPassed . "</strong>";
+$output .= "</div>";
+$output .= "</div>";
+
+$output .= "<div class=\"mb-3\">";
+$output .= "<div class=\"d-flex justify-content-between mb-1\">";
+$output .= "<span class=\"text-muted\">Средний балл</span>";
+$output .= "<strong>" . $avgScore . "%</strong>";
+$output .= "</div>";
+$output .= "<div class=\"progress\" style=\"height: 10px;\">";
+$output .= "<div class=\"progress-bar\" style=\"width: " . $avgScore . "%;\"></div>";
+$output .= "</div>";
+$output .= "</div>";
+
+$leaderboardUrl = $modx->makeUrl(34);
+$output .= "<a href=\"" . $leaderboardUrl . "\" class=\"btn btn-primary w-100\">Рейтинг →</a>";
+
+$output .= "</div>";
+$output .= "</div>";
+
+$output .= "</div>";
+
+// ПРАВАЯ КОЛОНКА - Редактирование и история
+$output .= "<div class=\"col-md-8\">";
+
+// Вкладки
+$output .= "<ul class=\"nav nav-tabs mb-4\">";
+$output .= "<li class=\"nav-item\">";
+$output .= "<button class=\"nav-link active\" data-bs-toggle=\"tab\" data-bs-target=\"#history-tab\">История</button>";
+$output .= "</li>";
+$output .= "<li class=\"nav-item\">";
+$output .= "<button class=\"nav-link\" data-bs-toggle=\"tab\" data-bs-target=\"#edit-tab\">Редактировать</button>";
+$output .= "</li>";
+$output .= "<li class=\"nav-item\">";
+$output .= "<button class=\"nav-link\" data-bs-toggle=\"tab\" data-bs-target=\"#password-tab\">Пароль</button>";
+$output .= "</li>";
+$output .= "</ul>";
+
+$output .= "<div class=\"tab-content\">";
+
+// ИСТОРИЯ
+$output .= "<div class=\"tab-pane fade show active\" id=\"history-tab\">";
+
+if (empty($history)) {
+    $output .= "<div class=\"alert alert-info\">";
+    $output .= "<p class=\"mb-0\">Вы ещё не проходили тесты</p>";
+    $testsUrl = $modx->makeUrl(35);
+    $output .= "<a href=\"" . $testsUrl . "\" class=\"btn btn-primary mt-2\">Перейти к тестам</a>";
+    $output .= "</div>";
+} else {
+    foreach ($history as $item) {
+        $scorePct = $item["score_pct"];
+        $badgeClass = $scorePct >= 70 ? "success" : "danger";
+        $modeLabel = $item["mode"] === "training" ? "Training" : "Exam";
+        
+        $output .= "<div class=\"card mb-3\">";
+        $output .= "<div class=\"card-body\">";
+        $output .= "<div class=\"d-flex justify-content-between align-items-start\">";
+        
+        $output .= "<div>";
+        $output .= "<h6 class=\"mb-1\">" . htmlspecialchars($item["test_title"]) . "</h6>";
+        $output .= "<small class=\"text-muted\">";
+        $output .= date("d.m.Y H:i", strtotime($item["finished_at"]));
+        $output .= " • <span class=\"badge bg-secondary\">" . $modeLabel . "</span>";
+        $output .= "</small>";
+        $output .= "</div>";
+        
+        $output .= "<div class=\"text-end\">";
+        $output .= "<span class=\"badge bg-" . $badgeClass . " fs-6\">" . $scorePct . "%</span>";
+        $output .= "<br><small class=\"text-muted\">" . $item["score"] . "/" . $item["max_score"] . "</small>";
+        $output .= "</div>";
+        
+        $output .= "</div>";
+        $output .= "</div>";
+        $output .= "</div>";
+    }
+}
+
+$output .= "</div>";
+
+// РЕДАКТИРОВАНИЕ
+$output .= "<div class=\"tab-pane fade\" id=\"edit-tab\">";
+
+$output .= "<div class=\"card\">";
+$output .= "<div class=\"card-body\">";
+
+$output .= "<form method=\"POST\">";
+$output .= "<input type=\"hidden\" name=\"update_profile\" value=\"1\">";
+
+$output .= "<div class=\"mb-3\">";
+$output .= "<label class=\"form-label\">Логин (не изменяется)</label>";
+$output .= "<input type=\"text\" class=\"form-control\" value=\"" . htmlspecialchars($username) . "\" disabled>";
+$output .= "</div>";
+
+$output .= "<div class=\"mb-3\">";
+$output .= "<label class=\"form-label\">Полное имя</label>";
+$output .= "<input type=\"text\" name=\"fullname\" class=\"form-control\" value=\"" . htmlspecialchars($fullname) . "\">";
+$output .= "</div>";
+
+$output .= "<div class=\"mb-3\">";
+$output .= "<label class=\"form-label\">Email *</label>";
+$output .= "<input type=\"email\" name=\"email\" class=\"form-control\" value=\"" . htmlspecialchars($email) . "\" required>";
+$output .= "</div>";
+
+$output .= "<button type=\"submit\" class=\"btn btn-primary\">Сохранить</button>";
+
+$output .= "</form>";
+
+$output .= "</div>";
+$output .= "</div>";
+
+$output .= "</div>";
+
+// СМЕНА ПАРОЛЯ
+$output .= "<div class=\"tab-pane fade\" id=\"password-tab\">";
+
+$output .= "<div class=\"card\">";
+$output .= "<div class=\"card-body\">";
+
+$output .= "<form method=\"POST\">";
+$output .= "<input type=\"hidden\" name=\"change_password\" value=\"1\">";
+
+$output .= "<div class=\"mb-3\">";
+$output .= "<label class=\"form-label\">Текущий пароль *</label>";
+$output .= "<input type=\"password\" name=\"old_password\" class=\"form-control\" required>";
+$output .= "</div>";
+
+$output .= "<div class=\"mb-3\">";
+$output .= "<label class=\"form-label\">Новый пароль * (минимум 6 символов)</label>";
+$output .= "<input type=\"password\" name=\"new_password\" class=\"form-control\" required>";
+$output .= "</div>";
+
+$output .= "<div class=\"mb-3\">";
+$output .= "<label class=\"form-label\">Подтверждение пароля *</label>";
+$output .= "<input type=\"password\" name=\"confirm_password\" class=\"form-control\" required>";
+$output .= "</div>";
+
+$output .= "<button type=\"submit\" class=\"btn btn-primary\">Изменить пароль</button>";
+
+$output .= "</form>";
+
+$output .= "</div>";
+$output .= "</div>";
+
+$output .= "</div>";
+
+$output .= "</div>";
+
+$output .= "</div>";
+
+$output .= "</div>";
+
+return $output;

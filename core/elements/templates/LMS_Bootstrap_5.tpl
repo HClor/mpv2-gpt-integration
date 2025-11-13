@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <base href="{$modx->config.site_url}">
+    
+    <base href="{$_modx->config.site_url}">
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{$_modx->resource.pagetitle} - {$_modx->config.site_name}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -34,15 +35,12 @@
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
+
                 <ul class="navbar-nav me-auto">
-                    {'pdoMenu' | snippet : [
-                        'startId' => 0,
-                        'level' => 1,
-                        'includeDocs' => $_modx->config.site_start ~ ',35,34',
-                        'tplOuter' => '@INLINE {$wrapper}',
-                        'tpl' => '@INLINE <li class="nav-item"><a class="nav-link" href="{$link}">{$menutitle}</a></li>',
-                        'tplHere' => '@INLINE <li class="nav-item"><a class="nav-link active" href="{$link}">{$menutitle}</a></li>'
-                    ]}
+                    [[!MenuWithACL?
+                        &tpl=`menuItem`
+                        &tplOuter=`menuOuterTpl`
+                    ]]
                 </ul>
                 <ul class="navbar-nav">
                     {'!userMenu' | snippet}
@@ -50,8 +48,12 @@
             </div>
         </div>
     </nav>
+
+    {include 'lmsHeader'}
+    
     <main class="py-4">
         <div class="container">
+            {'!pdoCrumbs' | snippet}
             {$_modx->resource.content}
         </div>
     </main>
@@ -66,6 +68,9 @@
                     <a href="{34 | url}">Рейтинг</a>
                     {if $_modx->user.id == 0}
                         | <a href="{24 | url}">Вход</a>
+                    {/if}
+                    {if $_modx->user.id > 0}
+                        | <a href="{115 | url}">⭐ Избранное</a>
                     {/if}
                 </div>
             </div>

@@ -93,21 +93,59 @@ if ($_POST && $mode === "register") {
                 
                 $user->addOne($profile);
                 
+
                 if ($user->save()) {
+                    // ДОБАВЛЕНИЕ В ГРУППУ LMS Students
                     $studentGroup = $modx->getObject("modUserGroup", ["name" => "LMS Students"]);
+                    
                     if ($studentGroup) {
-                        $membership = $modx->newObject("modUserGroupMember");
-                        $membership->set("user_group", $studentGroup->id);
-                        $membership->set("member", $user->id);
-                        $membership->set("role", 1);
-                        $membership->save();
+                        // Проверяем, не состоит ли уже в группе (на всякий случай)
+                        $existingMembership = $modx->getObject("modUserGroupMember", [
+                            "user_group" => $studentGroup->id,
+                            "member" => $user->id
+                        ]);
+                        
+                        if (!$existingMembership) {
+                            $membership = $modx->newObject("modUserGroupMember");
+                            $membership->set("user_group", $studentGroup->id);
+                            $membership->set("member", $user->id);
+                            $membership->set("role", 1); // 1 = Member
+                            $membership->set("rank", 0);
+                            
+                            if ($membership->save()) {
+                                $modx->log(modX::LOG_LEVEL_INFO, "[authHandler] User {$user->id} added to LMS Students group");
+                            } else {
+                                $modx->log(modX::LOG_LEVEL_ERROR, "[authHandler] Failed to add user {$user->id} to LMS Students group");
+                            }
+                        }
+                    } else {
+                        $modx->log(modX::LOG_LEVEL_ERROR, "[authHandler] LMS Students group not found!");
                     }
                     
-                    $errors[] = "Регистрация успешна! Теперь можете войти.";
+                    // ВАЖНО: Автоматический вход после регистрации (опционально)
+                    // Если хотите чтобы пользователь сразу входил после регистрации:
+                    /*
+                    $response = $modx->runProcessor("security/login", [
+                        "username" => $username,
+                        "password" => $password,
+                        "rememberme" => false,
+                        "login_context" => "web"
+                    ]);
+                    
+                    if (!$response->isError()) {
+                        $testsUrl = $modx->makeUrl(35);
+                        $modx->sendRedirect($testsUrl);
+                        exit;
+                    }
+                    */
+                    
+                    $errors[] = "✅ Регистрация успешна! Теперь можете войти.";
                     $mode = "login";
                 } else {
                     $errors[] = "Ошибка создания пользователя";
                 }
+
+
             }
         }
     }

@@ -1,219 +1,242 @@
 <?php
-/* TS MANAGE USERS v2.1 ROLE PRIORITY FIX */
+/**
+ * TS MANAGE USERS v2.7 - FIXED isMember LOGIC
+ */
+if (!$modx instanceof modX) {
+    return '<div class="alert alert-danger">MODX context required</div>';
+}
+
 try {
-    if (!$modx->user->hasSessionContext("web")) {
+    if (!$modx->user || !$modx->user->isAuthenticated()) {
         return '<div class="alert alert-warning">Войдите для доступа</div>';
     }
 
-    $userId = $modx->user->id;
-    $isAdmin = $modx->user->isMember("LMS Admins") || $userId == 1;
+    $userId = (int)$modx->user->get('id');
+    
+    // Правильная проверка через getUserGroupNames()
+    $userGroupNames = $modx->user->getUserGroupNames();
+
+
+    $isAdmin = in_array('LMS Admins', $userGroupNames, true) || $userId === 1;
+
 
     if (!$isAdmin) {
-        return '<div class="alert alert-danger">Доступ запрещён. Только для администраторов.</div>';
+        
+$userGroupNames = $modx->user->getUserGroupNames();
+$output = '<pre>' . print_r($userGroupNames, true) . '</pre>';
+        
+        
+        return '<div class="alert alert-danger">Доступ запрещён. Только для администраторов.</div><pre>' . print_r($userGroupNames, true) . '</pre>';
     }
 
     $errors = [];
-    $success = "";
+    $success = '';
 
-    // ФУНКЦИЯ: определить роль пользователя по приоритету
-    function getUserRole($modx, $uid) {
-        $q = $modx->prepare("
-            SELECT mgn.name 
-            FROM modx_member_groups mg
-            JOIN modx_membergroup_names mgn ON mgn.id = mg.user_group
-            WHERE mg.member = :uid AND mgn.name LIKE 'LMS %'
-        ");
-        $q->execute([':uid' => $uid]);
-        $groups = $q->fetchAll(PDO::FETCH_COLUMN);
-        
-        if (in_array('LMS Admins', $groups)) return 'admin';
-        if (in_array('LMS Experts', $groups)) return 'expert';
-        if (in_array('LMS Students', $groups)) return 'student';
-        return null;
-    }
+    $groupMap = [
+        'student' => 'LMS Students',
+        'expert' => 'LMS Experts',
+        'admin'  => 'LMS Admins',
+    ];
 
-    // ИЗМЕНЕНИЕ РОЛИ
-    if ($_POST && isset($_POST["change_role"])) {
-        $targetUserId = (int)($_POST["user_id"] ?? 0);
-        $newRole = $_POST["new_role"] ?? "";
+    $getUserRole = static function (modX $modx, int $uid): ?string {
+        $sql = 'SELECT mgn.name
+                FROM modx_member_groups mg
+                JOIN modx_membergroup_names mgn ON mgn.id = mg.user_group
+                WHERE mg.member = :uid AND mgn.name LIKE "LMS %"
+                ORDER BY FIELD(mgn.name, "LMS Admins", "LMS Experts", "LMS Students")
+                LIMIT 1';
+        $stmt = $modx->prepare($sql);
+        $stmt->execute([':uid' => $uid]);
+        $groupName = $stmt->fetchColumn();
 
-        if (!$targetUserId || !in_array($newRole, ["student", "expert", "admin"])) {
-            $errors[] = "Некорректные данные";
+        return match($groupName) {
+            'LMS Admins' => 'admin',
+            'LMS Experts' => 'expert',
+            'LMS Students' => 'student',
+            default => null
+        };
+    };
+
+    $isPost = $_SERVER['REQUEST_METHOD'] === 'POST';
+
+    $sanitizeText = static function (modX $modx, string $value): string {
+        return $modx->sanitize($value, $modx->sanitizePatterns['text']);
+    };
+
+    if ($isPost && isset($_POST['change_role'])) {
+        $targetUserId = (int)($_POST['user_id'] ?? 0);
+        $newRole = $sanitizeText($modx, (string)($_POST['new_role'] ?? ''));
+
+        if (!$targetUserId || !array_key_exists($newRole, $groupMap)) {
+            $errors[] = 'Некорректные данные';
         } else {
-            $groupMap = [
-                "student" => "LMS Students",
-                "expert" => "LMS Experts",
-                "admin" => "LMS Admins"
-            ];
-
-            $targetUser = $modx->getObject("modUser", $targetUserId);
+            $targetUser = $modx->getObject('modUser', $targetUserId);
             if (!$targetUser) {
-                $errors[] = "Пользователь не найден";
+                $errors[] = 'Пользователь не найден';
             } else {
-                // Удаляем из всех LMS групп
-                foreach ($groupMap as $gname) {
-                    $grp = $modx->getObject("modUserGroup", ["name" => $gname]);
-                    if ($grp) {
-                        $targetUser->leaveGroup($grp->id);
+                foreach ($groupMap as $groupName) {
+                    $group = $modx->getObject('modUserGroup', ['name' => $groupName]);
+                    if ($group) {
+                        $targetUser->leaveGroup((int)$group->get('id'));
                     }
                 }
 
-                // Добавляем в новую группу
-                $newGroup = $modx->getObject("modUserGroup", ["name" => $groupMap[$newRole]]);
+                $newGroup = $modx->getObject('modUserGroup', ['name' => $groupMap[$newRole]]);
                 if ($newGroup) {
-                    $targetUser->joinGroup($newGroup->id);
-                    $success = "Роль изменена на: " . $groupMap[$newRole];
+                    $targetUser->joinGroup((int)$newGroup->get('id'), 1);
+                    $success = 'Роль изменена на: ' . $groupMap[$newRole];
                 } else {
-                    $errors[] = "Группа не найдена";
+                    $errors[] = 'Группа не найдена';
                 }
             }
         }
     }
 
-    // БЛОКИРОВКА
-    if ($_POST && isset($_POST["toggle_block"])) {
-        $targetUserId = (int)($_POST["user_id"] ?? 0);
-        if ($targetUserId && $targetUserId != 1) {
-            $targetUser = $modx->getObject("modUser", $targetUserId);
+    if ($isPost && isset($_POST['toggle_block'])) {
+        $targetUserId = (int)($_POST['user_id'] ?? 0);
+        if ($targetUserId && $targetUserId !== 1) {
+            $targetUser = $modx->getObject('modUser', $targetUserId);
             if ($targetUser) {
-                $profile = $targetUser->getOne("Profile");
-                $isBlocked = (bool)$profile->get("blocked");
-                $profile->set("blocked", !$isBlocked);
-                $profile->save();
-                $success = $isBlocked ? "Пользователь разблокирован" : "Пользователь заблокирован";
+                $profile = $targetUser->getOne('Profile');
+                if ($profile) {
+                    $isBlocked = (bool)$profile->get('blocked');
+                    $profile->set('blocked', !$isBlocked);
+                    $profile->save();
+                    $success = $isBlocked ? 'Пользователь разблокирован' : 'Пользователь заблокирован';
+                }
             }
         }
     }
 
-    // СОЗДАНИЕ ПОЛЬЗОВАТЕЛЯ
-    if ($_POST && isset($_POST["create_user"])) {
-        $username = trim($_POST["username"] ?? "");
-        $email = trim($_POST["email"] ?? "");
-        $password = trim($_POST["password"] ?? "");
-        $role = $_POST["role"] ?? "student";
+    if ($isPost && isset($_POST['create_user'])) {
+        $username = $sanitizeText($modx, trim((string)($_POST['username'] ?? '')));
+        $email = trim((string)($_POST['email'] ?? ''));
+        $password = (string)($_POST['password'] ?? '');
+        $role = $sanitizeText($modx, (string)($_POST['role'] ?? 'student'));
 
-        if (!$username || !$email || !$password) {
-            $errors[] = "Заполните все поля";
+        if ($username === '' || $email === '' || $password === '') {
+            $errors[] = 'Заполните все поля';
         } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $errors[] = "Некорректный email";
+            $errors[] = 'Некорректный email';
+        } elseif (!array_key_exists($role, $groupMap)) {
+            $errors[] = 'Некорректная роль';
         } else {
-            $existingUser = $modx->getObject("modUser", ["username" => $username]);
+            $existingUser = $modx->getObject('modUser', ['username' => $username]);
             if ($existingUser) {
-                $errors[] = "Логин уже занят";
+                $errors[] = 'Логин уже занят';
             } else {
-                $newUser = $modx->newObject("modUser");
-                $newUser->set("username", $username);
-                $newUser->set("active", 1);
+                $newUser = $modx->newObject('modUser');
+                $newUser->set('username', $username);
+                $newUser->set('active', 1);
 
-                $profile = $modx->newObject("modUserProfile");
-                $profile->set("email", $email);
-                $profile->set("blocked", 0);
-                $profile->set("internalKey", 0);
+                $profile = $modx->newObject('modUserProfile');
+                $profile->set('email', $email);
+                $profile->set('blocked', 0);
                 $newUser->addOne($profile);
 
                 if ($newUser->save()) {
-                    $newUser->set("password", $password);
+                    $newUser->set('password', $password);
                     $newUser->save();
 
-                    $groupMap = [
-                        "student" => "LMS Students",
-                        "expert" => "LMS Experts",
-                        "admin" => "LMS Admins"
-                    ];
-                    $grp = $modx->getObject("modUserGroup", ["name" => $groupMap[$role]]);
-                    if ($grp) {
-                        $newUser->joinGroup($grp->id);
+                    $group = $modx->getObject('modUserGroup', ['name' => $groupMap[$role]]);
+                    if ($group) {
+                        $newUser->joinGroup((int)$group->get('id'), 1);
                     }
 
-                    $success = "Пользователь создан: $username";
+                    $success = 'Пользователь создан: ' . htmlspecialchars($username, ENT_QUOTES, 'UTF-8');
                 } else {
-                    $errors[] = "Ошибка создания";
+                    $errors[] = 'Ошибка создания';
                 }
             }
         }
     }
 
-    // ВЫВОД
     $output = '<div class="container-fluid py-4">';
     $output .= '<h2 class="mb-4">Управление пользователями</h2>';
 
-    if ($errors) {
-        foreach ($errors as $err) {
-            $output .= '<div class="alert alert-danger">' . htmlspecialchars($err) . '</div>';
-        }
+    foreach ($errors as $err) {
+        $output .= '<div class="alert alert-danger">' . htmlspecialchars($err, ENT_QUOTES, 'UTF-8') . '</div>';
     }
-    if ($success) {
-        $output .= '<div class="alert alert-success">' . htmlspecialchars($success) . '</div>';
+    if ($success !== '') {
+        $output .= '<div class="alert alert-success">' . $success . '</div>';
     }
 
-    // Кнопка создания
     $output .= '<button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#createUserModal">+ Создать пользователя</button>';
 
-    // Таблица пользователей
-    $users = $modx->getCollection("modUser", [], true);
+    $users = $modx->getCollection('modUser');
+
     $output .= '<table class="table table-hover mb-0"><thead class="table-light"><tr>';
     $output .= '<th style="width: 50px;">ID</th><th>Логин</th><th>Email</th><th>Роль в LMS</th>';
     $output .= '<th style="width: 100px;">Статус</th><th style="width: 180px;">Действия</th></tr></thead><tbody>';
 
-    foreach ($users as $u) {
-        $uid = $u->id;
-        $profile = $u->getOne("Profile");
-        $email = $profile ? $profile->get("email") : "";
-        $blocked = $profile ? (bool)$profile->get("blocked") : false;
-        
-        $role = getUserRole($modx, $uid);
-        $roleBadge = $role ? [
-            'student' => '<span class="badge bg-info">Студент</span>',
-            'expert' => '<span class="badge bg-primary">Эксперт</span>',
-            'admin' => '<span class="badge bg-danger">Админ</span>'
-        ][$role] : '<span class="badge bg-secondary">Нет роли</span>';
+    foreach ($users as $user) {
+        $uid = (int)$user->get('id');
+        $profile = $user->getOne('Profile');
+        $email = $profile ? $profile->get('email') : '';
+        $blocked = $profile ? (bool)$profile->get('blocked') : false;
 
-        $statusBadge = $blocked 
-            ? '<span class="badge bg-danger">Заблокирован</span>' 
+        $role = $getUserRole($modx, $uid);
+        $roleBadge = '<span class="badge bg-secondary">Нет роли</span>';
+        if ($role) {
+            $roleBadge = [
+                'student' => '<span class="badge bg-info">Студент</span>',
+                'expert'  => '<span class="badge bg-primary">Эксперт</span>',
+                'admin'   => '<span class="badge bg-danger">Админ</span>',
+            ][$role];
+        }
+
+        $statusBadge = $blocked
+            ? '<span class="badge bg-danger">Заблокирован</span>'
             : '<span class="badge bg-success">Активен</span>';
 
-        $output .= "<tr><td>$uid</td><td><strong>{$u->username}</strong></td><td>$email</td>";
-        $output .= "<td>$roleBadge</td><td>$statusBadge</td><td>";
-        
-        // Кнопка роли
-        $output .= "<button class=\"btn btn-sm btn-primary\" data-bs-toggle=\"modal\" data-bs-target=\"#roleModal$uid\">Роль</button> ";
-        
-        // Кнопка блокировки (не для admin ID=1)
-        if ($uid != 1) {
-            $blockText = $blocked ? "Разблок." : "Блок.";
-            $output .= "<form method=\"POST\" class=\"d-inline\">";
-            $output .= "<input type=\"hidden\" name=\"toggle_block\" value=\"1\">";
-            $output .= "<input type=\"hidden\" name=\"user_id\" value=\"$uid\">";
-            $output .= "<button type=\"submit\" class=\"btn btn-sm btn-warning\" onclick=\"return confirm('Уверены?')\">$blockText</button>";
-            $output .= "</form>";
-        }
-        
-        $output .= "</td></tr>";
+        $output .= '<tr>';
+        $output .= '<td>' . $uid . '</td>';
+        $output .= '<td><strong>' . htmlspecialchars($user->get('username'), ENT_QUOTES, 'UTF-8') . '</strong></td>';
+        $output .= '<td>' . htmlspecialchars($email, ENT_QUOTES, 'UTF-8') . '</td>';
+        $output .= '<td>' . $roleBadge . '</td>';
+        $output .= '<td>' . $statusBadge . '</td>';
+        $output .= '<td>';
 
-        // Модальное окно смены роли
+        $output .= '<button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#roleModal' . $uid . '">Роль</button> ';
+
+        if ($uid !== 1) {
+            $output .= '<form method="POST" class="d-inline">';
+            $output .= '<input type="hidden" name="toggle_block" value="1">';
+            $output .= '<input type="hidden" name="user_id" value="' . $uid . '">';
+            $output .= '<button type="submit" class="btn btn-sm btn-warning" onclick="return confirm(\'Уверены?\')">' . ($blocked ? 'Разблок.' : 'Блок.') . '</button>';
+            $output .= '</form>';
+        }
+
+        $output .= '</td></tr>';
+
         $currentRole = $role ?? 'student';
-        $output .= "<div class=\"modal fade\" id=\"roleModal$uid\" tabindex=\"-1\">";
-        $output .= "<div class=\"modal-dialog\"><div class=\"modal-content\">";
-        $output .= "<div class=\"modal-header\"><h5 class=\"modal-title\">Изменить роль: {$u->username}</h5>";
-        $output .= "<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"modal\"></button></div>";
-        $output .= "<form method=\"POST\"><div class=\"modal-body\">";
-        $output .= "<input type=\"hidden\" name=\"change_role\" value=\"1\">";
-        $output .= "<input type=\"hidden\" name=\"user_id\" value=\"$uid\">";
-        $output .= "<label class=\"form-label\">Новая роль:</label>";
-        $output .= "<select name=\"new_role\" class=\"form-select\">";
-        $output .= "<option value=\"student\"" . ($currentRole == 'student' ? ' selected' : '') . ">Студент</option>";
-        $output .= "<option value=\"expert\"" . ($currentRole == 'expert' ? ' selected' : '') . ">Эксперт</option>";
-        $output .= "<option value=\"admin\"" . ($currentRole == 'admin' ? ' selected' : '') . ">Админ</option>";
-        $output .= "</select></div>";
-        $output .= "<div class=\"modal-footer\">";
-        $output .= "<button type=\"button\" class=\"btn btn-secondary\" data-bs-dismiss=\"modal\">Отмена</button>";
-        $output .= "<button type=\"submit\" class=\"btn btn-primary\">Сохранить</button>";
-        $output .= "</div></form></div></div></div>";
+        $output .= '<div class="modal fade" id="roleModal' . $uid . '" tabindex="-1">';
+        $output .= '<div class="modal-dialog"><div class="modal-content">';
+        $output .= '<div class="modal-header"><h5 class="modal-title">Изменить роль: ' . htmlspecialchars($user->get('username'), ENT_QUOTES, 'UTF-8') . '</h5>';
+        $output .= '<button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>';
+        $output .= '<form method="POST"><div class="modal-body">';
+        $output .= '<input type="hidden" name="change_role" value="1">';
+        $output .= '<input type="hidden" name="user_id" value="' . $uid . '">';
+        $output .= '<label class="form-label">Новая роль:</label>';
+        $output .= '<select name="new_role" class="form-select">';
+        foreach ($groupMap as $key => $title) {
+            $selected = $currentRole === $key ? ' selected' : '';
+            $label = [
+                'student' => 'Студент',
+                'expert'  => 'Эксперт',
+                'admin'   => 'Админ',
+            ][$key];
+            $output .= '<option value="' . $key . '"' . $selected . '>' . $label . '</option>';
+        }
+        $output .= '</select></div>';
+        $output .= '<div class="modal-footer">';
+        $output .= '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>';
+        $output .= '<button type="submit" class="btn btn-primary">Сохранить</button>';
+        $output .= '</div></form></div></div></div>';
     }
 
     $output .= '</tbody></table>';
 
-    // Модальное окно создания пользователя
     $output .= '<div class="modal fade" id="createUserModal" tabindex="-1">';
     $output .= '<div class="modal-dialog"><div class="modal-content">';
     $output .= '<div class="modal-header"><h5 class="modal-title">Создать пользователя</h5>';
@@ -240,7 +263,6 @@ try {
     $output .= '</div>';
 
     return $output;
-
-} catch (Exception $e) {
-    return '<div class="alert alert-danger">Ошибка: ' . htmlspecialchars($e->getMessage()) . '</div>';
+} catch (Throwable $e) {
+    return '<div class="alert alert-danger">Ошибка: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') . '</div>';
 }
