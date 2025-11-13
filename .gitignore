@@ -1,5 +1,5 @@
 # MODX Core
-/core/cache/*
+/core/*
 !/core/sql/
 !/core/cache/.htaccess
 !/core/cache/index.html
@@ -9,13 +9,16 @@
 /core/components/*
 !/core/elements/
 
+/vendor/*
+
 # MODX Manager
 /manager/
 /setup/
 /connectors/
 
-# Assets (кроме своих)
-/assets/components/*
+# Assets (кроме своих компонентов и шаблонов)
+/assets/components/*/
+!/assets/components/testsystem/
 !/assets/templates/
 
 # Временные файлы
