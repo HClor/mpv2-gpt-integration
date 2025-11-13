@@ -23,6 +23,11 @@
 /assets/components/*/
 !/assets/components/testsystem/
 !/assets/templates/
+!/assets/uploads/
+/assets/uploads/*
+!/assets/uploads/test_imports/
+/assets/uploads/test_imports/*
+!/assets/uploads/test_imports/.htaccess
 
 
 # Временные файлы
