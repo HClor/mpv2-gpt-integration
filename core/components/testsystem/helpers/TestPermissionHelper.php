@@ -21,8 +21,8 @@ class TestPermissionHelper
     /**
      * Группы пользователей в MODX
      */
-    const GROUP_ADMINISTRATOR = 'Administrator';
-    const GROUP_EXPERT = 'Expert';
+    const GROUP_ADMINISTRATOR = 'LMS Admins';
+    const GROUP_EXPERT = 'LMS Experts';
 
     /**
      * Проверяет, является ли пользователь администратором
