@@ -1275,31 +1275,50 @@ input:checked + .mode-slider:before {
 
 
 /* ===================================================================
-   TOGGLE-SWITCH ДЛЯ ИЗБРАННОГО v2.0
+   УНИФИЦИРОВАННЫЙ TOGGLE-SWITCH ДЛЯ ИЗБРАННОГО СО ЗВЕЗДОЧКОЙ v3.0
+   Использование: favorite-toggle-wrapper, favorite-toggle-switch, favorite-toggle-slider
    =================================================================== */
 
-.favorite-toggle-wrapper {
+/* Основной контейнер toggle */
+.favorite-toggle-wrapper,
+.favorite-toggle-wrapper-large {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    margin-left: 1rem;
 }
 
-/* Toggle switch */
+.favorite-toggle-wrapper-large {
+    gap: 10px;
+}
+
+/* Toggle switch - стандартный размер */
 .favorite-toggle-switch {
     position: relative;
     display: inline-block;
     width: 50px;
     height: 28px;
-    margin: 0;
+    cursor: pointer;
+    flex-shrink: 0;
 }
 
-.favorite-toggle-switch input {
+/* Toggle switch - большой размер (для myFavorites) */
+.favorite-toggle-switch-large {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 32px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.favorite-toggle-switch input,
+.favorite-toggle-switch-large input {
     opacity: 0;
     width: 0;
     height: 0;
 }
 
+/* Slider - стандартный */
 .favorite-toggle-slider {
     position: absolute;
     cursor: pointer;
@@ -1308,44 +1327,129 @@ input:checked + .mode-slider:before {
     right: 0;
     bottom: 0;
     background-color: #ccc;
-    transition: 0.4s;
+    transition: 0.3s;
     border-radius: 28px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.15);
 }
 
+/* Slider - большой */
+.favorite-toggle-slider-large {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.3s;
+    border-radius: 32px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+/* Звездочка внутри toggle - стандартный */
 .favorite-toggle-slider:before {
     position: absolute;
-    content: "";
-    height: 20px;
-    width: 20px;
+    content: "★";
+    height: 22px;
+    width: 22px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #ccc;
+}
+
+/* Звездочка внутри toggle - большой */
+.favorite-toggle-slider-large:before {
+    position: absolute;
+    content: "★";
+    height: 24px;
+    width: 24px;
     left: 4px;
     bottom: 4px;
     background-color: white;
-    transition: 0.4s;
+    transition: 0.3s;
     border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    color: #ccc;
 }
 
-input:checked + .favorite-toggle-slider {
+/* Активное состояние - включено (желтый фон) */
+input:checked + .favorite-toggle-slider,
+input:checked + .favorite-toggle-slider-large {
     background-color: #ffc107;
 }
 
-input:focus + .favorite-toggle-slider {
-    box-shadow: 0 0 1px #ffc107;
+/* Неактивное состояние - выключено (серый фон) */
+input:not(:checked) + .favorite-toggle-slider,
+input:not(:checked) + .favorite-toggle-slider-large {
+    background-color: #ccc;
 }
 
+/* Цвет звездочки в активном состоянии */
+input:checked + .favorite-toggle-slider:before,
+input:checked + .favorite-toggle-slider-large:before {
+    color: #ffc107;
+}
+
+/* Цвет звездочки в неактивном состоянии */
+input:not(:checked) + .favorite-toggle-slider:before,
+input:not(:checked) + .favorite-toggle-slider-large:before {
+    color: #ccc;
+}
+
+/* Анимация сдвига - стандартный */
 input:checked + .favorite-toggle-slider:before {
     transform: translateX(22px);
 }
 
+/* Анимация сдвига - большой */
+input:checked + .favorite-toggle-slider-large:before {
+    transform: translateX(28px);
+}
+
+/* Эффект при фокусе */
+input:focus + .favorite-toggle-slider,
+input:focus + .favorite-toggle-slider-large {
+    box-shadow: 0 0 4px #ffc107;
+}
+
+/* Hover эффекты */
+.favorite-toggle-switch:hover .favorite-toggle-slider,
+.favorite-toggle-switch-large:hover .favorite-toggle-slider-large {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.25);
+}
+
 /* Текст рядом с toggle */
-.favorite-toggle-label {
+.favorite-toggle-label,
+.favorite-toggle-label-text {
     font-size: 0.9rem;
     font-weight: 500;
-    color: #495057;
+    color: #666;
     user-select: none;
     white-space: nowrap;
 }
 
-/* В режиме теста - справа в header рядом с бейджем */
+.favorite-toggle-label-text {
+    font-size: 14px;
+}
+
+/* Активный текст */
+input:checked ~ .favorite-toggle-label,
+input:checked ~ .favorite-toggle-label-text {
+    color: #ffc107;
+    font-weight: 600;
+}
+
+/* Размещение в card-header */
 #question-container .card-header {
     display: flex;
     justify-content: space-between;
@@ -1357,73 +1461,23 @@ input:checked + .favorite-toggle-slider:before {
     margin-left: auto;
 }
 
-#favorite-toggle-container {
+#favorite-toggle-container,
+#learning-favorite-toggle-container,
+#favorites-view-toggle-container {
     flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-/* В режиме обучения - в card-header */
-#learning-favorite-toggle-container {
-    flex-shrink: 0;
-}
-
-/* Адаптивность */
-@media (max-width: 768px) {
-    .favorite-toggle-wrapper {
-        margin-left: 0.5rem;
-    }
-    
-    .favorite-toggle-label {
-        display: none; /* Скрываем текст на мобильных */
-    }
-}
-
-@media (max-width: 576px) {
-    .favorite-toggle-switch {
-        width: 44px;
-        height: 24px;
-    }
-    
-    .favorite-toggle-slider:before {
-        height: 16px;
-        width: 16px;
-    }
-    
-    input:checked + .favorite-toggle-slider:before {
-        transform: translateX(20px);
-    }
-    
-    #question-container .card-header {
-        flex-wrap: wrap;
-    }
-}
-
-
-/* Toggle в списке избранного */
-.favorites-page .favorite-toggle-wrapper {
+/* Стили для страницы избранного */
+.favorites-page .favorite-toggle-wrapper-large {
     margin-left: 0;
 }
 
 .favorites-page .list-group-item {
     transition: opacity 0.3s ease, max-height 0.3s ease;
 }
-
-.favorites-page .list-group-item .favorite-toggle-wrapper {
-    align-self: center;
-}
-
-/* Анимация удаления */
-@keyframes fadeOut {
-    from {
-        opacity: 1;
-        transform: translateX(0);
-    }
-    to {
-        opacity: 0;
-        transform: translateX(20px);
-    }
-}
-
-
 
 /* Стили для просмотра избранного */
 .learning-header-block {
@@ -1437,12 +1491,6 @@ input:checked + .favorite-toggle-slider:before {
     background: linear-gradient(90deg, #ffc107 0%, #ffb700 100%);
 }
 
-#favorites-view-toggle-container {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
 /* Улучшенные кнопки навигации */
 #prev-card-btn:disabled,
 #next-card-btn:disabled {
@@ -1450,76 +1498,84 @@ input:checked + .favorite-toggle-slider:before {
     cursor: not-allowed;
 }
 
-#prev-card-btn:not(:disabled):hover,
-#next-card-btn:not(:disabled):hover {
+#prev-card-btn:not(:disabled):hover {
     transform: translateX(-2px);
     transition: transform 0.2s;
 }
 
 #next-card-btn:not(:disabled):hover {
     transform: translateX(2px);
+    transition: transform 0.2s;
+}
+
+/* Адаптивность - скрываем текст на маленьких экранах */
+@media (max-width: 768px) {
+    .favorite-toggle-label {
+        display: none;
+    }
+}
+
+@media (max-width: 576px) {
+    .favorite-toggle-switch {
+        width: 44px;
+        height: 24px;
+    }
+
+    .favorite-toggle-slider:before {
+        height: 18px;
+        width: 18px;
+        font-size: 10px;
+    }
+
+    input:checked + .favorite-toggle-slider:before {
+        transform: translateX(20px);
+    }
+
+    #question-container .card-header {
+        flex-wrap: wrap;
+    }
+
+    .favorite-toggle-label-text {
+        display: none;
+    }
+
+    .favorite-toggle-wrapper-large {
+        gap: 0;
+    }
 }
 
 
+/* ===================================================================
+   УНИФИЦИРОВАННЫЕ СООБЩЕНИЯ ОБ АВТОРИЗАЦИИ v1.0
+   =================================================================== */
 
-
-.favorite-toggle-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+.auth-required-alert {
+    border-left: 4px solid #ffc107 !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }
 
-.favorite-toggle-switch {
-    position: relative;
-    display: inline-block;
-    width: 50px;
-    height: 24px;
+.auth-required-alert h4 {
+    color: #856404;
+    font-weight: 600;
 }
 
-.favorite-toggle-switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
+.auth-required-alert i.bi-shield-lock {
+    color: #ffc107;
 }
 
-.favorite-toggle-slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #ccc;
-    transition: .4s;
-    border-radius: 24px;
-}
-
-.favorite-toggle-slider:before {
-    position: absolute;
-    content: "";
-    height: 18px;
-    width: 18px;
-    left: 3px;
-    bottom: 3px;
-    background-color: white;
-    transition: .4s;
-    border-radius: 50%;
-}
-
-input:checked + .favorite-toggle-slider {
-    background-color: #ffc107;
-}
-
-input:checked + .favorite-toggle-slider:before {
-    transform: translateX(26px);
-}
-
-.favorite-toggle-label {
-    font-size: 0.9rem;
+.auth-required-alert .btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
     font-weight: 500;
-    color: #666;
+    padding: 0.6rem 1.5rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
 }
 
+.auth-required-alert .btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
 
 /* ===================================================================
    КОМПАКТНЫЙ ИНТЕРФЕЙС ЗАПУСКА ТЕСТА v2.1 - FIXED

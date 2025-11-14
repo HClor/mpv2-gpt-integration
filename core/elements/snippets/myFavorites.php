@@ -3,9 +3,13 @@
 
 if (!$modx->user->hasSessionContext('web')) {
     $authUrl = $modx->makeUrl($modx->getOption('lms.auth_page', null, 24));
-    return '<div class="alert alert-warning">
-        <h4>Требуется авторизация</h4>
-        <p><a href="' . $authUrl . '" class="btn btn-primary">Войти</a></p>
+    return '<div class="alert alert-warning auth-required-alert">
+        <div class="d-flex align-items-center mb-3">
+            <i class="bi bi-shield-lock me-2" style="font-size: 2rem;"></i>
+            <h4 class="mb-0">Требуется авторизация</h4>
+        </div>
+        <p class="mb-3">Для просмотра избранных вопросов необходимо войти в систему.</p>
+        <a href="' . $authUrl . '" class="btn btn-primary"><i class="bi bi-box-arrow-in-right me-2"></i>Войти в систему</a>
     </div>';
 }
 
@@ -179,88 +183,8 @@ $output .= '
 </div>
 ';
 
-// УЛУЧШЕННЫЙ CSS
+// Специфичные CSS для модального окна myFavorites
 $output .= '<style>
-/* Большой toggle-switch для страницы избранного */
-.favorite-toggle-wrapper-large {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.favorite-toggle-switch-large {
-    position: relative;
-    display: inline-block;
-    width: 60px;
-    height: 32px;
-    cursor: pointer;
-    flex-shrink: 0;
-}
-
-.favorite-toggle-switch-large input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.favorite-toggle-slider-large {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #ffc107;
-    transition: 0.3s;
-    border-radius: 32px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-}
-
-.favorite-toggle-slider-large:before {
-    position: absolute;
-    content: "★";
-    height: 24px;
-    width: 24px;
-    left: 4px;
-    bottom: 4px;
-    background-color: white;
-    transition: 0.3s;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    color: #ffc107;
-}
-
-input:checked + .favorite-toggle-slider-large {
-    background-color: #ffc107;
-}
-
-input:not(:checked) + .favorite-toggle-slider-large {
-    background-color: #ccc;
-}
-
-input:not(:checked) + .favorite-toggle-slider-large:before {
-    color: #ccc;
-}
-
-input:checked + .favorite-toggle-slider-large:before {
-    transform: translateX(28px);
-}
-
-.favorite-toggle-label-text {
-    font-size: 14px;
-    font-weight: 500;
-    color: #666;
-    white-space: nowrap;
-}
-
-input:checked ~ .favorite-toggle-label-text {
-    color: #ffc107;
-    font-weight: 600;
-}
-
 /* Hover для кликабельного вопроса */
 .favorite-question-clickable:hover {
     background-color: #f8f9fa;
@@ -273,26 +197,10 @@ input:checked ~ .favorite-toggle-label-text {
     background-color: #e9ecef;
 }
 
-/* Hover эффекты для toggle */
-.favorite-toggle-switch-large:hover .favorite-toggle-slider-large {
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-}
-
 /* Анимация удаления */
 .removing-item {
     transition: all 0.3s ease;
     opacity: 0.5;
-}
-
-/* Адаптивность - скрываем текст на маленьких экранах */
-@media (max-width: 576px) {
-    .favorite-toggle-label-text {
-        display: none;
-    }
-    
-    .favorite-toggle-wrapper-large {
-        gap: 0;
-    }
 }
 
 /* Изображения в модальном окне */
