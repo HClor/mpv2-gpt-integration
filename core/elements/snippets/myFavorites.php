@@ -221,6 +221,13 @@ $output .= '<style>
 #modal-explanation {
     overflow-x: hidden;
 }
+
+/* Обертка для toggle в myFavorites */
+.favorite-toggle-wrapper-large {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
 </style>';
 
 // УЛУЧШЕННЫЙ JavaScript
