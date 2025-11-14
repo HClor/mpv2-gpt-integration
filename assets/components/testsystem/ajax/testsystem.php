@@ -2282,51 +2282,78 @@ if (empty($allQuestionIds)) {
 
         case 'grantTestAccess':
             // Предоставить доступ пользователю
-            PermissionHelper::requireAuthentication($modx, 'Login required');
+            try {
+                $modx->log(modX::LOG_LEVEL_ERROR, '[grantTestAccess] Start');
 
-            $currentUserId = PermissionHelper::getCurrentUserId($modx);
-            $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
-            $targetUserId = ValidationHelper::requireInt($data, 'user_id', 'User ID required');
-            $role = ValidationHelper::requireString($data, 'role', 'Role required');
+                PermissionHelper::requireAuthentication($modx, 'Login required');
+                $modx->log(modX::LOG_LEVEL_ERROR, '[grantTestAccess] Auth OK');
 
-            // Валидация роли
-            $allowedRoles = [
-                TestPermissionHelper::ROLE_AUTHOR,
-                TestPermissionHelper::ROLE_EDITOR,
-                TestPermissionHelper::ROLE_VIEWER
-            ];
+                $currentUserId = PermissionHelper::getCurrentUserId($modx);
+                $modx->log(modX::LOG_LEVEL_ERROR, '[grantTestAccess] Current user ID: ' . $currentUserId);
 
-            if (!in_array($role, $allowedRoles, true)) {
-                throw new Exception('Invalid role: ' . $role);
+                $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
+                $modx->log(modX::LOG_LEVEL_ERROR, '[grantTestAccess] Test ID: ' . $testId);
+
+                $targetUserId = ValidationHelper::requireInt($data, 'user_id', 'User ID required');
+                $modx->log(modX::LOG_LEVEL_ERROR, '[grantTestAccess] Target user ID: ' . $targetUserId);
+
+                $role = ValidationHelper::requireString($data, 'role', 'Role required');
+                $modx->log(modX::LOG_LEVEL_ERROR, '[grantTestAccess] Role: ' . $role);
+
+                // Валидация роли
+                $allowedRoles = [
+                    TestPermissionHelper::ROLE_AUTHOR,
+                    TestPermissionHelper::ROLE_EDITOR,
+                    TestPermissionHelper::ROLE_VIEWER
+                ];
+
+                if (!in_array($role, $allowedRoles, true)) {
+                    $modx->log(modX::LOG_LEVEL_ERROR, '[grantTestAccess] Invalid role: ' . $role);
+                    throw new Exception('Invalid role: ' . $role);
+                }
+
+                // Проверяем что тест существует
+                $stmt = $modx->prepare("SELECT id FROM {$prefix}test_tests WHERE id = ?");
+                $stmt->execute([$testId]);
+                if (!$stmt->fetch()) {
+                    $modx->log(modX::LOG_LEVEL_ERROR, '[grantTestAccess] Test not found: ' . $testId);
+                    throw new Exception('Test not found');
+                }
+                $modx->log(modX::LOG_LEVEL_ERROR, '[grantTestAccess] Test exists');
+
+                // Проверяем права на управление доступом
+                if (!TestPermissionHelper::canManageAccess($modx, $testId, $currentUserId)) {
+                    $modx->log(modX::LOG_LEVEL_ERROR, '[grantTestAccess] Access denied for user: ' . $currentUserId);
+                    throw new Exception('Access denied: you cannot manage access to this test');
+                }
+                $modx->log(modX::LOG_LEVEL_ERROR, '[grantTestAccess] Can manage access');
+
+                // Проверяем что целевой пользователь существует
+                $stmt = $modx->prepare("SELECT id FROM {$prefix}users WHERE id = ?");
+                $stmt->execute([$targetUserId]);
+                if (!$stmt->fetch()) {
+                    $modx->log(modX::LOG_LEVEL_ERROR, '[grantTestAccess] Target user not found: ' . $targetUserId);
+                    throw new Exception('Target user not found');
+                }
+                $modx->log(modX::LOG_LEVEL_ERROR, '[grantTestAccess] Target user exists');
+
+                // Предоставляем доступ
+                $modx->log(modX::LOG_LEVEL_ERROR, '[grantTestAccess] Calling TestPermissionHelper::grantAccess');
+                $success = TestPermissionHelper::grantAccess($modx, $testId, $targetUserId, $role, $currentUserId);
+                $modx->log(modX::LOG_LEVEL_ERROR, '[grantTestAccess] grantAccess returned: ' . ($success ? 'true' : 'false'));
+
+                if (!$success) {
+                    throw new Exception('Failed to grant access');
+                }
+
+                $response = ResponseHelper::success(null, 'Access granted successfully');
+                $modx->log(modX::LOG_LEVEL_ERROR, '[grantTestAccess] Success');
+
+            } catch (Exception $e) {
+                $modx->log(modX::LOG_LEVEL_ERROR, '[grantTestAccess] Exception: ' . $e->getMessage());
+                $modx->log(modX::LOG_LEVEL_ERROR, '[grantTestAccess] Trace: ' . $e->getTraceAsString());
+                throw $e;
             }
-
-            // Проверяем что тест существует
-            $stmt = $modx->prepare("SELECT id FROM {$prefix}test_tests WHERE id = ?");
-            $stmt->execute([$testId]);
-            if (!$stmt->fetch()) {
-                throw new Exception('Test not found');
-            }
-
-            // Проверяем права на управление доступом
-            if (!TestPermissionHelper::canManageAccess($modx, $testId, $currentUserId)) {
-                throw new Exception('Access denied: you cannot manage access to this test');
-            }
-
-            // Проверяем что целевой пользователь существует
-            $stmt = $modx->prepare("SELECT id FROM {$prefix}users WHERE id = ?");
-            $stmt->execute([$targetUserId]);
-            if (!$stmt->fetch()) {
-                throw new Exception('Target user not found');
-            }
-
-            // Предоставляем доступ
-            $success = TestPermissionHelper::grantAccess($modx, $testId, $targetUserId, $role, $currentUserId);
-
-            if (!$success) {
-                throw new Exception('Failed to grant access');
-            }
-
-            $response = ResponseHelper::success(null, 'Access granted successfully');
             break;
 
         case 'revokeTestAccess':
