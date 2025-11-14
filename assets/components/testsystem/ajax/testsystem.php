@@ -2226,14 +2226,17 @@ if (empty($allQuestionIds)) {
                 $modx->log(modX::LOG_LEVEL_ERROR, '[getTestAccess] Test ID: ' . $testId);
 
                 // Проверяем права на управление доступом
-                $test = $modx->getObject('TestTest', $testId);
+                $stmt = $modx->prepare("SELECT id, title, publication_status FROM {$prefix}test_tests WHERE id = ?");
+                $stmt->execute([$testId]);
+                $test = $stmt->fetch(PDO::FETCH_ASSOC);
+
                 if (!$test) {
                     $modx->log(modX::LOG_LEVEL_ERROR, '[getTestAccess] Test not found: ' . $testId);
                     throw new Exception('Test not found');
                 }
-                $modx->log(modX::LOG_LEVEL_ERROR, '[getTestAccess] Test found: ' . $test->get('title'));
+                $modx->log(modX::LOG_LEVEL_ERROR, '[getTestAccess] Test found: ' . $test['title']);
 
-                $publicationStatus = $test->get('publication_status');
+                $publicationStatus = $test['publication_status'];
 
                 if (!TestPermissionHelper::canManageAccess($modx, $testId, $userId)) {
                     $modx->log(modX::LOG_LEVEL_ERROR, '[getTestAccess] Access denied for user ' . $userId);
@@ -2266,7 +2269,7 @@ if (empty($allQuestionIds)) {
                 $response = ResponseHelper::success([
                     'users' => $users,
                     'available_users' => $availableUsers,
-                    'test_title' => $test->get('title')
+                    'test_title' => $test['title']
                 ]);
                 $modx->log(modX::LOG_LEVEL_ERROR, '[getTestAccess] Success');
 
@@ -2298,8 +2301,9 @@ if (empty($allQuestionIds)) {
             }
 
             // Проверяем что тест существует
-            $test = $modx->getObject('TestTest', $testId);
-            if (!$test) {
+            $stmt = $modx->prepare("SELECT id FROM {$prefix}test_tests WHERE id = ?");
+            $stmt->execute([$testId]);
+            if (!$stmt->fetch()) {
                 throw new Exception('Test not found');
             }
 
@@ -2333,8 +2337,9 @@ if (empty($allQuestionIds)) {
             $targetUserId = ValidationHelper::requireInt($data, 'user_id', 'User ID required');
 
             // Проверяем что тест существует
-            $test = $modx->getObject('TestTest', $testId);
-            if (!$test) {
+            $stmt = $modx->prepare("SELECT id FROM {$prefix}test_tests WHERE id = ?");
+            $stmt->execute([$testId]);
+            if (!$stmt->fetch()) {
                 throw new Exception('Test not found');
             }
 
