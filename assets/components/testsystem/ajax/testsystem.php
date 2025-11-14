@@ -1542,7 +1542,15 @@ if (empty($allQuestionIds)) {
             // Используем TestService для создания теста со страницей
             $result = TestService::createTestWithPage($modx, $title, $description, $publicationStatus, $userId);
 
+            // ДИАГНОСТИКА: Логируем результат создания теста
+            $modx->log(modX::LOG_LEVEL_ERROR, '[createTestWithPage] Result: ' . print_r($result, true));
+            $modx->log(modX::LOG_LEVEL_ERROR, '[createTestWithPage] test_id: ' . ($result['test_id'] ?? 'MISSING'));
+            $modx->log(modX::LOG_LEVEL_ERROR, '[createTestWithPage] csv_import_url: ' . ($result['csv_import_url'] ?? 'MISSING'));
+
             $response = ResponseHelper::success($result, 'Test and page created successfully');
+
+            // ДИАГНОСТИКА: Логируем финальный response
+            $modx->log(modX::LOG_LEVEL_ERROR, '[createTestWithPage] Final response: ' . print_r($response, true));
             break;
 
         case 'createTest':

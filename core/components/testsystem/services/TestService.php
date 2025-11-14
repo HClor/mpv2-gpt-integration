@@ -48,12 +48,17 @@ class TestService
             // ШАГ 5: Генерируем URL для импорта CSV
             $csvImportUrl = self::generateCsvImportUrl($modx, $testId);
 
-            return [
+            $result = [
                 'test_id' => $testId,
                 'resource_id' => $resourceId,
                 'test_url' => $testUrl,
                 'csv_import_url' => $csvImportUrl
             ];
+
+            // ДИАГНОСТИКА: Логируем результат перед возвратом
+            $modx->log(modX::LOG_LEVEL_ERROR, '[TestService::createTestWithPage] Returning result: ' . print_r($result, true));
+
+            return $result;
 
         } catch (Exception $e) {
             $modx->log(modX::LOG_LEVEL_ERROR, '[TestService::createTestWithPage] Error: ' . $e->getMessage());
@@ -338,21 +343,30 @@ class TestService
      */
     private static function generateCsvImportUrl($modx, $testId)
     {
+        $modx->log(modX::LOG_LEVEL_ERROR, '[TestService::generateCsvImportUrl] START - testId: ' . $testId);
+
         // Получаем ID страницы импорта CSV из системных настроек
         $csvImportPageId = (int)$modx->getOption('lms.csv_import_page', null, 0);
+        $modx->log(modX::LOG_LEVEL_ERROR, '[TestService::generateCsvImportUrl] csvImportPageId: ' . $csvImportPageId);
 
         if ($csvImportPageId > 0) {
             // Используем настройку lms.csv_import_page
             $baseUrl = $modx->makeUrl($csvImportPageId, 'web', '', 'full');
+            $modx->log(modX::LOG_LEVEL_ERROR, '[TestService::generateCsvImportUrl] baseUrl from makeUrl: ' . $baseUrl);
         } else {
             // Fallback: используем /import-csv
             $siteUrl = rtrim($modx->getOption('site_url'), '/');
             $baseUrl = $siteUrl . '/import-csv';
+            $modx->log(modX::LOG_LEVEL_ERROR, '[TestService::generateCsvImportUrl] baseUrl fallback: ' . $baseUrl);
         }
 
         // Добавляем test_id как GET параметр
         $separator = (strpos($baseUrl, '?') !== false) ? '&' : '?';
-        return $baseUrl . $separator . 'test_id=' . $testId;
+        $csvImportUrl = $baseUrl . $separator . 'test_id=' . $testId;
+
+        $modx->log(modX::LOG_LEVEL_ERROR, '[TestService::generateCsvImportUrl] Final CSV Import URL: ' . $csvImportUrl);
+
+        return $csvImportUrl;
     }
 
     /**

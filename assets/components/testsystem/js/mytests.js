@@ -285,14 +285,34 @@ async function createTest() {
         });
         
         const result = await response.json();
-        
+
+        // ДИАГНОСТИКА: Полный вывод ответа API
+        console.log('[createTest] API Response:', result);
+        console.log('[createTest] result.success:', result.success);
+        console.log('[createTest] result.data:', result.data);
+        console.log('[createTest] result.message:', result.message);
+
         if (!result.success) {
             throw new Error(result.message || 'Ошибка создания теста');
         }
-        
-        const testId = result.test_id;
-        const testUrl = result.test_url;
-        const csvImportUrl = result.csv_import_url;
+
+        // ВАЖНО: Данные могут быть в result.data, а не в result напрямую!
+        const responseData = result.data || result;
+
+        console.log('[createTest] responseData:', responseData);
+        console.log('[createTest] test_id:', responseData.test_id);
+        console.log('[createTest] test_url:', responseData.test_url);
+        console.log('[createTest] csv_import_url:', responseData.csv_import_url);
+
+        const testId = responseData.test_id;
+        const testUrl = responseData.test_url;
+        const csvImportUrl = responseData.csv_import_url;
+
+        if (!testId) {
+            console.error('[createTest] ERROR: test_id is missing or undefined!');
+            console.error('[createTest] Full response:', JSON.stringify(result, null, 2));
+            throw new Error('test_id не получен от сервера');
+        }
 
         showNotification('success', `✅ Тест "${title}" успешно создан!`);
 
