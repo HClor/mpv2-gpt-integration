@@ -150,6 +150,19 @@ class ValidationHelper
     }
 
     /**
+     * Требовать валидный ID вопроса (алиас для validateQuestionId)
+     *
+     * @param int|string $questionId ID вопроса
+     * @param string|null $errorMessage Сообщение об ошибке
+     * @return int
+     * @throws ValidationException Если ID невалиден
+     */
+    public static function requireQuestionId($questionId, $errorMessage = null)
+    {
+        return self::validateQuestionId($questionId, $errorMessage);
+    }
+
+    /**
      * Валидация email адреса
      *
      * @param string $email Email для проверки
