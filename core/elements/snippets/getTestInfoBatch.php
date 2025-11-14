@@ -2,10 +2,16 @@
 /**
  * getTestInfoBatch - получает информацию о тестах одним запросом
  * Поддерживает pdoPage для пагинации
+ * Учитывает права доступа и роли пользователей
+ *
+ * @version 2.0
  */
 if (!$modx instanceof modX) {
     return '';
 }
+
+// Подключаем bootstrap для доступа к TestPermissionHelper
+require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
 
 $parents = $scriptProperties['parents'] ?? $modx->resource->id;
 $depth = (int)($scriptProperties['depth'] ?? 3);
@@ -15,6 +21,7 @@ $tpl = $scriptProperties['tpl'] ?? 'testCard';
 $sortby = $scriptProperties['sortby'] ?? 'createdon';
 $sortdir = strtoupper($scriptProperties['sortdir'] ?? 'DESC');
 $totalVar = $scriptProperties['totalVar'] ?? 'total';
+$showAllStatuses = (int)($scriptProperties['showAllStatuses'] ?? 0);
 
 // Валидация sortdir
 if (!in_array($sortdir, ['ASC', 'DESC'])) {
@@ -43,8 +50,19 @@ if ($depth > 0) {
 
 $parentIdsStr = implode(',', $parentIds);
 
-// ИСПРАВЛЕНО: Добавлен фильтр по publication_status
-$sql_where_publication = "AND t.publication_status = 'public'";
+// Определяем фильтр по publication_status в зависимости от роли пользователя
+$userId = $modx->user->id;
+$isAdminOrExpert = TestPermissionHelper::isAdminOrExpert($modx, $userId);
+
+// Админы и эксперты видят все статусы (если showAllStatuses=1)
+// Обычные пользователи видят только public тесты
+if ($showAllStatuses && $isAdminOrExpert) {
+    // Показываем все статусы
+    $sql_where_publication = "";
+} else {
+    // Только public для обычных пользователей
+    $sql_where_publication = "AND t.publication_status = 'public'";
+}
 
 // Получаем общее количество для пагинации
 $sqlCount = "
@@ -67,7 +85,7 @@ $modx->setPlaceholder($totalVar, $totalCount);
 
 // Основной запрос с данными
 $sql = "
-    SELECT 
+    SELECT
         sc.id,
         sc.pagetitle,
         sc.longtitle,
@@ -81,6 +99,8 @@ $sql = "
         t.pass_score,
         t.mode,
         t.publication_status,
+        t.created_by,
+        t.updated_at,
         COUNT(q.id) as question_count
     FROM `{$S}` sc
     INNER JOIN `{$Ttests}` t ON t.resource_id = sc.id
@@ -113,11 +133,23 @@ foreach ($tests as $test) {
     // Форматируем дату
     $createdDate = $test['createdon'] ? date('d.m.Y', $test['createdon']) : '';
     $publishedDate = $test['publishedon'] ? date('d.m.Y', $test['publishedon']) : '';
-    
+    $updatedDate = $test['updated_at'] ? date('d.m.Y H:i', strtotime($test['updated_at'])) : '';
+
+    // Проверяем права доступа текущего пользователя
+    $testId = (int)$test['test_id'];
+    $publicationStatus = $test['publication_status'];
+
+    $canView = TestPermissionHelper::canView($modx, $testId, $publicationStatus, $userId);
+    $canEdit = TestPermissionHelper::canEdit($modx, $testId, $publicationStatus, $userId);
+    $canManageAccess = TestPermissionHelper::canManageAccess($modx, $testId, $userId);
+    $canChangeStatus = TestPermissionHelper::canChangeStatus($modx, $testId, $userId);
+    $userRole = TestPermissionHelper::getUserRole($modx, $testId, $userId) ?? 'none';
+    $isCreator = TestPermissionHelper::isTestCreator($modx, $testId, $userId);
+
     // Подготавливаем данные для чанка
     $placeholders = [
         'id' => $test['id'],
-        'test_id' => $test['test_id'],
+        'test_id' => $testId,
         'pagetitle' => $test['pagetitle'],
         'longtitle' => $test['longtitle'],
         'introtext' => $test['introtext'],
@@ -126,13 +158,23 @@ foreach ($tests as $test) {
         'url' => $testUrl,
         'createdon' => $createdDate,
         'publishedon' => $publishedDate,
+        'updatedon' => $updatedDate,
         'testQuestions' => (int)$test['question_count'],
         'testQuestionsPerSession' => (int)$test['questions_per_session'],
         'testPassScore' => (int)$test['pass_score'],
         'testMode' => $test['mode'],
-        'publication_status' => $test['publication_status'],
+        'publication_status' => $publicationStatus,
+        'created_by' => (int)$test['created_by'],
         'idx' => $idx++,
-        'total' => $totalCount
+        'total' => $totalCount,
+        // Права доступа
+        'canView' => $canView ? 1 : 0,
+        'canEdit' => $canEdit ? 1 : 0,
+        'canManageAccess' => $canManageAccess ? 1 : 0,
+        'canChangeStatus' => $canChangeStatus ? 1 : 0,
+        'userRole' => $userRole,
+        'isCreator' => $isCreator ? 1 : 0,
+        'isAdminOrExpert' => $isAdminOrExpert ? 1 : 0
     ];
     
     $output[] = $modx->getChunk($tpl, $placeholders);
