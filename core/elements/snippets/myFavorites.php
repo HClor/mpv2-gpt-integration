@@ -1,6 +1,9 @@
 <?php
 /* My Favorites v2.2 - Modal view + responsive */
 
+// Подключаем bootstrap для классов TestSystem
+require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
+
 if (!$modx->user->hasSessionContext('web')) {
     $authUrl = $modx->makeUrl($modx->getOption('lms.auth_page', null, 24));
     return '<div class="alert alert-warning auth-required-alert">

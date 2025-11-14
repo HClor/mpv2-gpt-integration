@@ -557,14 +557,19 @@ async function addFavoritesViewToggle(questionId) {
     
     async function addLearningFavoriteButton(questionId) {
         if (!questionId) return;
-        
+
+        console.log(`[Learning Mode] addLearningFavoriteButton called for question ${questionId}`);
+
         const statusResult = await apiCall("getFavoriteStatus", {
             question_id: questionId
         });
-        
+
+        console.log(`[Learning Mode] getFavoriteStatus response:`, statusResult);
+
         if (!statusResult.success) return;
-        
+
         const isFavorite = statusResult.is_favorite;
+        console.log(`[Learning Mode] Setting initial checkbox state to: ${isFavorite}`);
         
         // ИСПРАВЛЕНИЕ: Ищем card-header в режиме обучения
         const cardHeader = document.querySelector("#question-container .card-header");
@@ -592,18 +597,22 @@ async function addFavoritesViewToggle(questionId) {
         // Обработчик
         const toggleInput = document.getElementById("learning-favorite-toggle-input");
         toggleInput.addEventListener("change", async function() {
-            const previousState = !this.checked; // Предыдущее состояние (до клика)
+            const newState = this.checked; // Новое состояние (после клика)
+            console.log(`[Learning Mode] Toggle clicked. Question ${questionId}, new state: ${newState}`);
 
             try {
                 const result = await apiCall("toggleFavorite", {
                     question_id: questionId
                 });
 
-                console.log("toggleFavorite result:", result);
+                console.log(`[Learning Mode] toggleFavorite response:`, result);
 
                 if (result.success) {
-                    // Обновляем checkbox на основе ответа сервера
-                    this.checked = result.is_favorite;
+                    // Проверяем соответствие состояния сервера и checkbox
+                    if (result.is_favorite !== newState) {
+                        console.warn(`[Learning Mode] State mismatch! Server: ${result.is_favorite}, Checkbox: ${newState}. Fixing...`);
+                        this.checked = result.is_favorite;
+                    }
 
                     if (result.is_favorite) {
                         showNotification("⭐ Добавлено в избранное", "success");
@@ -612,11 +621,13 @@ async function addFavoritesViewToggle(questionId) {
                     }
                 } else {
                     // Возвращаем к предыдущему состоянию при ошибке
-                    this.checked = previousState;
+                    this.checked = !newState;
+                    console.error(`[Learning Mode] Toggle failed:`, result);
                 }
             } catch (error) {
                 // Возвращаем к предыдущему состоянию при ошибке
-                this.checked = previousState;
+                this.checked = !newState;
+                console.error(`[Learning Mode] Toggle error:`, error);
                 alert("Ошибка: " + error.message);
             }
         });
@@ -1545,15 +1556,20 @@ async function addFavoritesViewToggle(questionId) {
     // Добавить toggle избранного В РЕЖИМЕ ТЕСТА
     async function addFavoriteButton() {
         if (!currentQuestionId) return;
-        
+
+        console.log(`[Test Mode] addFavoriteButton called for question ${currentQuestionId}`);
+
         // Проверяем статус избранного
         const statusResult = await apiCall("getFavoriteStatus", {
             question_id: currentQuestionId
         });
-        
+
+        console.log(`[Test Mode] getFavoriteStatus response:`, statusResult);
+
         if (!statusResult.success) return;
-        
+
         const isFavorite = statusResult.is_favorite;
+        console.log(`[Test Mode] Setting initial checkbox state to: ${isFavorite}`);
         
         // Ищем контейнер для toggle
         const questionHeader = document.querySelector("#question-container .card-header");
@@ -1580,18 +1596,22 @@ async function addFavoritesViewToggle(questionId) {
         // Обработчик переключения
         const toggleInput = document.getElementById("favorite-toggle-input");
         toggleInput.addEventListener("change", async function() {
-            const previousState = !this.checked; // Предыдущее состояние (до клика)
+            const newState = this.checked; // Новое состояние (после клика)
+            console.log(`[Test Mode] Toggle clicked. Question ${currentQuestionId}, new state: ${newState}`);
 
             try {
                 const result = await apiCall("toggleFavorite", {
                     question_id: currentQuestionId
                 });
 
-                console.log("toggleFavorite result (test mode):", result);
+                console.log(`[Test Mode] toggleFavorite response:`, result);
 
                 if (result.success) {
-                    // Обновляем checkbox на основе ответа сервера
-                    this.checked = result.is_favorite;
+                    // Проверяем соответствие состояния сервера и checkbox
+                    if (result.is_favorite !== newState) {
+                        console.warn(`[Test Mode] State mismatch! Server: ${result.is_favorite}, Checkbox: ${newState}. Fixing...`);
+                        this.checked = result.is_favorite;
+                    }
 
                     if (result.is_favorite) {
                         showNotification("⭐ Добавлено в избранное", "success");
@@ -1600,11 +1620,13 @@ async function addFavoritesViewToggle(questionId) {
                     }
                 } else {
                     // Возвращаем к предыдущему состоянию при ошибке
-                    this.checked = previousState;
+                    this.checked = !newState;
+                    console.error(`[Test Mode] Toggle failed:`, result);
                 }
             } catch (error) {
                 // Возвращаем к предыдущему состоянию при ошибке
-                this.checked = previousState;
+                this.checked = !newState;
+                console.error(`[Test Mode] Toggle error:`, error);
                 alert("Ошибка: " + error.message);
             }
         });
