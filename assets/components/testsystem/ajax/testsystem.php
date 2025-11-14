@@ -2213,48 +2213,68 @@ if (empty($allQuestionIds)) {
 
         case 'getTestAccess':
             // Получить список пользователей с доступом к тесту
-            PermissionHelper::requireAuthentication($modx, 'Login required');
+            try {
+                $modx->log(modX::LOG_LEVEL_ERROR, '[getTestAccess] Start');
 
-            $userId = PermissionHelper::getCurrentUserId($modx);
-            $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
+                PermissionHelper::requireAuthentication($modx, 'Login required');
+                $modx->log(modX::LOG_LEVEL_ERROR, '[getTestAccess] Auth OK');
 
-            // Проверяем права на управление доступом
-            $test = $modx->getObject('TestTest', $testId);
-            if (!$test) {
-                throw new Exception('Test not found');
+                $userId = PermissionHelper::getCurrentUserId($modx);
+                $modx->log(modX::LOG_LEVEL_ERROR, '[getTestAccess] User ID: ' . $userId);
+
+                $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
+                $modx->log(modX::LOG_LEVEL_ERROR, '[getTestAccess] Test ID: ' . $testId);
+
+                // Проверяем права на управление доступом
+                $test = $modx->getObject('TestTest', $testId);
+                if (!$test) {
+                    $modx->log(modX::LOG_LEVEL_ERROR, '[getTestAccess] Test not found: ' . $testId);
+                    throw new Exception('Test not found');
+                }
+                $modx->log(modX::LOG_LEVEL_ERROR, '[getTestAccess] Test found: ' . $test->get('title'));
+
+                $publicationStatus = $test->get('publication_status');
+
+                if (!TestPermissionHelper::canManageAccess($modx, $testId, $userId)) {
+                    $modx->log(modX::LOG_LEVEL_ERROR, '[getTestAccess] Access denied for user ' . $userId);
+                    throw new Exception('Access denied: you cannot manage access to this test');
+                }
+                $modx->log(modX::LOG_LEVEL_ERROR, '[getTestAccess] Access granted');
+
+                // Получаем список пользователей с доступом
+                $users = TestPermissionHelper::getTestUsers($modx, $testId);
+                $modx->log(modX::LOG_LEVEL_ERROR, '[getTestAccess] Users count: ' . count($users));
+
+                // Получаем список доступных пользователей (все кроме уже имеющих доступ)
+                $existingUserIds = array_column($users, 'user_id');
+                $existingUserIds[] = $userId; // Исключаем текущего пользователя
+
+                $placeholders = implode(',', array_fill(0, count($existingUserIds), '?'));
+                $stmt = $modx->prepare("
+                    SELECT u.id, u.username,
+                           COALESCE(p.fullname, u.username) as fullname
+                    FROM {$prefix}users u
+                    LEFT JOIN {$prefix}user_attributes p ON p.internalKey = u.id
+                    WHERE u.id NOT IN ($placeholders)
+                    ORDER BY u.username
+                    LIMIT 100
+                ");
+                $stmt->execute($existingUserIds);
+                $availableUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                $modx->log(modX::LOG_LEVEL_ERROR, '[getTestAccess] Available users count: ' . count($availableUsers));
+
+                $response = ResponseHelper::success([
+                    'users' => $users,
+                    'available_users' => $availableUsers,
+                    'test_title' => $test->get('title')
+                ]);
+                $modx->log(modX::LOG_LEVEL_ERROR, '[getTestAccess] Success');
+
+            } catch (Exception $e) {
+                $modx->log(modX::LOG_LEVEL_ERROR, '[getTestAccess] Exception: ' . $e->getMessage());
+                $modx->log(modX::LOG_LEVEL_ERROR, '[getTestAccess] Trace: ' . $e->getTraceAsString());
+                throw $e;
             }
-
-            $publicationStatus = $test->get('publication_status');
-
-            if (!TestPermissionHelper::canManageAccess($modx, $testId, $userId)) {
-                throw new Exception('Access denied: you cannot manage access to this test');
-            }
-
-            // Получаем список пользователей с доступом
-            $users = TestPermissionHelper::getTestUsers($modx, $testId);
-
-            // Получаем список доступных пользователей (все кроме уже имеющих доступ)
-            $existingUserIds = array_column($users, 'user_id');
-            $existingUserIds[] = $userId; // Исключаем текущего пользователя
-
-            $placeholders = implode(',', array_fill(0, count($existingUserIds), '?'));
-            $stmt = $modx->prepare("
-                SELECT u.id, u.username,
-                       COALESCE(p.fullname, u.username) as fullname
-                FROM {$prefix}users u
-                LEFT JOIN {$prefix}user_attributes p ON p.internalKey = u.id
-                WHERE u.id NOT IN ($placeholders)
-                ORDER BY u.username
-                LIMIT 100
-            ");
-            $stmt->execute($existingUserIds);
-            $availableUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            $response = ResponseHelper::success([
-                'users' => $users,
-                'available_users' => $availableUsers,
-                'test_title' => $test->get('title')
-            ]);
             break;
 
         case 'grantTestAccess':
