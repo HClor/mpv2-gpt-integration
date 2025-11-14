@@ -25,7 +25,9 @@ $modx = new modX();
 $modx->initialize('web');
 $modx->getService('error','error.modError');
 
-// ← ДОБАВИТЬ ЭТУ СТРОКУ
+// Подключаем bootstrap для автозагрузки классов безопасности
+require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
+
 $prefix = $modx->getOption('table_prefix', null, 'modx_');
 
 header('Content-Type: application/json; charset=utf-8');
@@ -50,21 +52,51 @@ if (empty($data)) {
 
 $response = ['success' => false, 'message' => 'Unknown action'];
 
-function checkUserRights($modx) {
-    if (!$modx->user->hasSessionContext('web')) {
-        return ['canEdit' => false, 'isAdmin' => false, 'isExpert' => false];
+// ============================================
+// CSRF PROTECTION
+// ============================================
+// Список actions, которые НЕ требуют CSRF проверки (только чтение данных)
+$csrfExemptActions = [
+    'getTestInfo',
+    'getQuestion',
+    'getTestSettings',
+    'checkEditRights',
+    'getUserTestHistory',
+    'getDetailedResults',
+    'getKnowledgeAreas',
+    'getTestPermissions',
+    'getAllQuestionsForTest'
+];
+
+// Если это POST запрос и action требует CSRF проверки
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !in_array($action, $csrfExemptActions, true)) {
+    try {
+        // Проверяем CSRF токен
+        CsrfProtection::requireValidToken($data);
+    } catch (Exception $e) {
+        // CSRF токен невалиден
+        die(json_encode([
+            'success' => false,
+            'message' => 'CSRF token validation failed. Please refresh the page and try again.'
+        ]));
     }
-    
-    $userId = (int)$modx->user->get('id');
-    $userGroups = $modx->user->getUserGroupNames();
-    $isExpert = in_array('LMS Experts', $userGroups, true);
-    $isAdmin = in_array('LMS Admins', $userGroups, true) || $userId === 1;
-    
-    return [
-        'canEdit' => $isExpert || $isAdmin,
-        'isAdmin' => $isAdmin,
-        'isExpert' => $isExpert
-    ];
+}
+
+/**
+ * Legacy функция для обратной совместимости
+ * @deprecated Используйте PermissionHelper::getUserRights() напрямую
+ */
+function checkUserRights($modx) {
+    return PermissionHelper::getUserRights($modx);
+}
+
+/**
+ * Legacy функция для обратной совместимости
+ * IDOR Protection: проверяет владение тестом и явные разрешения
+ * @deprecated Используйте PermissionHelper::canEditTest() напрямую
+ */
+function canUserEditTest($modx, $testId) {
+    return PermissionHelper::canEditTest($modx, $testId);
 }
 
 try {
@@ -73,16 +105,13 @@ try {
         
 
         case 'getTestInfo':
-            $testId = (int)($data['test_id'] ?? 0);
-            if (!$testId) {
-                throw new Exception('Test ID required');
-            }
-            
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = (int)$modx->user->get('id');
+            // Валидация входных данных
+            $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
+
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
             
             // Загружаем тест
             $stmt = $modx->prepare("
@@ -97,102 +126,42 @@ try {
             if (!$test) {
                 throw new Exception('Test not found');
             }
-            
-            // Проверка доступа
-            $hasAccess = false;
-            $canEdit = false;
-            
-            $rights = checkUserRights($modx);
-            
-            // Админы и эксперты видят все
-            if ($rights['isAdmin'] || $rights['isExpert']) {
-                $hasAccess = true;
-                $canEdit = true;
-            }
-            // Владелец теста
-            elseif ((int)$test['created_by'] === $userId) {
-                $hasAccess = true;
-                $canEdit = true;
-            }
-            // Public тесты
-            elseif ($test['publication_status'] === 'public') {
-                $hasAccess = true;
-            }
-            // Unlisted тесты (по прямой ссылке)
-            elseif ($test['publication_status'] === 'unlisted') {
-                $hasAccess = true;
-            }
-            // Проверяем permissions для private
-            elseif ($test['publication_status'] === 'private') {
-                $stmt = $modx->prepare("
-                    SELECT can_edit 
-                    FROM modx_test_permissions 
-                    WHERE test_id = ? AND user_id = ?
-                ");
-                $stmt->execute([$testId, $userId]);
-                $perm = $stmt->fetch(PDO::FETCH_ASSOC);
-                
-                if ($perm) {
-                    $hasAccess = true;
-                    $canEdit = (bool)$perm['can_edit'];
-                }
-            }
-            
-            if (!$hasAccess) {
-                throw new Exception('Access denied');
-            }
+
+            // Проверка доступа с использованием PermissionHelper
+            $access = PermissionHelper::requireTestAccess($modx, $test, 'Access denied');
+            $canEdit = $access['canEdit'];
             
             // Подсчет вопросов
             $stmt = $modx->prepare("SELECT COUNT(*) FROM modx_test_questions WHERE test_id = ? AND published = 1");
             $stmt->execute([$testId]);
             $test['total_questions'] = (int)$stmt->fetchColumn();
             $test['can_edit'] = $canEdit;
-            
-            $response = [
-                'success' => true,
-                'data' => $test
-            ];
+
+            $response = ResponseHelper::success($test);
             break;
 
 
 
         case 'createQuestion':
-            $rights = checkUserRights($modx);
-            
-            if (!$rights['canEdit']) {
-                throw new Exception('No permission to create questions');
-            }
-            
-            $testId = (int)($data['test_id'] ?? 0);
-            $questionText = trim($data['question_text'] ?? '');
-            $questionType = trim($data['question_type'] ?? 'single');
-            $explanation = trim($data['explanation'] ?? '');
-            $questionImage = trim($data['question_image'] ?? '');
-            $explanationImage = trim($data['explanation_image'] ?? '');
-            $published = (int)($data['published'] ?? 1);
-            $isLearning = (int)($data['is_learning'] ?? 0);
-            $answers = $data['answers'] ?? [];
-            
-            if (!$testId || empty($questionText)) {
-                throw new Exception('Test ID and question text are required');
-            }
-            
-            if (count($answers) < 2) {
-                throw new Exception('At least 2 answers required');
-            }
-            
-            // Проверяем наличие правильного ответа
-            $hasCorrect = false;
-            foreach ($answers as $answer) {
-                if (isset($answer['is_correct']) && $answer['is_correct'] == 1) {
-                    $hasCorrect = true;
-                    break;
-                }
-            }
-            
-            if (!$hasCorrect) {
-                throw new Exception('At least one correct answer is required');
-            }
+            // Проверка прав доступа
+            PermissionHelper::requireEditRights($modx, 'No permission to create questions');
+
+            // Валидация входных данных
+            $testId = ValidationHelper::requireInt($data, 'test_id', 'Test ID is required');
+            $questionText = ValidationHelper::requireString($data, 'question_text', 'Question text is required');
+            $questionType = ValidationHelper::optionalString($data, 'question_type', 'single');
+            $explanation = ValidationHelper::optionalString($data, 'explanation');
+            $questionImage = ValidationHelper::optionalString($data, 'question_image');
+            $explanationImage = ValidationHelper::optionalString($data, 'explanation_image');
+            $published = ValidationHelper::optionalInt($data, 'published', 1);
+            $isLearning = ValidationHelper::optionalInt($data, 'is_learning', 0);
+            $answers = ValidationHelper::requireArray($data, 'answers', 2, 'At least 2 answers required');
+
+            // Валидация типа вопроса
+            $questionType = ValidationHelper::validateQuestionType($questionType);
+
+            // Проверка наличия правильного ответа
+            ValidationHelper::requireCorrectAnswer($answers);
             
             try {
                 // Получаем максимальный sort_order
@@ -278,12 +247,11 @@ try {
                     $modx->prepare("DELETE FROM modx_test_questions WHERE id = ?")->execute([$questionId]);
                     throw new Exception('Failed to add minimum 2 answers');
                 }
-                
-                $response = [
-                    'success' => true,
-                    'message' => 'Question created successfully',
-                    'question_id' => $questionId
-                ];
+
+                $response = ResponseHelper::success(
+                    ['question_id' => $questionId],
+                    'Question created successfully'
+                );
                 
             } catch (PDOException $e) {
                 throw new Exception('Database error: ' . $e->getMessage());
@@ -295,107 +263,38 @@ try {
 
 
         case 'startSession':
-            $testId = (int)($data['test_id'] ?? 0);
-            $mode = $data['mode'] ?? 'training';
-            $requestedCount = isset($data['questions_count']) ? (int)$data['questions_count'] : null;
-            
-            if (!$testId) {
-                throw new Exception('Test ID required');
-            }
-            
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Please login first');
-            }
-            
-            $userId = $modx->user->id;
-            
-    
-            // ДОБАВЬ ЭТО: Очистка старых сессий всех пользователей (не только текущего)
-            $modx->exec("
-                UPDATE {$prefix}test_sessions 
-                SET status = 'expired' 
-                WHERE status = 'active' 
-                AND started_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)
-            ");
-            
-            
-            // НОВОЕ: Удаляем старые активные сессии этого пользователя для этого теста
-            $stmt = $modx->prepare("
-                UPDATE {$prefix}test_sessions 
-                SET status = 'abandoned' 
-                WHERE test_id = ? AND user_id = ? AND status = 'active'
-            ");
-            $stmt->execute([$testId, $userId]);
-            
-            $stmt = $modx->prepare("
-                SELECT questions_per_session, randomize_questions 
-                FROM {$prefix}test_tests 
-                WHERE id = ?
-            ");
-            $stmt->execute([$testId]);
-            $testSettings = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            $questionsLimit = $requestedCount !== null 
-                ? $requestedCount 
-                : (int)($testSettings['questions_per_session'] ?? 20);
-            
-            $randomize = (int)($testSettings['randomize_questions'] ?? 1);
-            
-            // УЛУЧШЕНО: Более случайный выбор вопросов
-            $sql = "SELECT id FROM {$prefix}test_questions WHERE test_id = ? AND published = 1";
-            if ($randomize) {
-                // Используем MD5(CONCAT()) для лучшей случайности
-                $sql .= " ORDER BY RAND(" . mt_rand() . ")";
-            } else {
-                $sql .= " ORDER BY sort_order";
-            }
-            $sql .= " LIMIT " . $questionsLimit;
-            
-            $stmt = $modx->prepare($sql);
-            $stmt->execute([$testId]);
-            $questionIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
-            
-            if (empty($questionIds)) {
-                throw new Exception('No questions found');
-            }
-            
-            $stmt = $modx->prepare("
-                INSERT INTO {$prefix}test_sessions 
-                (test_id, user_id, mode, question_order, status, started_at)
-                VALUES (?, ?, ?, ?, 'active', NOW())
-            ");
-            $stmt->execute([$testId, $userId, $mode, json_encode($questionIds)]);
-            $sessionId = $modx->lastInsertId();
-            
-            $response = [
-                'success' => true,
-                'data' => [
-                    'session_id' => $sessionId,
-                    'mode' => $mode,
-                    'total_questions' => count($questionIds)
-                ]
-            ];
+            // Валидация входных данных
+            $testId = ValidationHelper::requireInt($data, 'test_id', 'Test ID required');
+            $mode = ValidationHelper::optionalString($data, 'mode', 'training');
+            $requestedCount = isset($data['questions_count']) ? ValidationHelper::requireInt($data, 'questions_count', null, false, 1) : null;
+
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Please login first');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+
+            // Используем SessionService для запуска сессии
+            $sessionData = SessionService::startSession($modx, $testId, $userId, $mode, $requestedCount);
+
+            $response = ResponseHelper::success($sessionData);
             break;
 
         case 'cleanupOldSessions':
             // Удаляем сессии старше 24 часов
             $modx->exec("
-                UPDATE {$prefix}test_sessions 
-                SET status = 'expired' 
-                WHERE status = 'active' 
+                UPDATE {$prefix}test_sessions
+                SET status = 'expired'
+                WHERE status = 'active'
                 AND started_at < DATE_SUB(NOW(), INTERVAL 24 HOUR)
             ");
-            
-            $response = ['success' => true];
+
+            $response = ResponseHelper::success();
             break;
         
 
         case 'getNextQuestion':
-            $sessionId = (int)($data['session_id'] ?? 0);
-            
-            if (!$sessionId) {
-                throw new Exception('Session ID required');
-            }
+            // Валидация входных данных
+            $sessionId = ValidationHelper::requireInt($data, 'session_id', 'Session ID required');
             
             // ИСПРАВЛЕНИЕ: Добавляем поддержку областей знаний (test_id = -1)
             $stmt = $modx->prepare("
@@ -431,10 +330,7 @@ try {
             }
             
             if (!$nextQuestionId) {
-                $response = [
-                    'success' => true,
-                    'data' => ['finished' => true]
-                ];
+                $response = ResponseHelper::success(['finished' => true]);
                 break;
             }
             
@@ -479,29 +375,20 @@ try {
             $answers = $stmt->fetchAll(PDO::FETCH_ASSOC);
             
             // ИСПРАВЛЕНИЕ: правильная структура ответа
-            $response = [
-                'success' => true,
-                'data' => [
-                    'question' => $question,
-                    'answers' => $answers,
-                    'current' => count($answeredIds) + 1,
-                    'total' => count($questionOrder)
-                ]
-            ];
+            $response = ResponseHelper::success([
+                'question' => $question,
+                'answers' => $answers,
+                'current' => count($answeredIds) + 1,
+                'total' => count($questionOrder)
+            ]);
             break;
         
         case 'togglePublished':
-            $rights = checkUserRights($modx);
-            
-            if (!$rights['canEdit']) {
-                throw new Exception('No permission');
-            }
-            
-            $questionId = (int)($data['question_id'] ?? 0);
-            
-            if (!$questionId) {
-                throw new Exception('Question ID required');
-            }
+            // Проверка прав доступа
+            PermissionHelper::requireEditRights($modx, 'No permission');
+
+            // Валидация входных данных
+            $questionId = ValidationHelper::requireQuestionId($data['question_id'] ?? 0, 'Question ID required');
             
             // Получаем текущий статус
             $stmt = $modx->prepare("SELECT published FROM modx_test_questions WHERE id = ?");
@@ -512,25 +399,16 @@ try {
             $newStatus = $current ? 0 : 1;
             $stmt = $modx->prepare("UPDATE modx_test_questions SET published = ? WHERE id = ?");
             $stmt->execute([$newStatus, $questionId]);
-            
-            $response = [
-                'success' => true,
-                'published' => $newStatus
-            ];
-            break;        
+
+            $response = ResponseHelper::success(['published' => $newStatus]);
+            break;
 
         case 'toggleLearning':
-            $rights = checkUserRights($modx);
-            
-            if (!$rights['canEdit']) {
-                throw new Exception('No permission');
-            }
-            
-            $questionId = (int)($data['question_id'] ?? 0);
-            
-            if (!$questionId) {
-                throw new Exception('Question ID required');
-            }
+            // Проверка прав доступа
+            PermissionHelper::requireEditRights($modx, 'No permission');
+
+            // Валидация входных данных
+            $questionId = ValidationHelper::requireQuestionId($data['question_id'] ?? 0, 'Question ID required');
             
             // Получаем текущий статус
             $stmt = $modx->prepare("SELECT is_learning FROM modx_test_questions WHERE id = ?");
@@ -541,156 +419,27 @@ try {
             $newStatus = $current ? 0 : 1;
             $stmt = $modx->prepare("UPDATE modx_test_questions SET is_learning = ? WHERE id = ?");
             $stmt->execute([$newStatus, $questionId]);
-            
-            $response = [
-                'success' => true,
-                'is_learning' => $newStatus
-            ];
+
+            $response = ResponseHelper::success(['is_learning' => $newStatus]);
             break;
         
         
 
         case 'submitAnswer':
-            $sessionId = (int)($data['session_id'] ?? 0);
-            $questionId = (int)($data['question_id'] ?? 0);
+            // Валидация входных данных
+            $sessionId = ValidationHelper::requireInt($data, 'session_id', 'Session ID required');
+            $questionId = ValidationHelper::requireInt($data, 'question_id', 'Question ID required');
             $answerIds = $data['answer_ids'] ?? [];
-            
-            if (!$sessionId || !$questionId) {
-                throw new Exception('Invalid data');
-            }
-            
-            if (!is_array($answerIds)) {
-                $answerIds = [$answerIds];
-            }
-            
-            // ИСПРАВЛЕНИЕ: Приводим все ID к int
-            $answerIds = array_map('intval', $answerIds);
-            
-            $stmt = $modx->prepare("
-                SELECT s.mode, s.status 
-                FROM modx_test_sessions s
-                WHERE s.id = ?
-            ");
-            $stmt->execute([$sessionId]);
-            $session = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if (!$session || $session['status'] !== 'active') {
-                throw new Exception('Invalid or completed session');
-            }
-            
-            // ИСПРАВЛЕНИЕ: Проверяем, не был ли уже дан ответ на этот вопрос
-            $stmt = $modx->prepare("
-                SELECT COUNT(*) 
-                FROM modx_test_user_answers 
-                WHERE session_id = ? AND question_id = ?
-            ");
-            $stmt->execute([$sessionId, $questionId]);
-            $alreadyAnswered = (int)$stmt->fetchColumn();
-            
-            if ($alreadyAnswered > 0) {
-                // Уже отвечали - возвращаем существующий ответ
-                throw new Exception('Question already answered');
-            }
-            
-            $stmt = $modx->prepare("
-                SELECT id, is_correct 
-                FROM modx_test_answers 
-                WHERE question_id = ?
-            ");
-            $stmt->execute([$questionId]);
-            $allAnswers = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            $correctIds = [];
-            foreach ($allAnswers as $ans) {
-                if ($ans['is_correct']) {
-                    $correctIds[] = (int)$ans['id'];
-                }
-            }
-            
-            sort($answerIds);
-            sort($correctIds);
-            $isCorrect = ($answerIds === $correctIds) ? 1 : 0;
-            
 
-            $logData = [
-                'session' => $sessionId,
-                'question' => $questionId,
-                'answers' => $answerIds,
-                'correct' => $isCorrect
-            ];
+            // Используем SessionService для отправки ответа
+            $responseData = SessionService::submitAnswer($modx, $sessionId, $questionId, $answerIds);
 
-            
-            try {
-                // ИСПРАВЛЕНИЕ: Вставляем по одной строке на каждый ответ
-                $stmt = $modx->prepare("
-                    INSERT INTO modx_test_user_answers 
-                    (session_id, question_id, answer_id, is_correct, answered_at)
-                    VALUES (?, ?, ?, ?, NOW())
-                ");
-                
-                if (!$stmt) {
-                    throw new Exception('Database error: failed to prepare');
-                }
-                
-                // Вставляем каждый выбранный ответ отдельной строкой
-                foreach ($answerIds as $answerId) {
-                    // Проверяем, правильный ли этот ответ
-                    $isThisAnswerCorrect = in_array($answerId, $correctIds) ? 1 : 0;
-                    
-                    $insertResult = $stmt->execute([
-                        $sessionId,
-                        $questionId,
-                        $answerId,
-                        $isThisAnswerCorrect
-                    ]);
-                    
-                    if (!$insertResult) {
-                        $errorInfo = $stmt->errorInfo();
-                        throw new Exception('Failed to save answer: ' . $errorInfo[2]);
-                    }
-                }
-
-            } catch (PDOException $e) {
-                throw new Exception('Database error: ' . $e->getMessage());
-            }
-
-
-            $responseData = [
-                'is_correct' => $isCorrect,
-                'user_answer_ids' => $answerIds
-            ];
-
-            if ($session['mode'] === 'training') {
-                $responseData['correct_answer_ids'] = $correctIds;
-                
-                $stmt = $modx->prepare("
-                    SELECT explanation, explanation_image 
-                    FROM modx_test_questions 
-                    WHERE id = ?
-                ");
-                $stmt->execute([$questionId]);
-                $qData = $stmt->fetch(PDO::FETCH_ASSOC);
-                
-                if ($qData['explanation']) {
-                    $responseData['explanation'] = $qData['explanation'];
-                }
-                if ($qData['explanation_image']) {
-                    $responseData['explanation_image'] = $qData['explanation_image'];
-                }
-            }
-
-            $response = [
-                'success' => true,
-                'data' => $responseData
-            ];
+            $response = ResponseHelper::success($responseData);
             break;
-        
+
         case 'finishTest':
-            $sessionId = (int)($data['session_id'] ?? 0);
-            
-            if (!$sessionId) {
-                throw new Exception('Session ID required');
-            }
+            // Валидация входных данных
+            $sessionId = ValidationHelper::requireInt($data, 'session_id', 'Session ID required');
             
             $stmt = $modx->prepare("
                 SELECT s.test_id, s.mode, s.status, t.pass_score
@@ -766,28 +515,22 @@ try {
                 }
             }
 
-            $response = [
-                'success' => true,
-                'data' => [
-                    'score' => $score,
-                    'passed' => $passed,
-                    'correct_count' => $correct,
-                    'incorrect_count' => $total - $correct,
-                    'total_count' => $total,
-                    'pass_score' => (int)$session['pass_score']
-                ]
-            ];
+            $response = ResponseHelper::success([
+                'score' => $score,
+                'passed' => $passed,
+                'correct_count' => $correct,
+                'incorrect_count' => $total - $correct,
+                'total_count' => $total,
+                'pass_score' => (int)$session['pass_score']
+            ]);
             break;
-        
+
 
 
         case 'getAllQuestions':
-            $testId = (int)($data['test_id'] ?? 0);
-            
-            if (!$testId) {
-                throw new Exception('Test ID required');
-            }
-            
+            // Валидация входных данных
+            $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
+
             // ВАЖНО: НЕ фильтруем по is_learning здесь, показываем ВСЕ вопросы
             $stmt = $modx->prepare("
                 SELECT id, question_text, explanation, question_type, published, is_learning
@@ -800,35 +543,23 @@ try {
             
             // Логирование для отладки
             //error_log('getAllQuestions: testId=' . $testId . ', count=' . count($questions));
-            
-            $response = [
-                'success' => true,
-                'data' => $questions
-            ];
+
+            $response = ResponseHelper::success($questions);
             break;
 
 
         case 'checkEditRights':
-            $rights = checkUserRights($modx);
-            
-            $response = [
-                'success' => true,
-                'data' => $rights
-            ];
+            $rights = PermissionHelper::getUserRights($modx);
+
+            $response = ResponseHelper::success($rights);
             break;
         
         case 'getQuestion':
-            $rights = checkUserRights($modx);
-            
-            if (!$rights['canEdit']) {
-                throw new Exception('No permission to edit questions');
-            }
-            
-            $questionId = (int)($data['question_id'] ?? 0);
-            
-            if (!$questionId) {
-                throw new Exception('Question ID required');
-            }
+            // Проверка прав доступа
+            PermissionHelper::requireEditRights($modx, 'No permission to edit questions');
+
+            // Валидация входных данных
+            $questionId = ValidationHelper::requireQuestionId($data['question_id'] ?? 0, 'Question ID required');
             
             $stmt = $modx->prepare("
                 SELECT id, question_text, question_type, explanation, test_id,
@@ -843,11 +574,16 @@ try {
             
             $stmt->execute([$questionId]);
             $question = $stmt->fetch(PDO::FETCH_ASSOC);
-            
+
             if (!$question) {
                 throw new Exception('Question not found');
             }
-            
+
+            // IDOR Protection: проверяем право редактировать тест, которому принадлежит вопрос
+            if (!canUserEditTest($modx, $question['test_id'])) {
+                throw new Exception('You do not have permission to edit this test');
+            }
+
             $stmt = $modx->prepare("
                 SELECT id, answer_text, is_correct, sort_order
                 FROM modx_test_answers 
@@ -856,37 +592,31 @@ try {
             ");
             $stmt->execute([$questionId]);
             $answers = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
+
             $question['answers'] = $answers;
-            
-            $response = [
-                'success' => true,
-                'data' => $question
-            ];
+
+            $response = ResponseHelper::success($question);
             break;
         
 
 
         case 'updateQuestion':
-            $rights = checkUserRights($modx);
-            
-            if (!$rights['canEdit']) {
-                throw new Exception('No permission to edit questions');
-            }
-            
-            $questionId = (int)($data['question_id'] ?? 0);
-            $questionText = trim($data['question_text'] ?? '');
-            $questionType = trim($data['question_type'] ?? 'single');
-            $explanation = trim($data['explanation'] ?? '');
-            $questionImage = trim($data['question_image'] ?? '');
-            $explanationImage = trim($data['explanation_image'] ?? '');
-            $published = (int)($data['published'] ?? 1);
-            $isLearning = (int)($data['is_learning'] ?? 0); // ИЗМЕНИТЬ: было 1, теперь 0
+            // Проверка прав доступа
+            PermissionHelper::requireEditRights($modx, 'No permission to edit questions');
+
+            // Валидация входных данных
+            $questionId = ValidationHelper::requireQuestionId($data['question_id'] ?? 0, 'Question ID required');
+            $questionText = ValidationHelper::requireString($data, 'question_text', 'Question text is required');
+            $questionType = ValidationHelper::optionalString($data, 'question_type', 'single');
+            $explanation = ValidationHelper::optionalString($data, 'explanation');
+            $questionImage = ValidationHelper::optionalString($data, 'question_image');
+            $explanationImage = ValidationHelper::optionalString($data, 'explanation_image');
+            $published = ValidationHelper::optionalInt($data, 'published', 1);
+            $isLearning = ValidationHelper::optionalInt($data, 'is_learning', 0);
             $answers = $data['answers'] ?? [];
 
-            if (!$questionId || empty($questionText)) {
-                throw new Exception('Invalid data');
-            }
+            // Валидация типа вопроса
+            $questionType = ValidationHelper::validateQuestionType($questionType);
             
             $stmt = $modx->prepare("
                 UPDATE modx_test_questions 
@@ -907,9 +637,9 @@ try {
             
             foreach ($answers as $answer) {
                 if (empty($answer['id'])) continue;
-                
+
                 $stmt = $modx->prepare("
-                    UPDATE modx_test_answers 
+                    UPDATE modx_test_answers
                     SET answer_text = ?, is_correct = ?
                     WHERE id = ?
                 ");
@@ -919,29 +649,36 @@ try {
                     $answer['id']
                 ]);
             }
-            
-            $response = [
-                'success' => true,
-                'message' => 'Question updated'
-            ];
+
+            $response = ResponseHelper::success(null, 'Question updated');
             break;
         
 
 
         case 'deleteQuestion':
-            $rights = checkUserRights($modx);
-            
-            if (!$rights['canEdit']) {
-                throw new Exception('No permission to delete questions');
+            // Проверка прав доступа
+            PermissionHelper::requireEditRights($modx, 'No permission to delete questions');
+
+            // Валидация входных данных
+            $questionId = ValidationHelper::requireQuestionId($data['question_id'] ?? 0, 'Question ID required');
+            $sessionId = ValidationHelper::optionalInt($data, 'session_id', 0);
+
+            // IDOR Protection: получаем test_id вопроса и проверяем право на редактирование
+            $stmt = $modx->prepare("SELECT test_id FROM modx_test_questions WHERE id = ?");
+            if (!$stmt || !$stmt->execute([$questionId])) {
+                throw new Exception('Database error');
             }
-            
-            $questionId = (int)($data['question_id'] ?? 0);
-            $sessionId = (int)($data['session_id'] ?? 0);
-            
-            if (!$questionId) {
-                throw new Exception('Question ID required');
+
+            $question = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$question) {
+                throw new Exception('Question not found');
             }
-            
+
+            // Проверяем право редактировать тест, которому принадлежит вопрос
+            if (!canUserEditTest($modx, $question['test_id'])) {
+                throw new Exception('You do not have permission to delete questions from this test');
+            }
+
             if ($sessionId > 0) {
                 $stmt = $modx->prepare("SELECT question_order FROM modx_test_sessions WHERE id = ?");
                 $stmt->execute([$sessionId]);
@@ -966,25 +703,16 @@ try {
             
             $stmt = $modx->prepare("DELETE FROM modx_test_questions WHERE id = ?");
             $stmt->execute([$questionId]);
-            
-            $response = [
-                'success' => true,
-                'message' => 'Question deleted'
-            ];
+
+            $response = ResponseHelper::success(null, 'Question deleted');
             break;
-        
+
         case 'getTestSettings':
-            $rights = checkUserRights($modx);
-            
-            if (!$rights['canEdit']) {
-                throw new Exception('No permission to edit test settings');
-            }
-            
-            $testId = (int)($data['test_id'] ?? 0);
-            
-            if (!$testId) {
-                throw new Exception('Test ID required');
-            }
+            // Проверка прав доступа
+            PermissionHelper::requireEditRights($modx, 'No permission to edit test settings');
+
+            // Валидация входных данных
+            $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
             
             $stmt = $modx->prepare("
                 SELECT id, title, description, is_active, is_learning_material,
@@ -999,22 +727,16 @@ try {
             if (!$test) {
                 throw new Exception('Test not found');
             }
-            
-            $response = [
-                'success' => true,
-                'data' => $test
-            ];
+
+            $response = ResponseHelper::success($test);
             break;
 
 
 
         case 'getQuestionAnswers':
-            $questionId = (int)($data['question_id'] ?? 0);
-            $sessionId = (int)($data['session_id'] ?? 0);
-            
-            if (!$questionId || !$sessionId) {
-                throw new Exception('Question ID and Session ID required');
-            }
+            // Валидация входных данных
+            $questionId = ValidationHelper::requireQuestionId($data['question_id'] ?? 0, 'Question ID required');
+            $sessionId = ValidationHelper::requireInt($data, 'session_id', 'Session ID required');
             
             // Получаем сессию для проверки режима
             $stmt = $modx->prepare("
@@ -1091,29 +813,20 @@ try {
                 //error_log('getQuestionAnswers feedback: ' . json_encode($responseData['feedback']));
             }
             
-            $response = [
-                'success' => true,
-                'data' => $responseData
-            ];
+            $response = ResponseHelper::success($responseData);
             break;
 
-        
+
         case 'updateTestSettings':
-            $rights = checkUserRights($modx);
-            
-            if (!$rights['canEdit']) {
-                throw new Exception('No permission to edit test settings');
-            }
-            
-            $testId = (int)($data['test_id'] ?? 0);
-            $title = trim($data['title'] ?? '');
-            $description = trim($data['description'] ?? '');
-            $isActive = (int)($data['is_active'] ?? 1);
-            $isLearningMaterial = (int)($data['is_learning_material'] ?? 0);
-            
-            if (!$testId || empty($title)) {
-                throw new Exception('Invalid data');
-            }
+            // Проверка прав доступа
+            PermissionHelper::requireEditRights($modx, 'No permission to edit test settings');
+
+            // Валидация входных данных
+            $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
+            $title = ValidationHelper::requireString($data, 'title', 'Title is required');
+            $description = ValidationHelper::optionalString($data, 'description');
+            $isActive = ValidationHelper::optionalInt($data, 'is_active', 1);
+            $isLearningMaterial = ValidationHelper::optionalInt($data, 'is_learning_material', 0);
             
             $stmt = $modx->prepare("
                 UPDATE modx_test_tests 
@@ -1124,24 +837,17 @@ try {
                 WHERE id = ?
             ");
             $stmt->execute([$title, $description, $isActive, $isLearningMaterial, $testId]);
-            
-            $response = [
-                'success' => true,
-                'message' => 'Test settings updated'
-            ];
+
+            $response = ResponseHelper::success(null, 'Test settings updated');
             break;
 
         case 'toggleFavorite':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $questionId = (int)($data['question_id'] ?? 0);
-            $userId = $modx->user->id;
-            
-            if (!$questionId) {
-                throw new Exception('Question ID required');
-            }
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            // Валидация входных данных
+            $questionId = ValidationHelper::requireQuestionId($data['question_id'] ?? 0, 'Question ID required');
+            $userId = PermissionHelper::getCurrentUserId($modx);
             
             // Проверяем существование
             $stmt = $modx->prepare("
@@ -1168,25 +874,19 @@ try {
                 $stmt->execute([$userId, $questionId]);
                 $isFavorite = true;
             }
-            
-            $response = [
-                'success' => true,
-                'is_favorite' => $isFavorite
-            ];
+
+            $response = ResponseHelper::success(['is_favorite' => $isFavorite]);
             break;
-        
+
         case 'getFavoriteStatus':
             if (!$modx->user->hasSessionContext('web')) {
-                $response = ['success' => true, 'is_favorite' => false];
+                $response = ResponseHelper::success(['is_favorite' => false]);
                 break;
             }
-            
-            $questionId = (int)($data['question_id'] ?? 0);
-            $userId = $modx->user->id;
-            
-            if (!$questionId) {
-                throw new Exception('Question ID required');
-            }
+
+            // Валидация входных данных
+            $questionId = ValidationHelper::requireQuestionId($data['question_id'] ?? 0, 'Question ID required');
+            $userId = PermissionHelper::getCurrentUserId($modx);
             
             $stmt = $modx->prepare("
                 SELECT COUNT(*) FROM modx_test_favorites 
@@ -1194,19 +894,15 @@ try {
             ");
             $stmt->execute([$userId, $questionId]);
             $isFavorite = (int)$stmt->fetchColumn() > 0;
-            
-            $response = [
-                'success' => true,
-                'is_favorite' => $isFavorite
-            ];
+
+            $response = ResponseHelper::success(['is_favorite' => $isFavorite]);
             break;
 
         case 'getFavoriteQuestions':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Требуется авторизация');
-            }
-            
-            $userId = $modx->user->id;
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Требуется авторизация');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
             
             $stmt = $modx->prepare("
                 SELECT 
@@ -1227,25 +923,20 @@ try {
             
             $stmt->execute([$userId]);
             $favorites = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            $response = [
-                'success' => true,
-                'data' => $favorites
-            ];
+
+            $response = ResponseHelper::success($favorites);
             break;
-            
-            
+
+
         // ============================================
         // KNOWLEDGE AREAS API
         // ============================================
-        
+
         case 'getKnowledgeAreas':
-            // Только для авторизованных
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = $modx->user->id;
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
             
             $stmt = $modx->prepare("
                 SELECT ka.id, ka.name, ka.description, ka.test_ids, 
@@ -1279,30 +970,20 @@ try {
                 $area['questions_count'] = (int)$stmt->fetchColumn();
             }
             
-            $response = [
-                'success' => true,
-                'data' => $areas
-            ];
+            $response = ResponseHelper::success($areas);
             break;
-        
+
         case 'createKnowledgeArea':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = $modx->user->id;
-            $name = trim($data['name'] ?? '');
-            $description = trim($data['description'] ?? '');
-            $testIds = $data['test_ids'] ?? [];
-            $questionsPerSession = (int)($data['questions_per_session'] ?? 20);
-            
-            if (empty($name)) {
-                throw new Exception('Name is required');
-            }
-            
-            if (!is_array($testIds) || empty($testIds)) {
-                throw new Exception('At least one test must be selected');
-            }
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация входных данных
+            $name = ValidationHelper::requireString($data, 'name', 'Name is required');
+            $description = ValidationHelper::optionalString($data, 'description');
+            $testIds = ValidationHelper::requireArray($data, 'test_ids', 1, 'At least one test must be selected');
+            $questionsPerSession = ValidationHelper::optionalInt($data, 'questions_per_session', 20);
             
             // Валидация: все тесты должны существовать и быть активными
             $placeholders = implode(',', array_fill(0, count($testIds), '?'));
@@ -1346,104 +1027,91 @@ try {
             ]);
             
             $areaId = $modx->lastInsertId();
-            
-            $response = [
-                'success' => true,
-                'message' => 'Knowledge area created',
-                'area_id' => $areaId
-            ];
+
+            $response = ResponseHelper::success(
+                ['area_id' => $areaId],
+                'Knowledge area created'
+            );
             break;
-        
-case 'updateKnowledgeArea':
-    if (!$modx->user->hasSessionContext('web')) {
-        throw new Exception('Login required');
-    }
-    
-    $userId = $modx->user->id;
-    $areaId = (int)($data['area_id'] ?? 0);
-    $name = trim($data['name'] ?? '');
-    $description = trim($data['description'] ?? '');
-    $testIds = $data['test_ids'] ?? [];
-    $questionsPerSession = (int)($data['questions_per_session'] ?? 20);
-    $distributionMode = $data['question_distribution_mode'] ?? 'proportional';
-    $minQuestionsPerTest = (int)($data['min_questions_per_test'] ?? 3);
-    
-    if (!$areaId || empty($name)) {
-        throw new Exception('Invalid data');
-    }
-    
-    if (!is_array($testIds) || empty($testIds)) {
-        throw new Exception('At least one test must be selected');
-    }
-    
-    if (!in_array($distributionMode, ['proportional', 'equal'])) {
-        $distributionMode = 'proportional';
-    }
-    
-    // Проверяем что область принадлежит текущему пользователю
-    $stmt = $modx->prepare("
-        SELECT user_id 
-        FROM modx_test_knowledge_areas 
-        WHERE id = ?
-    ");
-    $stmt->execute([$areaId]);
-    $ownerId = (int)$stmt->fetchColumn();
-    
-    if ($ownerId !== $userId) {
-        throw new Exception('Access denied');
-    }
-    
-    // Валидация тестов
-    $placeholders = implode(',', array_fill(0, count($testIds), '?'));
-    $stmt = $modx->prepare("
-        SELECT COUNT(*) 
-        FROM modx_test_tests 
-        WHERE id IN ($placeholders) AND is_active = 1
-    ");
-    $stmt->execute($testIds);
-    $validCount = (int)$stmt->fetchColumn();
-    
-    if ($validCount !== count($testIds)) {
-        throw new Exception('Some tests are invalid or inactive');
-    }
-    
-    // Обновляем
-    $stmt = $modx->prepare("
-        UPDATE modx_test_knowledge_areas 
-        SET name = ?, description = ?, test_ids = ?, questions_per_session = ?, 
-            question_distribution_mode = ?, min_questions_per_test = ?
-        WHERE id = ? AND user_id = ?
-    ");
-    $stmt->execute([
-        $name,
-        $description,
-        json_encode(array_map('intval', $testIds)),
-        $questionsPerSession,
-        $distributionMode,
-        $minQuestionsPerTest,
-        $areaId,
-        $userId
-    ]);
-    
-    $response = [
-        'success' => true,
-        'message' => 'Knowledge area updated'
-    ];
-    break;
+
+        case 'updateKnowledgeArea':
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация входных данных
+            $areaId = ValidationHelper::requireInt($data, 'area_id', 'Area ID required');
+            $name = ValidationHelper::requireString($data, 'name', 'Name is required');
+            $description = ValidationHelper::optionalString($data, 'description');
+            $testIds = ValidationHelper::requireArray($data, 'test_ids', 1, 'At least one test must be selected');
+            $questionsPerSession = ValidationHelper::optionalInt($data, 'questions_per_session', 20);
+            $distributionMode = ValidationHelper::optionalString($data, 'question_distribution_mode', 'proportional');
+            $minQuestionsPerTest = ValidationHelper::optionalInt($data, 'min_questions_per_test', 3);
+
+            // Валидация режима распределения
+            if (!in_array($distributionMode, ['proportional', 'equal'], true)) {
+                $distributionMode = 'proportional';
+            }
+
+                    // Проверяем что область принадлежит текущему пользователю
+            $stmt = $modx->prepare("
+                SELECT user_id
+                FROM modx_test_knowledge_areas
+                WHERE id = ?
+            ");
+            $stmt->execute([$areaId]);
+            $ownerId = (int)$stmt->fetchColumn();
+
+            if ($ownerId !== $userId) {
+                throw new Exception('Access denied');
+            }
+
+            // Валидация тестов
+            $placeholders = implode(',', array_fill(0, count($testIds), '?'));
+            $stmt = $modx->prepare("
+                SELECT COUNT(*)
+                FROM modx_test_tests
+                WHERE id IN ($placeholders) AND is_active = 1
+            ");
+            $stmt->execute($testIds);
+            $validCount = (int)$stmt->fetchColumn();
+
+            if ($validCount !== count($testIds)) {
+                throw new Exception('Some tests are invalid or inactive');
+            }
+
+            // Обновляем
+            $stmt = $modx->prepare("
+                UPDATE modx_test_knowledge_areas
+                SET name = ?, description = ?, test_ids = ?, questions_per_session = ?,
+                    question_distribution_mode = ?, min_questions_per_test = ?
+                WHERE id = ? AND user_id = ?
+            ");
+            $stmt->execute([
+                $name,
+                $description,
+                json_encode(array_map('intval', $testIds)),
+                $questionsPerSession,
+                $distributionMode,
+                $minQuestionsPerTest,
+                $areaId,
+                $userId
+            ]);
+
+            $response = ResponseHelper::success(null, 'Knowledge area updated');
+            break;
     
     
         case 'deleteKnowledgeArea':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = $modx->user->id;
-            $areaId = (int)($data['area_id'] ?? 0);
-            
-            if (!$areaId) {
-                throw new Exception('Area ID required');
-            }
-            
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация входных данных
+            $areaId = ValidationHelper::requireInt($data, 'area_id', 'Area ID required');
+
             // КРИТИЧНО: Проверяем владельца
             $stmt = $modx->prepare("
                 SELECT user_id 
@@ -1459,29 +1127,23 @@ case 'updateKnowledgeArea':
             
             // Мягкое удаление (is_active = 0)
             $stmt = $modx->prepare("
-                UPDATE modx_test_knowledge_areas 
-                SET is_active = 0 
+                UPDATE modx_test_knowledge_areas
+                SET is_active = 0
                 WHERE id = ? AND user_id = ?
             ");
             $stmt->execute([$areaId, $userId]);
-            
-            $response = [
-                'success' => true,
-                'message' => 'Knowledge area deleted'
-            ];
+
+            $response = ResponseHelper::success(null, 'Knowledge area deleted');
             break;
-        
+
         case 'getKnowledgeAreaDetails':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = $modx->user->id;
-            $areaId = (int)($data['area_id'] ?? 0);
-            
-            if (!$areaId) {
-                throw new Exception('Area ID required');
-            }
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация входных данных
+            $areaId = ValidationHelper::requireInt($data, 'area_id', 'Area ID required');
             
             // КРИТИЧНО: Проверяем владельца
 
@@ -1518,20 +1180,16 @@ case 'updateKnowledgeArea':
             } else {
                 $area['tests'] = [];
             }
-            
-            $response = [
-                'success' => true,
-                'data' => $area
-            ];
+
+            $response = ResponseHelper::success($area);
             break;
-        
+
 
         case 'getAvailableTestsTree':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = (int)$modx->user->get('id');
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
             
             // Получаем тесты с учетом publication_status
             $stmt = $modx->prepare("
@@ -1623,25 +1281,17 @@ case 'updateKnowledgeArea':
                 return 0;
             });
             
-            $response = [
-                'success' => true,
-                'data' => array_values($tree)
-            ];
+            $response = ResponseHelper::success(array_values($tree));
             break;
 
 
         case 'startKnowledgeAreaSession':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = (int)$modx->user->get('id');
-            $areaId = (int)($data['area_id'] ?? 0);
-            
-            if (!$areaId) {
-                throw new Exception('Area ID required');
-            }
-            
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+            $areaId = ValidationHelper::requireInt($data, 'area_id', 'Area ID required');
+
             // Загружаем область знаний
             $stmt = $modx->prepare("
                 SELECT test_ids, questions_per_session, name, question_distribution_mode, 
@@ -1782,167 +1432,36 @@ if (empty($allQuestionIds)) {
             }
             
             $sessionId = (int)$modx->lastInsertId();
-            
-            $response = [
-                'success' => true,
-                'data' => [
-                    'session_id' => $sessionId,
-                    'area_name' => $area['name'],
-                    'total_questions' => count($allQuestionIds),
-                    'is_knowledge_area' => true,
-                    'distribution' => $distribution
-                ]
-            ];
+
+            $response = ResponseHelper::success([
+                'session_id' => $sessionId,
+                'area_name' => $area['name'],
+                'total_questions' => count($allQuestionIds),
+                'is_knowledge_area' => true,
+                'distribution' => $distribution
+            ]);
             break;
-        
+
         case 'publishTest':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $currentUserId = (int)$modx->user->get('id');
-            $testId = (int)($data['test_id'] ?? 0);
-            $publicationStatus = $data['status'] ?? 'private'; // draft, private, unlisted, public
-            
-            if (!$testId) {
-                throw new Exception('Test ID required');
-            }
-            
-            if (!in_array($publicationStatus, ['draft', 'private', 'unlisted', 'public'])) {
-                throw new Exception('Invalid publication status');
-            }
-            
-            $rights = checkUserRights($modx);
-            
-            // Загружаем тест
-            $stmt = $modx->prepare("
-                SELECT created_by, title, publication_status, public_url_slug
-                FROM modx_test_tests 
-                WHERE id = ?
-            ");
-            $stmt->execute([$testId]);
-            $test = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if (!$test) {
-                throw new Exception('Test not found');
-            }
-            
-            // Проверяем права на изменение статуса
-            $isOwner = ((int)$test['created_by'] === $currentUserId);
-            
-            if (!$isOwner && !$rights['isAdmin']) {
-                throw new Exception('Only owner or admin can change publication status');
-            }
-            
-            // Для публикации теста нужно минимум 5 вопросов
-            if (in_array($publicationStatus, ['unlisted', 'public'])) {
-                $stmt = $modx->prepare("
-                    SELECT COUNT(*) 
-                    FROM modx_test_questions 
-                    WHERE test_id = ? AND published = 1
-                ");
-                $stmt->execute([$testId]);
-                $questionsCount = (int)$stmt->fetchColumn();
-                
-                if ($questionsCount < 5) {
-                    throw new Exception('Test must have at least 5 published questions to be public');
-                }
-            }
-            
-            // Генерируем URL slug для unlisted/public
-            $slug = $test['public_url_slug'];
-            
-            if (in_array($publicationStatus, ['unlisted', 'public']) && !$slug) {
-                // Генерируем уникальный slug
-                $baseSlug = $modx->filterPathSegment($test['title']);
-                $baseSlug = preg_replace('/[^a-z0-9-]/', '', strtolower($baseSlug));
-                $baseSlug = substr($baseSlug, 0, 100);
-                
-                if (empty($baseSlug)) {
-                    $baseSlug = 'test-' . $testId;
-                }
-                
-                $slug = $baseSlug;
-                $counter = 1;
-                
-                // Проверяем уникальность
-                while (true) {
-                    $stmt = $modx->prepare("
-                        SELECT COUNT(*) 
-                        FROM modx_test_tests 
-                        WHERE public_url_slug = ? AND id != ?
-                    ");
-                    $stmt->execute([$slug, $testId]);
-                    
-                    if ((int)$stmt->fetchColumn() === 0) {
-                        break;
-                    }
-                    
-                    $slug = $baseSlug . '-' . $counter;
-                    $counter++;
-                    
-                    if ($counter > 100) {
-                        throw new Exception('Failed to generate unique URL slug');
-                    }
-                }
-            }
-            
-            // Обновляем статус
-            $publishedAt = in_array($publicationStatus, ['unlisted', 'public']) ? 'NOW()' : 'NULL';
-            
-            $stmt = $modx->prepare("
-                UPDATE modx_test_tests 
-                SET publication_status = ?, 
-                    public_url_slug = ?,
-                    published_at = $publishedAt
-                WHERE id = ?
-            ");
-            
-            $stmt->execute([$publicationStatus, $slug, $testId]);
-            
-            // Создаем уведомления для пользователей с доступом при публикации
-            if ($publicationStatus === 'public' && $test['publication_status'] !== 'public') {
-                $stmt = $modx->prepare("
-                    SELECT DISTINCT user_id 
-                    FROM modx_test_permissions 
-                    WHERE test_id = ?
-                ");
-                $stmt->execute([$testId]);
-                $sharedUsers = $stmt->fetchAll(PDO::FETCH_COLUMN);
-                
-                if (!empty($sharedUsers)) {
-                    $message = "Тест \"{$test['title']}\" стал публичным";
-                    
-                    $stmt = $modx->prepare("
-                        INSERT INTO modx_test_notifications 
-                        (user_id, type, test_id, initiator_id, message)
-                        VALUES (?, 'test_published', ?, ?, ?)
-                    ");
-                    
-                    foreach ($sharedUsers as $userId) {
-                        $stmt->execute([$userId, $testId, $currentUserId, $message]);
-                    }
-                }
-            }
-            
-            $response = [
-                'success' => true,
-                'message' => 'Publication status updated',
-                'data' => [
-                    'status' => $publicationStatus,
-                    'slug' => $slug,
-                    'public_url' => $slug ? $modx->makeUrl($modx->getOption('lms.public_test_page', null, 0), 'web', ['slug' => $slug], 'full') : null
-                ]
-            ];
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $currentUserId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация входных данных
+            $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
+            $publicationStatus = ValidationHelper::optionalString($data, 'status', 'private');
+
+            // Используем TestService для публикации
+            $result = TestService::publishTest($modx, $testId, $publicationStatus, $currentUserId);
+
+            $response = ResponseHelper::success($result, 'Publication status updated');
             break;
 
 
         case 'getPublicTestBySlug':
-            $slug = trim($data['slug'] ?? '');
-            
-            if (empty($slug)) {
-                throw new Exception('Slug required');
-            }
+            // Валидация входных данных
+            $slug = ValidationHelper::requireString($data, 'slug', 'Slug required');
             
             // Загружаем тест
             $stmt = $modx->prepare("
@@ -1980,260 +1499,67 @@ if (empty($allQuestionIds)) {
             ");
             $stmt->execute([$test['id']]);
             $test['statistics'] = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            $response = [
-                'success' => true,
-                'data' => $test
-            ];
+
+            $response = ResponseHelper::success($test);
             break;            
 
-// ДИАГНОСТИКА: Проверяем права пользователя
-case 'checkResourcePermissions':
-    if (!$modx->user->hasSessionContext('web')) {
-        throw new Exception('Not logged in');
-    }
-    
-    $userId = (int)$modx->user->get('id');
-    $user = $modx->getObject('modUser', $userId);
-    
-    if (!$user) {
-        throw new Exception('User not found');
-    }
-    
-    // Проверяем может ли пользователь создавать документы
-    $canCreate = $user->hasPermission('new_document');
-    $canSave = $user->hasPermission('save_document');
-    
-    $response = [
-        'success' => true,
-        'user_id' => $userId,
-        'can_create' => $canCreate,
-        'can_save' => $canSave,
-        'groups' => array_keys($user->getUserGroups())
-    ];
-    break;
+        // ДИАГНОСТИКА: Проверяем права пользователя
+        case 'checkResourcePermissions':
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Not logged in');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+            $user = $modx->getObject('modUser', $userId);
+
+            if (!$user) {
+                throw new Exception('User not found');
+            }
+
+            // Проверяем может ли пользователь создавать документы
+            $canCreate = $user->hasPermission('new_document');
+            $canSave = $user->hasPermission('save_document');
+
+            $response = ResponseHelper::success([
+                'user_id' => $userId,
+                'can_create' => $canCreate,
+                'can_save' => $canSave,
+                'groups' => array_keys($user->getUserGroups())
+            ]);
+            break;
 
         case 'createTestWithPage':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = (int)$modx->user->get('id');
-            $title = trim($data['title'] ?? '');
-            $description = trim($data['description'] ?? '');
-            $publicationStatus = $data['publication_status'] ?? 'draft';
-            
-            if (empty($title)) {
-                throw new Exception('Title is required');
-            }
-            
-            // Валидация статуса
-            $allowedStatuses = ['draft', 'private', 'unlisted', 'public'];
-            if (!in_array($publicationStatus, $allowedStatuses, true)) {
-                $publicationStatus = 'draft';
-            }
-            
-            try {
-                // ШАГ 1: Создаём тест
-                $insertStmt = $modx->prepare("
-                    INSERT INTO {$prefix}test_tests 
-                    (title, description, created_by, created_at, publication_status, is_active, mode, time_limit, pass_score, questions_per_session, resource_id) 
-                    VALUES (?, ?, ?, NOW(), ?, 1, 'training', 0, 70, 20, 0)
-                ");
-                
-                if (!$insertStmt) {
-                    throw new Exception('Failed to prepare insert statement');
-                }
-                
-                if (!$insertStmt->execute([$title, $description, $userId, $publicationStatus])) {
-                    throw new Exception('Failed to create test: ' . print_r($insertStmt->errorInfo(), true));
-                }
-                
-                $testId = (int)$modx->lastInsertId();
-                
-                if ($testId <= 0) {
-                    throw new Exception('Invalid test ID after insert');
-                }
-                
-                $modx->log(modX::LOG_LEVEL_INFO, "[createTestWithPage] Test created: ID={$testId}, Title={$title}");
-                
-                // ШАГ 2: Создаём страницу для теста
-                $testsParentId = (int)$modx->getOption('lms.user_tests_folder', null, 0);
-                
-                // ИСПРАВЛЕНО: Генерируем уникальный alias на основе testId
-                $baseAlias = $modx->filterPathSegment($title);
-                $baseAlias = preg_replace('/[^a-z0-9-]/', '', strtolower(transliterate($baseAlias)));
-                
-                if (empty($baseAlias)) {
-                    $baseAlias = 'test';
-                }
-                
-                // Финальный alias = base-{testId} (гарантированно уникальный)
-                $alias = $baseAlias . '-' . $testId;
-                
-                $modx->log(modX::LOG_LEVEL_INFO, "[createTestWithPage] Using alias: {$alias}, parent: {$testsParentId}");
-                
-                // Шаблон
-                $templateId = (int)$modx->getOption('lms.test_template', null, 0);
-                if ($templateId === 0) {
-                    $templateId = (int)$modx->getOption('default_template', null, 1);
-                }
-                
-                $modx->log(modX::LOG_LEVEL_INFO, "[createTestWithPage] Using template: {$templateId}");
-                
-                // Создаём ресурс
-                $resource = $modx->newObject('modResource');
-                
-                if (!$resource) {
-                    throw new Exception('Failed to create resource object');
-                }
-                
-                // Устанавливаем поля ресурса
-                $resourceData = [
-                    'pagetitle' => $title,
-                    'alias' => $alias,  // ← ИСПРАВЛЕНО: сразу финальный alias
-                    'parent' => $testsParentId,
-                    'template' => $templateId,
-                    'content' => '[[!testRunner]]',
-                    'published' => 1,
-                    'richtext' => 0,
-                    'searchable' => 1,
-                    'cacheable' => 1,
-                    'createdby' => $userId,
-                    'createdon' => time(),
-                    'class_key' => 'modDocument',
-                    'context_key' => 'web'
-                ];
-                
-                $resource->fromArray($resourceData, '', true, true);
-                
-                // Сохраняем БЕЗ событий
-                if (!$resource->save()) {
-                    $errors = $resource->getErrors();
-                    $errorMsg = 'Resource validation errors: ';
-                    foreach ($errors as $field => $error) {
-                        $errorMsg .= "{$field}: {$error}, ";
-                    }
-                    $modx->log(modX::LOG_LEVEL_ERROR, "[createTestWithPage] {$errorMsg}");
-                    throw new Exception('Failed to save resource: ' . $errorMsg);
-                }
-                
-                $resourceId = (int)$resource->get('id');
-                
-                if ($resourceId <= 0) {
-                    throw new Exception('Invalid resource ID after save: got ' . var_export($resourceId, true));
-                }
-                
-                $modx->log(modX::LOG_LEVEL_INFO, "[createTestWithPage] Resource created: ID={$resourceId}");
-                
-                // ШАГ 3: Привязываем тест к странице
-                $updateStmt = $modx->prepare("
-                    UPDATE {$prefix}test_tests 
-                    SET resource_id = ? 
-                    WHERE id = ?
-                ");
-                
-                if (!$updateStmt || !$updateStmt->execute([$resourceId, $testId])) {
-                    $modx->log(modX::LOG_LEVEL_ERROR, '[createTestWithPage] Failed to link test ' . $testId . ' to resource ' . $resourceId);
-                    throw new Exception('Failed to link test to page');
-                }
-                
-                $modx->log(modX::LOG_LEVEL_INFO, "[createTestWithPage] Test linked to resource");
-                
-                // Очищаем кеш ПЕРЕД генерацией URL
-                try {
-                    $modx->cacheManager->refresh([
-                        'db' => [],
-                        'auto_publish' => ['contexts' => ['web']],
-                        'context_settings' => ['contexts' => ['web']],
-                        'resource' => ['contexts' => ['web']],
-                    ]);
-                } catch (Exception $cacheError) {
-                    $modx->log(modX::LOG_LEVEL_WARN, "[createTestWithPage] Cache clear failed: " . $cacheError->getMessage());
-                }
-                
-                // Генерируем URL ПОСЛЕ очистки кеша
-                $testUrl = '';
-                
-                try {
-                    // Перезагружаем ресурс из БД чтобы убедиться что данные актуальны
-                    $resource = $modx->getObject('modResource', $resourceId);
-                    
-                    if (!$resource) {
-                        throw new Exception('Resource not found after creation');
-                    }
-                    
-                    $testUrl = $modx->makeUrl($resourceId, 'web', '', 'full');
-                    
-                    // Проверяем валидность
-                    if (empty($testUrl) || !filter_var($testUrl, FILTER_VALIDATE_URL)) {
-                        throw new Exception('Invalid URL from makeUrl');
-                    }
-                    
-                    $modx->log(modX::LOG_LEVEL_INFO, "[createTestWithPage] URL via makeUrl: {$testUrl}");
-                    
-                } catch (Exception $e) {
-                    $modx->log(modX::LOG_LEVEL_WARN, "[createTestWithPage] makeUrl failed, using fallback: " . $e->getMessage());
-                    
-                    // Fallback: строим URL вручную
-                    $siteUrl = rtrim($modx->getOption('site_url'), '/');
-                    $useFriendlyUrls = (bool)$modx->getOption('friendly_urls', null, false);
-                    
-                    if ($useFriendlyUrls && $testsParentId > 0) {
-                        // Получаем URI родительской папки
-                        $parentResource = $modx->getObject('modResource', $testsParentId);
-                        
-                        if ($parentResource) {
-                            $parentUri = trim($parentResource->get('uri'), '/');
-                            $testUrl = $siteUrl . '/' . $parentUri . '/' . $alias;
-                        } else {
-                            $testUrl = $siteUrl . '/' . $alias;
-                        }
-                        
-                        $modx->log(modX::LOG_LEVEL_INFO, "[createTestWithPage] Fallback URL with parent: {$testUrl}");
-                    } elseif ($useFriendlyUrls) {
-                        $testUrl = $siteUrl . '/' . $alias;
-                        $modx->log(modX::LOG_LEVEL_INFO, "[createTestWithPage] Fallback URL simple: {$testUrl}");
-                    } else {
-                        // Без ЧПУ
-                        $testUrl = $siteUrl . '/?id=' . $resourceId;
-                        $modx->log(modX::LOG_LEVEL_INFO, "[createTestWithPage] Fallback URL no-friendly: {$testUrl}");
-                    }
-                }
-                
-                $response = [
-                    'success' => true,
-                    'message' => 'Test and page created successfully',
-                    'test_id' => $testId,
-                    'resource_id' => $resourceId,
-                    'test_url' => $testUrl
-                ];
-                
-            } catch (Exception $e) {
-                $modx->log(modX::LOG_LEVEL_ERROR, '[createTestWithPage] Error: ' . $e->getMessage() . ' | Trace: ' . $e->getTraceAsString());
-                throw new Exception('Failed to create test with page: ' . $e->getMessage());
-            }
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация входных данных
+            $title = ValidationHelper::requireString($data, 'title', 'Title is required');
+            $description = ValidationHelper::optionalString($data, 'description');
+            $publicationStatus = ValidationHelper::optionalString($data, 'publication_status', 'draft');
+
+            // Используем TestService для создания теста со страницей
+            $result = TestService::createTestWithPage($modx, $title, $description, $publicationStatus, $userId);
+
+            $response = ResponseHelper::success($result, 'Test and page created successfully');
             break;
 
         case 'createTest':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = (int)$modx->user->get('id');
-            $title = trim($data['title'] ?? '');
-            $description = trim($data['description'] ?? '');
-            $publicationStatus = $data['publication_status'] ?? 'private';
-            
-            $rights = checkUserRights($modx);
-            
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация входных данных
+            $title = ValidationHelper::requireString($data, 'title', 'Title required');
+            $description = ValidationHelper::optionalString($data, 'description');
+            $publicationStatus = ValidationHelper::optionalString($data, 'publication_status', 'private');
+
+            $rights = PermissionHelper::getUserRights($modx);
+
             // Обычные пользователи могут создавать только private и draft
             if (!$rights['canEdit'] && !in_array($publicationStatus, ['private', 'draft'])) {
                 $publicationStatus = 'private';
-            }
-            
-            if (empty($title)) {
-                throw new Exception('Title required');
             }
             
             // Ограничение для обычных пользователей
@@ -2268,26 +1594,19 @@ case 'checkResourcePermissions':
             ]);
             
             $testId = (int)$modx->lastInsertId();
-            
-            $response = [
-                'success' => true, 
-                'message' => 'Test created', 
-                'test_id' => $testId
-            ];
+
+            $response = ResponseHelper::success(['test_id' => $testId], 'Test created');
             break;
 
 
         case 'createTestPage':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $testId = (int)($data['test_id'] ?? 0);
-            $userId = (int)$modx->user->get('id');
-            
-            if (!$testId) {
-                throw new Exception('Test ID required');
-            }
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация входных данных
+            $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
             
             // Проверяем владельца теста + ЗАГРУЖАЕМ resource_id
             $stmt = $modx->prepare("
@@ -2337,12 +1656,10 @@ case 'checkResourcePermissions':
                     $existingUrl = $modx->getOption('site_url') . 'resource-' . $existingResourceId;
                 }
                 
-                $response = [
-                    'success' => true,
-                    'message' => 'Page already exists',
+                $response = ResponseHelper::success([
                     'test_url' => $existingUrl,
                     'resource_id' => $existingResourceId
-                ];
+                ], 'Page already exists');
                 break;
             }
             
@@ -2456,12 +1773,10 @@ case 'checkResourcePermissions':
                     $testUrl = $siteUrl . '/' . $alias;
                 }
                 
-                $response = [
-                    'success' => true,
-                    'message' => 'Test page created successfully',
+                $response = ResponseHelper::success([
                     'resource_id' => $resourceId,
                     'test_url' => $testUrl
-                ];
+                ], 'Test page created successfully');
                 
             } catch (Exception $e) {
                 $modx->log(modX::LOG_LEVEL_ERROR, '[createTestPage] Error: ' . $e->getMessage());
@@ -2470,11 +1785,10 @@ case 'checkResourcePermissions':
             break;
 
         case 'getMyTests':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = (int)$modx->user->get('id');
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
             
             $stmt = $modx->prepare("
                 SELECT 
@@ -2488,52 +1802,19 @@ case 'checkResourcePermissions':
             
             $stmt->execute([$userId]);
             $tests = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // ИСПРАВЛЕНО: Добавляем URL для каждого теста
-            $siteUrl = rtrim($modx->getOption('site_url'), '/');
-            $testsParentId = (int)$modx->getOption('lms.user_tests_folder', null, 129);
-            
-            // Получаем URI родительской папки один раз
-            $parentUri = '';
-            if ($testsParentId > 0) {
-                $parent = $modx->getObject('modResource', $testsParentId);
-                if ($parent) {
-                    $parentUri = trim($parent->get('uri'), '/');
-                }
-            }
-            
-            foreach ($tests as &$test) {
-                $resourceId = (int)($test['resource_id'] ?? 0);
-                
-                if ($resourceId > 0) {
-                    $resource = $modx->getObject('modResource', $resourceId);
-                    
-                    if ($resource) {
-                        $alias = $resource->get('alias');
-                        
-                        if (!empty($parentUri)) {
-                            $test['test_url'] = $siteUrl . '/' . $parentUri . '/' . $alias;
-                        } else {
-                            $test['test_url'] = $siteUrl . '/' . $alias;
-                        }
-                    } else {
-                        $test['test_url'] = '#';
-                    }
-                } else {
-                    $test['test_url'] = '#';
-                }
-            }
-            
-            $response = ['success' => true, 'data' => $tests];
+
+            // Добавляем URL для каждого теста
+            UrlHelper::addUrlsToTests($modx, $tests);
+
+            $response = ResponseHelper::success($tests);
             break;
 
 
         case 'getSharedWithMe':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = (int)$modx->user->get('id');
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
             
             $stmt = $modx->prepare("
                 SELECT 
@@ -2550,72 +1831,37 @@ case 'checkResourcePermissions':
             
             $stmt->execute([$userId]);
             $tests = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // ИСПРАВЛЕНО: Добавляем URL для каждого теста
-            $siteUrl = rtrim($modx->getOption('site_url'), '/');
-            $testsParentId = (int)$modx->getOption('lms.user_tests_folder', null, 129);
-            
-            // Получаем URI родительской папки один раз
-            $parentUri = '';
-            if ($testsParentId > 0) {
-                $parent = $modx->getObject('modResource', $testsParentId);
-                if ($parent) {
-                    $parentUri = trim($parent->get('uri'), '/');
-                }
-            }
-            
-            foreach ($tests as &$test) {
-                $resourceId = (int)($test['resource_id'] ?? 0);
-                
-                if ($resourceId > 0) {
-                    $resource = $modx->getObject('modResource', $resourceId);
-                    
-                    if ($resource) {
-                        $alias = $resource->get('alias');
-                        
-                        if (!empty($parentUri)) {
-                            $test['test_url'] = $siteUrl . '/' . $parentUri . '/' . $alias;
-                        } else {
-                            $test['test_url'] = $siteUrl . '/' . $alias;
-                        }
-                    } else {
-                        $test['test_url'] = '#';
-                    }
-                } else {
-                    $test['test_url'] = '#';
-                }
-            }
-            
-            $response = ['success' => true, 'data' => $tests];
+
+            // Добавляем URL для каждого теста
+            UrlHelper::addUrlsToTests($modx, $tests);
+
+            $response = ResponseHelper::success($tests);
             break;
     
         case 'searchUsers':
-            $rights = checkUserRights($modx);
-            
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $query = trim($data['query'] ?? '');
-            $testId = (int)($data['test_id'] ?? 0);
-            
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $currentUserId = PermissionHelper::getCurrentUserId($modx);
+            $rights = PermissionHelper::getUserRights($modx);
+
+            // Валидация входных данных
+            $query = ValidationHelper::requireString($data, 'query', 'Search query required');
+            $testId = ValidationHelper::optionalInt($data, 'test_id', 0);
+
             if (strlen($query) < 2) {
                 throw new Exception('Search query too short (min 2 chars)');
             }
             
-            $currentUserId = (int)$modx->user->get('id');
-            
             if ($testId > 0) {
-                $stmt = $modx->prepare("SELECT created_by FROM modx_test_tests WHERE id = ?");
-                $stmt->execute([$testId]);
-                $test = $stmt->fetch(PDO::FETCH_ASSOC);
-                
-                if (!$test) {
+                $testOwnerId = TestRepository::getTestOwner($modx, $testId);
+
+                if ($testOwnerId === false) {
                     throw new Exception('Test not found');
                 }
-                
-                $canSearch = $rights['canEdit'] || ((int)$test['created_by'] === $currentUserId);
-                
+
+                $canSearch = $rights['canEdit'] || ($testOwnerId === $currentUserId);
+
                 if (!$canSearch) {
                     throw new Exception('Permission denied');
                 }
@@ -2661,24 +1907,20 @@ case 'checkResourcePermissions':
                 }
             }
             
-            $response = ['success' => true, 'data' => $users];
+            $response = ResponseHelper::success($users);
             break;
-        
+
         case 'grantAccess':
-            $rights = checkUserRights($modx);
-            
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $currentUserId = (int)$modx->user->get('id');
-            $testId = (int)($data['test_id'] ?? 0);
-            $targetUserId = (int)($data['user_id'] ?? 0);
-            $canEdit = (int)($data['can_edit'] ?? 0);
-            
-            if (!$testId || !$targetUserId) {
-                throw new Exception('Test ID and User ID required');
-            }
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $currentUserId = PermissionHelper::getCurrentUserId($modx);
+            $rights = PermissionHelper::getUserRights($modx);
+
+            // Валидация входных данных
+            $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
+            $targetUserId = ValidationHelper::requireInt($data, 'user_id', 'User ID required');
+            $canEdit = ValidationHelper::optionalInt($data, 'can_edit', 0);
             
             $stmt = $modx->prepare("SELECT created_by, title FROM modx_test_tests WHERE id = ?");
             $stmt->execute([$testId]);
@@ -2714,69 +1956,57 @@ case 'checkResourcePermissions':
                 VALUES (?, 'access_granted', ?, ?, ?)
             ");
             $stmt->execute([$targetUserId, $testId, $currentUserId, $message]);
-            
-            $response = ['success' => true, 'message' => 'Access granted'];
+
+            $response = ResponseHelper::success(null, 'Access granted');
             break;
-        
+
         case 'revokeAccess':
-            $rights = checkUserRights($modx);
-            
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $currentUserId = (int)$modx->user->get('id');
-            $testId = (int)($data['test_id'] ?? 0);
-            $targetUserId = (int)($data['user_id'] ?? 0);
-            
-            if (!$testId || !$targetUserId) {
-                throw new Exception('Test ID and User ID required');
-            }
-            
-            $stmt = $modx->prepare("SELECT created_by FROM modx_test_tests WHERE id = ?");
-            $stmt->execute([$testId]);
-            $test = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if (!$test) {
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $currentUserId = PermissionHelper::getCurrentUserId($modx);
+            $rights = PermissionHelper::getUserRights($modx);
+
+            // Валидация входных данных
+            $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
+            $targetUserId = ValidationHelper::requireInt($data, 'user_id', 'User ID required');
+
+            $testOwnerId = TestRepository::getTestOwner($modx, $testId);
+
+            if ($testOwnerId === false) {
                 throw new Exception('Test not found');
             }
-            
-            $canRevoke = $rights['canEdit'] || ((int)$test['created_by'] === $currentUserId);
-            
+
+            $canRevoke = $rights['canEdit'] || ($testOwnerId === $currentUserId);
+
             if (!$canRevoke) {
                 throw new Exception('Permission denied');
             }
             
             $stmt = $modx->prepare("DELETE FROM modx_test_permissions WHERE test_id = ? AND user_id = ?");
             $stmt->execute([$testId, $targetUserId]);
-            
-            $response = ['success' => true, 'message' => 'Access revoked'];
+
+            $response = ResponseHelper::success(null, 'Access revoked');
             break;
-        
+
         case 'getTestPermissions':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $currentUserId = (int)$modx->user->get('id');
-            $testId = (int)($data['test_id'] ?? 0);
-            
-            if (!$testId) {
-                throw new Exception('Test ID required');
-            }
-            
-            $rights = checkUserRights($modx);
-            
-            $stmt = $modx->prepare("SELECT created_by FROM modx_test_tests WHERE id = ?");
-            $stmt->execute([$testId]);
-            $test = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if (!$test) {
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $currentUserId = PermissionHelper::getCurrentUserId($modx);
+            $rights = PermissionHelper::getUserRights($modx);
+
+            // Валидация входных данных
+            $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
+
+            $testOwnerId = TestRepository::getTestOwner($modx, $testId);
+
+            if ($testOwnerId === false) {
                 throw new Exception('Test not found');
             }
-            
-            $canView = $rights['canEdit'] || ((int)$test['created_by'] === $currentUserId);
-            
+
+            $canView = $rights['canEdit'] || ($testOwnerId === $currentUserId);
+
             if (!$canView) {
                 throw new Exception('Permission denied');
             }
@@ -2796,16 +2026,17 @@ case 'checkResourcePermissions':
             
             $stmt->execute([$testId]);
             $permissions = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            $response = ['success' => true, 'data' => $permissions];
+
+            $response = ResponseHelper::success($permissions);
             break;
-        
+
         case 'getNotifications':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = (int)$modx->user->get('id');
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация входных данных
             $unreadOnly = (bool)($data['unread_only'] ?? false);
             $limit = min((int)($data['limit'] ?? 20), 50);
             
@@ -2831,77 +2062,67 @@ case 'checkResourcePermissions':
             $stmt = $modx->prepare("SELECT COUNT(*) FROM modx_test_notifications WHERE user_id = ? AND is_read = 0");
             $stmt->execute([$userId]);
             $unreadCount = (int)$stmt->fetchColumn();
-            
-            $response = ['success' => true, 'data' => ['notifications' => $notifications, 'unread_count' => $unreadCount]];
+
+            $response = ResponseHelper::success([
+                'notifications' => $notifications,
+                'unread_count' => $unreadCount
+            ]);
             break;
         
         case 'markNotificationRead':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = (int)$modx->user->get('id');
-            $notificationId = (int)($data['notification_id'] ?? 0);
-            
-            if (!$notificationId) {
-                throw new Exception('Notification ID required');
-            }
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация входных данных
+            $notificationId = ValidationHelper::requireInt($data, 'notification_id', 'Notification ID required');
             
             $stmt = $modx->prepare("UPDATE modx_test_notifications SET is_read = 1 WHERE id = ? AND user_id = ?");
             $stmt->execute([$notificationId, $userId]);
-            
-            $response = ['success' => true, 'message' => 'Notification marked as read'];
+
+            $response = ResponseHelper::success(null, 'Notification marked as read');
             break;
-        
+
         case 'markAllNotificationsRead':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = (int)$modx->user->get('id');
-            
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+
             $stmt = $modx->prepare("UPDATE modx_test_notifications SET is_read = 1 WHERE user_id = ? AND is_read = 0");
             $stmt->execute([$userId]);
-            
-            $response = ['success' => true, 'message' => 'All notifications marked as read'];
+
+            $response = ResponseHelper::success(null, 'All notifications marked as read');
             break;
 
         case 'checkSiteSettings':
-            $response = [
-                'success' => true,
-                'data' => [
-                    'site_url' => $modx->getOption('site_url'),
-                    'base_url' => $modx->getOption('base_url'),
-                    'friendly_urls' => $modx->getOption('friendly_urls'),
-                    'use_alias_path' => $modx->getOption('use_alias_path'),
-                    'site_start' => $modx->getOption('site_start')
-                ]
-            ];
+            $response = ResponseHelper::success([
+                'site_url' => $modx->getOption('site_url'),
+                'base_url' => $modx->getOption('base_url'),
+                'friendly_urls' => $modx->getOption('friendly_urls'),
+                'use_alias_path' => $modx->getOption('use_alias_path'),
+                'site_start' => $modx->getOption('site_start')
+            ]);
             break;
 
         case 'getParentUri':
-            $resourceId = (int)($data['resource_id'] ?? 0);
-            
-            if (!$resourceId) {
-                throw new Exception('Resource ID required');
-            }
+            // Валидация входных данных
+            $resourceId = ValidationHelper::requireInt($data, 'resource_id', 'Resource ID required');
             
             $resource = $modx->getObject('modResource', $resourceId);
             
             if (!$resource) {
                 throw new Exception('Resource not found');
             }
-            
-            $response = [
-                'success' => true,
-                'data' => [
-                    'id' => $resource->get('id'),
-                    'pagetitle' => $resource->get('pagetitle'),
-                    'alias' => $resource->get('alias'),
-                    'uri' => $resource->get('uri'),
-                    'parent' => $resource->get('parent')
-                ]
-            ];
+
+            $response = ResponseHelper::success([
+                'id' => $resource->get('id'),
+                'pagetitle' => $resource->get('pagetitle'),
+                'alias' => $resource->get('alias'),
+                'uri' => $resource->get('uri'),
+                'parent' => $resource->get('parent')
+            ]);
             break;
             
             
@@ -2916,110 +2137,53 @@ case 'checkResourcePermissions':
          */
 
         case 'deleteTest':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Требуется авторизация');
-            }
-            
-            $userId = (int)$modx->user->get('id');
-            $testId = isset($data['test_id']) ? (int)$data['test_id'] : 0;
-            
-            if (!$testId) {
-                throw new Exception('Не указан ID теста');
-            }
-            
-            // Проверяем владельца теста
-            $stmt = $modx->prepare("SELECT created_by, resource_id FROM {$prefix}test_tests WHERE id = ?");
-            $stmt->execute([$testId]);
-            $test = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if (!$test) {
-                throw new Exception('Тест не найден');
-            }
-            
-            if ((int)$test['created_by'] !== $userId) {
-                throw new Exception('У вас нет прав на удаление этого теста');
-            }
-            
-            try {
-                // 1. Удаляем ответы на вопросы
-                $modx->exec("
-                    DELETE ua FROM {$prefix}test_user_answers ua
-                    INNER JOIN {$prefix}test_questions q ON q.id = ua.question_id
-                    WHERE q.test_id = {$testId}
-                ");
-                
-                // 2. Удаляем варианты ответов
-                $modx->exec("
-                    DELETE a FROM {$prefix}test_answers a
-                    INNER JOIN {$prefix}test_questions q ON q.id = a.question_id
-                    WHERE q.test_id = {$testId}
-                ");
-                
-                // 3. Удаляем вопросы
-                $modx->exec("DELETE FROM {$prefix}test_questions WHERE test_id = {$testId}");
-                
-                // 4. Удаляем разрешения
-                $modx->exec("DELETE FROM {$prefix}test_permissions WHERE test_id = {$testId}");
-                
-                // 5. Удаляем сессии
-                $modx->exec("DELETE FROM {$prefix}test_sessions WHERE test_id = {$testId}");
-                
-                // 6. Удаляем избранное
-                $modx->exec("DELETE FROM {$prefix}test_favorites WHERE test_id = {$testId}");
-                
-                // 7. Удаляем страницу MODX
-                if (!empty($test['resource_id'])) {
-                    $resourceId = (int)$test['resource_id'];
-                    $modx->exec("DELETE FROM {$prefix}site_content WHERE id = {$resourceId}");
-                }
-                
-                // 8. Удаляем сам тест
-                $modx->exec("DELETE FROM {$prefix}test_tests WHERE id = {$testId}");
-                
-                $response = [
-                    'success' => true,
-                    'message' => 'Тест успешно удален'
-                ];
-                
-            } catch (Exception $e) {
-                $modx->log(modX::LOG_LEVEL_ERROR, 'Ошибка при удалении теста: ' . $e->getMessage());
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Требуется авторизация');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация входных данных
+            $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Не указан ID теста');
+
+            // Проверяем права владельца и получаем данные теста
+            $test = TestRepository::requireTestOwner($modx, $testId, $userId, 'У вас нет прав на удаление этого теста');
+
+            // Удаляем тест и все связанные данные
+            $success = TestRepository::deleteTest($modx, $testId);
+
+            if (!$success) {
                 throw new Exception('Произошла ошибка при удалении теста');
             }
+
+            // Удаляем страницу MODX если она существует
+            if (!empty($test['resource_id'])) {
+                $resourceId = (int)$test['resource_id'];
+                $modx->exec("DELETE FROM {$prefix}site_content WHERE id = {$resourceId}");
+            }
+
+            $response = ResponseHelper::success(null, 'Тест успешно удален');
             break;
 
         case 'updateTest':
-            if (!$modx->user->hasSessionContext('web')) {
-                throw new Exception('Login required');
-            }
-            
-            $userId = (int)$modx->user->get('id');
-            $testId = (int)($data['test_id'] ?? 0);
-            $title = trim($data['title'] ?? '');
-            $description = trim($data['description'] ?? '');
-            $publicationStatus = $data['publication_status'] ?? 'private';
-            
-            if (!$testId || empty($title)) {
-                throw new Exception('Test ID and title required');
-            }
-            
+            // Проверка авторизации
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация входных данных
+            $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
+            $title = ValidationHelper::requireString($data, 'title', 'Title required');
+            $description = ValidationHelper::optionalString($data, 'description');
+            $publicationStatus = ValidationHelper::optionalString($data, 'publication_status', 'private');
+
             // Валидация статуса
             $allowedStatuses = ['draft', 'private', 'unlisted', 'public'];
             if (!in_array($publicationStatus, $allowedStatuses, true)) {
                 $publicationStatus = 'private';
             }
-            
-            // Проверяем владельца теста
-            $stmt = $modx->prepare("SELECT created_by FROM {$prefix}test_tests WHERE id = ?");
-            $stmt->execute([$testId]);
-            $test = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if (!$test) {
-                throw new Exception('Test not found');
-            }
-            
-            if ((int)$test['created_by'] !== $userId) {
-                throw new Exception('Access denied: not test owner');
-            }
+
+            // Проверяем права владельца
+            $test = TestRepository::requireTestOwner($modx, $testId, $userId, 'Access denied: not test owner');
             
             // Обновляем тест
             $stmt = $modx->prepare("
@@ -3031,22 +2195,15 @@ case 'checkResourcePermissions':
             if (!$stmt || !$stmt->execute([$title, $description, $publicationStatus, $testId])) {
                 throw new Exception('Failed to update test');
             }
-            
+
             // Обновляем pagetitle страницы если она есть
-            $stmt = $modx->prepare("SELECT resource_id FROM {$prefix}test_tests WHERE id = ?");
-            $stmt->execute([$testId]);
-            $testData = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            if ($testData && $testData['resource_id']) {
-                $resourceId = (int)$testData['resource_id'];
+            if (!empty($test['resource_id'])) {
+                $resourceId = (int)$test['resource_id'];
                 $stmt = $modx->prepare("UPDATE {$prefix}site_content SET pagetitle = ? WHERE id = ?");
                 $stmt->execute([$title, $resourceId]);
             }
-            
-            $response = [
-                'success' => true,
-                'message' => 'Test updated successfully'
-            ];
+
+            $response = ResponseHelper::success(null, 'Test updated successfully');
             break;
             
 
@@ -3054,12 +2211,15 @@ case 'checkResourcePermissions':
                 throw new Exception('Unknown action: ' . $action);
         }
         
+    } catch (TestSystemException $e) {
+        // Специализированные исключения с правильными HTTP кодами
+        http_response_code($e->getHttpCode());
+        $response = $e->toArray();
     } catch (Exception $e) {
-        http_response_code(400);
-        $response = [
-            'success' => false,
-            'message' => $e->getMessage()
-        ];
+        // Обработка неожиданных исключений
+        http_response_code(500);
+        $response = ResponseHelper::error('Internal server error');
+        $modx->log(modX::LOG_LEVEL_ERROR, '[testsystem.php] Unexpected error: ' . $e->getMessage());
     }
 
 header('Content-Type: application/json; charset=utf-8');

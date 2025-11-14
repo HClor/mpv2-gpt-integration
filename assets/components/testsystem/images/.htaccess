@@ -1,0 +1,29 @@
+# Защита от выполнения PHP файлов в директории загрузок
+# Даже если кто-то загрузит PHP файл, он не сможет его выполнить
+
+# Запретить выполнение PHP
+<FilesMatch "\.(php|php3|php4|php5|phtml|phps)$">
+    Deny from all
+</FilesMatch>
+
+# Альтернативный вариант для Apache 2.4+
+<IfModule mod_authz_core.c>
+    <FilesMatch "\.(php|php3|php4|php5|phtml|phps)$">
+        Require all denied
+    </FilesMatch>
+</IfModule>
+
+# Отключить интерпретацию PHP через AddHandler/AddType
+php_flag engine off
+
+# Разрешить только изображения
+<FilesMatch "\.(jpg|jpeg|png|gif|webp)$">
+    Allow from all
+</FilesMatch>
+
+# Альтернативный вариант для Apache 2.4+
+<IfModule mod_authz_core.c>
+    <FilesMatch "\.(jpg|jpeg|png|gif|webp)$">
+        Require all granted
+    </FilesMatch>
+</IfModule>

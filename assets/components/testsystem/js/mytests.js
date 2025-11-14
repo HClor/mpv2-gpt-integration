@@ -1,5 +1,11 @@
 // assets/components/testsystem/js/mytests.js - IMPROVED VERSION
 
+// CSRF Protection: получаем токен из meta тега
+function getCsrfToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    return metaTag ? metaTag.content : null;
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     loadMyTests();
     loadSharedTests();
@@ -23,10 +29,14 @@ function escapeHtml(text) {
 
 async function loadMyTests() {
     try {
+        const csrfToken = getCsrfToken();
         const response = await fetch('/assets/components/testsystem/ajax/testsystem.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'getMyTests' })
+            body: JSON.stringify({
+                action: 'getMyTests',
+                data: { csrf_token: csrfToken }
+            })
         });
         
         const result = await response.json();
@@ -41,10 +51,14 @@ async function loadMyTests() {
 
 async function loadSharedTests() {
     try {
+        const csrfToken = getCsrfToken();
         const response = await fetch('/assets/components/testsystem/ajax/testsystem.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'getSharedWithMe' })
+            body: JSON.stringify({
+                action: 'getSharedWithMe',
+                data: { csrf_token: csrfToken }
+            })
         });
         
         const result = await response.json();
@@ -53,8 +67,9 @@ async function loadSharedTests() {
             renderSharedTests(result.data);
         } else {
             console.error('Error loading shared tests:', result.message);
-            document.getElementById('shared').innerHTML = 
-                '<div class="alert alert-danger">Ошибка загрузки: ' + result.message + '</div>';
+            // XSS Protection: экранируем сообщение об ошибке
+            document.getElementById('shared').innerHTML =
+                '<div class="alert alert-danger">Ошибка загрузки: ' + escapeHtml(result.message) + '</div>';
         }
     } catch (error) {
         console.error('Error loading shared tests:', error);
@@ -254,15 +269,17 @@ async function createTest() {
     }
     
     try {
+        const csrfToken = getCsrfToken();
         const response = await fetch('/assets/components/testsystem/ajax/testsystem.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 action: 'createTestWithPage',
-                data: { 
-                    title, 
-                    description, 
-                    publication_status: publicationStatus 
+                data: {
+                    title,
+                    description,
+                    publication_status: publicationStatus,
+                    csrf_token: csrfToken
                 }
             })
         });
@@ -368,6 +385,7 @@ async function saveTestChanges(testId) {
     }
     
     try {
+        const csrfToken = getCsrfToken();
         const response = await fetch('/assets/components/testsystem/ajax/testsystem.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -377,7 +395,8 @@ async function saveTestChanges(testId) {
                     test_id: testId,
                     title: title,
                     description: description,
-                    publication_status: publicationStatus
+                    publication_status: publicationStatus,
+                    csrf_token: csrfToken
                 }
             })
         });
@@ -414,12 +433,16 @@ async function deleteTest(testId) {
     }
     
     try {
+        const csrfToken = getCsrfToken();
         const response = await fetch('/assets/components/testsystem/ajax/testsystem.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
+            body: JSON.stringify({
                 action: 'deleteTest',
-                data: { test_id: testId }
+                data: {
+                    test_id: testId,
+                    csrf_token: csrfToken
+                }
             })
         });
         
@@ -438,12 +461,16 @@ async function deleteTest(testId) {
 }
 
 async function manageAccess(testId) {
+    const csrfToken = getCsrfToken();
     const permsResponse = await fetch('/assets/components/testsystem/ajax/testsystem.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
             action: 'getTestPermissions',
-            data: { test_id: testId }
+            data: {
+                test_id: testId,
+                csrf_token: csrfToken
+            }
         })
     });
     
@@ -561,12 +588,17 @@ async function searchUsers(testId) {
     }
     
     try {
+        const csrfToken = getCsrfToken();
         const response = await fetch('/assets/components/testsystem/ajax/testsystem.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
+            body: JSON.stringify({
                 action: 'searchUsers',
-                data: { query: query, test_id: testId }
+                data: {
+                    query: query,
+                    test_id: testId,
+                    csrf_token: csrfToken
+                }
             })
         });
         
@@ -595,9 +627,10 @@ function renderSearchResults(users, testId) {
     
     users.forEach(user => {
         const userDisplay = user.fullname || user.username;
-        const email = user.email ? `(${user.email})` : '';
+        // XSS Protection: экранируем email
+        const email = user.email ? `(${escapeHtml(user.email)})` : '';
         const hasAccess = user.has_access;
-        
+
         if (hasAccess) {
             html += `
                 <div class="list-group-item">
@@ -615,11 +648,11 @@ function renderSearchResults(users, testId) {
                     <div class="d-flex justify-content-between align-items-center">
                         <div>${escapeHtml(userDisplay)} ${email}</div>
                         <div class="btn-group">
-                            <button class="btn btn-sm btn-success" 
+                            <button class="btn btn-sm btn-success"
                                     onclick="grantAccessToUser(${testId}, ${user.id}, 0)">
                                 <i class="bi bi-eye"></i> Просмотр
                             </button>
-                            <button class="btn btn-sm btn-warning" 
+                            <button class="btn btn-sm btn-warning"
                                     onclick="grantAccessToUser(${testId}, ${user.id}, 1)">
                                 <i class="bi bi-pencil"></i> Редактирование
                             </button>
@@ -636,15 +669,17 @@ function renderSearchResults(users, testId) {
 
 async function grantAccessToUser(testId, userId, canEdit) {
     try {
+        const csrfToken = getCsrfToken();
         const response = await fetch('/assets/components/testsystem/ajax/testsystem.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
+            body: JSON.stringify({
                 action: 'grantAccess',
-                data: { 
-                    test_id: testId, 
+                data: {
+                    test_id: testId,
                     user_id: userId,
-                    can_edit: canEdit
+                    can_edit: canEdit,
+                    csrf_token: csrfToken
                 }
             })
         });
@@ -678,12 +713,17 @@ async function revokeAccess(testId, userId) {
     }
     
     try {
+        const csrfToken = getCsrfToken();
         const response = await fetch('/assets/components/testsystem/ajax/testsystem.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
+            body: JSON.stringify({
                 action: 'revokeAccess',
-                data: { test_id: testId, user_id: userId }
+                data: {
+                    test_id: testId,
+                    user_id: userId,
+                    csrf_token: csrfToken
+                }
             })
         });
         

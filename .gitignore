@@ -1,12 +1,14 @@
 # MODX Core
-/core/*
-!/core/sql/
-!/core/cache/.htaccess
-!/core/cache/index.html
 /core/config/config.inc.php
 /core/packages/*
 /core/export/*
+/core/cache/*
+!/core/cache/.htaccess
+!/core/cache/index.html
 /core/components/*
+!/core/components/testsystem/
+/core/model/*
+!/core/sql/
 !/core/elements/
 
 /vendor/*
@@ -22,6 +24,11 @@
 /assets/components/*/
 !/assets/components/testsystem/
 !/assets/templates/
+!/assets/uploads/
+/assets/uploads/*
+!/assets/uploads/test_imports/
+/assets/uploads/test_imports/*
+!/assets/uploads/test_imports/.htaccess
 
 
 # Временные файлы

@@ -65,6 +65,15 @@
     
     async function apiCall(action, data) {
         try {
+            // CSRF Protection: Получаем токен из meta тега
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+            if (csrfToken) {
+                // Добавляем CSRF токен к данным
+                data = data || {};
+                data.csrf_token = csrfToken;
+            }
+
             const response = await fetch(API_URL, {
                 method: "POST",
                 headers: {
@@ -72,7 +81,7 @@
                 },
                 body: JSON.stringify({ action, data })
             });
-            
+
             const text = await response.text();
             try {
                 return JSON.parse(text);
@@ -290,23 +299,23 @@
         
         document.getElementById("card-counter").textContent = `${index + 1} из ${allQuestions.length}`;
         
-        // Показываем название теста
+        // Показываем название теста (XSS Protection: экранируем текст)
         const testTitleEl = document.getElementById("favorite-test-title");
         if (testTitleEl && question.test_title) {
-            testTitleEl.innerHTML = `<i class="bi bi-folder2-open"></i> ${question.test_title}`;
+            testTitleEl.innerHTML = `<i class="bi bi-folder2-open"></i> ${escapeHtml(question.test_title)}`;
         }
-        
-        // Формируем HTML вопроса с изображением
-        let questionHtml = question.question_text || 'Текст вопроса отсутствует';
+
+        // Формируем HTML вопроса с изображением (XSS Protection: санитизация HTML)
+        let questionHtml = sanitizeHtml(question.question_text) || 'Текст вопроса отсутствует';
         if (question.question_image) {
-            questionHtml += `<div class="mt-3"><img src="${question.question_image}" class="img-fluid"></div>`;
+            questionHtml += `<div class="mt-3"><img src="${escapeHtml(question.question_image)}" class="img-fluid"></div>`;
         }
         document.getElementById("learning-question-text").innerHTML = questionHtml;
-        
-        // Формируем HTML объяснения с изображением
-        let expHtml = `<strong>Объяснение:</strong><br><div class="explanation-content">${question.explanation || "Объяснение отсутствует"}</div>`;
+
+        // Формируем HTML объяснения с изображением (XSS Protection: санитизация HTML)
+        let expHtml = `<strong>Объяснение:</strong><br><div class="explanation-content">${sanitizeHtml(question.explanation) || "Объяснение отсутствует"}</div>`;
         if (question.explanation_image) {
-            expHtml += `<div class="mt-3"><img src="${question.explanation_image}" class="img-fluid" style="max-width: 600px;"></div>`;
+            expHtml += `<div class="mt-3"><img src="${escapeHtml(question.explanation_image)}" class="img-fluid" style="max-width: 600px;"></div>`;
         }
         document.getElementById("learning-explanation").innerHTML = expHtml;
 
@@ -505,17 +514,17 @@ async function addFavoritesViewToggle(questionId) {
         document.getElementById("total-q").textContent = allQuestions.length;
         document.getElementById("card-counter").textContent = `${index + 1} из ${allQuestions.length}`;
         
-        // ИСПРАВЛЕНИЕ: Формируем HTML вопроса с изображением
-        let questionHtml = question.question_text || 'Текст вопроса отсутствует';
+        // Формируем HTML вопроса с изображением (XSS Protection: санитизация HTML)
+        let questionHtml = sanitizeHtml(question.question_text) || 'Текст вопроса отсутствует';
         if (question.question_image) {
-            questionHtml += `<div class="mt-3"><img src="${question.question_image}" class="img-fluid"></div>`;
+            questionHtml += `<div class="mt-3"><img src="${escapeHtml(question.question_image)}" class="img-fluid"></div>`;
         }
         document.getElementById("learning-question-text").innerHTML = questionHtml;
-        
-        // ИСПРАВЛЕНИЕ: Формируем HTML объяснения с изображением
-        let expHtml = `<strong>Объяснение:</strong><br><div class="explanation-content">${question.explanation || "Объяснение отсутствует"}</div>`;
+
+        // Формируем HTML объяснения с изображением (XSS Protection: санитизация HTML)
+        let expHtml = `<strong>Объяснение:</strong><br><div class="explanation-content">${sanitizeHtml(question.explanation) || "Объяснение отсутствует"}</div>`;
         if (question.explanation_image) {
-            expHtml += `<div class="mt-3"><img src="${question.explanation_image}" class="img-fluid" style="max-width: 600px;"></div>`;
+            expHtml += `<div class="mt-3"><img src="${escapeHtml(question.explanation_image)}" class="img-fluid" style="max-width: 600px;"></div>`;
         }
         document.getElementById("learning-explanation").innerHTML = expHtml;
     
@@ -1441,12 +1450,12 @@ async function addFavoritesViewToggle(questionId) {
                 </div>`;
         }
         
-        // Формируем HTML вопроса с изображением
-        questionHtml += question.question_text || 'Текст вопроса отсутствует';
+        // Формируем HTML вопроса с изображением (XSS Protection: санитизация HTML)
+        questionHtml += sanitizeHtml(question.question_text) || 'Текст вопроса отсутствует';
         if (question.question_image) {
-            questionHtml += `<div class="mt-3"><img src="${question.question_image}" class="img-fluid"></div>`;
+            questionHtml += `<div class="mt-3"><img src="${escapeHtml(question.question_image)}" class="img-fluid"></div>`;
         }
-        
+
         document.getElementById("question-text").innerHTML = questionHtml;
     
         const typeHint = document.getElementById("question-type-hint");
@@ -2050,9 +2059,10 @@ async function addFavoritesViewToggle(questionId) {
         if (data.explanation) {
             const explanationBlock = document.getElementById("explanation-block");
             if (explanationBlock) {
-                let expHtml = `<strong>Объяснение:</strong><br><div class="explanation-content">${data.explanation}</div>`;
+                // XSS Protection: санитизация HTML в объяснении
+                let expHtml = `<strong>Объяснение:</strong><br><div class="explanation-content">${sanitizeHtml(data.explanation)}</div>`;
                 if (data.explanation_image) {
-                    expHtml += `<img src="${data.explanation_image}" class="img-fluid mt-2">`;
+                    expHtml += `<img src="${escapeHtml(data.explanation_image)}" class="img-fluid mt-2">`;
                 }
                 explanationBlock.innerHTML = expHtml;
                 explanationBlock.style.display = "block";
@@ -2280,7 +2290,8 @@ async function addFavoritesViewToggle(questionId) {
                 
                 const descElement = document.querySelector("#test-info .card-body p");
                 if (descElement) {
-                    descElement.innerHTML = description.replace(/\n/g, "<br>");
+                    // XSS Protection: санитизация HTML в описании
+                    descElement.innerHTML = sanitizeHtml(description.replace(/\n/g, "<br>"));
                 }
                 
             } else {
@@ -2297,7 +2308,30 @@ async function addFavoritesViewToggle(questionId) {
         div.textContent = text;
         return div.innerHTML;
     }
-    
+
+    // XSS Protection: Санитизация HTML с помощью DOMPurify
+    // Разрешаем безопасные теги для форматирования текста из Quill.js
+    function sanitizeHtml(html) {
+        if (!html) return '';
+        if (typeof DOMPurify === 'undefined') {
+            console.warn('DOMPurify not loaded, using escapeHtml fallback');
+            return escapeHtml(html);
+        }
+
+        // Настройки санитизации: разрешаем только безопасные теги
+        const config = {
+            ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 's', 'ol', 'ul', 'li', 'a', 'img', 'h1', 'h2', 'h3', 'blockquote', 'code', 'pre', 'div', 'span'],
+            ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'style'],
+            ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+            KEEP_CONTENT: true,
+            RETURN_DOM: false,
+            RETURN_DOM_FRAGMENT: false,
+            FORCE_BODY: false
+        };
+
+        return DOMPurify.sanitize(html, config);
+    }
+
     // Инициализация Quill редактора для объяснений
 
 
@@ -2677,16 +2711,17 @@ async function addFavoritesViewToggle(questionId) {
             currentViewQuestionId = questionData.id;
             
             document.getElementById("modal-view-question-type").textContent = questionData.type_name;
-            
-            let questionHtml = questionData.text;
+
+            // XSS Protection: санитизация HTML в модальном окне
+            let questionHtml = sanitizeHtml(questionData.text);
             if (questionData.image) {
-                questionHtml += `<div class="mt-3"><img src="${questionData.image}" class="img-fluid"></div>`;
+                questionHtml += `<div class="mt-3"><img src="${escapeHtml(questionData.image)}" class="img-fluid"></div>`;
             }
             document.getElementById("modal-view-question-text").innerHTML = questionHtml;
-            
-            let explanationHtml = `<strong>Объяснение:</strong><br><div class="mt-2">${questionData.explanation || "Объяснение отсутствует"}</div>`;
+
+            let explanationHtml = `<strong>Объяснение:</strong><br><div class="mt-2">${sanitizeHtml(questionData.explanation) || "Объяснение отсутствует"}</div>`;
             if (questionData.explanation_image) {
-                explanationHtml += `<div class="mt-3"><img src="${questionData.explanation_image}" class="img-fluid"></div>`;
+                explanationHtml += `<div class="mt-3"><img src="${escapeHtml(questionData.explanation_image)}" class="img-fluid"></div>`;
             }
             document.getElementById("modal-view-explanation").innerHTML = explanationHtml;
             

@@ -1,6 +1,9 @@
 <?php
 /* TS MANAGE CATEGORIES v1.1 AUTO FOLDER */
 
+// Подключаем bootstrap для CSRF защиты
+require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
+
 // Проверяем права (только админы)
 if (!$modx->user->hasSessionContext("web")) {
     $authUrl = $modx->makeUrl($modx->getOption("lms.auth_page", null, 0));
@@ -24,14 +27,18 @@ $success = "";
 
 // ДОБАВЛЕНИЕ категории
 if ($_POST && isset($_POST["add_category"])) {
+    // CSRF Protection
+    if (!CsrfProtection::validateRequest($_POST)) {
+        $errors[] = "Ошибка безопасности. Обновите страницу и попробуйте снова.";
+    } else {
     $name = trim($_POST["name"] ?? "");
     $description = trim($_POST["description"] ?? "");
     $sortOrder = (int)($_POST["sort_order"] ?? 99);
-    
+
     if (empty($name)) {
         $errors[] = "Введите название категории";
     }
-    
+
     if (empty($errors)) {
         $stmt = $modx->prepare("
             INSERT INTO modx_test_categories (name, description, sort_order) 
@@ -64,19 +71,24 @@ if ($_POST && isset($_POST["add_category"])) {
             $errors[] = "Ошибка при создании категории";
         }
     }
+    } // Закрываем else блок CSRF проверки (add_category)
 }
 
 // РЕДАКТИРОВАНИЕ категории
 if ($_POST && isset($_POST["edit_category"])) {
+    // CSRF Protection
+    if (!CsrfProtection::validateRequest($_POST)) {
+        $errors[] = "Ошибка безопасности. Обновите страницу и попробуйте снова.";
+    } else {
     $catId = (int)($_POST["category_id"] ?? 0);
     $name = trim($_POST["name"] ?? "");
     $description = trim($_POST["description"] ?? "");
     $sortOrder = (int)($_POST["sort_order"] ?? 99);
-    
+
     if (empty($name)) {
         $errors[] = "Введите название категории";
     }
-    
+
     if (empty($errors) && $catId) {
         $stmt = $modx->prepare("
             UPDATE modx_test_categories 
@@ -91,12 +103,17 @@ if ($_POST && isset($_POST["edit_category"])) {
             $errors[] = "Ошибка при обновлении категории";
         }
     }
+    } // Закрываем else блок CSRF проверки (edit_category)
 }
 
 // УДАЛЕНИЕ категории
 if ($_POST && isset($_POST["delete_category"])) {
+    // CSRF Protection
+    if (!CsrfProtection::validateRequest($_POST)) {
+        $errors[] = "Ошибка безопасности. Обновите страницу и попробуйте снова.";
+    } else {
     $catId = (int)($_POST["category_id"] ?? 0);
-    
+
     if ($catId) {
         // Проверяем есть ли тесты в категории
         $stmt = $modx->prepare("SELECT COUNT(*) FROM modx_test_tests WHERE category_id = ?");
@@ -115,6 +132,7 @@ if ($_POST && isset($_POST["delete_category"])) {
             }
         }
     }
+    } // Закрываем else блок CSRF проверки (delete_category)
 }
 
 // Получаем все категории
@@ -161,6 +179,7 @@ $html[] = "<div class=\"card-header\"><h5 class=\"mb-0\">Добавить кат
 $html[] = "<div class=\"card-body\">";
 
 $html[] = "<form method=\"POST\">";
+$html[] = CsrfProtection::getTokenField(); // CSRF Protection
 $html[] = "<input type=\"hidden\" name=\"add_category\" value=\"1\">";
 
 $html[] = "<div class=\"mb-3\">";
@@ -238,9 +257,10 @@ if (empty($categories)) {
         $html[] = "<div class=\"modal-dialog\">";
         $html[] = "<div class=\"modal-content\">";
         $html[] = "<form method=\"POST\">";
+        $html[] = CsrfProtection::getTokenField(); // CSRF Protection
         $html[] = "<input type=\"hidden\" name=\"edit_category\" value=\"1\">";
         $html[] = "<input type=\"hidden\" name=\"category_id\" value=\"" . $cat["id"] . "\">";
-        
+
         $html[] = "<div class=\"modal-header\">";
         $html[] = "<h5 class=\"modal-title\">Редактировать категорию</h5>";
         $html[] = "<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"modal\"></button>";
@@ -276,9 +296,10 @@ if (empty($categories)) {
         $html[] = "<div class=\"modal-dialog\">";
         $html[] = "<div class=\"modal-content\">";
         $html[] = "<form method=\"POST\">";
+        $html[] = CsrfProtection::getTokenField(); // CSRF Protection
         $html[] = "<input type=\"hidden\" name=\"delete_category\" value=\"1\">";
         $html[] = "<input type=\"hidden\" name=\"category_id\" value=\"" . $cat["id"] . "\">";
-        
+
         $html[] = "<div class=\"modal-header\">";
         $html[] = "<h5 class=\"modal-title\">Удалить категорию?</h5>";
         $html[] = "<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"modal\"></button>";

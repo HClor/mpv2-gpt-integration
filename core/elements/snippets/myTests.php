@@ -2,6 +2,9 @@
 // Snippet: myTests
 // Описание: Управление личными тестами пользователя
 
+// Подключаем bootstrap для CSRF защиты
+require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
+
 if (!$modx->user->hasSessionContext('web')) {
     $authId = (int)$modx->getOption('lms.auth_page', null, 0);
     $authUrl = $authId > 0 ? $modx->makeUrl($authId) : $modx->makeUrl($modx->resource->get('id'));
@@ -11,7 +14,9 @@ if (!$modx->user->hasSessionContext('web')) {
 $assetsUrl = rtrim($modx->getOption('assets_url', null, MODX_ASSETS_URL), '/') . '/';
 $jsPath = $assetsUrl . 'components/testsystem/js/mytests.js';
 
-$output = '<div id="my-tests-container">';
+// CSRF Protection: добавляем meta тег с токеном для JavaScript
+$output = CsrfProtection::getTokenMeta();
+$output .= '<div id="my-tests-container">';
 $output .= '<div class="d-flex justify-content-between align-items-center mb-4">';
 $output .= '<h2>Мои тесты</h2>';
 $output .= '<button class="btn btn-primary" onclick="showCreateTestModal()"><i class="bi bi-plus-circle"></i> Создать тест</button>';

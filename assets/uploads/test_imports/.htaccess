@@ -1,0 +1,33 @@
+# Защита от выполнения PHP файлов в директории временных загрузок
+# Даже если кто-то загрузит вредоносный файл, он не сможет его выполнить
+
+# Запретить выполнение PHP
+<FilesMatch "\.(php|php3|php4|php5|phtml|phps)$">
+    Deny from all
+</FilesMatch>
+
+# Альтернативный вариант для Apache 2.4+
+<IfModule mod_authz_core.c>
+    <FilesMatch "\.(php|php3|php4|php5|phtml|phps)$">
+        Require all denied
+    </FilesMatch>
+</IfModule>
+
+# Отключить интерпретацию PHP через AddHandler/AddType
+php_flag engine off
+
+# Разрешить только CSV и Excel файлы
+<FilesMatch "\.(csv|xlsx|xls)$">
+    Allow from all
+</FilesMatch>
+
+# Альтернативный вариант для Apache 2.4+
+<IfModule mod_authz_core.c>
+    <FilesMatch "\.(csv|xlsx|xls)$">
+        Require all granted
+    </FilesMatch>
+</IfModule>
+
+# Запретить доступ к файлам напрямую (только через PHP скрипты)
+Order Deny,Allow
+Deny from all
