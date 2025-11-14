@@ -568,7 +568,7 @@ async function addFavoritesViewToggle(questionId) {
 
         if (!statusResult.success) return;
 
-        const isFavorite = statusResult.is_favorite;
+        const isFavorite = statusResult.data?.is_favorite || false;
         console.log(`[Learning Mode] Setting initial checkbox state to: ${isFavorite}`);
         
         // ИСПРАВЛЕНИЕ: Ищем card-header в режиме обучения
@@ -608,13 +608,14 @@ async function addFavoritesViewToggle(questionId) {
                 console.log(`[Learning Mode] toggleFavorite response:`, result);
 
                 if (result.success) {
+                    const serverState = result.data?.is_favorite;
                     // Проверяем соответствие состояния сервера и checkbox
-                    if (result.is_favorite !== newState) {
-                        console.warn(`[Learning Mode] State mismatch! Server: ${result.is_favorite}, Checkbox: ${newState}. Fixing...`);
-                        this.checked = result.is_favorite;
+                    if (serverState !== newState) {
+                        console.warn(`[Learning Mode] State mismatch! Server: ${serverState}, Checkbox: ${newState}. Fixing...`);
+                        this.checked = serverState;
                     }
 
-                    if (result.is_favorite) {
+                    if (serverState) {
                         showNotification("⭐ Добавлено в избранное", "success");
                     } else {
                         showNotification("Убрано из избранного", "info");
@@ -1568,7 +1569,7 @@ async function addFavoritesViewToggle(questionId) {
 
         if (!statusResult.success) return;
 
-        const isFavorite = statusResult.is_favorite;
+        const isFavorite = statusResult.data?.is_favorite || false;
         console.log(`[Test Mode] Setting initial checkbox state to: ${isFavorite}`);
         
         // Ищем контейнер для toggle
@@ -1607,13 +1608,14 @@ async function addFavoritesViewToggle(questionId) {
                 console.log(`[Test Mode] toggleFavorite response:`, result);
 
                 if (result.success) {
+                    const serverState = result.data?.is_favorite;
                     // Проверяем соответствие состояния сервера и checkbox
-                    if (result.is_favorite !== newState) {
-                        console.warn(`[Test Mode] State mismatch! Server: ${result.is_favorite}, Checkbox: ${newState}. Fixing...`);
-                        this.checked = result.is_favorite;
+                    if (serverState !== newState) {
+                        console.warn(`[Test Mode] State mismatch! Server: ${serverState}, Checkbox: ${newState}. Fixing...`);
+                        this.checked = serverState;
                     }
 
-                    if (result.is_favorite) {
+                    if (serverState) {
                         showNotification("⭐ Добавлено в избранное", "success");
                     } else {
                         showNotification("Убрано из избранного", "info");
