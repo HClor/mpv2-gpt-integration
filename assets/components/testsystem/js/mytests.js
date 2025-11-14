@@ -292,17 +292,23 @@ async function createTest() {
         
         const testId = result.test_id;
         const testUrl = result.test_url;
-        
+        const csvImportUrl = result.csv_import_url;
+
         showNotification('success', `✅ Тест "${title}" успешно создан!`);
-        
+
         const modal = bootstrap.Modal.getInstance(document.getElementById('createTestModal'));
         if (modal) {
             modal.hide();
         }
-        
+
         // Спрашиваем, куда перейти
         if (confirm('Тест создан! Хотите импортировать вопросы сейчас?\n\nДа - перейти к импорту\nНет - остаться на этой странице')) {
-            window.location.href = `/import-csv?test_id=${testId}`;
+            if (csvImportUrl) {
+                window.location.href = csvImportUrl;
+            } else {
+                // Fallback если по какой-то причине URL не пришел
+                window.location.href = `/import-csv?test_id=${testId}`;
+            }
         } else {
             loadMyTests(); // Перезагружаем список
         }

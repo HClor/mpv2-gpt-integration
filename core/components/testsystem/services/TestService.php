@@ -45,10 +45,14 @@ class TestService
             // ШАГ 4: Очищаем кеш и генерируем URL
             $testUrl = self::generateTestUrl($modx, $resourceId, $testId, $title);
 
+            // ШАГ 5: Генерируем URL для импорта CSV
+            $csvImportUrl = self::generateCsvImportUrl($modx, $testId);
+
             return [
                 'test_id' => $testId,
                 'resource_id' => $resourceId,
-                'test_url' => $testUrl
+                'test_url' => $testUrl,
+                'csv_import_url' => $csvImportUrl
             ];
 
         } catch (Exception $e) {
@@ -323,6 +327,32 @@ class TestService
         }
 
         return $testUrl;
+    }
+
+    /**
+     * Генерация URL для импорта CSV с test_id параметром
+     *
+     * @param object $modx MODX объект
+     * @param int $testId ID теста
+     * @return string URL для импорта CSV
+     */
+    private static function generateCsvImportUrl($modx, $testId)
+    {
+        // Получаем ID страницы импорта CSV из системных настроек
+        $csvImportPageId = (int)$modx->getOption('lms.csv_import_page', null, 0);
+
+        if ($csvImportPageId > 0) {
+            // Используем настройку lms.csv_import_page
+            $baseUrl = $modx->makeUrl($csvImportPageId, 'web', '', 'full');
+        } else {
+            // Fallback: используем /import-csv
+            $siteUrl = rtrim($modx->getOption('site_url'), '/');
+            $baseUrl = $siteUrl . '/import-csv';
+        }
+
+        // Добавляем test_id как GET параметр
+        $separator = (strpos($baseUrl, '?') !== false) ? '&' : '?';
+        return $baseUrl . $separator . 'test_id=' . $testId;
     }
 
     /**
