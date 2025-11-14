@@ -531,27 +531,31 @@ $output .= '<div class="card-header">';
 $output .= '<div class="d-flex justify-content-between align-items-center flex-wrap gap-2">';
 $output .= '<h2 class="mb-0">' . htmlspecialchars($test['title'], ENT_QUOTES, 'UTF-8') . '</h2>';
 
-// Показываем статус в зависимости от прав
+// Показываем статус только для draft, private и unlisted (public не показываем - это норма)
 $showStatus = false;
 $statusLabel = '';
 $statusClass = '';
+$statusIcon = 'bi-lock-fill';
 
 if ($publicationStatus === 'draft' && $isAdminOrExpert) {
     $showStatus = true;
     $statusLabel = 'Черновик';
     $statusClass = 'bg-warning text-dark';
+    $statusIcon = 'bi-pencil-fill';
 } elseif ($publicationStatus === 'private') {
     $showStatus = true;
     $statusLabel = 'Приватный';
     $statusClass = 'bg-secondary';
-} elseif ($publicationStatus === 'public' && $isAdminOrExpert) {
+    $statusIcon = 'bi-lock-fill';
+} elseif ($publicationStatus === 'unlisted' && $isAdminOrExpert) {
     $showStatus = true;
-    $statusLabel = 'Публичный';
-    $statusClass = 'bg-success';
+    $statusLabel = 'По ссылке';
+    $statusClass = 'bg-info';
+    $statusIcon = 'bi-link-45deg';
 }
 
 if ($showStatus) {
-    $output .= '<span class="badge ' . $statusClass . ' fs-6"><i class="bi bi-lock-fill"></i> ' . $statusLabel . '</span>';
+    $output .= '<span class="badge ' . $statusClass . ' fs-6"><i class="' . $statusIcon . '"></i> ' . $statusLabel . '</span>';
 }
 
 $output .= '</div>';

@@ -172,8 +172,8 @@ class TestPermissionHelper
             return true;
         }
 
-        // Public тесты видят все
-        if ($publicationStatus === 'public') {
+        // Public и unlisted тесты видят все (unlisted доступен по прямой ссылке)
+        if ($publicationStatus === 'public' || $publicationStatus === 'unlisted') {
             return true;
         }
 
@@ -216,7 +216,7 @@ class TestPermissionHelper
             return true;
         }
 
-        // Эксперты редактируют public и draft (но не private чужие)
+        // Эксперты редактируют public, unlisted и draft (но не private чужие)
         if (self::isExpert($modx, $userId)) {
             if ($publicationStatus !== 'private') {
                 return true;
