@@ -592,24 +592,31 @@ async function addFavoritesViewToggle(questionId) {
         // Обработчик
         const toggleInput = document.getElementById("learning-favorite-toggle-input");
         toggleInput.addEventListener("change", async function() {
-            const newState = this.checked;
-            
+            const previousState = !this.checked; // Предыдущее состояние (до клика)
+
             try {
                 const result = await apiCall("toggleFavorite", {
                     question_id: questionId
                 });
-                
+
+                console.log("toggleFavorite result:", result);
+
                 if (result.success) {
+                    // Обновляем checkbox на основе ответа сервера
+                    this.checked = result.is_favorite;
+
                     if (result.is_favorite) {
                         showNotification("⭐ Добавлено в избранное", "success");
                     } else {
                         showNotification("Убрано из избранного", "info");
                     }
                 } else {
-                    this.checked = !newState;
+                    // Возвращаем к предыдущему состоянию при ошибке
+                    this.checked = previousState;
                 }
             } catch (error) {
-                this.checked = !newState;
+                // Возвращаем к предыдущему состоянию при ошибке
+                this.checked = previousState;
                 alert("Ошибка: " + error.message);
             }
         });
@@ -1573,24 +1580,31 @@ async function addFavoritesViewToggle(questionId) {
         // Обработчик переключения
         const toggleInput = document.getElementById("favorite-toggle-input");
         toggleInput.addEventListener("change", async function() {
-            const newState = this.checked;
-            
+            const previousState = !this.checked; // Предыдущее состояние (до клика)
+
             try {
                 const result = await apiCall("toggleFavorite", {
                     question_id: currentQuestionId
                 });
-                
+
+                console.log("toggleFavorite result (test mode):", result);
+
                 if (result.success) {
+                    // Обновляем checkbox на основе ответа сервера
+                    this.checked = result.is_favorite;
+
                     if (result.is_favorite) {
                         showNotification("⭐ Добавлено в избранное", "success");
                     } else {
                         showNotification("Убрано из избранного", "info");
                     }
                 } else {
-                    this.checked = !newState;
+                    // Возвращаем к предыдущему состоянию при ошибке
+                    this.checked = previousState;
                 }
             } catch (error) {
-                this.checked = !newState;
+                // Возвращаем к предыдущему состоянию при ошибке
+                this.checked = previousState;
                 alert("Ошибка: " + error.message);
             }
         });
