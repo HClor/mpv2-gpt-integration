@@ -130,6 +130,27 @@ class ValidationHelper
     }
 
     /**
+     * Требование и валидация ID теста из массива данных
+     *
+     * @param int|string|array $dataOrTestId Массив данных или ID теста напрямую
+     * @param string|null $errorMessage Сообщение об ошибке
+     * @return int
+     * @throws ValidationException Если ID невалиден
+     */
+    public static function requireTestId($dataOrTestId, $errorMessage = null)
+    {
+        // Если передан массив, извлекаем test_id
+        if (is_array($dataOrTestId)) {
+            $testId = $dataOrTestId['test_id'] ?? 0;
+        } else {
+            // Если передано значение напрямую
+            $testId = $dataOrTestId;
+        }
+
+        return self::validateTestId($testId, $errorMessage);
+    }
+
+    /**
      * Валидация ID вопроса
      *
      * @param int|string $questionId ID вопроса
@@ -147,6 +168,27 @@ class ValidationHelper
         }
 
         return $id;
+    }
+
+    /**
+     * Требование и валидация ID вопроса из массива данных
+     *
+     * @param int|string|array $dataOrQuestionId Массив данных или ID вопроса напрямую
+     * @param string|null $errorMessage Сообщение об ошибке
+     * @return int
+     * @throws ValidationException Если ID невалиден
+     */
+    public static function requireQuestionId($dataOrQuestionId, $errorMessage = null)
+    {
+        // Если передан массив, извлекаем question_id
+        if (is_array($dataOrQuestionId)) {
+            $questionId = $dataOrQuestionId['question_id'] ?? 0;
+        } else {
+            // Если передано значение напрямую
+            $questionId = $dataOrQuestionId;
+        }
+
+        return self::validateQuestionId($questionId, $errorMessage);
     }
 
     /**

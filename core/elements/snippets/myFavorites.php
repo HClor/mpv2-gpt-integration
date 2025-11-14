@@ -39,7 +39,9 @@ $stmt = $modx->prepare("
 $stmt->execute([$userId]);
 $favorites = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$output = '<div class="favorites-page">';
+// Добавляем CSRF токен для JavaScript
+$output = CsrfProtection::getTokenMeta();
+$output .= '<div class="favorites-page">';
 
 if (empty($favorites)) {
     $testsUrl = $modx->makeUrl(35);
@@ -369,14 +371,23 @@ document.addEventListener("DOMContentLoaded", function() {
                 }
                 
                 listItem.classList.add("removing-item");
-                
+
                 try {
+                    // Получаем CSRF токен из meta тега
+                    const csrfToken = document.querySelector("meta[name=\"csrf-token\"]")?.content;
+                    const requestData = {question_id: questionId};
+
+                    // Добавляем CSRF токен если он есть
+                    if (csrfToken) {
+                        requestData.csrf_token = csrfToken;
+                    }
+
                     const response = await fetch("/assets/components/testsystem/ajax/testsystem.php", {
                         method: "POST",
                         headers: {"Content-Type": "application/json"},
                         body: JSON.stringify({
                             action: "toggleFavorite",
-                            data: {question_id: questionId}
+                            data: requestData
                         })
                     });
                     
