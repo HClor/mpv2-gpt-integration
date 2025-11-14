@@ -19,7 +19,9 @@ if (!$modx->user->hasSessionContext('web')) {
 }
 
 $assetsUrl = rtrim($modx->getOption('assets_url', null, MODX_ASSETS_URL), '/') . '/';
-$jsPath = $assetsUrl . 'components/testsystem/js/mytests.js';
+// Добавляем версию для сброса кеша браузера
+$jsVersion = filemtime(MODX_ASSETS_PATH . 'components/testsystem/js/mytests.js');
+$jsPath = $assetsUrl . 'components/testsystem/js/mytests.js?v=' . $jsVersion;
 
 // CSRF Protection: добавляем meta тег с токеном для JavaScript
 $output = CsrfProtection::getTokenMeta();

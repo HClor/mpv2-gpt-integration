@@ -1,5 +1,8 @@
 // assets/components/testsystem/js/mytests.js - IMPROVED VERSION
 
+// ДИАГНОСТИКА: Проверка загрузки файла
+console.log('[mytests.js] FILE LOADED - Version with diagnostic logging');
+
 // CSRF Protection: получаем токен из meta тега
 function getCsrfToken() {
     const metaTag = document.querySelector('meta[name="csrf-token"]');
