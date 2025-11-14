@@ -80,7 +80,7 @@
                     `]]
 
                     [[+canManageAccess:is=`1`:then=`
-                        <button class="btn btn-outline-secondary" title="Управление доступом" onclick="openAccessModal([[+test_id]])">
+                        <button class="btn btn-outline-secondary" title="Управление доступом" onclick="openAccessManagementModal([[+test_id]])">
                             <i class="bi bi-people"></i>
                         </button>
                     `]]

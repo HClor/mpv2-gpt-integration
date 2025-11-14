@@ -65,7 +65,8 @@ $csrfExemptActions = [
     'getDetailedResults',
     'getKnowledgeAreas',
     'getTestPermissions',
-    'getAllQuestionsForTest'
+    'getAllQuestionsForTest',
+    'getTestAccess'
 ];
 
 // Если это POST запрос и action требует CSRF проверки
@@ -2205,7 +2206,133 @@ if (empty($allQuestionIds)) {
 
             $response = ResponseHelper::success(null, 'Test updated successfully');
             break;
-            
+
+        // ============================================
+        // УПРАВЛЕНИЕ ДОСТУПОМ К ТЕСТАМ
+        // ============================================
+
+        case 'getTestAccess':
+            // Получить список пользователей с доступом к тесту
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+            $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
+
+            // Проверяем права на управление доступом
+            $test = $modx->getObject('TestTest', $testId);
+            if (!$test) {
+                throw new Exception('Test not found');
+            }
+
+            $publicationStatus = $test->get('publication_status');
+
+            if (!TestPermissionHelper::canManageAccess($modx, $testId, $userId)) {
+                throw new Exception('Access denied: you cannot manage access to this test');
+            }
+
+            // Получаем список пользователей с доступом
+            $users = TestPermissionHelper::getTestUsers($modx, $testId);
+
+            // Получаем список доступных пользователей (все кроме уже имеющих доступ)
+            $existingUserIds = array_column($users, 'user_id');
+            $existingUserIds[] = $userId; // Исключаем текущего пользователя
+
+            $placeholders = implode(',', array_fill(0, count($existingUserIds), '?'));
+            $stmt = $modx->prepare("
+                SELECT u.id, u.username,
+                       COALESCE(p.fullname, u.username) as fullname
+                FROM {$prefix}users u
+                LEFT JOIN {$prefix}user_attributes p ON p.internalKey = u.id
+                WHERE u.id NOT IN ($placeholders)
+                ORDER BY u.username
+                LIMIT 100
+            ");
+            $stmt->execute($existingUserIds);
+            $availableUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $response = ResponseHelper::success([
+                'users' => $users,
+                'available_users' => $availableUsers,
+                'test_title' => $test->get('title')
+            ]);
+            break;
+
+        case 'grantTestAccess':
+            // Предоставить доступ пользователю
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $currentUserId = PermissionHelper::getCurrentUserId($modx);
+            $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
+            $targetUserId = ValidationHelper::requireInt($data['user_id'] ?? 0, 'User ID required');
+            $role = ValidationHelper::requireString($data, 'role', 'Role required');
+
+            // Валидация роли
+            $allowedRoles = [
+                TestPermissionHelper::ROLE_AUTHOR,
+                TestPermissionHelper::ROLE_EDITOR,
+                TestPermissionHelper::ROLE_VIEWER
+            ];
+
+            if (!in_array($role, $allowedRoles, true)) {
+                throw new Exception('Invalid role: ' . $role);
+            }
+
+            // Проверяем что тест существует
+            $test = $modx->getObject('TestTest', $testId);
+            if (!$test) {
+                throw new Exception('Test not found');
+            }
+
+            // Проверяем права на управление доступом
+            if (!TestPermissionHelper::canManageAccess($modx, $testId, $currentUserId)) {
+                throw new Exception('Access denied: you cannot manage access to this test');
+            }
+
+            // Проверяем что целевой пользователь существует
+            $targetUser = $modx->getObject('modUser', $targetUserId);
+            if (!$targetUser) {
+                throw new Exception('Target user not found');
+            }
+
+            // Предоставляем доступ
+            $success = TestPermissionHelper::grantAccess($modx, $testId, $targetUserId, $role, $currentUserId);
+
+            if (!$success) {
+                throw new Exception('Failed to grant access');
+            }
+
+            $response = ResponseHelper::success(null, 'Access granted successfully');
+            break;
+
+        case 'revokeTestAccess':
+            // Удалить доступ пользователя
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $currentUserId = PermissionHelper::getCurrentUserId($modx);
+            $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
+            $targetUserId = ValidationHelper::requireInt($data['user_id'] ?? 0, 'User ID required');
+
+            // Проверяем что тест существует
+            $test = $modx->getObject('TestTest', $testId);
+            if (!$test) {
+                throw new Exception('Test not found');
+            }
+
+            // Проверяем права на управление доступом
+            if (!TestPermissionHelper::canManageAccess($modx, $testId, $currentUserId)) {
+                throw new Exception('Access denied: you cannot manage access to this test');
+            }
+
+            // Удаляем доступ
+            $success = TestPermissionHelper::revokeAccess($modx, $testId, $targetUserId);
+
+            if (!$success) {
+                throw new Exception('Failed to revoke access');
+            }
+
+            $response = ResponseHelper::success(null, 'Access revoked successfully');
+            break;
+
 
     default:
                 throw new Exception('Unknown action: ' . $action);

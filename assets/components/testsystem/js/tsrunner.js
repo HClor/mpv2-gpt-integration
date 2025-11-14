@@ -3498,6 +3498,203 @@ async function addFavoritesViewToggle(questionId) {
     
     window.openPublicationModal = openPublicationModal;
     window.changePublicationStatus = changePublicationStatus;
-    
+
+    // ============================================
+    // УПРАВЛЕНИЕ ДОСТУПОМ К ТЕСТАМ
+    // ============================================
+
+    async function openAccessManagementModal(currentTestId) {
+        try {
+            const result = await apiCall("getTestAccess", { test_id: currentTestId });
+
+            if (!result.success) {
+                alert('Ошибка: ' + result.message);
+                return;
+            }
+
+            const users = result.data.users || [];
+            const testTitle = result.data.test_title || 'Тест';
+            const availableUsers = result.data.available_users || [];
+
+            // Генерируем список пользователей с доступом
+            let usersHtml = '';
+            if (users.length === 0) {
+                usersHtml = '<tr><td colspan="4" class="text-center text-muted">Нет пользователей с явным доступом</td></tr>';
+            } else {
+                users.forEach(user => {
+                    const roleLabel = {
+                        'author': '<span class="badge bg-danger">Автор</span>',
+                        'editor': '<span class="badge bg-warning text-dark">Редактор</span>',
+                        'viewer': '<span class="badge bg-info">Зритель</span>'
+                    }[user.role] || user.role;
+
+                    usersHtml += `
+                        <tr>
+                            <td><strong>${escapeHtml(user.username)}</strong></td>
+                            <td>${roleLabel}</td>
+                            <td class="small text-muted">${escapeHtml(user.granted_at || '')}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-danger"
+                                        onclick="revokeTestAccess(${currentTestId}, ${user.user_id}, '${escapeHtml(user.username)}')">
+                                    <i class="bi bi-trash"></i> Удалить
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            }
+
+            // Генерируем список доступных пользователей для добавления
+            let userOptionsHtml = '<option value="">-- Выберите пользователя --</option>';
+            availableUsers.forEach(u => {
+                userOptionsHtml += `<option value="${u.id}">${escapeHtml(u.username)} (${escapeHtml(u.fullname || 'Без имени')})</option>`;
+            });
+
+            const modalHtml = `
+            <div class="modal fade" id="accessManagementModal" tabindex="-1">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header bg-secondary text-white">
+                            <h5 class="modal-title">
+                                <i class="bi bi-people-fill"></i> Управление доступом: ${escapeHtml(testTitle)}
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            <!-- Таблица пользователей с доступом -->
+                            <h6 class="mb-3">Пользователи с доступом</h6>
+                            <div class="table-responsive mb-4">
+                                <table class="table table-sm table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Пользователь</th>
+                                            <th>Роль</th>
+                                            <th>Дата предоставления</th>
+                                            <th>Действия</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="access-users-list">
+                                        ${usersHtml}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <hr>
+
+                            <!-- Форма добавления пользователя -->
+                            <h6 class="mb-3">Добавить пользователя</h6>
+                            <div class="row g-2">
+                                <div class="col-md-5">
+                                    <label class="form-label small">Пользователь</label>
+                                    <select class="form-select" id="new-access-user">
+                                        ${userOptionsHtml}
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label small">Роль</label>
+                                    <select class="form-select" id="new-access-role">
+                                        <option value="viewer">Зритель (просмотр)</option>
+                                        <option value="editor">Редактор (редактирование)</option>
+                                        <option value="author">Автор (полный доступ)</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small">&nbsp;</label>
+                                    <button class="btn btn-primary w-100" onclick="grantTestAccess(${currentTestId})">
+                                        <i class="bi bi-plus-circle"></i> Добавить
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="alert alert-info mt-3 small">
+                                <strong>Описание ролей:</strong><br>
+                                <strong>Автор</strong> - полный доступ (редактирование, управление доступом, изменение статуса)<br>
+                                <strong>Редактор</strong> - может редактировать вопросы и настройки теста<br>
+                                <strong>Зритель</strong> - может только просматривать и проходить тест
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            `;
+
+            // Удаляем старое модальное окно если есть
+            const oldModal = document.getElementById("accessManagementModal");
+            if (oldModal) {
+                oldModal.remove();
+            }
+
+            // Добавляем новое модальное окно
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+            const modal = new bootstrap.Modal(document.getElementById("accessManagementModal"));
+            modal.show();
+
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Ошибка при загрузке данных: ' + error.message);
+        }
+    }
+
+    async function grantTestAccess(testId) {
+        const userId = document.getElementById('new-access-user').value;
+        const role = document.getElementById('new-access-role').value;
+
+        if (!userId) {
+            alert('Выберите пользователя');
+            return;
+        }
+
+        try {
+            const result = await apiCall("grantTestAccess", {
+                test_id: testId,
+                user_id: parseInt(userId),
+                role: role
+            });
+
+            if (result.success) {
+                showNotification('✅ Доступ предоставлен', 'success');
+                // Закрываем и переотрываем модальное окно для обновления списка
+                bootstrap.Modal.getInstance(document.getElementById("accessManagementModal")).hide();
+                setTimeout(() => openAccessManagementModal(testId), 500);
+            } else {
+                alert('Ошибка: ' + result.message);
+            }
+        } catch (error) {
+            alert('Ошибка: ' + error.message);
+        }
+    }
+
+    async function revokeTestAccess(testId, userId, username) {
+        if (!confirm(`Удалить доступ для пользователя "${username}"?`)) {
+            return;
+        }
+
+        try {
+            const result = await apiCall("revokeTestAccess", {
+                test_id: testId,
+                user_id: userId
+            });
+
+            if (result.success) {
+                showNotification('✅ Доступ удалён', 'success');
+                // Закрываем и переотрываем модальное окно для обновления списка
+                bootstrap.Modal.getInstance(document.getElementById("accessManagementModal")).hide();
+                setTimeout(() => openAccessManagementModal(testId), 500);
+            } else {
+                alert('Ошибка: ' + result.message);
+            }
+        } catch (error) {
+            alert('Ошибка: ' + error.message);
+        }
+    }
+
+    window.openAccessManagementModal = openAccessManagementModal;
+    window.grantTestAccess = grantTestAccess;
+    window.revokeTestAccess = revokeTestAccess;
+
 
 })();
