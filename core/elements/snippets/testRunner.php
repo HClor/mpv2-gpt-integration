@@ -525,7 +525,37 @@ $timeLimit = (int)$test['time_limit'];
 // Формирование HTML вывода
 $output = '<div id="test-container" data-test-id="' . (int)$testId . '" data-can-edit="' . ($canEditTest ? '1' : '0') . '" data-test-mode="' . htmlspecialchars($testMode, ENT_QUOTES, 'UTF-8') . '">';
 $output .= '<div id="test-info" class="card mb-4">';
-$output .= '<div class="card-header"><h2>' . htmlspecialchars($test['title'], ENT_QUOTES, 'UTF-8') . '</h2></div>';
+
+// Заголовок с бейджем статуса
+$output .= '<div class="card-header">';
+$output .= '<div class="d-flex justify-content-between align-items-center flex-wrap gap-2">';
+$output .= '<h2 class="mb-0">' . htmlspecialchars($test['title'], ENT_QUOTES, 'UTF-8') . '</h2>';
+
+// Показываем статус в зависимости от прав
+$showStatus = false;
+$statusLabel = '';
+$statusClass = '';
+
+if ($publicationStatus === 'draft' && $isAdminOrExpert) {
+    $showStatus = true;
+    $statusLabel = 'Черновик';
+    $statusClass = 'bg-warning text-dark';
+} elseif ($publicationStatus === 'private') {
+    $showStatus = true;
+    $statusLabel = 'Приватный';
+    $statusClass = 'bg-secondary';
+} elseif ($publicationStatus === 'public' && $isAdminOrExpert) {
+    $showStatus = true;
+    $statusLabel = 'Публичный';
+    $statusClass = 'bg-success';
+}
+
+if ($showStatus) {
+    $output .= '<span class="badge ' . $statusClass . ' fs-6"><i class="bi bi-lock-fill"></i> ' . $statusLabel . '</span>';
+}
+
+$output .= '</div>';
+$output .= '</div>';
 $output .= '<div class="card-body">';
 $output .= '<p>' . nl2br(htmlspecialchars($test['description'], ENT_QUOTES, 'UTF-8')) . '</p>';
 $output .= '<ul class="list-unstyled">';
