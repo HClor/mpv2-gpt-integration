@@ -76,8 +76,10 @@ if ($depth > 0) {
 $parentIdsStr = implode(',', $parentIds);
 
 // Определяем фильтр по publication_status в зависимости от роли пользователя
-$userId = $modx->user->id;
-$isAdminOrExpert = TestPermissionHelper::isAdminOrExpert($modx, $userId);
+// Проверяем авторизацию во фронтенде (контекст 'web')
+$isAuthenticatedInFrontend = $modx->user->isAuthenticated('web');
+$userId = $isAuthenticatedInFrontend ? $modx->user->id : 0;
+$isAdminOrExpert = $userId > 0 ? TestPermissionHelper::isAdminOrExpert($modx, $userId) : false;
 
 // Админы и эксперты видят все статусы (если showAllStatuses=1)
 // Обычные пользователи видят только public тесты
