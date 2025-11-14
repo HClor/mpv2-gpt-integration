@@ -2263,7 +2263,7 @@ if (empty($allQuestionIds)) {
 
             $currentUserId = PermissionHelper::getCurrentUserId($modx);
             $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
-            $targetUserId = ValidationHelper::requireInt($data['user_id'] ?? 0, 'User ID required');
+            $targetUserId = ValidationHelper::requireInt($data, 'user_id', 'User ID required');
             $role = ValidationHelper::requireString($data, 'role', 'Role required');
 
             // Валидация роли
@@ -2310,7 +2310,7 @@ if (empty($allQuestionIds)) {
 
             $currentUserId = PermissionHelper::getCurrentUserId($modx);
             $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
-            $targetUserId = ValidationHelper::requireInt($data['user_id'] ?? 0, 'User ID required');
+            $targetUserId = ValidationHelper::requireInt($data, 'user_id', 'User ID required');
 
             // Проверяем что тест существует
             $test = $modx->getObject('TestTest', $testId);
