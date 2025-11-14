@@ -2313,8 +2313,9 @@ if (empty($allQuestionIds)) {
             }
 
             // Проверяем что целевой пользователь существует
-            $targetUser = $modx->getObject('modUser', $targetUserId);
-            if (!$targetUser) {
+            $stmt = $modx->prepare("SELECT id FROM {$prefix}users WHERE id = ?");
+            $stmt->execute([$targetUserId]);
+            if (!$stmt->fetch()) {
                 throw new Exception('Target user not found');
             }
 
