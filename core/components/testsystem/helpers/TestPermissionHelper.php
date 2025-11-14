@@ -282,36 +282,74 @@ class TestPermissionHelper
      */
     public static function grantAccess($modx, $testId, $targetUserId, $role, $grantedBy)
     {
+        $modx->log(modX::LOG_LEVEL_ERROR, '[TestPermissionHelper::grantAccess] Start - testId: ' . $testId . ', targetUserId: ' . $targetUserId . ', role: ' . $role);
+
         if (!in_array($role, [self::ROLE_AUTHOR, self::ROLE_EDITOR, self::ROLE_VIEWER])) {
+            $modx->log(modX::LOG_LEVEL_ERROR, '[TestPermissionHelper::grantAccess] Invalid role: ' . $role);
             return false;
         }
 
         $prefix = $modx->getOption('table_prefix');
+        $modx->log(modX::LOG_LEVEL_ERROR, '[TestPermissionHelper::grantAccess] Table prefix: ' . $prefix);
 
         // Проверяем, есть ли уже доступ
-        $stmt = $modx->prepare("
-            SELECT id FROM {$prefix}test_permissions
-            WHERE test_id = ? AND user_id = ?
-        ");
-        $stmt->execute([$testId, $targetUserId]);
+        $sql = "SELECT id FROM {$prefix}test_permissions WHERE test_id = ? AND user_id = ?";
+        $modx->log(modX::LOG_LEVEL_ERROR, '[TestPermissionHelper::grantAccess] Check SQL: ' . $sql);
+
+        $stmt = $modx->prepare($sql);
+        if (!$stmt) {
+            $modx->log(modX::LOG_LEVEL_ERROR, '[TestPermissionHelper::grantAccess] Failed to prepare SELECT statement');
+            return false;
+        }
+
+        $result = $stmt->execute([$testId, $targetUserId]);
+        if (!$result) {
+            $error = $stmt->errorInfo();
+            $modx->log(modX::LOG_LEVEL_ERROR, '[TestPermissionHelper::grantAccess] SELECT execute failed: ' . print_r($error, true));
+            return false;
+        }
+
         $exists = $stmt->fetchColumn();
+        $modx->log(modX::LOG_LEVEL_ERROR, '[TestPermissionHelper::grantAccess] Existing record ID: ' . ($exists ? $exists : 'none'));
 
         if ($exists) {
             // Обновляем роль
-            $stmt = $modx->prepare("
-                UPDATE {$prefix}test_permissions
-                SET role = ?, granted_by = ?, granted_at = NOW()
-                WHERE test_id = ? AND user_id = ?
-            ");
-            return $stmt->execute([$role, $grantedBy, $testId, $targetUserId]);
+            $sql = "UPDATE {$prefix}test_permissions SET role = ?, granted_by = ?, granted_at = NOW() WHERE test_id = ? AND user_id = ?";
+            $modx->log(modX::LOG_LEVEL_ERROR, '[TestPermissionHelper::grantAccess] UPDATE SQL: ' . $sql);
+
+            $stmt = $modx->prepare($sql);
+            if (!$stmt) {
+                $modx->log(modX::LOG_LEVEL_ERROR, '[TestPermissionHelper::grantAccess] Failed to prepare UPDATE statement');
+                return false;
+            }
+
+            $result = $stmt->execute([$role, $grantedBy, $testId, $targetUserId]);
+            if (!$result) {
+                $error = $stmt->errorInfo();
+                $modx->log(modX::LOG_LEVEL_ERROR, '[TestPermissionHelper::grantAccess] UPDATE execute failed: ' . print_r($error, true));
+            } else {
+                $modx->log(modX::LOG_LEVEL_ERROR, '[TestPermissionHelper::grantAccess] UPDATE success');
+            }
+            return $result;
         } else {
             // Создаем новую запись
-            $stmt = $modx->prepare("
-                INSERT INTO {$prefix}test_permissions
-                (test_id, user_id, role, granted_by, granted_at)
-                VALUES (?, ?, ?, ?, NOW())
-            ");
-            return $stmt->execute([$testId, $targetUserId, $role, $grantedBy]);
+            $sql = "INSERT INTO {$prefix}test_permissions (test_id, user_id, role, granted_by, granted_at) VALUES (?, ?, ?, ?, NOW())";
+            $modx->log(modX::LOG_LEVEL_ERROR, '[TestPermissionHelper::grantAccess] INSERT SQL: ' . $sql);
+
+            $stmt = $modx->prepare($sql);
+            if (!$stmt) {
+                $modx->log(modX::LOG_LEVEL_ERROR, '[TestPermissionHelper::grantAccess] Failed to prepare INSERT statement');
+                return false;
+            }
+
+            $result = $stmt->execute([$testId, $targetUserId, $role, $grantedBy]);
+            if (!$result) {
+                $error = $stmt->errorInfo();
+                $modx->log(modX::LOG_LEVEL_ERROR, '[TestPermissionHelper::grantAccess] INSERT execute failed: ' . print_r($error, true));
+            } else {
+                $modx->log(modX::LOG_LEVEL_ERROR, '[TestPermissionHelper::grantAccess] INSERT success');
+            }
+            return $result;
         }
     }
 
