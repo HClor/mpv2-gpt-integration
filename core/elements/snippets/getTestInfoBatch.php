@@ -40,12 +40,37 @@ $Tquestions = $prefix . 'test_questions';
 $S = $prefix . 'site_content';
 
 // Получаем все дочерние ID с учетом depth
+// Используем прямой SQL запрос вместо getChildIds() для надежности
 $parentIds = [$parents];
+
 if ($depth > 0) {
-    $childIds = $modx->getChildIds($parents, $depth);
-    if (!empty($childIds)) {
-        $parentIds = array_merge($parentIds, $childIds);
+    // Рекурсивный поиск дочерних страниц через SQL
+    $tempParents = [$parents];
+
+    for ($level = 1; $level <= $depth; $level++) {
+        if (empty($tempParents)) break;
+
+        $tempParentsStr = implode(',', $tempParents);
+        $stmt = $modx->query("
+            SELECT id
+            FROM `{$S}`
+            WHERE parent IN ({$tempParentsStr})
+                AND published = 1
+                AND deleted = 0
+        ");
+
+        $levelIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        if (!empty($levelIds)) {
+            $parentIds = array_merge($parentIds, $levelIds);
+            $tempParents = $levelIds; // Для следующего уровня
+        } else {
+            break;
+        }
     }
+
+    // Убираем дубликаты
+    $parentIds = array_unique($parentIds);
 }
 
 $parentIdsStr = implode(',', $parentIds);
