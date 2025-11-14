@@ -171,6 +171,59 @@ foreach ($tests as $test) {
     $userRole = TestPermissionHelper::getUserRole($modx, $testId, $userId) ?? 'none';
     $isCreator = TestPermissionHelper::isTestCreator($modx, $testId, $userId);
 
+    // Формируем HTML для бейджа статуса
+    $statusBadge = '';
+    if ($publicationStatus === 'draft' && $isAdminOrExpert) {
+        $statusBadge = '<span class="badge bg-warning text-dark" title="Черновик - только для админов и экспертов">
+            <i class="bi bi-pencil-fill"></i> Черновик
+        </span>';
+    } elseif ($publicationStatus === 'private') {
+        $statusBadge = '<span class="badge bg-secondary" title="Приватный - доступ только по приглашению">
+            <i class="bi bi-lock-fill"></i> Приватный
+        </span>';
+    } elseif ($publicationStatus === 'unlisted' && $isAdminOrExpert) {
+        $statusBadge = '<span class="badge bg-info" title="По ссылке - доступен всем, но не виден в списках">
+            <i class="bi bi-link-45deg"></i> По ссылке
+        </span>';
+    }
+
+    // Формируем HTML для dropdown управления
+    $managementDropdown = '';
+    if ($canEdit || $canManageAccess) {
+        $dropdownItems = '';
+
+        if ($canEdit) {
+            $dropdownItems .= '<li>
+                <a class="dropdown-item" href="' . htmlspecialchars($testUrl, ENT_QUOTES, 'UTF-8') . '?action=edit">
+                    <i class="bi bi-pencil"></i> Редактировать
+                </a>
+            </li>';
+        }
+
+        if ($canManageAccess) {
+            $dropdownItems .= '<li>
+                <button class="dropdown-item" onclick="openAccessManagementModal(' . $testId . ')">
+                    <i class="bi bi-people"></i> Управление доступом
+                </button>
+            </li>';
+        }
+
+        if ($canChangeStatus) {
+            $dropdownItems .= '<li>
+                <button class="dropdown-item" onclick="openPublicationModal(' . $testId . ', \'' . htmlspecialchars($publicationStatus, ENT_QUOTES, 'UTF-8') . '\')">
+                    <i class="bi bi-globe"></i> Изменить статус
+                </button>
+            </li>';
+        }
+
+        $managementDropdown = '<div class="btn-group btn-group-sm">
+            <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-gear"></i> Управление
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">' . $dropdownItems . '</ul>
+        </div>';
+    }
+
     // Подготавливаем данные для чанка
     $placeholders = [
         'id' => $test['id'],
@@ -199,7 +252,10 @@ foreach ($tests as $test) {
         'canChangeStatus' => $canChangeStatus ? 1 : 0,
         'userRole' => $userRole,
         'isCreator' => $isCreator ? 1 : 0,
-        'isAdminOrExpert' => $isAdminOrExpert ? 1 : 0
+        'isAdminOrExpert' => $isAdminOrExpert ? 1 : 0,
+        // Готовые HTML фрагменты
+        'statusBadge' => $statusBadge,
+        'managementDropdown' => $managementDropdown
     ];
     
     $output[] = $modx->getChunk($tpl, $placeholders);

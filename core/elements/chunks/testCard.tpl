@@ -33,23 +33,7 @@
                 </h5>
 
                 <!-- Статус теста (показываем только draft, private, unlisted) -->
-                [[+publication_status:is=`draft`:and:is=`[[+isAdminOrExpert]]`:eq=`1`:then=`
-                    <span class="badge bg-warning text-dark" title="Черновик - только для админов и экспертов">
-                        <i class="bi bi-pencil-fill"></i> Черновик
-                    </span>
-                `]]
-
-                [[+publication_status:is=`private`:then=`
-                    <span class="badge bg-secondary" title="Приватный - доступ только по приглашению">
-                        <i class="bi bi-lock-fill"></i> Приватный
-                    </span>
-                `]]
-
-                [[+publication_status:is=`unlisted`:and:is=`[[+isAdminOrExpert]]`:eq=`1`:then=`
-                    <span class="badge bg-info" title="По ссылке - доступен всем, но не виден в списках">
-                        <i class="bi bi-link-45deg"></i> По ссылке
-                    </span>
-                `]]
+                [[+statusBadge]]
             </div>
 
             <!-- Описание -->
@@ -72,36 +56,7 @@
                 </a>
 
                 <!-- Dropdown управления (только если есть права) -->
-                [[+canEdit:is=`1`:or:is=`[[+canManageAccess]]`:eq=`1`:then=`
-                    <div class="btn-group btn-group-sm">
-                        <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-gear"></i> Управление
-                        </button>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            [[+canEdit:is=`1`:then=`
-                                <li>
-                                    <a class="dropdown-item" href="[[+url]]?action=edit">
-                                        <i class="bi bi-pencil"></i> Редактировать
-                                    </a>
-                                </li>
-                            `]]
-                            [[+canManageAccess:is=`1`:then=`
-                                <li>
-                                    <button class="dropdown-item" onclick="openAccessManagementModal([[+test_id]])">
-                                        <i class="bi bi-people"></i> Управление доступом
-                                    </button>
-                                </li>
-                            `]]
-                            [[+canChangeStatus:is=`1`:then=`
-                                <li>
-                                    <button class="dropdown-item" onclick="openPublicationModal([[+test_id]], '[[+publication_status]]')">
-                                        <i class="bi bi-globe"></i> Изменить статус
-                                    </button>
-                                </li>
-                            `]]
-                        </ul>
-                    </div>
-                `]]
+                [[+managementDropdown]]
             </div>
         </div>
     </div>
