@@ -1,5 +1,26 @@
 {
+    "name": "mpv2/test-system",
+    "description": "MPV2 Learning and Testing System",
+    "type": "project",
     "require": {
+        "php": ">=7.4",
         "phpoffice/phpspreadsheet": "^5.2"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "MPV2\\TestSystem\\": "core/components/testsystem/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "MPV2\\TestSystem\\Tests\\": "tests/"
+        }
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
     }
 }
