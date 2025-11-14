@@ -205,4 +205,26 @@ foreach ($tests as $test) {
     $output[] = $modx->getChunk($tpl, $placeholders);
 }
 
+// Подключение ресурсов для модального окна управления доступом
+$assetsUrl = $modx->getOption('assets_url', null, MODX_ASSETS_URL);
+$assetsUrl = rtrim($assetsUrl, '/') . '/';
+
+$cssPath = $assetsUrl . 'components/testsystem/css/tsrunner.css';
+$jsPath = $assetsUrl . 'components/testsystem/js/tsrunner.js';
+
+// CSRF Protection: Добавляем meta тег с токеном для JavaScript
+$resources = CsrfProtection::getTokenMeta();
+
+// XSS Protection: Подключаем DOMPurify для санитизации HTML
+$resources .= '<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>';
+
+$resources .= '<link rel="stylesheet" href="' . htmlspecialchars($cssPath, ENT_QUOTES, 'UTF-8') . '">';
+$resources .= '<script src="' . htmlspecialchars($jsPath, ENT_QUOTES, 'UTF-8') . '"></script>';
+
+// Добавляем ресурсы только один раз
+if (!isset($modx->testsystem_resources_loaded)) {
+    $modx->testsystem_resources_loaded = true;
+    array_unshift($output, $resources);
+}
+
 return implode('', $output);
