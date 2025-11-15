@@ -32,6 +32,8 @@ require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
 require_once __DIR__ . '/controllers/BaseController.php';
 require_once __DIR__ . '/controllers/SessionController.php';
 require_once __DIR__ . '/controllers/FavoriteController.php';
+require_once __DIR__ . '/controllers/QuestionController.php';
+require_once __DIR__ . '/controllers/TestController.php';
 require_once __DIR__ . '/controllers/ControllerFactory.php';
 
 $prefix = $modx->getOption('table_prefix', null, 'modx_');

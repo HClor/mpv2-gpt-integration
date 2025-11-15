@@ -32,6 +32,23 @@ class ControllerFactory
         'toggleFavorite' => 'FavoriteController',
         'getFavoriteStatus' => 'FavoriteController',
         'getFavoriteQuestions' => 'FavoriteController',
+
+        // Question Controller
+        'createQuestion' => 'QuestionController',
+        'getQuestion' => 'QuestionController',
+        'updateQuestion' => 'QuestionController',
+        'deleteQuestion' => 'QuestionController',
+        'getAllQuestions' => 'QuestionController',
+        'getQuestionAnswers' => 'QuestionController',
+        'togglePublished' => 'QuestionController',
+        'toggleLearning' => 'QuestionController',
+
+        // Test Controller
+        'getTestInfo' => 'TestController',
+        'getTestSettings' => 'TestController',
+        'updateTestSettings' => 'TestController',
+        'updateTest' => 'TestController',
+        'deleteTest' => 'TestController',
     ];
 
     /**
