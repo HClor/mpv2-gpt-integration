@@ -28,6 +28,12 @@ $modx->getService('error','error.modError');
 // Подключаем bootstrap для автозагрузки классов безопасности
 require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
 
+// Подключаем контроллеры
+require_once __DIR__ . '/controllers/BaseController.php';
+require_once __DIR__ . '/controllers/SessionController.php';
+require_once __DIR__ . '/controllers/FavoriteController.php';
+require_once __DIR__ . '/controllers/ControllerFactory.php';
+
 $prefix = $modx->getOption('table_prefix', null, 'modx_');
 
 header('Content-Type: application/json; charset=utf-8');
@@ -100,7 +106,15 @@ function canUserEditTest($modx, $testId) {
 }
 
 try {
-    
+    // Инициализируем ControllerFactory
+    $controllerFactory = new ControllerFactory($modx);
+
+    // Если действие можно обработать через контроллер, делаем это
+    if ($controllerFactory->canHandle($action)) {
+        $response = $controllerFactory->handle($action, $data);
+    } else {
+        // Иначе используем старый switch для обратной совместимости
+
     switch ($action) {
         
 
@@ -2210,8 +2224,9 @@ if (empty($allQuestionIds)) {
     default:
                 throw new Exception('Unknown action: ' . $action);
         }
-        
-    } catch (TestSystemException $e) {
+    } // Закрываем else блок для switch
+
+} catch (TestSystemException $e) {
         // Специализированные исключения с правильными HTTP кодами
         http_response_code($e->getHttpCode());
         $response = $e->toArray();
