@@ -137,6 +137,24 @@ class ControllerFactory
         'processQueue' => 'NotificationController',
         'cleanupOld' => 'NotificationController',
         'getStatistics' => 'NotificationController',
+
+        // Analytics Controller
+        'getMyStatistics' => 'AnalyticsController',
+        'getUserStatistics' => 'AnalyticsController',
+        'getTestStatistics' => 'AnalyticsController',
+        'getCategoryStatistics' => 'AnalyticsController',
+        'getQuestionStatistics' => 'AnalyticsController',
+        'getTopUsers' => 'AnalyticsController',
+        'getHardestQuestions' => 'AnalyticsController',
+        'getScoreDistribution' => 'AnalyticsController',
+        'getCohortAnalysis' => 'AnalyticsController',
+        'getUserActivitySummary' => 'AnalyticsController',
+        'getAdminDashboard' => 'AnalyticsController',
+        'getMyDashboard' => 'AnalyticsController',
+        'getUserComparison' => 'AnalyticsController',
+        'generateReport' => 'AnalyticsController',
+        'getReportHistory' => 'AnalyticsController',
+        'cleanupCache' => 'AnalyticsController',
     ];
 
     /**
