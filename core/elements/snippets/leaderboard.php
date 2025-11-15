@@ -69,23 +69,33 @@ if ($userId > 0) {
     $myStats = $stmt->fetch(PDO::FETCH_ASSOC);
 }
 
-// Получаем общий рейтинг
-$stmt = $modx->query("
-    SELECT 
-        u.id,
-        u.username,
-        s.tests_completed,
-        s.tests_passed,
-        s.avg_score_pct,
-        s.current_streak
-    FROM {$prefix}test_user_stats s
-    JOIN {$prefix}users u ON u.id = s.user_id
-    WHERE s.tests_completed > 0
-    ORDER BY s.avg_score_pct DESC, s.tests_completed DESC
-    LIMIT 50
-");
+// Получаем общий рейтинг (с кешированием)
+$cacheKey = 'testsystem/leaderboard_top50';
+$cacheTTL = Config::getCacheTTL('leaderboard_ttl', 300);
 
-$leaders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$leaders = $modx->cacheManager->get($cacheKey);
+
+if ($leaders === null) {
+    $stmt = $modx->query("
+        SELECT
+            u.id,
+            u.username,
+            s.tests_completed,
+            s.tests_passed,
+            s.avg_score_pct,
+            s.current_streak
+        FROM {$prefix}test_user_stats s
+        JOIN {$prefix}users u ON u.id = s.user_id
+        WHERE s.tests_completed > 0
+        ORDER BY s.avg_score_pct DESC, s.tests_completed DESC
+        LIMIT 50
+    ");
+
+    $leaders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Сохраняем в кеш
+    $modx->cacheManager->set($cacheKey, $leaders, $cacheTTL);
+}
 
 $output = "";
 
