@@ -59,6 +59,23 @@ class ControllerFactory
         'cleanOrphanedSessions' => 'AdminController',
         'cleanOldSessions' => 'AdminController',
         'getSystemStats' => 'AdminController',
+
+        // Material Controller
+        'createMaterial' => 'MaterialController',
+        'getMaterial' => 'MaterialController',
+        'updateMaterial' => 'MaterialController',
+        'deleteMaterial' => 'MaterialController',
+        'getMaterialsList' => 'MaterialController',
+        'addContentBlock' => 'MaterialController',
+        'updateContentBlock' => 'MaterialController',
+        'deleteContentBlock' => 'MaterialController',
+        'addAttachment' => 'MaterialController',
+        'deleteAttachment' => 'MaterialController',
+        'updateProgress' => 'MaterialController',
+        'getUserProgress' => 'MaterialController',
+        'setTags' => 'MaterialController',
+        'linkTest' => 'MaterialController',
+        'unlinkTest' => 'MaterialController',
     ];
 
     /**
