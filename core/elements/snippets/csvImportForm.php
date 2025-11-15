@@ -79,11 +79,11 @@ $isSuperAdmin = ($currentUserId === 1);
 
 // Проверка роли (админ/эксперт)
 $isExpertOrAdmin = false;
-$sql = "SELECT mgn.`name` 
+$sql = "SELECT mgn.`name`
         FROM `{$prefix}member_groups` AS mg
         JOIN `{$prefix}membergroup_names` AS mgn ON mgn.`id` = mg.`user_group`
-        WHERE mg.`member` = :uid 
-        AND mgn.`name` IN ('LMS Admins', 'LMS Experts')";
+        WHERE mg.`member` = :uid
+        AND mgn.`name` IN ('" . Config::getGroup('admins') . "', '" . Config::getGroup('experts') . "')";
 
 $stmt = $modx->prepare($sql);
 if ($stmt && $stmt->execute([':uid' => $currentUserId])) {

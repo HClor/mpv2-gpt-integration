@@ -21,10 +21,10 @@ if (!$modx->user->hasSessionContext('web')) {
 }
 
 // ============================================
-// КОНФИГУРАЦИЯ: ID страниц
+// КОНФИГУРАЦИЯ: ID страниц из конфигурации
 // ============================================
-$knowledgeAreaPageId = 145; // ID ресурса "Область знаний"
-$manageAreasPageId = 125;   // ID ресурса "Мои области знаний"
+$knowledgeAreaPageId = Config::getPageId('knowledge_area', 145);
+$manageAreasPageId = Config::getPageId('manage_areas', 125);
 
 // Формируем относительные URL без trailing slash
 $knowledgeAreaPageUrl = rtrim($modx->makeUrl($knowledgeAreaPageId, 'web', []), '/');

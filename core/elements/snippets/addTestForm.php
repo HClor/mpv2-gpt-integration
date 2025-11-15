@@ -5,10 +5,10 @@
 require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
 
 // ============================================
-// НАСТРОЙКИ (ID ресурсов)
+// НАСТРОЙКИ (ID ресурсов из конфигурации)
 // ============================================
-$TESTS_ROOT_ID = 35; // ID корневой папки "Тесты"
-$IMPORT_PAGE_ID = 29; // ID страницы импорта
+$TESTS_ROOT_ID = Config::getPageId('tests_root', 35);
+$IMPORT_PAGE_ID = Config::getPageId('import_csv', 29);
 
 // ============================================
 // ПРОВЕРКА АВТОРИЗАЦИИ
@@ -35,8 +35,8 @@ if (!$canCreate) {
     $sql = "SELECT mgn.`name` 
             FROM `{$prefix}member_groups` AS mg
             JOIN `{$prefix}membergroup_names` AS mgn ON mgn.`id` = mg.`user_group`
-            WHERE mg.`member` = :uid 
-            AND mgn.`name` IN ('LMS Admins', 'LMS Experts')";
+            WHERE mg.`member` = :uid
+            AND mgn.`name` IN ('" . Config::getGroup('admins') . "', '" . Config::getGroup('experts') . "')";
 
     $stmt = $modx->prepare($sql);
     if ($stmt && $stmt->execute([':uid' => $currentUserId])) {

@@ -27,6 +27,7 @@ spl_autoload_register(function ($className) {
         'CsrfProtection' => TESTSYSTEM_PATH . '/security/CsrfProtection.php',
 
         // Helpers
+        'Config' => TESTSYSTEM_PATH . '/helpers/Config.php',
         'ResponseHelper' => TESTSYSTEM_PATH . '/helpers/ResponseHelper.php',
         'ValidationHelper' => TESTSYSTEM_PATH . '/helpers/ValidationHelper.php',
         'PermissionHelper' => TESTSYSTEM_PATH . '/helpers/PermissionHelper.php',

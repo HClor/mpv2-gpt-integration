@@ -111,8 +111,8 @@ if ($knowledgeAreaId > 0) {
     $totalQuestions = (int)$stmt->fetchColumn();
     
     if ($totalQuestions === 0) {
-        // КОНФИГУРАЦИЯ: ID страницы управления областями
-        $manageAreasPageId = 125;
+        // КОНФИГУРАЦИЯ: ID страницы управления областями из конфигурации
+        $manageAreasPageId = Config::getPageId('manage_areas', 125);
         $manageAreasPageUrl = rtrim($modx->makeUrl($manageAreasPageId, 'web', []), '/');
         
         return '<div class="alert alert-warning">
@@ -123,9 +123,9 @@ if ($knowledgeAreaId > 0) {
     }
     
     $questionsPerSession = min((int)$knowledgeArea['questions_per_session'], $totalQuestions);
-    
-    // КОНФИГУРАЦИЯ: ID страницы управления областями
-    $manageAreasPageId = 125;
+
+    // КОНФИГУРАЦИЯ: ID страницы управления областями из конфигурации
+    $manageAreasPageId = Config::getPageId('manage_areas', 125);
     $manageAreasPageUrl = rtrim($modx->makeUrl($manageAreasPageId, 'web', []), '/');
     
     // Формируем вывод для области знаний
@@ -281,13 +281,15 @@ if (!$test) {
 
     
     // Проверяем права
+    $groupAdmins = Config::getGroup('admins');
+    $groupExperts = Config::getGroup('experts');
     $roleStmt = $modx->prepare("SELECT mgn.`name` FROM {$tableMemberGroups} AS mg
         JOIN {$tableMemberGroupNames} AS mgn ON mgn.`id` = mg.`user_group`
-        WHERE mg.`member` = :uid AND mgn.`name` IN ('LMS Admins', 'LMS Experts')");
-    
-    if ($roleStmt && $roleStmt->execute([':uid' => $currentUserId])) {
+        WHERE mg.`member` = :uid AND mgn.`name` IN (:group1, :group2)");
+
+    if ($roleStmt && $roleStmt->execute([':uid' => $currentUserId, ':group1' => $groupAdmins, ':group2' => $groupExperts])) {
         $roleNames = $roleStmt->fetchAll(PDO::FETCH_COLUMN);
-        if (in_array('LMS Admins', $roleNames, true) || in_array('LMS Experts', $roleNames, true)) {
+        if (in_array($groupAdmins, $roleNames, true) || in_array($groupExperts, $roleNames, true)) {
             $canEdit = true;
         }
     }
@@ -332,14 +334,16 @@ $publicationStatus = $testAccess['publication_status'] ?? 'public';
 $createdBy = (int)($testAccess['created_by'] ?? 0);
 
 // Определяем права пользователя
+$groupAdmins = Config::getGroup('admins');
+$groupExperts = Config::getGroup('experts');
 $roleStmt = $modx->prepare("SELECT mgn.`name` FROM {$tableMemberGroups} AS mg
     JOIN {$tableMemberGroupNames} AS mgn ON mgn.`id` = mg.`user_group`
-    WHERE mg.`member` = :uid AND mgn.`name` IN ('LMS Admins', 'LMS Experts')");
+    WHERE mg.`member` = :uid AND mgn.`name` IN (:group1, :group2)");
 
 $isAdminOrExpert = false;
-if ($roleStmt && $roleStmt->execute([':uid' => $userId])) {
+if ($roleStmt && $roleStmt->execute([':uid' => $userId, ':group1' => $groupAdmins, ':group2' => $groupExperts])) {
     $roleNames = $roleStmt->fetchAll(PDO::FETCH_COLUMN);
-    if (in_array('LMS Admins', $roleNames, true) || in_array('LMS Experts', $roleNames, true)) {
+    if (in_array($groupAdmins, $roleNames, true) || in_array($groupExperts, $roleNames, true)) {
         $isAdminOrExpert = true;
     }
 }
@@ -403,21 +407,23 @@ if ($totalQuestions === 0) {
     // Проверяем права на редактирование для показа ссылки на импорт
     $currentUserId = (int)$modx->user->get('id');
     $canEdit = false;
-    
+
+    $groupAdmins = Config::getGroup('admins');
+    $groupExperts = Config::getGroup('experts');
     $roleStmt = $modx->prepare("SELECT mgn.`name` FROM {$tableMemberGroups} AS mg
         JOIN {$tableMemberGroupNames} AS mgn ON mgn.`id` = mg.`user_group`
-        WHERE mg.`member` = :uid AND mgn.`name` IN ('LMS Admins', 'LMS Experts')");
-    
-    if ($roleStmt && $roleStmt->execute([':uid' => $currentUserId])) {
+        WHERE mg.`member` = :uid AND mgn.`name` IN (:group1, :group2)");
+
+    if ($roleStmt && $roleStmt->execute([':uid' => $currentUserId, ':group1' => $groupAdmins, ':group2' => $groupExperts])) {
         $roleNames = $roleStmt->fetchAll(PDO::FETCH_COLUMN);
-        if (in_array('LMS Admins', $roleNames, true) || in_array('LMS Experts', $roleNames, true)) {
+        if (in_array($groupAdmins, $roleNames, true) || in_array($groupExperts, $roleNames, true)) {
             $canEdit = true;
         }
     }
     
     if ($canEdit) {
         // Показываем кнопку импорта CSV
-        $importPageId = 29; // ID страницы импорта CSV
+        $importPageId = Config::getPageId('import_csv', 29);
         $importUrl = $modx->makeUrl($importPageId, 'web', ['test_id' => $testId], 'full');
         
         if (!empty($importUrl)) {
@@ -486,7 +492,7 @@ if ($canEditTest) {
     $editLinks .= '<a class="btn btn-outline-primary" href="' . htmlspecialchars($resourceEditUrl, ENT_QUOTES, 'UTF-8') . '" target="_blank" rel="noopener"><i class="bi bi-pencil"></i> Страница</a>';
     
     // Импорт CSV
-    $importPageId = 29;
+    $importPageId = Config::getPageId('import_csv', 29);
     $importUrl = $modx->makeUrl($importPageId, 'web', ['test_id' => $testId], 'full');
     if (!empty($importUrl)) {
         $editLinks .= '<a class="btn btn-outline-success" href="' . htmlspecialchars($importUrl, ENT_QUOTES, 'UTF-8') . '"><i class="bi bi-upload"></i> CSV</a>';
