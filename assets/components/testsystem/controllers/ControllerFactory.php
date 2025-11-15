@@ -111,6 +111,18 @@ class ControllerFactory
         'reviewEssay' => 'SpecialQuestionController',
         'getEssaysForReview' => 'SpecialQuestionController',
         'getMyEssays' => 'SpecialQuestionController',
+
+        // Gamification Controller
+        'getMyProfile' => 'GamificationController',
+        'getMyAchievements' => 'GamificationController',
+        'getLeaderboard' => 'GamificationController',
+        'getMyStreak' => 'GamificationController',
+        'awardXP' => 'GamificationController',
+        'checkAchievements' => 'GamificationController',
+        'getXPHistory' => 'GamificationController',
+        'getLevelStats' => 'GamificationController',
+        'getRarestAchievements' => 'GamificationController',
+        'updateLeaderboard' => 'GamificationController',
     ];
 
     /**
