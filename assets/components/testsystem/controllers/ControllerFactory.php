@@ -86,6 +86,25 @@ class ControllerFactory
         'getPermissionHistory' => 'CategoryController',
         'bulkGrantPermissions' => 'CategoryController',
         'bulkRevokePermissions' => 'CategoryController',
+
+        // Learning Path Controller
+        'createPath' => 'LearningPathController',
+        'getPath' => 'LearningPathController',
+        'updatePath' => 'LearningPathController',
+        'deletePath' => 'LearningPathController',
+        'addStep' => 'LearningPathController',
+        'updateStep' => 'LearningPathController',
+        'deleteStep' => 'LearningPathController',
+        'reorderSteps' => 'LearningPathController',
+        'enrollOnPath' => 'LearningPathController',
+        'unenrollFromPath' => 'LearningPathController',
+        'getMyPaths' => 'LearningPathController',
+        'getPathProgress' => 'LearningPathController',
+        'completePathStep' => 'LearningPathController',
+        'getNextPathStep' => 'LearningPathController',
+        'getPathsList' => 'LearningPathController',
+        'bulkEnrollOnPath' => 'LearningPathController',
+        'getPathStatistics' => 'LearningPathController',
     ];
 
     /**
