@@ -155,6 +155,17 @@ class ControllerFactory
         'generateReport' => 'AnalyticsController',
         'getReportHistory' => 'AnalyticsController',
         'cleanupCache' => 'AnalyticsController',
+
+        // Certificate Controller
+        'getMyCertificates' => 'CertificateController',
+        'getCertificate' => 'CertificateController',
+        'verifyCertificate' => 'CertificateController',
+        'issueCertificate' => 'CertificateController',
+        'revokeCertificate' => 'CertificateController',
+        'checkEligibility' => 'CertificateController',
+        'downloadCertificate' => 'CertificateController',
+        'getCertificateStatistics' => 'CertificateController',
+        'cleanupExpired' => 'CertificateController',
     ];
 
     /**
