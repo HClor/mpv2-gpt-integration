@@ -76,6 +76,16 @@ class ControllerFactory
         'setTags' => 'MaterialController',
         'linkTest' => 'MaterialController',
         'unlinkTest' => 'MaterialController',
+
+        // Category Controller
+        'grantCategoryPermission' => 'CategoryController',
+        'revokeCategoryPermission' => 'CategoryController',
+        'getCategoryUsers' => 'CategoryController',
+        'getUserCategories' => 'CategoryController',
+        'checkCategoryPermission' => 'CategoryController',
+        'getPermissionHistory' => 'CategoryController',
+        'bulkGrantPermissions' => 'CategoryController',
+        'bulkRevokePermissions' => 'CategoryController',
     ];
 
     /**

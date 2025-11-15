@@ -36,6 +36,7 @@ require_once __DIR__ . '/controllers/QuestionController.php';
 require_once __DIR__ . '/controllers/TestController.php';
 require_once __DIR__ . '/controllers/AdminController.php';
 require_once __DIR__ . '/controllers/MaterialController.php';
+require_once __DIR__ . '/controllers/CategoryController.php';
 require_once __DIR__ . '/controllers/ControllerFactory.php';
 
 $prefix = $modx->getOption('table_prefix', null, 'modx_');
