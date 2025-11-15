@@ -123,6 +123,20 @@ class ControllerFactory
         'getLevelStats' => 'GamificationController',
         'getRarestAchievements' => 'GamificationController',
         'updateLeaderboard' => 'GamificationController',
+
+        // Notification Controller
+        'getMyNotifications' => 'NotificationController',
+        'getUnreadCount' => 'NotificationController',
+        'markAsRead' => 'NotificationController',
+        'markAllAsRead' => 'NotificationController',
+        'deleteNotification' => 'NotificationController',
+        'createNotification' => 'NotificationController',
+        'sendEmail' => 'NotificationController',
+        'getMyPreferences' => 'NotificationController',
+        'updatePreference' => 'NotificationController',
+        'processQueue' => 'NotificationController',
+        'cleanupOld' => 'NotificationController',
+        'getStatistics' => 'NotificationController',
     ];
 
     /**
