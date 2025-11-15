@@ -49,6 +49,16 @@ class ControllerFactory
         'updateTestSettings' => 'TestController',
         'updateTest' => 'TestController',
         'deleteTest' => 'TestController',
+
+        // Admin Controller
+        'checkIntegrity' => 'AdminController',
+        'cleanOrphanedData' => 'AdminController',
+        'cleanOrphanedTests' => 'AdminController',
+        'cleanOrphanedQuestions' => 'AdminController',
+        'cleanOrphanedAnswers' => 'AdminController',
+        'cleanOrphanedSessions' => 'AdminController',
+        'cleanOldSessions' => 'AdminController',
+        'getSystemStats' => 'AdminController',
     ];
 
     /**
