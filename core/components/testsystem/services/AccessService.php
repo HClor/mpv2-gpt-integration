@@ -236,8 +236,8 @@ class AccessService
         }
 
         $userGroups = $user->getUserGroupNames();
-        $isAdmin = in_array('LMS Admins', $userGroups, true) || $userId === 1;
-        $isExpert = in_array('LMS Experts', $userGroups, true);
+        $isAdmin = in_array(\Config::getGroup('admins'), $userGroups, true) || $userId === 1;
+        $isExpert = in_array(\Config::getGroup('experts'), $userGroups, true);
 
         $rights = [
             'isAdmin' => $isAdmin,
