@@ -1,5 +1,7 @@
 <?php
-/* TS RESET PASSWORD v1.0 */
+/* TS RESET PASSWORD v1.1 - Added CSRF Protection */
+
+require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
 
 $token = $_GET['token'] ?? '';
 $errors = [];
@@ -9,9 +11,22 @@ if (empty($token)) {
     return '<div class="alert alert-danger">Неверная ссылка для восстановления пароля</div>';
 }
 
-$c = $modx->newQuery('modUserProfile');
-$c->where(['extended:LIKE' => '%"reset_token":"' . $token . '"%']);
-$profile = $modx->getObject('modUserProfile', $c);
+// Безопасный поиск токена в JSON поле с использованием prepared statement
+$pdo = $modx->getConnection(modX::MODE_READONLY);
+$stmt = $pdo->prepare("
+    SELECT id
+    FROM " . $modx->getTableName('modUserProfile') . "
+    WHERE JSON_EXTRACT(extended, '$.reset_token') = :token
+    LIMIT 1
+");
+$stmt->bindValue(':token', $token, PDO::PARAM_STR);
+$stmt->execute();
+$profileId = $stmt->fetchColumn();
+
+$profile = null;
+if ($profileId) {
+    $profile = $modx->getObject('modUserProfile', $profileId);
+}
 
 if (!$profile) {
     $forgotId = $modx->getOption('lms.forgot_page', null, 0);
@@ -32,25 +47,30 @@ if (!$user) {
 }
 
 if ($_POST && isset($_POST['reset_password'])) {
-    $password = trim($_POST['password'] ?? '');
-    $password_confirm = trim($_POST['password_confirm'] ?? '');
-    
-    if (empty($password)) {
-        $errors[] = 'Введите новый пароль';
-    } elseif (strlen($password) < 6) {
-        $errors[] = 'Пароль должен быть не менее 6 символов';
-    } elseif ($password !== $password_confirm) {
-        $errors[] = 'Пароли не совпадают';
+    // CSRF защита
+    if (!CsrfProtection::validateRequest($_POST)) {
+        $errors[] = 'Ошибка безопасности. Обновите страницу и попробуйте снова.';
     } else {
+        $password = trim($_POST['password'] ?? '');
+        $password_confirm = trim($_POST['password_confirm'] ?? '');
+
+        if (empty($password)) {
+            $errors[] = 'Введите новый пароль';
+        } elseif (strlen($password) < 6) {
+            $errors[] = 'Пароль должен быть не менее 6 символов';
+        } elseif ($password !== $password_confirm) {
+            $errors[] = 'Пароли не совпадают';
+        } else {
         $user->set('password', $password);
         
         unset($extended['reset_token'], $extended['reset_expiry']);
         $profile->set('extended', $extended);
         
-        if ($user->save() && $profile->save()) {
-            $success = true;
-        } else {
-            $errors[] = 'Ошибка при сохранении пароля';
+            if ($user->save() && $profile->save()) {
+                $success = true;
+            } else {
+                $errors[] = 'Ошибка при сохранении пароля';
+            }
         }
     }
 }
@@ -85,6 +105,7 @@ return $errorMsg . '<div class="container">
                     <p>Для пользователя: <strong>' . htmlspecialchars($user->username) . '</strong></p>
                     <form method="post">
                         <input type="hidden" name="reset_password" value="1">
+                        ' . CsrfProtection::getTokenField() . '
                         <div class="mb-3">
                             <label class="form-label">Новый пароль</label>
                             <input type="password" name="password" class="form-control" required>

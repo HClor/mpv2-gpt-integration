@@ -7,9 +7,22 @@ if (empty($token)) {
     return '<div class="alert alert-danger">Неверная ссылка активации</div>';
 }
 
-$c = $modx->newQuery('modUserProfile');
-$c->where(['extended:LIKE' => '%"activation_token":"' . $token . '"%']);
-$profile = $modx->getObject('modUserProfile', $c);
+// Безопасный поиск токена в JSON поле с использованием prepared statement
+$pdo = $modx->getConnection(modX::MODE_READONLY);
+$stmt = $pdo->prepare("
+    SELECT id
+    FROM " . $modx->getTableName('modUserProfile') . "
+    WHERE JSON_EXTRACT(extended, '$.activation_token') = :token
+    LIMIT 1
+");
+$stmt->bindValue(':token', $token, PDO::PARAM_STR);
+$stmt->execute();
+$profileId = $stmt->fetchColumn();
+
+$profile = null;
+if ($profileId) {
+    $profile = $modx->getObject('modUserProfile', $profileId);
+}
 
 if (!$profile) {
     return '<div class="alert alert-danger">Неверный токен активации или аккаунт уже активирован</div>';
