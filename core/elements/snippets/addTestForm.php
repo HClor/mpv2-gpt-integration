@@ -11,45 +11,17 @@ $TESTS_ROOT_ID = Config::getPageId('tests_root', 35);
 $IMPORT_PAGE_ID = Config::getPageId('import_csv', 29);
 
 // ============================================
-// ПРОВЕРКА АВТОРИЗАЦИИ
+// ПРОВЕРКА АВТОРИЗАЦИИ И ПРАВ
 // ============================================
-if (!$modx->user->hasSessionContext("web")) {
-    $authUrl = $modx->makeUrl($modx->getOption("lms.auth_page", null, 0));
-    return "<div class=\"alert alert-warning\"><a href=\"" . $authUrl . "\">Войдите</a>, чтобы добавлять тесты</div>";
-}
-
-
-// ИСПРАВЛЕНО: Более гибкая проверка прав
-$currentUserId = (int)$modx->user->get('id');
-$canCreate = false;
-
-$prefix = $modx->getOption('table_prefix');
-
-// Проверка 1: ID=1 (суперадмин)
-if ($currentUserId === 1) {
-    $canCreate = true;
-}
-
-// Проверка 2: Роли LMS Admins или LMS Experts
-if (!$canCreate) {
-    $sql = "SELECT mgn.`name` 
-            FROM `{$prefix}member_groups` AS mg
-            JOIN `{$prefix}membergroup_names` AS mgn ON mgn.`id` = mg.`user_group`
-            WHERE mg.`member` = :uid
-            AND mgn.`name` IN ('" . Config::getGroup('admins') . "', '" . Config::getGroup('experts') . "')";
-
-    $stmt = $modx->prepare($sql);
-    if ($stmt && $stmt->execute([':uid' => $currentUserId])) {
-        $groups = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        $canCreate = count($groups) > 0;
-    }
-}
-
-if (!$canCreate) {
+try {
+    PermissionHelper::requireAuthentication($modx);
+    PermissionHelper::requireEditRights($modx, 'Создание тестов доступно только экспертам и администраторам.');
+} catch (AuthenticationException $e) {
+    return $e->renderAlert($modx, 'Для добавления тестов необходимо войти в систему.');
+} catch (PermissionException $e) {
     return "<div class=\"alert alert-danger\">
         <h4>Доступ запрещён</h4>
-        <p>Создание тестов доступно только экспертам и администраторам.</p>
-        <p><small>Ваш ID: {$currentUserId}. Обратитесь к администратору для назначения роли LMS Experts.</small></p>
+        <p>" . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') . "</p>
     </div>";
 }
 

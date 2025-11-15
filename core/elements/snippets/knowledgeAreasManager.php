@@ -12,12 +12,10 @@ if (!$modx instanceof modX) {
 }
 
 // Проверка авторизации
-if (!$modx->user->hasSessionContext('web')) {
-    $authId = (int)$modx->getOption('lms.auth_page', null, 0);
-    $authUrl = $authId > 0 ? rtrim($modx->makeUrl($authId, 'web', []), '/') : '#';
-    return '<div class="alert alert-warning">
-        <p>Для управления областями знаний необходимо <a href="' . htmlspecialchars($authUrl, ENT_QUOTES, 'UTF-8') . '">войти в систему</a>.</p>
-    </div>';
+try {
+    PermissionHelper::requireAuthentication($modx);
+} catch (AuthenticationException $e) {
+    return $e->renderAlert($modx, 'Для управления областями знаний необходимо войти в систему.');
 }
 
 // ============================================

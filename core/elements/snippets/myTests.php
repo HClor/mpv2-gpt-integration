@@ -5,17 +5,10 @@
 // Подключаем bootstrap для CSRF защиты
 require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
 
-if (!$modx->user->hasSessionContext('web')) {
-    $authId = (int)$modx->getOption('lms.auth_page', null, 0);
-    $authUrl = $authId > 0 ? $modx->makeUrl($authId) : $modx->makeUrl($modx->resource->get('id'));
-    return '<div class="alert alert-warning auth-required-alert">
-        <div class="d-flex align-items-center mb-3">
-            <i class="bi bi-shield-lock me-2" style="font-size: 2rem;"></i>
-            <h4 class="mb-0">Требуется авторизация</h4>
-        </div>
-        <p class="mb-3">Для управления тестами необходимо войти в систему.</p>
-        <a href="' . htmlspecialchars($authUrl, ENT_QUOTES, 'UTF-8') . '" class="btn btn-primary"><i class="bi bi-box-arrow-in-right me-2"></i>Войти в систему</a>
-    </div>';
+try {
+    PermissionHelper::requireAuthentication($modx);
+} catch (AuthenticationException $e) {
+    return $e->renderAlert($modx, 'Для управления тестами необходимо войти в систему.');
 }
 
 $assetsUrl = rtrim($modx->getOption('assets_url', null, MODX_ASSETS_URL), '/') . '/';
