@@ -105,6 +105,12 @@ class ControllerFactory
         'getPathsList' => 'LearningPathController',
         'bulkEnrollOnPath' => 'LearningPathController',
         'getPathStatistics' => 'LearningPathController',
+
+        // Special Question Controller
+        'getQuestionTypeData' => 'SpecialQuestionController',
+        'reviewEssay' => 'SpecialQuestionController',
+        'getEssaysForReview' => 'SpecialQuestionController',
+        'getMyEssays' => 'SpecialQuestionController',
     ];
 
     /**

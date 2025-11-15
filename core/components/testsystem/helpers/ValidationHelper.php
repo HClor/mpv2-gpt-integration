@@ -220,7 +220,7 @@ class ValidationHelper
      */
     public static function validateQuestionType($questionType)
     {
-        $allowedTypes = ['single', 'multiple', 'text', 'matching'];
+        $allowedTypes = ['single', 'multiple', 'matching', 'ordering', 'fill_blank', 'essay'];
         $type = trim($questionType);
 
         if (!in_array($type, $allowedTypes, true)) {
