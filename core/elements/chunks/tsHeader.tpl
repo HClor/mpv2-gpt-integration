@@ -13,28 +13,17 @@
 
         <div class="collapse navbar-collapse" id="navbarMain">
             <!-- Основное меню -->
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                <li class="nav-item">
-                    <a class="nav-link" href="{$_modx->config.site_start | url}">
-                        <i class="fas fa-home"></i> Главная
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{$_modx->makeUrl(999)}">
-                        <i class="fas fa-clipboard-list"></i> Тесты
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{$_modx->makeUrl(1000)}">
-                        <i class="fas fa-book"></i> Обучение
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="{$_modx->makeUrl(1001)}">
-                        <i class="fas fa-trophy"></i> Рейтинг
-                    </a>
-                </li>
-            </ul>
+            [[!pdoMenu?
+                &parents=`0`
+                &level=`1`
+                &resources=`-[[++site_start]]`
+                &showHidden=`0`
+                &sortby=`menuindex`
+                &sortdir=`ASC`
+                &tplOuter=`@INLINE <ul class="navbar-nav me-auto mb-2 mb-lg-0">[[+wrapper]]</ul>`
+                &tpl=`@INLINE <li class="nav-item[[+classnames]]"><a class="nav-link[[+classnames]]" href="[[+link]]">[[+menutitle]]</a>[[+wrapper]]</li>`
+                &tplHere=`@INLINE <li class="nav-item[[+classnames]]"><a class="nav-link active[[+classnames]]" href="[[+link]]">[[+menutitle]]</a>[[+wrapper]]</li>`
+            ]]
 
             <!-- Меню пользователя -->
             <ul class="navbar-nav">
@@ -44,8 +33,8 @@
                     <!-- XP и уровень -->
                     [[!getUserStats?
                         &userId=`{$_modx->user.id}`
-                        &tpl=`@INLINE <span class="user-xp me-3">
-                            <i class="fas fa-star"></i> Уровень [[+level]] | [[+total_xp]] XP
+                        &tpl=`@INLINE <span class="user-xp me-3 text-light">
+                            <i class="fas fa-star text-warning"></i> Уровень [[+level]] | [[+total_xp]] XP
                         </span>`
                     ]]
 
@@ -58,10 +47,10 @@
 
                     <!-- Профиль -->
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="userMenu" data-bs-toggle="dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-user-circle"></i> {$_modx->user.username}
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
+                        <ul class="dropdown-menu dropdown-menu-end" style="position: absolute; z-index: 1050;">
                             <li>
                                 <a class="dropdown-item" href="{$_modx->makeUrl(1003)}">
                                     <i class="fas fa-user"></i> Мой профиль
