@@ -5,17 +5,13 @@
 require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
 
 // Проверяем права (только админы)
-if (!$modx->user->hasSessionContext("web")) {
-    $authUrl = $modx->makeUrl($modx->getOption("lms.auth_page", null, 0));
-    return "<div class=\"alert alert-warning\">
-        <a href=\"" . $authUrl . "\">Войдите</a>, чтобы управлять категориями
-    </div>";
+try {
+    PermissionHelper::requireAuthentication($modx);
+} catch (AuthenticationException $e) {
+    return $e->renderAlert($modx, 'Для управления категориями необходимо войти в систему.');
 }
 
-$userId = $modx->user->id;
-$isAdmin = $modx->user->isMember("LMS Admins") || $userId == 1;
-
-if (!$isAdmin) {
+if (!PermissionHelper::isAdmin($modx)) {
     return "<div class=\"alert alert-danger\">
         <h4>Доступ запрещён</h4>
         <p>Управление категориями доступно только администраторам.</p>

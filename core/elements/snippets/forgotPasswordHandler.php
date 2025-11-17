@@ -1,17 +1,23 @@
 <?php
-/* TS FORGOT PASSWORD v1.0 */
+/* TS FORGOT PASSWORD v1.1 - Added CSRF Protection */
+
+require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
 
 $errors = [];
 $success = false;
 
 if ($_POST && isset($_POST['reset_request'])) {
-    $email = trim($_POST['email'] ?? '');
-    
-    if (empty($email)) {
-        $errors[] = 'Введите email';
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $errors[] = 'Неверный формат email';
+    // CSRF защита
+    if (!CsrfProtection::validateRequest($_POST)) {
+        $errors[] = 'Ошибка безопасности. Обновите страницу и попробуйте снова.';
     } else {
+        $email = trim($_POST['email'] ?? '');
+
+        if (empty($email)) {
+            $errors[] = 'Введите email';
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $errors[] = 'Неверный формат email';
+        } else {
         $profile = $modx->getObject('modUserProfile', ['email' => $email]);
         
         if ($profile) {
@@ -53,8 +59,9 @@ if ($_POST && isset($_POST['reset_request'])) {
             } else {
                 $success = true;
             }
-        } else {
-            $success = true;
+            } else {
+                $success = true;
+            }
         }
     }
 }
@@ -92,6 +99,7 @@ return $errorMsg . '<div class="container">
                     <p>Введите email, указанный при регистрации. На него будет отправлена ссылка для установки нового пароля.</p>
                     <form method="post">
                         <input type="hidden" name="reset_request" value="1">
+                        ' . CsrfProtection::getTokenField() . '
                         <div class="mb-3">
                             <label class="form-label">Email</label>
                             <input type="email" name="email" class="form-control" value="' . $emailValue . '" required>

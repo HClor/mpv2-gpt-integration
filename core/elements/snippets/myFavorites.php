@@ -1,16 +1,12 @@
 <?php
 /* My Favorites v2.2 - Modal view + responsive */
 
-if (!$modx->user->hasSessionContext('web')) {
-    $authUrl = $modx->makeUrl($modx->getOption('lms.auth_page', null, 24));
-    return '<div class="alert alert-warning auth-required-alert">
-        <div class="d-flex align-items-center mb-3">
-            <i class="bi bi-shield-lock me-2" style="font-size: 2rem;"></i>
-            <h4 class="mb-0">Требуется авторизация</h4>
-        </div>
-        <p class="mb-3">Для просмотра избранных вопросов необходимо войти в систему.</p>
-        <a href="' . $authUrl . '" class="btn btn-primary"><i class="bi bi-box-arrow-in-right me-2"></i>Войти в систему</a>
-    </div>';
+require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
+
+try {
+    PermissionHelper::requireAuthentication($modx);
+} catch (AuthenticationException $e) {
+    return $e->renderAlert($modx, 'Для просмотра избранных вопросов необходимо войти в систему.');
 }
 
 $userId = $modx->user->id;
@@ -48,7 +44,7 @@ $output = CsrfProtection::getTokenMeta();
 $output .= '<div class="favorites-page">';
 
 if (empty($favorites)) {
-    $testsUrl = $modx->makeUrl(35);
+    $testsUrl = $modx->makeUrl(Config::getPageId('tests_root', 35));
     $output .= '<div class="alert alert-info">';
     $output .= '<h4>У вас пока нет избранных вопросов</h4>';
     $output .= '<p>Добавляйте интересные вопросы в избранное, чтобы легко находить их позже.</p>';

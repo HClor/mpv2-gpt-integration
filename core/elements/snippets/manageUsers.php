@@ -2,57 +2,54 @@
 /**
  * TS MANAGE USERS v2.7 - FIXED isMember LOGIC
  */
+require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
+
 if (!$modx instanceof modX) {
     return '<div class="alert alert-danger">MODX context required</div>';
 }
 
 try {
-    if (!$modx->user || !$modx->user->isAuthenticated()) {
-        return '<div class="alert alert-warning">Войдите для доступа</div>';
-    }
+    // Проверка авторизации
+    PermissionHelper::requireAuthentication($modx);
 
-    $userId = (int)$modx->user->get('id');
-    
-    // Правильная проверка через getUserGroupNames()
-    $userGroupNames = $modx->user->getUserGroupNames();
-
-
-    $isAdmin = in_array('LMS Admins', $userGroupNames, true) || $userId === 1;
-
-
-    if (!$isAdmin) {
-        
-$userGroupNames = $modx->user->getUserGroupNames();
-$output = '<pre>' . print_r($userGroupNames, true) . '</pre>';
-        
-        
-        return '<div class="alert alert-danger">Доступ запрещён. Только для администраторов.</div><pre>' . print_r($userGroupNames, true) . '</pre>';
+    // Проверка прав администратора
+    if (!PermissionHelper::isAdmin($modx)) {
+        throw new PermissionException('Доступ запрещён. Только для администраторов.');
     }
 
     $errors = [];
     $success = '';
 
     $groupMap = [
-        'student' => 'LMS Students',
-        'expert' => 'LMS Experts',
-        'admin'  => 'LMS Admins',
+        'student' => Config::getGroup('students'),
+        'expert' => Config::getGroup('experts'),
+        'admin'  => Config::getGroup('admins'),
     ];
 
     $getUserRole = static function (modX $modx, int $uid): ?string {
+        $adminGroup = Config::getGroup('admins');
+        $expertGroup = Config::getGroup('experts');
+        $studentGroup = Config::getGroup('students');
+
         $sql = 'SELECT mgn.name
                 FROM modx_member_groups mg
                 JOIN modx_membergroup_names mgn ON mgn.id = mg.user_group
                 WHERE mg.member = :uid AND mgn.name LIKE "LMS %"
-                ORDER BY FIELD(mgn.name, "LMS Admins", "LMS Experts", "LMS Students")
+                ORDER BY FIELD(mgn.name, :admin, :expert, :student)
                 LIMIT 1';
         $stmt = $modx->prepare($sql);
-        $stmt->execute([':uid' => $uid]);
+        $stmt->execute([
+            ':uid' => $uid,
+            ':admin' => $adminGroup,
+            ':expert' => $expertGroup,
+            ':student' => $studentGroup
+        ]);
         $groupName = $stmt->fetchColumn();
 
         return match($groupName) {
-            'LMS Admins' => 'admin',
-            'LMS Experts' => 'expert',
-            'LMS Students' => 'student',
+            $adminGroup => 'admin',
+            $expertGroup => 'expert',
+            $studentGroup => 'student',
             default => null
         };
     };

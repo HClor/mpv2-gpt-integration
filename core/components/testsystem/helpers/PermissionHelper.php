@@ -33,10 +33,10 @@ class PermissionHelper
         $userGroups = $modx->user->getUserGroupNames();
 
         // Проверка на эксперта
-        $isExpert = in_array('LMS Experts', $userGroups, true);
+        $isExpert = in_array(Config::getGroup('experts'), $userGroups, true);
 
         // Проверка на админа (superadmin или LMS Admins group)
-        $isAdmin = in_array('LMS Admins', $userGroups, true) || $userId === 1;
+        $isAdmin = in_array(Config::getGroup('admins'), $userGroups, true) || $userId === 1;
 
         return [
             'isAdmin' => $isAdmin,
@@ -69,7 +69,7 @@ class PermissionHelper
 
         // Админы и эксперты могут
         $userGroups = $modx->user->getUserGroupNames();
-        if (in_array('LMS Admins', $userGroups, true) || in_array('LMS Experts', $userGroups, true)) {
+        if (in_array(Config::getGroup('admins'), $userGroups, true) || in_array(Config::getGroup('experts'), $userGroups, true)) {
             return true;
         }
 
@@ -236,7 +236,7 @@ class PermissionHelper
     {
         $userId = (int)$modx->user->get('id');
         $userGroups = $modx->user->getUserGroupNames();
-        return ($userId === 1) || in_array('LMS Admins', $userGroups, true);
+        return ($userId === 1) || in_array(Config::getGroup('admins'), $userGroups, true);
     }
 
     /**
@@ -248,7 +248,7 @@ class PermissionHelper
     public static function isExpert($modx)
     {
         $userGroups = $modx->user->getUserGroupNames();
-        return in_array('LMS Experts', $userGroups, true);
+        return in_array(Config::getGroup('experts'), $userGroups, true);
     }
 
     /**

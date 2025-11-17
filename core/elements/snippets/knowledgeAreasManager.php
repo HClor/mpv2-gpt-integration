@@ -12,19 +12,17 @@ if (!$modx instanceof modX) {
 }
 
 // Проверка авторизации
-if (!$modx->user->hasSessionContext('web')) {
-    $authId = (int)$modx->getOption('lms.auth_page', null, 0);
-    $authUrl = $authId > 0 ? rtrim($modx->makeUrl($authId, 'web', []), '/') : '#';
-    return '<div class="alert alert-warning">
-        <p>Для управления областями знаний необходимо <a href="' . htmlspecialchars($authUrl, ENT_QUOTES, 'UTF-8') . '">войти в систему</a>.</p>
-    </div>';
+try {
+    PermissionHelper::requireAuthentication($modx);
+} catch (AuthenticationException $e) {
+    return $e->renderAlert($modx, 'Для управления областями знаний необходимо войти в систему.');
 }
 
 // ============================================
-// КОНФИГУРАЦИЯ: ID страниц
+// КОНФИГУРАЦИЯ: ID страниц из конфигурации
 // ============================================
-$knowledgeAreaPageId = 145; // ID ресурса "Область знаний"
-$manageAreasPageId = 125;   // ID ресурса "Мои области знаний"
+$knowledgeAreaPageId = Config::getPageId('knowledge_area', 145);
+$manageAreasPageId = Config::getPageId('manage_areas', 125);
 
 // Формируем относительные URL без trailing slash
 $knowledgeAreaPageUrl = rtrim($modx->makeUrl($knowledgeAreaPageId, 'web', []), '/');
