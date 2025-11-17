@@ -37,8 +37,9 @@ if (file_exists(MODX_CORE_PATH . 'model/modx/modx.class.php')) {
 }
 
 // Пути к компонентам
-$snippetsPath = dirname(__DIR__) . '/elements/snippets/';
-$chunksPath = dirname(__DIR__) . '/elements/chunks/';
+$corePath = dirname(dirname(__DIR__)) . '/';
+$snippetsPath = $corePath . 'elements/snippets/';
+$chunksPath = $corePath . 'elements/chunks/';
 
 // ============================================
 // HELPER FUNCTIONS
