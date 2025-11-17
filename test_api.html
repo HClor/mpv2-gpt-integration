@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Test System API Debug</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+        .section { margin-bottom: 30px; padding: 15px; background: #2d2d30; border-radius: 5px; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; background: #0e639c; color: white; border: none; border-radius: 3px; }
+        button:hover { background: #1177bb; }
+        pre { background: #1e1e1e; padding: 10px; border-radius: 3px; overflow-x: auto; border-left: 3px solid #0e639c; }
+        .success { color: #4ec9b0; }
+        .error { color: #f48771; }
+        .warning { color: #dcdcaa; }
+        h3 { color: #569cd6; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Test System API Debugger</h1>
+
+    <div class="section">
+        <h3>1. Проверка авторизации</h3>
+        <button onclick="checkAuth()">Проверить авторизацию</button>
+        <pre id="auth-result"></pre>
+    </div>
+
+    <div class="section">
+        <h3>2. Получение моих тестов (getMyTests)</h3>
+        <button onclick="getMyTests()">Загрузить мои тесты</button>
+        <pre id="mytests-result"></pre>
+    </div>
+
+    <div class="section">
+        <h3>3. Получение доступных тестов (getSharedWithMe)</h3>
+        <button onclick="getSharedTests()">Загрузить доступные тесты</button>
+        <pre id="shared-result"></pre>
+    </div>
+
+    <div class="section">
+        <h3>4. Проверка прав (checkEditRights)</h3>
+        <button onclick="checkRights()">Проверить права</button>
+        <pre id="rights-result"></pre>
+    </div>
+
+    <div class="section">
+        <h3>5. Console Log</h3>
+        <pre id="console-log"></pre>
+    </div>
+
+    <script>
+        const API_URL = '/assets/components/testsystem/ajax/testsystem.php';
+
+        function log(message, type = 'info') {
+            const logEl = document.getElementById('console-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'warning';
+            logEl.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            console.log(message);
+        }
+
+        function getCsrfToken() {
+            const metaTag = document.querySelector('meta[name="csrf-token"]');
+            return metaTag ? metaTag.content : null;
+        }
+
+        async function apiCall(action, data = {}) {
+            try {
+                const csrfToken = getCsrfToken();
+                if (csrfToken) {
+                    data.csrf_token = csrfToken;
+                }
+
+                log(`Запрос: ${action}`, 'info');
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action, data })
+                });
+
+                const result = await response.json();
+                log(`Ответ (${action}): ${result.success ? 'SUCCESS' : 'FAIL'}`, result.success ? 'success' : 'error');
+
+                return result;
+            } catch (error) {
+                log(`Ошибка (${action}): ${error.message}`, 'error');
+                return { success: false, message: error.message };
+            }
+        }
+
+        async function checkAuth() {
+            const resultEl = document.getElementById('auth-result');
+            resultEl.textContent = 'Проверка...';
+
+            const result = await apiCall('checkEditRights');
+            resultEl.textContent = JSON.stringify(result, null, 2);
+        }
+
+        async function getMyTests() {
+            const resultEl = document.getElementById('mytests-result');
+            resultEl.textContent = 'Загрузка...';
+
+            const result = await apiCall('getMyTests');
+            resultEl.textContent = JSON.stringify(result, null, 2);
+
+            if (result.success && result.data) {
+                log(`Найдено тестов: ${result.data.length}`, 'success');
+            }
+        }
+
+        async function getSharedTests() {
+            const resultEl = document.getElementById('shared-result');
+            resultEl.textContent = 'Загрузка...';
+
+            const result = await apiCall('getSharedWithMe');
+            resultEl.textContent = JSON.stringify(result, null, 2);
+
+            if (result.success && result.data) {
+                log(`Найдено доступных тестов: ${result.data.length}`, 'success');
+            }
+        }
+
+        async function checkRights() {
+            const resultEl = document.getElementById('rights-result');
+            resultEl.textContent = 'Проверка...';
+
+            const result = await apiCall('checkEditRights');
+            resultEl.textContent = JSON.stringify(result, null, 2);
+        }
+
+        // Автоматический запуск при загрузке
+        window.addEventListener('DOMContentLoaded', function() {
+            log('Страница загружена', 'success');
+            log('CSRF token: ' + (getCsrfToken() || 'НЕ НАЙДЕН'), getCsrfToken() ? 'success' : 'error');
+        });
+    </script>
+</body>
+</html>
