@@ -82,7 +82,20 @@ $csrfExemptActions = [
     'getDetailedResults',
     'getKnowledgeAreas',
     'getTestPermissions',
-    'getAllQuestionsForTest'
+    'getAllQuestionsForTest',
+    'getMyTests',                // Получение личных тестов
+    'getSharedWithMe',           // Получение тестов, доступных пользователю
+    'getKnowledgeAreaDetails',   // Детали области знаний
+    'getAvailableTestsTree',     // Дерево доступных тестов
+    'getFavoriteStatus',         // Статус избранного
+    'getFavoriteQuestions',      // Список избранных вопросов
+    'getNotifications',          // Список уведомлений
+    'getAllQuestions',           // Все вопросы теста
+    'checkResourcePermissions',  // Проверка прав на ресурсы
+    'checkSiteSettings',         // Проверка настроек сайта
+    'getParentUri',              // Получение URI родителя
+    'getPublicTestBySlug',       // Публичный тест по slug
+    'getQuestionAnswers'         // Ответы на вопрос (для просмотра)
 ];
 
 // Если это POST запрос и action требует CSRF проверки
