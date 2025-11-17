@@ -68,7 +68,7 @@ SET @template_id = LAST_INSERT_ID();
 DELETE FROM `modx_site_tmplvars` WHERE `name` IN ('cssTV', 'jsTV');
 
 -- TV для дополнительного CSS
-INSERT INTO `modx_site_tmplvars` (`type`, `name`, `caption`, `description`, `category`, `locked`, `rank`, `display`, `display_params`, `default_text`) VALUES (
+INSERT INTO `modx_site_tmplvars` (`type`, `name`, `caption`, `description`, `category`, `locked`, `rank`, `display`, `default_text`) VALUES (
     'textarea',
     'cssTV',
     'Дополнительный CSS',
@@ -77,14 +77,13 @@ INSERT INTO `modx_site_tmplvars` (`type`, `name`, `caption`, `description`, `cat
     0,
     0,
     'default',
-    '',
     ''
 );
 
 SET @tv_css_id = LAST_INSERT_ID();
 
 -- TV для дополнительного JS
-INSERT INTO `modx_site_tmplvars` (`type`, `name`, `caption`, `description`, `category`, `locked`, `rank`, `display`, `display_params`, `default_text`) VALUES (
+INSERT INTO `modx_site_tmplvars` (`type`, `name`, `caption`, `description`, `category`, `locked`, `rank`, `display`, `default_text`) VALUES (
     'textarea',
     'jsTV',
     'Дополнительный JS',
@@ -93,7 +92,6 @@ INSERT INTO `modx_site_tmplvars` (`type`, `name`, `caption`, `description`, `cat
     0,
     1,
     'default',
-    '',
     ''
 );
 
