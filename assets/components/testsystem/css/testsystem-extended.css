@@ -1,0 +1,429 @@
+/**
+ * TESTSYSTEM EXTENDED STYLES - Sprint 17
+ * Общие стили для всех модулей системы тестирования
+ * Спринты 9-16: Materials, Permissions, Paths, Questions, Gamification, Notifications, Analytics, Certificates
+ */
+
+/* ==================== GENERAL UTILITIES ==================== */
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.handle {
+    cursor: move;
+}
+
+.text-decoration-none:hover {
+    text-decoration: none !important;
+}
+
+/* ==================== LEARNING MATERIALS (Sprint 9) ==================== */
+
+.material-block {
+    transition: all 0.3s ease;
+}
+
+.material-block.block-completed {
+    background-color: #f8f9fa;
+    border-left: 4px solid #28a745;
+}
+
+.block-text {
+    line-height: 1.8;
+    font-size: 1.05rem;
+}
+
+.block-image img,
+.block-video iframe,
+.block-video video {
+    border-radius: 8px;
+}
+
+.rich-text-editor {
+    font-family: 'Courier New', monospace;
+}
+
+/* ==================== CATEGORY PERMISSIONS (Sprint 10) ==================== */
+
+.category-permissions-group {
+    transition: all 0.2s ease;
+}
+
+.permission-row:hover {
+    background-color: #f8f9fa;
+}
+
+/* ==================== LEARNING PATHS (Sprint 11) ==================== */
+
+.path-card {
+    transition: transform 0.2s ease;
+}
+
+.path-card:hover {
+    transform: translateY(-5px);
+}
+
+.step-card {
+    transition: all 0.3s ease;
+}
+
+.step-card.border-success {
+    box-shadow: 0 0 10px rgba(40, 167, 69, 0.2);
+}
+
+.step-card.border-primary {
+    box-shadow: 0 0 10px rgba(13, 110, 253, 0.2);
+}
+
+/* ==================== SPECIAL QUESTION TYPES (Sprint 12) ==================== */
+
+.matching-question .matching-select {
+    width: 60px;
+}
+
+.matching-left-item,
+.matching-right-item {
+    transition: background-color 0.2s ease;
+}
+
+.matching-left-item:hover,
+.matching-right-item:hover {
+    background-color: #f0f0f0;
+}
+
+.ordering-list {
+    min-height: 200px;
+}
+
+.ordering-item {
+    transition: all 0.2s ease;
+}
+
+.ordering-item.dragging {
+    opacity: 0.5;
+}
+
+.fill-blank-input {
+    border-bottom: 2px solid #0d6efd;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    border-radius: 0;
+    padding: 2px 5px;
+}
+
+.fill-blank-input:focus {
+    border-bottom-color: #0a58ca;
+    box-shadow: none;
+}
+
+.essay-textarea {
+    resize: vertical;
+    min-height: 300px;
+}
+
+.word-counter {
+    font-size: 0.9rem;
+}
+
+/* ==================== GAMIFICATION (Sprint 13) ==================== */
+
+.level-badge {
+    position: relative;
+}
+
+.level-badge-small {
+    font-size: 1.1rem;
+}
+
+.gamification-widget {
+    padding: 10px;
+}
+
+.achievement-card {
+    transition: all 0.3s ease;
+}
+
+.achievement-card:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.achievement-card.border-warning {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffffff 100%);
+}
+
+.achievement-icon {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+.xp-notification {
+    animation: slideInUp 0.5s ease;
+}
+
+@keyframes slideInUp {
+    from {
+        transform: translateY(100px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.leaderboard-list .table-primary {
+    font-weight: bold;
+}
+
+/* ==================== NOTIFICATIONS (Sprint 14) ==================== */
+
+#notifications-dropdown {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+#notifications-dropdown .list-group-item {
+    border-left: none;
+    border-right: none;
+}
+
+#notifications-dropdown .list-group-item.bg-light {
+    background-color: #e7f3ff !important;
+}
+
+#notifications-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 20px;
+    height: 20px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.notification-settings-container table td {
+    vertical-align: middle;
+}
+
+/* ==================== ANALYTICS (Sprint 15) ==================== */
+
+.stat-box {
+    transition: all 0.3s ease;
+}
+
+.stat-box:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.analytics-container .card {
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* ==================== CERTIFICATES (Sprint 16) ==================== */
+
+.certificate-card {
+    transition: all 0.3s ease;
+}
+
+.certificate-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+}
+
+.certificate-preview {
+    border: 2px solid #ffc107;
+    padding: 20px;
+    background: linear-gradient(135deg, #fff8dc 0%, #ffffff 100%);
+}
+
+/* ==================== RESPONSIVE UTILITIES ==================== */
+
+@media (max-width: 768px) {
+    .test-actions-compact .btn-group {
+        flex-direction: column;
+    }
+
+    .test-actions-compact .btn {
+        width: 100%;
+        margin-bottom: 5px;
+    }
+
+    .matching-question .row {
+        flex-direction: column;
+    }
+
+    .gamification-widget {
+        font-size: 0.9rem;
+    }
+}
+
+/* ==================== MODALS ==================== */
+
+.modal-fullscreen-md-down {
+    @media (max-width: 768px) {
+        max-width: 100%;
+        margin: 0;
+        min-height: 100vh;
+    }
+}
+
+/* ==================== ANIMATIONS ==================== */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.slide-in {
+    animation: slideIn 0.3s ease;
+}
+
+/* ==================== CUSTOM BADGES ==================== */
+
+.badge.bg-purple {
+    background-color: #6f42c1 !important;
+}
+
+/* ==================== PROGRESS BARS ==================== */
+
+.progress {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    transition: width 0.6s ease;
+}
+
+/* ==================== CARDS ==================== */
+
+.card {
+    transition: all 0.2s ease;
+}
+
+.card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* ==================== LIST GROUPS ==================== */
+
+.list-group-item-action {
+    transition: all 0.2s ease;
+}
+
+.list-group-item-action:hover {
+    background-color: #f8f9fa;
+    transform: translateX(5px);
+}
+
+/* ==================== TABLES ==================== */
+
+.table-hover tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* ==================== BUTTONS ==================== */
+
+.btn {
+    transition: all 0.2s ease;
+}
+
+.btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.btn:active {
+    transform: translateY(0);
+}
+
+/* ==================== FORMS ==================== */
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* ==================== ALERTS ==================== */
+
+.alert {
+    border-radius: 8px;
+}
+
+/* ==================== TOOLTIPS & POPOVERS ==================== */
+
+.tooltip {
+    font-size: 0.875rem;
+}
+
+/* ==================== ACCESSIBILITY ==================== */
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+}
+
+/* ==================== PRINT STYLES ==================== */
+
+@media print {
+    .no-print,
+    .btn,
+    .modal,
+    .notification {
+        display: none !important;
+    }
+
+    .card {
+        border: 1px solid #dee2e6;
+        page-break-inside: avoid;
+    }
+}
+
+/* ==================== DARK MODE SUPPORT (Optional) ==================== */
+
+@media (prefers-color-scheme: dark) {
+    /* Можно добавить темную тему при необходимости */
+}
