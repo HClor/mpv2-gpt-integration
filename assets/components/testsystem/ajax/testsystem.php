@@ -85,6 +85,7 @@ $csrfExemptActions = [
     'getAllQuestionsForTest',
     'getMyTests',                // Получение личных тестов
     'getSharedWithMe',           // Получение тестов, доступных пользователю
+    'getPublicTests',            // Получение публичных тестов
     'getKnowledgeAreaDetails',   // Детали области знаний
     'getAvailableTestsTree',     // Дерево доступных тестов
     'getFavoriteStatus',         // Статус избранного
@@ -1875,7 +1876,30 @@ if (empty($allQuestionIds)) {
 
             $response = ResponseHelper::success($tests);
             break;
-    
+
+        case 'getPublicTests':
+            // Получение публичных тестов (доступно всем, даже неавторизованным)
+            $stmt = $modx->prepare("
+                SELECT
+                    t.id, t.title, t.description, t.resource_id, t.created_at,
+                    u.username as creator_name,
+                    (SELECT COUNT(*) FROM modx_test_questions WHERE test_id = t.id AND published = 1) as questions_count
+                FROM modx_test_tests t
+                LEFT JOIN modx_users u ON u.id = t.created_by
+                WHERE t.publication_status = 'public' AND t.is_active = 1
+                ORDER BY t.created_at DESC
+                LIMIT 100
+            ");
+
+            $stmt->execute();
+            $tests = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Добавляем URL для каждого теста
+            UrlHelper::addUrlsToTests($modx, $tests);
+
+            $response = ResponseHelper::success($tests);
+            break;
+
         case 'searchUsers':
             // Проверка авторизации
             PermissionHelper::requireAuthentication($modx, 'Login required');

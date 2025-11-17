@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     loadMyTests();
     loadSharedTests();
+    loadPublicTests();
 });
 
 function getStatusBadge(status) {
@@ -762,4 +763,72 @@ function showNotification(type, message) {
     setTimeout(() => {
         alertDiv.remove();
     }, 5000);
+}
+
+// Загрузка публичных тестов
+async function loadPublicTests() {
+    try {
+        const csrfToken = getCsrfToken();
+        const response = await fetch('/assets/components/testsystem/ajax/testsystem.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'getPublicTests',
+                data: { csrf_token: csrfToken }
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            renderPublicTests(result.data);
+        } else {
+            console.error('Error loading public tests:', result.message);
+            document.getElementById('public').innerHTML =
+                '<div class="alert alert-danger">Ошибка загрузки: ' + escapeHtml(result.message) + '</div>';
+        }
+    } catch (error) {
+        console.error('Error loading public tests:', error);
+        document.getElementById('public').innerHTML =
+            '<div class="alert alert-danger">Ошибка при загрузке публичных тестов</div>';
+    }
+}
+
+function renderPublicTests(tests) {
+    const container = document.getElementById('public');
+
+    if (tests.length === 0) {
+        container.innerHTML = '<div class="alert alert-info">Публичных тестов пока нет</div>';
+        return;
+    }
+
+    let html = '<div class="list-group tests-list-improved">';
+
+    tests.forEach(test => {
+        const testUrl = test.test_url || '#';
+        const questionsText = test.questions_count === 1 ? 'вопрос' : test.questions_count < 5 ? 'вопроса' : 'вопросов';
+
+        html += `<div class="list-group-item test-list-item-minimal">
+            <div class="d-flex justify-content-between align-items-start flex-wrap">
+                <div class="flex-grow-1 mb-2 mb-md-0">
+                    <h5 class="mb-1">
+                        <a href="${escapeHtml(testUrl)}" class="text-decoration-none">${escapeHtml(test.title)}</a>
+                    </h5>
+                    ${test.description ? `<p class="mb-1 text-muted small">${escapeHtml(test.description)}</p>` : ''}
+                    <div class="text-muted small mt-2">
+                        <span class="me-3"><i class="bi bi-patch-question"></i> ${test.questions_count} ${questionsText}</span>
+                        ${test.creator_name ? `<span class="me-3"><i class="bi bi-person"></i> ${escapeHtml(test.creator_name)}</span>` : ''}
+                    </div>
+                </div>
+                <div>
+                    <a href="${escapeHtml(testUrl)}" class="btn btn-sm btn-primary">
+                        <i class="bi bi-play-fill"></i> Пройти тест
+                    </a>
+                </div>
+            </div>
+        </div>`;
+    });
+
+    html += '</div>';
+    container.innerHTML = html;
 }

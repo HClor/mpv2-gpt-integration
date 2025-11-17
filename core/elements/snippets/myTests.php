@@ -25,11 +25,13 @@ $output .= '</div>';
 $output .= '<ul class="nav nav-tabs mb-3" role="tablist">';
 $output .= '<li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#created">Созданные мной</a></li>';
 $output .= '<li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#shared">Доступны мне</a></li>';
+$output .= '<li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#public">Публичные</a></li>';
 $output .= '</ul>';
 
 $output .= '<div class="tab-content">';
 $output .= '<div class="tab-pane fade show active" id="created"><div class="text-center py-5"><div class="spinner-border" role="status"></div></div></div>';
 $output .= '<div class="tab-pane fade" id="shared"><div class="text-center py-5"><div class="spinner-border" role="status"></div></div></div>';
+$output .= '<div class="tab-pane fade" id="public"><div class="text-center py-5"><div class="spinner-border" role="status"></div></div></div>';
 $output .= '</div>';
 
 $output .= '</div>';
