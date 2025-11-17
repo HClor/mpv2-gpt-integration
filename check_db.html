@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Database Check</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+        .section { margin-bottom: 30px; padding: 15px; background: #2d2d30; border-radius: 5px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 8px; text-align: left; border: 1px solid #444; }
+        th { background: #0e639c; color: white; }
+        .success { color: #4ec9b0; }
+        .error { color: #f48771; }
+        h3 { color: #569cd6; }
+    </style>
+</head>
+<body>
+    <h1>🗄️ Database Tests Check</h1>
+
+    <div class="section">
+        <h3>SQL запросы для проверки</h3>
+        <p>Скопируйте и выполните в phpMyAdmin:</p>
+
+        <h4>1. Общее количество тестов:</h4>
+        <pre>SELECT COUNT(*) AS total_tests FROM modx_test_tests;</pre>
+
+        <h4>2. Все тесты с информацией о создателях:</h4>
+        <pre>SELECT
+    t.id,
+    t.title,
+    t.created_by,
+    u.username,
+    t.publication_status,
+    t.is_active,
+    t.created_at,
+    (SELECT COUNT(*) FROM modx_test_questions WHERE test_id = t.id) as questions_count
+FROM modx_test_tests t
+LEFT JOIN modx_users u ON u.id = t.created_by
+ORDER BY t.created_at DESC
+LIMIT 20;</pre>
+
+        <h4>3. Тесты по пользователям:</h4>
+        <pre>SELECT
+    t.created_by,
+    u.username,
+    COUNT(*) as tests_count,
+    SUM(CASE WHEN t.is_active = 1 THEN 1 ELSE 0 END) as active_tests
+FROM modx_test_tests t
+LEFT JOIN modx_users u ON u.id = t.created_by
+GROUP BY t.created_by, u.username;</pre>
+
+        <h4>4. Проверка текущего пользователя:</h4>
+        <pre>-- Ваш userId = 2
+SELECT * FROM modx_test_tests WHERE created_by = 2;</pre>
+    </div>
+
+    <div class="section">
+        <h3>⚠️ Важно: Создание теста</h3>
+        <p class="success">Для создания теста перейдите на страницу <a href="/tests/list" style="color: #4ec9b0;">/tests/list</a> и нажмите кнопку "Создать тест"</p>
+        <p>После создания теста, вернитесь сюда и проверьте результат.</p>
+    </div>
+
+    <div class="section">
+        <h3>Возможные причины отсутствия тестов:</h3>
+        <ol>
+            <li>База данных пустая - нужно создать первый тест</li>
+            <li>Тесты созданы другим пользователем (не userId=2)</li>
+            <li>Тесты помечены как is_active=0 (неактивные)</li>
+        </ol>
+    </div>
+
+    <script>
+        console.log('Для проверки БД используйте SQL запросы выше в phpMyAdmin');
+    </script>
+</body>
+</html>
