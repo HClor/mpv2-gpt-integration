@@ -7,7 +7,7 @@
                     <i class="fas fa-graduation-cap"></i>
                     {$_modx->config.site_name}
                 </h5>
-                <p class="text-muted">
+                <p class="text-white-50">
                     Современная система тестирования и обучения с геймификацией, аналитикой и сертификацией.
                 </p>
                 <div class="mt-3">

@@ -65,30 +65,30 @@ $html[] = '<div class="h5 fw-bold text-primary mb-0">#' . $rank . '</div>';
 $html[] = '<small class="text-muted">Ваше место в рейтинге</small>';
 $html[] = '</div>';
 
-$html[] = '<ul class="list-unstyled mb-0">';
+$html[] = '<ul class="list-unstyled mb-0 text-light">';
 $html[] = '<li class="mb-2 d-flex justify-content-between">';
-$html[] = '<span><i class="bi bi-clipboard-check text-primary"></i> Пройдено тестов:</span>';
-$html[] = '<strong>' . (int)$stats['total_sessions'] . '</strong>';
+$html[] = '<span class="text-light"><i class="bi bi-clipboard-check text-primary"></i> Пройдено тестов:</span>';
+$html[] = '<strong class="text-light">' . (int)$stats['total_sessions'] . '</strong>';
 $html[] = '</li>';
 
 $html[] = '<li class="mb-2 d-flex justify-content-between">';
-$html[] = '<span><i class="bi bi-check-circle-fill text-success"></i> Успешно:</span>';
-$html[] = '<strong>' . (int)$stats['passed_count'] . '</strong>';
+$html[] = '<span class="text-light"><i class="bi bi-check-circle-fill text-success"></i> Успешно:</span>';
+$html[] = '<strong class="text-light">' . (int)$stats['passed_count'] . '</strong>';
 $html[] = '</li>';
 
 $html[] = '<li class="mb-2 d-flex justify-content-between">';
-$html[] = '<span><i class="bi bi-graph-up text-info"></i> Средний балл:</span>';
-$html[] = '<strong>' . round($stats['avg_score'], 1) . '%</strong>';
+$html[] = '<span class="text-light"><i class="bi bi-graph-up text-info"></i> Средний балл:</span>';
+$html[] = '<strong class="text-light">' . round($stats['avg_score'], 1) . '%</strong>';
 $html[] = '</li>';
 
 $html[] = '<li class="mb-2 d-flex justify-content-between">';
-$html[] = '<span><i class="bi bi-trophy-fill text-warning"></i> Лучший результат:</span>';
-$html[] = '<strong>' . (int)$stats['best_score'] . '%</strong>';
+$html[] = '<span class="text-light"><i class="bi bi-trophy-fill text-warning"></i> Лучший результат:</span>';
+$html[] = '<strong class="text-light">' . (int)$stats['best_score'] . '%</strong>';
 $html[] = '</li>';
 
-$html[] = '<li class="mt-3 pt-3 border-top d-flex justify-content-between align-items-center">';
-$html[] = '<span class="fw-bold">Всего баллов:</span>';
-$html[] = '<span class="text-primary fw-bold fs-3">' . (int)$stats['total_score'] . '</span>';
+$html[] = '<li class="mt-3 pt-3 border-top border-secondary d-flex justify-content-between align-items-center">';
+$html[] = '<span class="fw-bold text-light">Всего баллов:</span>';
+$html[] = '<span class="text-warning fw-bold fs-3">' . (int)$stats['total_score'] . '</span>';
 $html[] = '</li>';
 
 $html[] = '</ul>';
