@@ -60,8 +60,8 @@ $stmtRank->execute();
 $rank = $stmtRank->fetchColumn();
 
 $html = [];
-$html[] = '<div class="mb-3 p-3 bg-light rounded text-center">';
-$html[] = '<div class="display-6 fw-bold text-primary">#' . $rank . '</div>';
+$html[] = '<div class="mb-2 p-2 bg-light rounded text-center">';
+$html[] = '<div class="h5 fw-bold text-primary mb-0">#' . $rank . '</div>';
 $html[] = '<small class="text-muted">Ваше место в рейтинге</small>';
 $html[] = '</div>';
 
