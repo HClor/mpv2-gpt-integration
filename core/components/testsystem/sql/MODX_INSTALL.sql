@@ -27,7 +27,7 @@
 DELETE FROM `modx_namespaces` WHERE `name` = 'testsystem';
 
 -- Создать namespace для компонента
-INSERT INTO `modx_namespaces` (`name`, `core_path`, `assets_path`)
+INSERT INTO `modx_namespaces` (`name`, `path`, `assets_path`)
 VALUES (
     'testsystem',
     '{core_path}components/testsystem/',
@@ -80,7 +80,7 @@ INSERT INTO `modx_system_settings` (`key`, `value`, `xtype`, `namespace`, `area`
 ('testsystem.certificate_require_verification', '1', 'combo-boolean', 'testsystem', 'Certificates', NOW());
 
 -- Настройки производительности
-INSERT INTO `modx_system_settings` (`key`, `value`, `xtype`, `namespace', `area`, `editedon`) VALUES
+INSERT INTO `modx_system_settings` (`key`, `value`, `xtype`, `namespace`, `area`, `editedon`) VALUES
 ('testsystem.enable_caching', '1', 'combo-boolean', 'testsystem', 'Performance', NOW()),
 ('testsystem.cache_lifetime', '3600', 'numberfield', 'testsystem', 'Performance', NOW()),
 ('testsystem.analytics_cache_lifetime', '86400', 'numberfield', 'testsystem', 'Performance', NOW()),
