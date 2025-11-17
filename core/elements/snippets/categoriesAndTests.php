@@ -20,9 +20,9 @@ $html[] = '<div class="card mb-3">';
 $html[] = '<div class="card-header">Категории</div>';
 $html[] = '<div class="list-group list-group-flush">';
 
-// Кеширование списка категорий (TTL из конфигурации)
+// Кеширование списка категорий (TTL из настроек MODX)
 $cacheKey = 'testsystem/categories_list';
-$cacheTTL = Config::getCacheTTL('categories_ttl', 3600);
+$cacheTTL = (int)$modx->getOption('testsystem.cache_ttl', null, 3600);
 
 $categories = $modx->cacheManager->get($cacheKey);
 
