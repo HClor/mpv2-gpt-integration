@@ -22,7 +22,7 @@
 // ============================================
 
 // Определить путь к MODX
-define('MODX_CORE_PATH', dirname(dirname(dirname(__DIR__))) . '/');
+define('MODX_CORE_PATH', dirname(dirname(__DIR__)) . '/');
 define('MODX_CONFIG_KEY', 'config');
 
 // Попробовать подключить MODX
