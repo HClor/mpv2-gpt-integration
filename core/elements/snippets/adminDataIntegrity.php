@@ -15,6 +15,9 @@
  * и добавьте этот вызов сниппета
  */
 
+// Подключаем bootstrap для доступа к Config
+require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
+
 // Проверка прав администратора
 $userId = $modx->user->id;
 if ($userId === 0) {

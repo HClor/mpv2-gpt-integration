@@ -71,7 +71,7 @@ if ($userId > 0) {
 
 // Получаем общий рейтинг (с кешированием)
 $cacheKey = 'testsystem/leaderboard_top50';
-$cacheTTL = Config::getCacheTTL('leaderboard_ttl', 300);
+$cacheTTL = (int)$modx->getOption('testsystem.cache_ttl', null, 300);
 
 $leaders = $modx->cacheManager->get($cacheKey);
 
