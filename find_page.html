@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Find Page SQL</title>
+</head>
+<body>
+    <h1>SQL для поиска страницы /tests/list</h1>
+
+    <h3>Скопируйте и выполните в phpMyAdmin:</h3>
+
+    <h4>1. Поиск по alias "list" в папке "tests":</h4>
+    <pre>
+-- Сначала найдем папку tests
+SELECT id, pagetitle, alias, template, content
+FROM modx_site_content
+WHERE alias = 'tests' OR alias = 'list';
+    </pre>
+
+    <h4>2. Поиск всех страниц с алиасом "list":</h4>
+    <pre>
+SELECT
+    c.id,
+    c.pagetitle,
+    c.alias,
+    c.template,
+    c.content,
+    c.parent,
+    p.pagetitle as parent_title,
+    p.alias as parent_alias
+FROM modx_site_content c
+LEFT JOIN modx_site_content p ON p.id = c.parent
+WHERE c.alias = 'list'
+ORDER BY c.id;
+    </pre>
+
+    <h4>3. Поиск по URI:</h4>
+    <pre>
+SELECT id, pagetitle, alias, uri, template, content
+FROM modx_site_content
+WHERE uri LIKE '%tests/list%' OR uri LIKE '%tests%'
+ORDER BY uri;
+    </pre>
+
+    <h4>4. Проверка контента страницы:</h4>
+    <pre>
+-- Замените ID_СТРАНИЦЫ на ID найденной страницы
+SELECT id, pagetitle, content, template
+FROM modx_site_content
+WHERE id = ID_СТРАНИЦЫ;
+    </pre>
+
+    <p><strong>После выполнения запросов:</strong></p>
+    <ol>
+        <li>Найдите ID страницы /tests/list</li>
+        <li>Посмотрите поле <code>content</code> - там должен быть вызов сниппета</li>
+        <li>Если там НЕТ <code>[[!myTests]]</code>, нужно его добавить</li>
+    </ol>
+</body>
+</html>
