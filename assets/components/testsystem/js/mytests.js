@@ -7,6 +7,13 @@ function getCsrfToken() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Проверяем наличие контейнера - если его нет, это не страница управления тестами
+    const myTestsContainer = document.getElementById('my-tests-container');
+    if (!myTestsContainer) {
+        console.log('My tests container not found, skipping initialization');
+        return;
+    }
+
     loadMyTests();
     loadSharedTests();
 });

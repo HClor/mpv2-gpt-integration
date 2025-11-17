@@ -22,8 +22,14 @@
     
     // Инициализация
     document.addEventListener('DOMContentLoaded', function() {
+        // Проверяем наличие контейнера - если его нет, это не страница областей знаний
+        if (!container) {
+            console.log('Knowledge areas container not found, skipping initialization');
+            return;
+        }
+
         loadAreas();
-        
+
         document.getElementById('create-area-btn')?.addEventListener('click', openCreateModal);
         document.getElementById('save-area-btn')?.addEventListener('click', saveArea);
         document.getElementById('confirm-delete-area-btn')?.addEventListener('click', confirmDeleteArea);
