@@ -29,21 +29,21 @@ $modx->getService('error','error.modError');
 require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
 
 // Подключаем контроллеры
-require_once __DIR__ . '/controllers/BaseController.php';
-require_once __DIR__ . '/controllers/SessionController.php';
-require_once __DIR__ . '/controllers/FavoriteController.php';
-require_once __DIR__ . '/controllers/QuestionController.php';
-require_once __DIR__ . '/controllers/TestController.php';
-require_once __DIR__ . '/controllers/AdminController.php';
-require_once __DIR__ . '/controllers/MaterialController.php';
-require_once __DIR__ . '/controllers/CategoryController.php';
-require_once __DIR__ . '/controllers/LearningPathController.php';
-require_once __DIR__ . '/controllers/SpecialQuestionController.php';
-require_once __DIR__ . '/controllers/GamificationController.php';
-require_once __DIR__ . '/controllers/NotificationController.php';
-require_once __DIR__ . '/controllers/AnalyticsController.php';
-require_once __DIR__ . '/controllers/CertificateController.php';
-require_once __DIR__ . '/controllers/ControllerFactory.php';
+require_once dirname(__DIR__) . '/controllers/BaseController.php';
+require_once dirname(__DIR__) . '/controllers/SessionController.php';
+require_once dirname(__DIR__) . '/controllers/FavoriteController.php';
+require_once dirname(__DIR__) . '/controllers/QuestionController.php';
+require_once dirname(__DIR__) . '/controllers/TestController.php';
+require_once dirname(__DIR__) . '/controllers/AdminController.php';
+require_once dirname(__DIR__) . '/controllers/MaterialController.php';
+require_once dirname(__DIR__) . '/controllers/CategoryController.php';
+require_once dirname(__DIR__) . '/controllers/LearningPathController.php';
+require_once dirname(__DIR__) . '/controllers/SpecialQuestionController.php';
+require_once dirname(__DIR__) . '/controllers/GamificationController.php';
+require_once dirname(__DIR__) . '/controllers/NotificationController.php';
+require_once dirname(__DIR__) . '/controllers/AnalyticsController.php';
+require_once dirname(__DIR__) . '/controllers/CertificateController.php';
+require_once dirname(__DIR__) . '/controllers/ControllerFactory.php';
 
 $prefix = $modx->getOption('table_prefix', null, 'modx_');
 
