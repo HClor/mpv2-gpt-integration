@@ -420,13 +420,193 @@ try {
 
 ---
 
+## ❌ Новая проблема: "Call to a member function fetchAll() on bool"
+
+### Симптомы ошибки
+
+```
+Fatal error: Uncaught Error: Call to a member function fetchAll() on bool
+in /path/to/file.php on line 30
+
+Fatal error: Uncaught Error: Call to a member function fetch() on bool
+```
+
+Эта ошибка возникает когда:
+- `$modx->query($sql)` возвращает **false** вместо PDOStatement
+- Пытаемся вызвать `fetch()` или `fetchAll()` на false
+
+### Причины ошибки
+
+```php
+// ❌ НЕВЕРНО - query() возвращает false если SQL содержит ошибку
+$stmt = $modx->query("SELECT * FROM table WHERE invalid_column = 5");
+$rows = $stmt->fetchAll();  // Fatal error! $stmt = false
+```
+
+**Основные причины:**
+1. **SQL синтаксис ошибка** - неверная структура запроса
+2. **Несуществующая таблица/колонка** - в SQL используются несуществующие поля
+3. **GROUP BY без агрегирующих функций** - неправильное группирование
+4. **Нет проверки результата перед fetch()**
+
+### Примеры проблемных запросов
+
+#### ❌ Проблема 1: GROUP BY без ALL полей в SELECT
+
+```php
+// ❌ ОШИБКА - некоторые поля не в GROUP BY и не агрегированы
+$stmt = $modx->query("
+    SELECT id, title, COUNT(q.id) as questions
+    FROM modx_test_tests t
+    LEFT JOIN modx_test_questions q ON q.test_id = t.id
+    GROUP BY t.id
+");
+// MySQL может выдать ошибку в strict mode
+```
+
+**Решение:**
+```php
+// ✓ ВЕРНО - все поля либо в GROUP BY, либо агрегированы
+$stmt = $modx->query("
+    SELECT t.id, t.title, COUNT(q.id) as questions
+    FROM modx_test_tests t
+    LEFT JOIN modx_test_questions q ON q.test_id = t.id
+    GROUP BY t.id, t.title
+");
+
+// ИЛИ выбрать только нужные поля:
+$stmt = $modx->query("
+    SELECT t.id, COUNT(q.id) as questions
+    FROM modx_test_tests t
+    LEFT JOIN modx_test_questions q ON q.test_id = t.id
+    GROUP BY t.id
+");
+```
+
+#### ❌ Проблема 2: Поиск по категориям с LIKE
+
+```php
+// ❌ ОШИБКА - таблица/категория может не существовать
+$stmt = $modx->query("SELECT id FROM modx_site_categories WHERE name LIKE '%Test%'");
+if (!$stmt) {
+    echo "SQL ошибка\n";
+}
+$rows = $stmt->fetchAll();  // Fatal error если $stmt = false
+```
+
+**Решение:**
+```php
+// ✓ ВЕРНО - проверяем результат перед fetch()
+$stmt = $modx->query("SELECT id FROM modx_site_categories WHERE name LIKE '%Test%'");
+if ($stmt) {
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} else {
+    echo "Категория не найдена\n";
+}
+```
+
+### Правильный паттерн обработки результатов
+
+```php
+// ✓ ПРАВИЛЬНЫЙ ПАТТЕРН для любого SELECT запроса
+
+// 1. Попытка выполнить запрос
+$stmt = $modx->query("SELECT * FROM table");
+
+// 2. ВСЕГДА проверить что запрос выполнился
+if ($stmt === false) {
+    echo "Ошибка SQL: запрос не выполнен\n";
+    return false;
+}
+
+// 3. Получить результаты
+$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+foreach ($rows as $row) {
+    // обработать каждый $row
+}
+
+// ИЛИ получить по одному
+$stmt = $modx->query("SELECT * FROM table");
+if ($stmt) {
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        // обработать $row
+    }
+}
+```
+
+### Безопасный вспомогательный класс
+
+Если часто используете query(), создайте вспомогательный класс:
+
+```php
+class ModxQueryHelper {
+    private $modx;
+
+    public function __construct($modx) {
+        $this->modx = $modx;
+    }
+
+    /**
+     * Безопасное выполнение SELECT запроса
+     * @return array Всегда возвращает массив (пустой если ошибка)
+     */
+    public function queryAll($sql) {
+        try {
+            $stmt = $this->modx->query($sql);
+            if ($stmt === false) {
+                error_log("SQL Error: {$sql}");
+                return [];
+            }
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            error_log("Query Exception: " . $e->getMessage());
+            return [];
+        }
+    }
+
+    /**
+     * Безопасное выполнение INSERT/UPDATE/DELETE
+     * @return int Количество затронутых строк (или 0 на ошибку)
+     */
+    public function execute($sql) {
+        try {
+            $result = $this->modx->exec($sql);
+            return intval($result);
+        } catch (Exception $e) {
+            error_log("Execute Exception: " . $e->getMessage());
+            return 0;
+        }
+    }
+}
+
+// Использование:
+$helper = new ModxQueryHelper($modx);
+$rows = $helper->queryAll("SELECT * FROM table");  // Никогда не будет false
+$count = $helper->execute("UPDATE table SET ...");  // Всегда вернёт int
+```
+
+### Чек-лист при работе с query()
+
+Когда получаешь "Call to a member function" ошибку:
+
+- [ ] Проверить синтаксис SQL (используй MySQL синтаксис, не SQL Server)
+- [ ] Убедиться что таблица существует: `SHOW TABLES LIKE '%name%'`
+- [ ] Убедиться что столбцы существуют: `DESC table_name`
+- [ ] Если используется GROUP BY - проверить что все поля либо в GROUP BY либо агрегированы
+- [ ] **ВСЕГДА проверить что `$stmt !== false` перед fetch()**
+- [ ] Использовать try-catch для ловли исключений
+- [ ] Выводить/логировать SQL запрос при ошибке для отладки
+
+---
+
 ## 🎯 Выводы
 
 1. **Не предполагайте** - исследуйте реальный API перед использованием
 2. **Используйте диагностику** - создавайте тесты, чтобы понять как работает код
 3. **Читайте стек трейс** - он содержит ценную информацию об ошибке
-4. **Проверяйте документацию** - официальная документация часто содержит примеры правильного использования API
+4. **Проверяйте результаты** - никогда не вызывайте fetch() если query() вернул false
 5. **Обрабатывайте ошибки** - хорошее логирование помогает быстро найти проблемы
+6. **Проверяйте SQL** - синтаксис, таблицы, колонки, GROUP BY правила
 
 ---
 
@@ -435,4 +615,5 @@ try {
 - MODX Revolution Database API: http://rtfm.modx.com/revolution/2.x/developing-in-modx/basic-development/executing-queries
 - PDOStatement: https://www.php.net/manual/en/class.pdostatement.php
 - SQL Injection Prevention: https://owasp.org/www-community/attacks/SQL_Injection
+- MySQL GROUP BY: https://dev.mysql.com/doc/refman/8.0/en/group-by-modifiers.html
 
