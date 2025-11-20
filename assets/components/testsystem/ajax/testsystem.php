@@ -99,6 +99,7 @@ $csrfExemptActions = [
     'getQuestionAnswers',        // Ответы на вопрос (для просмотра)
     // TEMPORARY: CSRF validation has session sync issues with MODX
     'startSession',              // FIXME: Re-enable CSRF after fixing session handling
+    'getNextQuestion',           // FIXME: Re-enable CSRF after fixing session handling
     'submitAnswer',              // FIXME: Re-enable CSRF after fixing session handling
     'finishTest'                 // FIXME: Re-enable CSRF after fixing session handling
 ];
