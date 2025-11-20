@@ -105,7 +105,7 @@ $csrfExemptActions = [
     // Admin actions (also affected by session sync issues)
     'togglePublished',           // FIXME: Re-enable CSRF after fixing session handling
     'deleteQuestion',            // FIXME: Re-enable CSRF after fixing session handling
-    'saveQuestion',              // FIXME: Re-enable CSRF after fixing session handling
+    'updateQuestion',            // FIXME: Re-enable CSRF after fixing session handling (actual action name)
     'getQuestion',               // FIXME: Re-enable CSRF after fixing session handling
     'uploadImage'                // FIXME: Re-enable CSRF after fixing session handling
 ];
