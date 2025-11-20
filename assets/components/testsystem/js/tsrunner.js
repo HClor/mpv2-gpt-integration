@@ -1387,12 +1387,20 @@ async function addFavoritesViewToggle(questionId) {
                 alert("Ошибка загрузки вопроса");
                 return;
             }
-            
-            if (result.data.finished) {
+
+            console.log("DEBUG: getNextQuestion result:", result);
+
+            if (result.data && result.data.finished) {
                 finishTest();
                 return;
             }
-            
+
+            if (!result.data || !result.data.question) {
+                console.error("❌ Invalid response structure:", result);
+                alert("Ошибка: неверная структура ответа от сервера");
+                return;
+            }
+
             currentQuestionId = result.data.question.id;
             currentQuestionType = result.data.question.question_type;
             currentQuestionNumber++;
