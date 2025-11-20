@@ -26,7 +26,7 @@ $stmt = $modx->prepare("
         questions_per_session,
         pass_score
     FROM modx_test_tests
-    WHERE category_id = ? AND is_active = 1
+    WHERE resource_id = ? AND is_active = 1
     ORDER BY created_at DESC
 ");
 $stmt->execute([$categoryId]);
