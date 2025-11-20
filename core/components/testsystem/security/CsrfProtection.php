@@ -3,12 +3,13 @@
  * CSRF Protection Class for MODX
  *
  * Защита от Cross-Site Request Forgery атак
- * ИСПРАВЛЕНО: Использует MODX сессии вместо PHP native $_SESSION
+ * ИСПРАВЛЕНО: Использует MODX сессии через $_SESSION напрямую
  *
  * @package TestSystem
- * @version 2.0
+ * @version 2.1
  * @created 2025-11-13
- * @updated 2025-11-20 - переход на MODX сессии
+ * @updated 2025-11-20 - переход на MODX сессии (v2.0)
+ * @updated 2025-11-20 - убран session_start(), используем только $_SESSION (v2.1)
  */
 
 class CsrfProtection {
@@ -48,18 +49,14 @@ class CsrfProtection {
         // Генерируем криптографически стойкий токен
         $token = bin2hex(random_bytes(32));
 
-        // Сохраняем токен и время создания в MODX сессии
+        // Сохраняем токен и время создания
         $sessionData = [
             'token' => $token,
             'created_at' => time()
         ];
 
-        // MODX хранит данные сессии в $_SESSION, но управляет ими сам
-        // Используем прямое обращение к $_SESSION для совместимости
-        if (!isset($_SESSION)) {
-            @session_start();
-        }
-
+        // MODX уже инициализировал $_SESSION
+        // Просто сохраняем данные без вызова session_start()
         $_SESSION[self::TOKEN_NAME] = $sessionData;
 
         return $token;
@@ -80,10 +77,7 @@ class CsrfProtection {
         }
 
         // Проверяем наличие токена в сессии
-        if (!isset($_SESSION)) {
-            @session_start();
-        }
-
+        // MODX уже инициализировал $_SESSION, просто проверяем
         if (!isset($_SESSION[self::TOKEN_NAME])) {
             return false;
         }
@@ -110,10 +104,6 @@ class CsrfProtection {
      */
     public static function getToken() {
         $modx = self::getModx();
-
-        if (!isset($_SESSION)) {
-            @session_start();
-        }
 
         // Если токен существует и не истек, возвращаем его
         if (isset($_SESSION[self::TOKEN_NAME])) {
@@ -152,10 +142,6 @@ class CsrfProtection {
      * Очистка токена из сессии
      */
     public static function clearToken() {
-        if (!isset($_SESSION)) {
-            @session_start();
-        }
-
         unset($_SESSION[self::TOKEN_NAME]);
     }
 
