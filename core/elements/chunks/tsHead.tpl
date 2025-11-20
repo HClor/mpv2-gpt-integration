@@ -23,8 +23,8 @@
     <link href="/assets/components/testsystem/css/testsystem-extended.css" rel="stylesheet">
     
     <!-- CSRF токен для безопасности -->
-    <meta name="csrf-token" content="<?php echo $csrfToken; ?>">
-    
+    [[!csrfToken]]
+
     
 
     <style>
