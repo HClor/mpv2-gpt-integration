@@ -55,6 +55,11 @@ class LMSInstaller
         echo "🚀 LMS SYSTEM v2.0 - АВТОМАТИЧЕСКИЙ ИНСТАЛЛЯТОР\n";
         echo "========================================\n\n";
 
+        // Добавим диагностику перед началом
+        echo "[ДИАГНОСТИКА] Информация о подключении к БД:\n";
+        $this->diagnosticDatabaseInfo();
+        echo "\n";
+
         // Этап 1: Проверка
         echo "[ЭТАП 1/5] Проверка системы...\n";
         $this->checkSystem();
@@ -77,6 +82,46 @@ class LMSInstaller
 
         // Вывод результатов
         $this->printResults();
+    }
+
+    /**
+     * Диагностика подключения к БД
+     */
+    private function diagnosticDatabaseInfo()
+    {
+        try {
+            $db = $this->modx->getConnection();
+            echo "  Класс БД: " . get_class($db) . "\n";
+
+            // Проверим какие методы доступны
+            $hasMethod = function($method) use ($db) {
+                return method_exists($db, $method);
+            };
+
+            echo "  Доступные методы:\n";
+            echo "    - query(): " . ($hasMethod('query') ? 'ДА' : 'НЕТ') . "\n";
+            echo "    - prepare(): " . ($hasMethod('prepare') ? 'ДА' : 'НЕТ') . "\n";
+            echo "    - exec(): " . ($hasMethod('exec') ? 'ДА' : 'НЕТ') . "\n";
+            echo "    - execute(): " . ($hasMethod('execute') ? 'ДА' : 'НЕТ') . "\n";
+            echo "    - quote(): " . ($hasMethod('quote') ? 'ДА' : 'НЕТ') . "\n";
+
+            // Попробуем простой SELECT
+            if ($hasMethod('prepare')) {
+                echo "\n  Тест query():\n";
+                try {
+                    $stmt = $db->prepare("SELECT 1 as test");
+                    if ($stmt->execute()) {
+                        echo "    ✓ prepare()/execute() работают\n";
+                        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                        echo "    ✓ fetch() работает\n";
+                    }
+                } catch (Exception $e) {
+                    echo "    ✗ Ошибка: " . $e->getMessage() . "\n";
+                }
+            }
+        } catch (Exception $e) {
+            echo "  ✗ Ошибка диагностики: " . $e->getMessage() . "\n";
+        }
     }
 
     /**
@@ -236,14 +281,23 @@ class LMSInstaller
         ];
 
         $db = $this->modx->getConnection();
-        $stmt = $db->prepare("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE()");
-        if ($stmt->execute()) {
+
+        try {
+            $stmt = $db->prepare("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE()");
+            if (!$stmt->execute()) {
+                $this->addError("Ошибка при выполнении запроса таблиц. Код ошибки: " . $stmt->errorCode());
+                return;
+            }
+
             $existingTables = [];
             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
                 $existingTables[] = $row['TABLE_NAME'];
             }
-        } else {
-            $existingTables = [];
+
+            echo "  [Найдено {count($existingTables)} таблиц в БД]\n";
+        } catch (Exception $e) {
+            $this->addError("Исключение при проверке таблиц: " . $e->getMessage());
+            return;
         }
 
         $missingTables = [];
@@ -270,49 +324,76 @@ class LMSInstaller
     {
         $db = $this->modx->getConnection();
 
-        // Проверить наличие уровней
-        $stmt = $db->prepare("SELECT COUNT(*) as cnt FROM modx_test_level_config");
-        $levelCount = 0;
-        if ($stmt->execute()) {
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            $levelCount = intval($row['cnt']);
+        try {
+            // Проверить наличие уровней
+            echo "  Проверка уровней...\n";
+            $stmt = $db->prepare("SELECT COUNT(*) as cnt FROM modx_test_level_config");
+            $levelCount = 0;
+            if ($stmt->execute()) {
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                $levelCount = intval($row['cnt']);
+                echo "    [Найдено {$levelCount} уровней]\n";
+            } else {
+                echo "    [Ошибка запроса к уровням]\n";
+            }
+
+            if ($levelCount == 0) {
+                echo "  Создание уровней опыта...\n";
+                $this->createLevels();
+            } else {
+                $this->addSuccess("  ✓ Уровни уже созданы ({$levelCount} записей)");
+            }
+        } catch (Exception $e) {
+            $this->addError("Ошибка при проверке уровней: " . $e->getMessage());
+            return;
         }
 
-        if ($levelCount == 0) {
-            echo "  Создание уровней опыта...\n";
-            $this->createLevels();
-        } else {
-            $this->addSuccess("  ✓ Уровни уже созданы ({$levelCount} записей)");
+        try {
+            // Проверить наличие шаблонов уведомлений
+            echo "  Проверка шаблонов уведомлений...\n";
+            $stmt = $db->prepare("SELECT COUNT(*) as cnt FROM modx_test_notification_templates");
+            $templateCount = 0;
+            if ($stmt->execute()) {
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                $templateCount = intval($row['cnt']);
+                echo "    [Найдено {$templateCount} шаблонов]\n";
+            } else {
+                echo "    [Ошибка запроса к шаблонам]\n";
+            }
+
+            if ($templateCount == 0) {
+                echo "  Создание шаблонов уведомлений...\n";
+                $this->createNotificationTemplates();
+            } else {
+                $this->addSuccess("  ✓ Шаблоны уведомлений уже созданы ({$templateCount} записей)");
+            }
+        } catch (Exception $e) {
+            $this->addError("Ошибка при проверке шаблонов: " . $e->getMessage());
+            return;
         }
 
-        // Проверить наличие шаблонов уведомлений
-        $stmt = $db->prepare("SELECT COUNT(*) as cnt FROM modx_test_notification_templates");
-        $templateCount = 0;
-        if ($stmt->execute()) {
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            $templateCount = intval($row['cnt']);
-        }
+        try {
+            // Проверить наличие достижений
+            echo "  Проверка достижений...\n";
+            $stmt = $db->prepare("SELECT COUNT(*) as cnt FROM modx_test_achievements");
+            $achievementCount = 0;
+            if ($stmt->execute()) {
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                $achievementCount = intval($row['cnt']);
+                echo "    [Найдено {$achievementCount} достижений]\n";
+            } else {
+                echo "    [Ошибка запроса к достижениям]\n";
+            }
 
-        if ($templateCount == 0) {
-            echo "  Создание шаблонов уведомлений...\n";
-            $this->createNotificationTemplates();
-        } else {
-            $this->addSuccess("  ✓ Шаблоны уведомлений уже созданы ({$templateCount} записей)");
-        }
-
-        // Проверить наличие достижений
-        $stmt = $db->prepare("SELECT COUNT(*) as cnt FROM modx_test_achievements");
-        $achievementCount = 0;
-        if ($stmt->execute()) {
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            $achievementCount = intval($row['cnt']);
-        }
-
-        if ($achievementCount == 0) {
-            echo "  Создание достижений...\n";
-            $this->createAchievements();
-        } else {
-            $this->addSuccess("  ✓ Достижения уже созданы ({$achievementCount} записей)");
+            if ($achievementCount == 0) {
+                echo "  Создание достижений...\n";
+                $this->createAchievements();
+            } else {
+                $this->addSuccess("  ✓ Достижения уже созданы ({$achievementCount} записей)");
+            }
+        } catch (Exception $e) {
+            $this->addError("Ошибка при проверке достижений: " . $e->getMessage());
+            return;
         }
     }
 
@@ -334,16 +415,31 @@ class LMSInstaller
             ['level' => 10, 'xp_required' => 5000, 'title' => 'Мудрец'],
         ];
 
-        $db = $this->modx->getConnection();
-        $stmt = $db->prepare("INSERT INTO modx_test_level_config (level, xp_required, title) VALUES (:level, :xp, :title)");
-        foreach ($levels as $level) {
-            $stmt->bindValue(':level', intval($level['level']), PDO::PARAM_INT);
-            $stmt->bindValue(':xp', intval($level['xp_required']), PDO::PARAM_INT);
-            $stmt->bindValue(':title', $level['title'], PDO::PARAM_STR);
-            $stmt->execute();
-        }
+        try {
+            $db = $this->modx->getConnection();
+            $stmt = $db->prepare("INSERT INTO modx_test_level_config (level, xp_required, title) VALUES (:level, :xp, :title)");
 
-        $this->addSuccess("    ✓ Создано 10 уровней опыта");
+            $count = 0;
+            foreach ($levels as $level) {
+                try {
+                    $stmt->bindValue(':level', intval($level['level']), PDO::PARAM_INT);
+                    $stmt->bindValue(':xp', intval($level['xp_required']), PDO::PARAM_INT);
+                    $stmt->bindValue(':title', $level['title'], PDO::PARAM_STR);
+                    $result = $stmt->execute();
+                    if ($result) {
+                        $count++;
+                    } else {
+                        echo "      [Ошибка при вставке уровня {$level['level']}: " . $stmt->errorCode() . "]\n";
+                    }
+                } catch (Exception $e) {
+                    echo "      [Исключение при вставке уровня {$level['level']}: " . $e->getMessage() . "]\n";
+                }
+            }
+
+            $this->addSuccess("    ✓ Создано {$count} из 10 уровней опыта");
+        } catch (Exception $e) {
+            $this->addError("    ✗ Ошибка при создании уровней: " . $e->getMessage());
+        }
     }
 
     /**
@@ -410,20 +506,35 @@ class LMSInstaller
             ],
         ];
 
-        $db = $this->modx->getConnection();
-        $stmt = $db->prepare("INSERT INTO modx_test_notification_templates
-            (template_key, notification_type, channel, subject_template, body_template, is_active)
-            VALUES (:key, :type, :channel, :subject, :body, 1)");
-        foreach ($templates as $template) {
-            $stmt->bindValue(':key', $template['template_key'], PDO::PARAM_STR);
-            $stmt->bindValue(':type', $template['notification_type'], PDO::PARAM_STR);
-            $stmt->bindValue(':channel', $template['channel'], PDO::PARAM_STR);
-            $stmt->bindValue(':subject', $template['subject_template'], PDO::PARAM_STR);
-            $stmt->bindValue(':body', $template['body_template'], PDO::PARAM_STR);
-            $stmt->execute();
-        }
+        try {
+            $db = $this->modx->getConnection();
+            $stmt = $db->prepare("INSERT INTO modx_test_notification_templates
+                (template_key, notification_type, channel, subject_template, body_template, is_active)
+                VALUES (:key, :type, :channel, :subject, :body, 1)");
 
-        $this->addSuccess("    ✓ Создано 8 шаблонов уведомлений");
+            $count = 0;
+            foreach ($templates as $template) {
+                try {
+                    $stmt->bindValue(':key', $template['template_key'], PDO::PARAM_STR);
+                    $stmt->bindValue(':type', $template['notification_type'], PDO::PARAM_STR);
+                    $stmt->bindValue(':channel', $template['channel'], PDO::PARAM_STR);
+                    $stmt->bindValue(':subject', $template['subject_template'], PDO::PARAM_STR);
+                    $stmt->bindValue(':body', $template['body_template'], PDO::PARAM_STR);
+                    $result = $stmt->execute();
+                    if ($result) {
+                        $count++;
+                    } else {
+                        echo "      [Ошибка при вставке шаблона {$template['template_key']}: " . $stmt->errorCode() . "]\n";
+                    }
+                } catch (Exception $e) {
+                    echo "      [Исключение при вставке шаблона {$template['template_key']}: " . $e->getMessage() . "]\n";
+                }
+            }
+
+            $this->addSuccess("    ✓ Создано {$count} из 8 шаблонов уведомлений");
+        } catch (Exception $e) {
+            $this->addError("    ✗ Ошибка при создании шаблонов: " . $e->getMessage());
+        }
     }
 
     /**
