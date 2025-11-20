@@ -3,13 +3,14 @@
  * LMS SYSTEM v2.0 - АВТОМАТИЧЕСКИЙ ИНСТАЛЛЯТОР
  *
  * Использование в MODX Console:
- * 1. Скопируйте этот файл как: core/components/testsystem/installer.php
- * 2. В консоли MODX выполните:
- *    $installer = require MODX_CORE_PATH . 'components/testsystem/installer.php';
- *    $installer->run();
+ * 1. Откройте админку MODX → Tools → MODX Console
+ * 2. Скопируйте и выполните эти 3 строки (вместе):
  *
- * Или используйте этот файл напрямую через PHP CLI:
- *    php -r "require 'installer.php'; (new Installer())->run();"
+ *    require_once MODX_CORE_PATH . 'components/testsystem/installer.php';
+ *    $lmsInstaller = new LMSInstaller($modx);
+ *    $lmsInstaller->run();
+ *
+ * ВАЖНО: Скопируйте и выполните все 3 строки одновременно, не по одной!
  */
 
 class LMSInstaller
@@ -22,14 +23,26 @@ class LMSInstaller
 
     public function __construct($modx = null)
     {
-        // Если MODX уже загружен в контексте
-        if ($modx instanceof modX) {
+        // Если MODX уже загружен в контексте (например, в MODX Console)
+        if ($modx && $modx instanceof modX) {
             $this->modx = $modx;
         } else {
-            // Загрузить MODX
-            require_once dirname(dirname(dirname(__FILE__))) . '/index.php';
-            $this->modx = new modX();
-            $this->modx->initialize('web');
+            // Проверить что мы можем инициализировать MODX
+            if (!defined('MODX_CORE_PATH')) {
+                throw new Exception(
+                    "MODX не инициализирован.\n" .
+                    "Запустите инсталлятор из MODX Console:\n" .
+                    "  require_once MODX_CORE_PATH . 'components/testsystem/installer.php';\n" .
+                    "  \$installer = new LMSInstaller(\$modx);\n" .
+                    "  \$installer->run();"
+                );
+            }
+
+            // В MODX Console $modx должен быть доступен как переменная
+            throw new Exception(
+                "Ошибка инициализации MODX.\n" .
+                "Убедитесь что вы передали объект \$modx в конструктор"
+            );
         }
     }
 
@@ -514,10 +527,10 @@ class LMSInstaller
     }
 }
 
-// Если запущен из командной строки или MODX консоли
-if (php_sapi_name() === 'cli' || (isset($_GET['installer']) && $_GET['installer'] == 'run')) {
-    $installer = new LMSInstaller();
-    $installer->run();
-}
-
-return new LMSInstaller();
+// Этот файл предназначен для использования в MODX Console
+// или как require в MODX контексте.
+//
+// Использование:
+// require_once MODX_CORE_PATH . 'components/testsystem/installer.php';
+// $installer = new LMSInstaller($modx);
+// $installer->run();

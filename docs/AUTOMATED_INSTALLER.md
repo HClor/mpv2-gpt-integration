@@ -45,12 +45,14 @@
 ```php
 // 1. Откройте админку MODX
 // 2. Перейдите в Tools → MODX Console (Инструменты → Консоль)
-// 3. Скопируйте и выполните эту команду:
+// 3. Скопируйте И ВЫПОЛНИТЕ эту команду целиком (всё вместе):
 
 require_once MODX_CORE_PATH . 'components/testsystem/installer.php';
-$installer = new LMSInstaller($modx);
-$installer->run();
+$lmsInstaller = new LMSInstaller($modx);
+$lmsInstaller->run();
 ```
+
+**ВАЖНО:** Скопируйте ВСЕ ТРИ СТРОКИ целиком и выполните их одновременно (не по одной!).
 
 **Ожидаемый результат:**
 ```
