@@ -11,14 +11,17 @@ if (!$modx instanceof modX) {
     return '<div class="alert alert-danger">MODX context required</div>';
 }
 
-// Получаем ID текущего ресурса
+// ИСПРАВЛЕНО: Получаем testId из GET-параметра или ID текущего ресурса
+$testIdFromUrl = isset($_GET['testId']) ? (int)$_GET['testId'] : 0;
+
+// Если testId не передан, используем старый способ через resource_id
 $resourceId = 0;
 if ($modx->resource instanceof modResource) {
     $resourceId = (int)$modx->resource->get('id');
 }
 
-if ($resourceId <= 0) {
-    return '<div class="alert alert-danger">Ошибка: ресурс не определен</div>';
+if ($testIdFromUrl <= 0 && $resourceId <= 0) {
+    return '<div class="alert alert-danger">Ошибка: тест не указан</div>';
 }
 
 $prefix = (string)$modx->getOption('table_prefix');
@@ -255,11 +258,22 @@ if ($knowledgeAreaId > 0) {
 
 
 
-// Ищем тест, привязанный к этому ресурсу
-$sql = "SELECT `id`, `resource_id`, `title`, `description`, `mode`, `time_limit`, `pass_score`, `questions_per_session`
-    FROM {$tableTests}
-    WHERE `is_active` = 1 AND `resource_id` = ?
-    LIMIT 1";
+// ИСПРАВЛЕНО: Ищем тест либо по ID из URL, либо привязанный к этому ресурсу
+if ($testIdFromUrl > 0) {
+    // Загружаем тест по ID из GET-параметра
+    $sql = "SELECT `id`, `resource_id`, `title`, `description`, `mode`, `time_limit`, `pass_score`, `questions_per_session`
+        FROM {$tableTests}
+        WHERE `is_active` = 1 AND `id` = ?
+        LIMIT 1";
+    $queryParam = $testIdFromUrl;
+} else {
+    // Загружаем тест по resource_id (старое поведение)
+    $sql = "SELECT `id`, `resource_id`, `title`, `description`, `mode`, `time_limit`, `pass_score`, `questions_per_session`
+        FROM {$tableTests}
+        WHERE `is_active` = 1 AND `resource_id` = ?
+        LIMIT 1";
+    $queryParam = $resourceId;
+}
 
 $stmt = $modx->prepare($sql);
 if (!$stmt) {
@@ -267,7 +281,7 @@ if (!$stmt) {
     return '<div class="alert alert-danger">Ошибка при загрузке теста</div>';
 }
 
-if (!$stmt->execute([$resourceId])) {
+if (!$stmt->execute([$queryParam])) {
     $modx->log(modX::LOG_LEVEL_ERROR, '[testRunner] Failed to execute test query: ' . print_r($stmt->errorInfo(), true));
     return '<div class="alert alert-danger">Тест не найден или неактивен</div>';
 }
