@@ -109,8 +109,8 @@ if ($_POST && isset($_POST["add_test"])) {
             $stmt = $modx->prepare("
                 INSERT INTO `{$prefix}test_tests`
                 (resource_id, title, description, created_by, mode, time_limit, pass_score,
-                 questions_per_session, randomize_questions, randomize_answers, is_active, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 1, NOW())
+                 questions_per_session, randomize_questions, randomize_answers, is_active, publication_status, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 1, 'public', NOW())
             ");
 
             // resource_id = category_id (НЕ ID страницы MODX!)
