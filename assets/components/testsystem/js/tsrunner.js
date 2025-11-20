@@ -1383,14 +1383,10 @@ async function addFavoritesViewToggle(questionId) {
             });
     
             if (!result.success) {
-                console.error("❌ Result not successful:", result.message);
+                console.error("Ошибка загрузки вопроса:", result.message);
                 alert("Ошибка загрузки вопроса");
                 return;
             }
-
-            console.log("DEBUG: getNextQuestion result:", result);
-            console.log("DEBUG: result.data:", result.data);
-            console.log("DEBUG: result.data.question:", result.data?.question);
 
             if (result.data && result.data.finished) {
                 finishTest();
@@ -1398,10 +1394,7 @@ async function addFavoritesViewToggle(questionId) {
             }
 
             if (!result.data || !result.data.question) {
-                console.error("❌ Invalid response structure:", result);
-                console.error("❌ result.data exists?", !!result.data);
-                console.error("❌ result.data.question exists?", !!result.data?.question);
-                console.error("❌ Keys in result.data:", result.data ? Object.keys(result.data) : 'N/A');
+                console.error("Неверная структура ответа от сервера");
                 alert("Ошибка: неверная структура ответа от сервера");
                 return;
             }
