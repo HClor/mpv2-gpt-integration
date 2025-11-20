@@ -226,19 +226,17 @@ if ($knowledgeAreaId > 0) {
     $assetsUrl = $modx->getOption('assets_url', null, MODX_ASSETS_URL);
     $assetsUrl = rtrim($assetsUrl, '/') . '/';
 
-    $cssPath = $assetsUrl . 'components/testsystem/css/tsrunner.css';
     $jsPath = $assetsUrl . 'components/testsystem/js/tsrunner.js';
 
-    // CSRF Protection: Добавляем meta тег с токеном для JavaScript
-    $output .= CsrfProtection::getTokenMeta();
+    // ПРИМЕЧАНИЕ: CSRF токен и CSS уже подключены в tsHead.tpl
+    // ПРИМЕЧАНИЕ: Bootstrap JS подключен в tsScripts.tpl
 
     // XSS Protection: Подключаем DOMPurify для санитизации HTML
     $output .= '<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>';
 
-    $output .= '<link rel="stylesheet" href="' . htmlspecialchars($cssPath, ENT_QUOTES, 'UTF-8') . '">';
     $output .= '<script src="' . htmlspecialchars($jsPath, ENT_QUOTES, 'UTF-8') . '"></script>';
 
-    // Подключение Quill (если нужно для редактирования)
+    // Подключение Quill для редактирования вопросов
     $output .= '<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">';
     $output .= '<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>';
 
@@ -717,19 +715,17 @@ $output .= '</div>';
 $assetsUrl = $modx->getOption('assets_url', null, MODX_ASSETS_URL);
 $assetsUrl = rtrim($assetsUrl, '/') . '/';
 
-$cssPath = $assetsUrl . 'components/testsystem/css/tsrunner.css';
 $jsPath = $assetsUrl . 'components/testsystem/js/tsrunner.js';
 
-// CSRF Protection: Добавляем meta тег с токеном для JavaScript
-$output .= CsrfProtection::getTokenMeta();
+// ПРИМЕЧАНИЕ: CSRF токен и CSS уже подключены в tsHead.tpl
+// ПРИМЕЧАНИЕ: Bootstrap JS подключен в tsScripts.tpl
 
 // XSS Protection: Подключаем DOMPurify для санитизации HTML
 $output .= '<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>';
 
-$output .= '<link rel="stylesheet" href="' . htmlspecialchars($cssPath, ENT_QUOTES, 'UTF-8') . '">';
 $output .= '<script src="' . htmlspecialchars($jsPath, ENT_QUOTES, 'UTF-8') . '"></script>';
 
-// Подключение Quill
+// Подключение Quill для редактирования вопросов
 $output .= '<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">';
 $output .= '<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>';
 
