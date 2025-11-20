@@ -31,45 +31,15 @@ if (!$test) {
     return "<div class=\"alert alert-danger\">Тест с ID {$testId} не найден</div>";
 }
 
-// Генерация URL теста
-$testUrl = '#';
-$resourceId = (int)($test['resource_id'] ?? 0);
+// ИСПРАВЛЕНО: Генерация URL теста через /test-run?testId=X
+// resource_id теперь хранит category_id, а не ID страницы MODX
+$testRunPageId = Config::getPageId('test_run', 155);
+$testUrl = $modx->makeUrl($testRunPageId, '', ['testId' => $testId], 'full');
 
-if ($resourceId > 0) {
-    $resource = $modx->getObject('modResource', $resourceId);
-    
-    if ($resource) {
-        // Сразу строим URL вручную (надёжнее чем makeUrl для свежих ресурсов)
-        $siteUrl = rtrim($modx->getOption('site_url'), '/');
-        $alias = $resource->get('alias');
-        $parentId = (int)$resource->get('parent');
-        
-        if ($parentId > 0) {
-            $parent = $modx->getObject('modResource', $parentId);
-            if ($parent) {
-                $parentUri = trim($parent->get('uri'), '/');
-                $testUrl = $siteUrl . '/' . $parentUri . '/' . $alias;
-            } else {
-                $testUrl = $siteUrl . '/' . $alias;
-            }
-        } else {
-            // Ресурс в корне
-            $testUrl = $siteUrl . '/' . $alias;
-        }
-    }
-}
-
-// Fallback 1: страница "Мои тесты"
-if (empty($testUrl) || $testUrl === '#') {
-    $testsPageId = (int)$modx->getOption('lms.user_tests_folder', null, 0);
-    if ($testsPageId > 0) {
-        $testUrl = $modx->makeUrl($testsPageId, '', '', 'full');
-    }
-}
-
-// Fallback 2: текущая страница с якорем
-if (empty($testUrl) || $testUrl === '#') {
-    $testUrl = $modx->makeUrl($modx->resource->get('id'), '', '', 'full') . '#test-' . $testId;
+// Fallback: если страница test-run не найдена
+if (empty($testUrl)) {
+    $siteUrl = rtrim($modx->getOption('site_url'), '/');
+    $testUrl = $siteUrl . '/test-run?testId=' . $testId;
 }
 
 // Проверка прав доступа
