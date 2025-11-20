@@ -213,10 +213,15 @@ foreach ($dataChecks as $table => $label) {
 echo "\n[5/5] ПРОВЕРКА ДОСТУПА ПОЛЬЗОВАТЕЛЯ ID 2\n";
 echo "────────────────────────────────────────────────────────────────\n";
 
-$stmt = $modx->query("SELECT username, email FROM modx_users WHERE id = 2");
+$stmt = $modx->query("
+    SELECT u.username, ua.email
+    FROM modx_users u
+    LEFT JOIN modx_user_attributes ua ON ua.internalKey = u.id
+    WHERE u.id = 2
+");
 
 if ($stmt !== false && $row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-    printf("  ✓ Пользователь найден: %s (%s)\n", $row['username'], $row['email']);
+    printf("  ✓ Пользователь найден: %s (%s)\n", $row['username'], $row['email'] ?? 'нет email');
 
     // Проверить что он может видеть тесты
     $stmt = $modx->query("
