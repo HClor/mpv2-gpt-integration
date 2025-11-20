@@ -1201,19 +1201,35 @@ async function addFavoritesViewToggle(questionId) {
         startButtons.forEach(btn => {
             btn.addEventListener("click", function() {
                 console.log("Start button clicked!");
-                
+
+                // Защита от двойного клика
+                if (this.disabled) {
+                    console.log("Button already disabled, ignoring click");
+                    return;
+                }
+
+                this.disabled = true;
+                const originalText = this.textContent;
+                this.textContent = "Загрузка...";
+
                 const mode = this.dataset.mode || "training";
                 let questionsCount = null;
-                
+
                 if (mode === "training" && !isKnowledgeArea) {
                     const input = document.getElementById("training-questions-count");
                     if (input) {
                         questionsCount = parseInt(input.value, 10);
                     }
                 }
-                
+
                 console.log("Starting test:", { mode, questionsCount, isKnowledgeArea });
-                startTest(mode, questionsCount);
+
+                // Если startTest завершится с ошибкой, разблокируем кнопку
+                startTest(mode, questionsCount).catch(error => {
+                    console.error("Start test error:", error);
+                    this.disabled = false;
+                    this.textContent = originalText;
+                });
             });
         });
 
