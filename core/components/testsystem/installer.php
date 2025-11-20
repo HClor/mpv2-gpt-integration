@@ -236,10 +236,14 @@ class LMSInstaller
         ];
 
         $db = $this->modx->getConnection();
-        $result = $db->query("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE()");
-        $existingTables = [];
-        while ($row = $result->fetch(PDO::FETCH_ASSOC)) {
-            $existingTables[] = $row['TABLE_NAME'];
+        $stmt = $db->prepare("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = DATABASE()");
+        if ($stmt->execute()) {
+            $existingTables = [];
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                $existingTables[] = $row['TABLE_NAME'];
+            }
+        } else {
+            $existingTables = [];
         }
 
         $missingTables = [];
@@ -267,9 +271,12 @@ class LMSInstaller
         $db = $this->modx->getConnection();
 
         // Проверить наличие уровней
-        $result = $db->query("SELECT COUNT(*) as cnt FROM modx_test_level_config");
-        $row = $result->fetch(PDO::FETCH_ASSOC);
-        $levelCount = $row['cnt'];
+        $stmt = $db->prepare("SELECT COUNT(*) as cnt FROM modx_test_level_config");
+        $levelCount = 0;
+        if ($stmt->execute()) {
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            $levelCount = intval($row['cnt']);
+        }
 
         if ($levelCount == 0) {
             echo "  Создание уровней опыта...\n";
@@ -279,9 +286,12 @@ class LMSInstaller
         }
 
         // Проверить наличие шаблонов уведомлений
-        $result = $db->query("SELECT COUNT(*) as cnt FROM modx_test_notification_templates");
-        $row = $result->fetch(PDO::FETCH_ASSOC);
-        $templateCount = $row['cnt'];
+        $stmt = $db->prepare("SELECT COUNT(*) as cnt FROM modx_test_notification_templates");
+        $templateCount = 0;
+        if ($stmt->execute()) {
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            $templateCount = intval($row['cnt']);
+        }
 
         if ($templateCount == 0) {
             echo "  Создание шаблонов уведомлений...\n";
@@ -291,9 +301,12 @@ class LMSInstaller
         }
 
         // Проверить наличие достижений
-        $result = $db->query("SELECT COUNT(*) as cnt FROM modx_test_achievements");
-        $row = $result->fetch(PDO::FETCH_ASSOC);
-        $achievementCount = $row['cnt'];
+        $stmt = $db->prepare("SELECT COUNT(*) as cnt FROM modx_test_achievements");
+        $achievementCount = 0;
+        if ($stmt->execute()) {
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            $achievementCount = intval($row['cnt']);
+        }
 
         if ($achievementCount == 0) {
             echo "  Создание достижений...\n";
@@ -322,12 +335,12 @@ class LMSInstaller
         ];
 
         $db = $this->modx->getConnection();
+        $stmt = $db->prepare("INSERT INTO modx_test_level_config (level, xp_required, title) VALUES (:level, :xp, :title)");
         foreach ($levels as $level) {
-            $sql = "INSERT INTO modx_test_level_config (level, xp_required, title) VALUES (" .
-                   intval($level['level']) . ", " .
-                   intval($level['xp_required']) . ", '" .
-                   $db->quote($level['title']) . "')";
-            $db->query($sql);
+            $stmt->bindValue(':level', intval($level['level']), PDO::PARAM_INT);
+            $stmt->bindValue(':xp', intval($level['xp_required']), PDO::PARAM_INT);
+            $stmt->bindValue(':title', $level['title'], PDO::PARAM_STR);
+            $stmt->execute();
         }
 
         $this->addSuccess("    ✓ Создано 10 уровней опыта");
@@ -398,17 +411,16 @@ class LMSInstaller
         ];
 
         $db = $this->modx->getConnection();
+        $stmt = $db->prepare("INSERT INTO modx_test_notification_templates
+            (template_key, notification_type, channel, subject_template, body_template, is_active)
+            VALUES (:key, :type, :channel, :subject, :body, 1)");
         foreach ($templates as $template) {
-            $sql = "INSERT INTO modx_test_notification_templates " .
-                   "(template_key, notification_type, channel, subject_template, body_template, is_active) " .
-                   "VALUES (" .
-                   "'" . $db->quote($template['template_key']) . "', " .
-                   "'" . $db->quote($template['notification_type']) . "', " .
-                   "'" . $db->quote($template['channel']) . "', " .
-                   "'" . $db->quote($template['subject_template']) . "', " .
-                   "'" . $db->quote($template['body_template']) . "', " .
-                   "1)";
-            $db->query($sql);
+            $stmt->bindValue(':key', $template['template_key'], PDO::PARAM_STR);
+            $stmt->bindValue(':type', $template['notification_type'], PDO::PARAM_STR);
+            $stmt->bindValue(':channel', $template['channel'], PDO::PARAM_STR);
+            $stmt->bindValue(':subject', $template['subject_template'], PDO::PARAM_STR);
+            $stmt->bindValue(':body', $template['body_template'], PDO::PARAM_STR);
+            $stmt->execute();
         }
 
         $this->addSuccess("    ✓ Создано 8 шаблонов уведомлений");
@@ -422,13 +434,14 @@ class LMSInstaller
         $db = $this->modx->getConnection();
 
         // Если достижения уже созданы, не создавать заново
-        $result = $db->query("SELECT COUNT(*) as cnt FROM modx_test_achievements");
-        $row = $result->fetch(PDO::FETCH_ASSOC);
-        if ($row['cnt'] > 0) {
-            return;
+        $stmt = $db->prepare("SELECT COUNT(*) as cnt FROM modx_test_achievements");
+        if ($stmt->execute()) {
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (intval($row['cnt']) > 0) {
+                $this->addSuccess("    ✓ Достижения уже существуют в системе");
+                return;
+            }
         }
-
-        $this->addSuccess("    ✓ Достижения уже существуют в системе");
     }
 
     /**
@@ -439,19 +452,28 @@ class LMSInstaller
         $db = $this->modx->getConnection();
 
         // Проверить количество ресурсов
-        $result = $db->query("SELECT COUNT(*) as cnt FROM modx_site_content WHERE alias LIKE 'tests' OR alias LIKE 'test-run' OR alias LIKE 'leaderboard'");
-        $row = $result->fetch(PDO::FETCH_ASSOC);
-        $resourceCount = $row['cnt'];
+        $stmt = $db->prepare("SELECT COUNT(*) as cnt FROM modx_site_content WHERE alias LIKE 'tests' OR alias LIKE 'test-run' OR alias LIKE 'leaderboard'");
+        $resourceCount = 0;
+        if ($stmt->execute()) {
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            $resourceCount = intval($row['cnt']);
+        }
 
         // Проверить количество тестов
-        $result = $db->query("SELECT COUNT(*) as cnt FROM modx_test_tests");
-        $row = $result->fetch(PDO::FETCH_ASSOC);
-        $testCount = $row['cnt'];
+        $stmt = $db->prepare("SELECT COUNT(*) as cnt FROM modx_test_tests");
+        $testCount = 0;
+        if ($stmt->execute()) {
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            $testCount = intval($row['cnt']);
+        }
 
         // Проверить количество уровней
-        $result = $db->query("SELECT COUNT(*) as cnt FROM modx_test_level_config");
-        $row = $result->fetch(PDO::FETCH_ASSOC);
-        $levelCount = $row['cnt'];
+        $stmt = $db->prepare("SELECT COUNT(*) as cnt FROM modx_test_level_config");
+        $levelCount = 0;
+        if ($stmt->execute()) {
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            $levelCount = intval($row['cnt']);
+        }
 
         $this->addSuccess("  ✓ Ресурсов создано/найдено");
         $this->addSuccess("  ✓ Найдено {$testCount} тестов в БД");
