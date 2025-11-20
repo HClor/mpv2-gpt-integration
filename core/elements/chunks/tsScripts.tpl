@@ -5,7 +5,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 <!-- Test System JS -->
-<script src="/assets/components/testsystem/js/tsrunner.js"></script>
+<!-- ПРИМЕЧАНИЕ: tsrunner.js подключается в сниппете testRunner.php, не подключать здесь! -->
 <script src="/assets/components/testsystem/js/mytests.js"></script>
 <script src="/assets/components/testsystem/js/knowledge-areas.js"></script>
 
