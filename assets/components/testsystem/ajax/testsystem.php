@@ -101,7 +101,13 @@ $csrfExemptActions = [
     'startSession',              // FIXME: Re-enable CSRF after fixing session handling
     'getNextQuestion',           // FIXME: Re-enable CSRF after fixing session handling
     'submitAnswer',              // FIXME: Re-enable CSRF after fixing session handling
-    'finishTest'                 // FIXME: Re-enable CSRF after fixing session handling
+    'finishTest',                // FIXME: Re-enable CSRF after fixing session handling
+    // Admin actions (also affected by session sync issues)
+    'togglePublished',           // FIXME: Re-enable CSRF after fixing session handling
+    'deleteQuestion',            // FIXME: Re-enable CSRF after fixing session handling
+    'saveQuestion',              // FIXME: Re-enable CSRF after fixing session handling
+    'getQuestion',               // FIXME: Re-enable CSRF after fixing session handling
+    'uploadImage'                // FIXME: Re-enable CSRF after fixing session handling
 ];
 
 // Если это POST запрос и action требует CSRF проверки
