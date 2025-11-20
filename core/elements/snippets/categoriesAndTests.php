@@ -27,19 +27,19 @@ $cacheTTL = (int)$modx->getOption('testsystem.cache_ttl', null, 3600);
 $categories = $modx->cacheManager->get($cacheKey);
 
 if ($categories === null) {
-    // ИСПРАВЛЕНО: JOIN по resource_id вместо alias
+    // ИСПРАВЛЕНО: resource_id теперь хранит category_id, publication_status вместо is_public
     $sql = "
         SELECT
             c.id,
             c.name,
             COUNT(DISTINCT CASE
-                WHEN sc.published = 1 AND sc.deleted = 0
+                WHEN t.publication_status = 'public' AND t.is_active = 1
                 THEN t.id
             END) AS test_count
         FROM `{$Tcats}` c
-        LEFT JOIN `{$Ttests}` t ON t.category_id = c.id AND t.is_active = 1
-        LEFT JOIN `{$S}` sc ON sc.id = t.resource_id
+        LEFT JOIN `{$Ttests}` t ON t.resource_id = c.id
         GROUP BY c.id, c.name
+        HAVING test_count > 0
         ORDER BY c.sort_order
     ";
 
@@ -100,7 +100,7 @@ if (!$categoryId) {
         $html[] = '<p>' . htmlspecialchars($category['description'], ENT_QUOTES, 'UTF-8') . '</p>';
         $html[] = '</div>';
 
-        // ИСПРАВЛЕНО: JOIN по resource_id вместо alias + добавлен COUNT для устранения N+1
+        // ИСПРАВЛЕНО: resource_id = category_id, publication_status вместо is_public
         $sql = "
             SELECT
                 t.id,
@@ -109,19 +109,13 @@ if (!$categoryId) {
                 t.mode,
                 t.questions_per_session,
                 t.pass_score,
-                t.resource_id,
-                sc.id AS resource_id_check,
                 COUNT(q.id) AS question_count
             FROM `{$Ttests}` t
-            LEFT JOIN `{$S}` sc ON sc.id = t.resource_id
-                AND sc.published = 1
-                AND sc.deleted = 0
             LEFT JOIN `{$Tquestions}` q ON q.test_id = t.id
-            WHERE t.category_id = ?
+            WHERE t.resource_id = ?
+              AND t.publication_status = 'public'
               AND t.is_active = 1
-              AND t.resource_id IS NOT NULL
-              AND sc.id IS NOT NULL
-            GROUP BY t.id, t.title, t.description, t.mode, t.questions_per_session, t.pass_score, t.resource_id, sc.id
+            GROUP BY t.id, t.title, t.description, t.mode, t.questions_per_session, t.pass_score
             ORDER BY t.created_at DESC
         ";
 
@@ -139,12 +133,13 @@ if (!$categoryId) {
                 // Количество вопросов уже получено в основном запросе (N+1 исправлено)
                 $questionCount = (int)$test['question_count'];
 
-                // ИСПРАВЛЕНО: Используем resource_id из таблицы test_tests
-                $testUrl = htmlspecialchars($modx->makeUrl((int)$test['resource_id']), ENT_QUOTES, 'UTF-8');
-                
+                // ИСПРАВЛЕНО: URL на страницу test-run (ID 155) с параметром testId
+                $testRunPageId = 155; // ID страницы "Прохождение теста"
+                $testUrl = htmlspecialchars($modx->makeUrl($testRunPageId, '', ['testId' => $test['id']]), ENT_QUOTES, 'UTF-8');
+
                 // Если makeUrl вернул пустую строку, логируем проблему
                 if (empty($testUrl)) {
-                    $modx->log(modX::LOG_LEVEL_ERROR, "[categoriesAndTests] Empty URL for test ID={$test['id']}, resource_id={$test['resource_id']}");
+                    $modx->log(modX::LOG_LEVEL_ERROR, "[categoriesAndTests] Empty URL for test ID={$test['id']}");
                     $testUrl = '#'; // Временная заглушка
                 }
 
