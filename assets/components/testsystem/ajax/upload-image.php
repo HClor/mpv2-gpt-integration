@@ -22,16 +22,11 @@ if (!$modx->user->hasSessionContext('web')) {
     die(json_encode(['success' => false, 'message' => 'Not authorized']));
 }
 
-// CSRF Protection - TEMPORARY DISABLED due to session sync issues with MODX
-// FIXME: Re-enable CSRF after fixing session handling
-// FormData upload doesn't include csrf_token, and CsrfProtection uses PHP native $_SESSION
-// while MODX uses its own session system
-/*
+// CSRF Protection - восстановлено после исправления CsrfProtection для MODX
 $csrfToken = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? $_POST['csrf_token'] ?? null;
 if (!$csrfToken || !CsrfProtection::validateToken($csrfToken)) {
     die(json_encode(['success' => false, 'message' => 'CSRF token validation failed']));
 }
-*/
 
 // Проверка прав
 $userId = (int)$modx->user->get('id');
