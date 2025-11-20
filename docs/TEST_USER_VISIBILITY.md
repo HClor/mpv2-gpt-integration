@@ -22,7 +22,12 @@ $prefix = $modx->getOption('table_prefix');
 echo "[1] ПРОВЕРКА ПОЛЬЗОВАТЕЛЯ ID 2\n";
 echo "────────────────────────────────────────────────────────────────\n";
 
-$stmt = $modx->query("SELECT id, username, email, active FROM modx_users WHERE id = " . (int)$userId);
+$stmt = $modx->query("
+    SELECT u.id, u.username, u.active, ua.email
+    FROM modx_users u
+    LEFT JOIN modx_user_attributes ua ON ua.internalKey = u.id
+    WHERE u.id = " . (int)$userId
+);
 
 if ($stmt === false) {
     echo "✗ Ошибка SQL\n";
@@ -36,7 +41,7 @@ if (!$user) {
     return;
 }
 
-printf("✓ Пользователь найден: %s (%s)\n", $user['username'], $user['email']);
+printf("✓ Пользователь найден: %s (%s)\n", $user['username'], $user['email'] ?? 'нет email');
 printf("  Статус: %s\n", $user['active'] ? 'Активен' : 'НЕАКТИВЕН!');
 
 // Шаг 2: Проверить группы пользователя
