@@ -1111,12 +1111,15 @@ async function addFavoritesViewToggle(questionId) {
 
 
     window.tsEditQuestion = function() {
+        console.log("tsEditQuestion called:", { canEdit, currentQuestionId, currentQuestionNumber });
+
         if (!canEdit) {
             alert("У вас нет прав для редактирования");
             return;
         }
-        
+
         if (!currentQuestionId) {
+            console.error("❌ currentQuestionId is null/undefined!");
             alert("Вопрос не загружен");
             return;
         }
@@ -1430,7 +1433,9 @@ async function addFavoritesViewToggle(questionId) {
             currentQuestionId = result.data.question.id;
             currentQuestionType = result.data.question.question_type;
             currentQuestionNumber++;
-            
+
+            console.log("✅ Question loaded, currentQuestionId set to:", currentQuestionId);
+
             displayQuestion(result.data.question, result.data.answers);
             
             // КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ: Управляем кнопками ПЕРЕД setupAnswerListeners
