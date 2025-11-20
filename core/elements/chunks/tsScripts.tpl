@@ -9,6 +9,32 @@
 <script src="/assets/components/testsystem/js/mytests.js"></script>
 <script src="/assets/components/testsystem/js/knowledge-areas.js"></script>
 
+<!-- Sprint 9: Учебные материалы -->
+<script src="/assets/components/testsystem/js/learning-materials.js"></script>
+
+<!-- Sprint 10: Права доступа -->
+<script src="/assets/components/testsystem/js/category-permissions.js"></script>
+
+<!-- Sprint 11: Траектории обучения -->
+<script src="/assets/components/testsystem/js/learning-paths.js"></script>
+
+<!-- Sprint 12: Расширенные типы вопросов -->
+<script src="/assets/components/testsystem/js/special-question-types.js"></script>
+
+<!-- Sprint 13: Геймификация -->
+<script src="/assets/components/testsystem/js/gamification.js"></script>
+
+<!-- Sprint 14: Уведомления -->
+<script src="/assets/components/testsystem/js/notifications.js"></script>
+
+<!-- Sprint 15: Аналитика -->
+<script src="/assets/components/testsystem/js/analytics.js"></script>
+
+<!-- Sprint 16: Сертификаты -->
+<script src="/assets/components/testsystem/js/certificates.js"></script>
+
+
+
 <!-- Дополнительный JS из TV поля -->
 {$_modx->resource.jsTV}
 
