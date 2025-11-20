@@ -1,12 +1,14 @@
 <?php
 /**
- * CSRF Protection Class
+ * CSRF Protection Class for MODX
  *
  * Защита от Cross-Site Request Forgery атак
+ * ИСПРАВЛЕНО: Использует MODX сессии вместо PHP native $_SESSION
  *
  * @package TestSystem
- * @version 1.0
+ * @version 2.0
  * @created 2025-11-13
+ * @updated 2025-11-20 - переход на MODX сессии
  */
 
 class CsrfProtection {
@@ -21,24 +23,44 @@ class CsrfProtection {
     const TOKEN_LIFETIME = 7200;
 
     /**
+     * Получение объекта MODX
+     *
+     * @return modX
+     */
+    private static function getModx() {
+        global $modx;
+
+        if (!$modx instanceof modX) {
+            throw new Exception('MODX instance not found');
+        }
+
+        return $modx;
+    }
+
+    /**
      * Генерация нового CSRF токена
      *
      * @return string Сгенерированный токен
      */
     public static function generateToken() {
-        // Запускаем сессию если не запущена
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
+        $modx = self::getModx();
 
         // Генерируем криптографически стойкий токен
         $token = bin2hex(random_bytes(32));
 
-        // Сохраняем токен и время создания в сессии
-        $_SESSION[self::TOKEN_NAME] = [
+        // Сохраняем токен и время создания в MODX сессии
+        $sessionData = [
             'token' => $token,
             'created_at' => time()
         ];
+
+        // MODX хранит данные сессии в $_SESSION, но управляет ими сам
+        // Используем прямое обращение к $_SESSION для совместимости
+        if (!isset($_SESSION)) {
+            @session_start();
+        }
+
+        $_SESSION[self::TOKEN_NAME] = $sessionData;
 
         return $token;
     }
@@ -50,12 +72,18 @@ class CsrfProtection {
      * @return bool True если токен валиден
      */
     public static function validateToken($token) {
-        // Запускаем сессию если не запущена
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
+        $modx = self::getModx();
+
+        // Проверяем что пользователь имеет активную web сессию
+        if (!$modx->user->hasSessionContext('web')) {
+            return false;
         }
 
         // Проверяем наличие токена в сессии
+        if (!isset($_SESSION)) {
+            @session_start();
+        }
+
         if (!isset($_SESSION[self::TOKEN_NAME])) {
             return false;
         }
@@ -72,12 +100,6 @@ class CsrfProtection {
         // Используем hash_equals для защиты от timing attacks
         $isValid = hash_equals($sessionData['token'], $token);
 
-        // Опционально: можно регенерировать токен после каждой проверки (one-time token)
-        // Для удобства оставляем токен живым в течение сессии
-        // if ($isValid) {
-        //     self::clearToken();
-        // }
-
         return $isValid;
     }
 
@@ -87,8 +109,10 @@ class CsrfProtection {
      * @return string Токен
      */
     public static function getToken() {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
+        $modx = self::getModx();
+
+        if (!isset($_SESSION)) {
+            @session_start();
         }
 
         // Если токен существует и не истек, возвращаем его
@@ -128,8 +152,8 @@ class CsrfProtection {
      * Очистка токена из сессии
      */
     public static function clearToken() {
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
+        if (!isset($_SESSION)) {
+            @session_start();
         }
 
         unset($_SESSION[self::TOKEN_NAME]);

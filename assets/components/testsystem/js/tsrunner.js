@@ -852,10 +852,16 @@ async function addFavoritesViewToggle(questionId) {
             
             const formData = new FormData();
             formData.append('image', file);
-            
+
+            // Добавляем CSRF токен
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+            if (csrfToken) {
+                formData.append('csrf_token', csrfToken);
+            }
+
             uploadBtn.disabled = true;
             uploadBtn.textContent = 'Загрузка...';
-            
+
             try {
                 const response = await fetch('/assets/components/testsystem/ajax/upload-image.php', {
                     method: 'POST',
@@ -955,11 +961,17 @@ async function addFavoritesViewToggle(questionId) {
             
             const formData = new FormData();
             formData.append('image', file);
-            
+
+            // Добавляем CSRF токен
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+            if (csrfToken) {
+                formData.append('csrf_token', csrfToken);
+            }
+
             try {
                 const range = quill.getSelection(true);
                 quill.insertText(range.index, 'Загрузка...', 'user');
-                
+
                 const response = await fetch('/assets/components/testsystem/ajax/upload-image.php', {
                     method: 'POST',
                     body: formData
@@ -2419,10 +2431,16 @@ async function addFavoritesViewToggle(questionId) {
                 
                 const formData = new FormData();
                 formData.append('image', file);
-                
+
+                // Добавляем CSRF токен
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+                if (csrfToken) {
+                    formData.append('csrf_token', csrfToken);
+                }
+
                 uploadBtn.disabled = true;
                 uploadBtn.textContent = 'Загрузка...';
-                
+
                 try {
                     const response = await fetch('/assets/components/testsystem/ajax/upload-image.php', {
                         method: 'POST',
@@ -2481,11 +2499,17 @@ async function addFavoritesViewToggle(questionId) {
             
             const formData = new FormData();
             formData.append('image', file);
-            
+
+            // Добавляем CSRF токен
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+            if (csrfToken) {
+                formData.append('csrf_token', csrfToken);
+            }
+
             try {
                 const range = quill.getSelection(true);
                 quill.insertText(range.index, 'Загрузка...', 'user');
-                
+
                 const response = await fetch('/assets/components/testsystem/ajax/upload-image.php', {
                     method: 'POST',
                     body: formData

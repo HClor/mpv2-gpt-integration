@@ -96,18 +96,7 @@ $csrfExemptActions = [
     'checkSiteSettings',         // Проверка настроек сайта
     'getParentUri',              // Получение URI родителя
     'getPublicTestBySlug',       // Публичный тест по slug
-    'getQuestionAnswers',        // Ответы на вопрос (для просмотра)
-    // TEMPORARY: CSRF validation has session sync issues with MODX
-    'startSession',              // FIXME: Re-enable CSRF after fixing session handling
-    'getNextQuestion',           // FIXME: Re-enable CSRF after fixing session handling
-    'submitAnswer',              // FIXME: Re-enable CSRF after fixing session handling
-    'finishTest',                // FIXME: Re-enable CSRF after fixing session handling
-    // Admin actions (also affected by session sync issues)
-    'togglePublished',           // FIXME: Re-enable CSRF after fixing session handling
-    'deleteQuestion',            // FIXME: Re-enable CSRF after fixing session handling
-    'updateQuestion',            // FIXME: Re-enable CSRF after fixing session handling (actual action name)
-    'getQuestion',               // FIXME: Re-enable CSRF after fixing session handling
-    'uploadImage'                // FIXME: Re-enable CSRF after fixing session handling
+    'getQuestionAnswers'         // Ответы на вопрос (для просмотра)
 ];
 
 // Если это POST запрос и action требует CSRF проверки
