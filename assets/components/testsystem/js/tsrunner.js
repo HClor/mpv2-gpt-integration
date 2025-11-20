@@ -1389,6 +1389,8 @@ async function addFavoritesViewToggle(questionId) {
             }
 
             console.log("DEBUG: getNextQuestion result:", result);
+            console.log("DEBUG: result.data:", result.data);
+            console.log("DEBUG: result.data.question:", result.data?.question);
 
             if (result.data && result.data.finished) {
                 finishTest();
@@ -1397,6 +1399,9 @@ async function addFavoritesViewToggle(questionId) {
 
             if (!result.data || !result.data.question) {
                 console.error("❌ Invalid response structure:", result);
+                console.error("❌ result.data exists?", !!result.data);
+                console.error("❌ result.data.question exists?", !!result.data?.question);
+                console.error("❌ Keys in result.data:", result.data ? Object.keys(result.data) : 'N/A');
                 alert("Ошибка: неверная структура ответа от сервера");
                 return;
             }
