@@ -544,6 +544,95 @@ grep -n "is_public\|category_id\|tc\.title" your_snippet.php
 
 ---
 
+## ❌ ПРОБЛЕМА: Созданные тесты не отображаются на странице [[!categoriesAndTests]]
+
+**Дата:** 2025-11-20
+**Статус:** ✅ ИСПРАВЛЕНО
+
+### Описание проблемы
+
+После создания теста через форму `/add-test` (сниппет `[[!addTestForm]]`), тест не отображался на странице тестов, использующей сниппет `[[!categoriesAndTests]]`.
+
+### Симптомы
+
+1. Тест успешно создается в БД (видно в таблице `modx_test_tests`)
+2. При открытии страницы Тесты (ID 35) `[[!categoriesAndTests]]` тест не отображается
+3. Категория показывается, но список тестов пустой
+
+### Причина
+
+**addTestForm.php** (строки 109-114) не устанавливал поле `publication_status` при создании теста:
+
+```php
+// ❌ БЫЛО (без publication_status):
+INSERT INTO modx_test_tests
+(resource_id, title, description, created_by, mode, time_limit, pass_score,
+ questions_per_session, randomize_questions, randomize_answers, is_active, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 1, NOW())
+```
+
+**categoriesAndTests.php** (строки 36, 116) показывает только тесты с `publication_status = 'public'`:
+
+```php
+WHERE t.publication_status = 'public' AND t.is_active = 1
+```
+
+Результат: новые тесты получали `publication_status = NULL` (или значение по умолчанию), поэтому не попадали в выборку.
+
+### Решение
+
+**Файл:** `core/elements/snippets/addTestForm.php`
+**Коммит:** `d57b2cc` - "Add publication_status to test creation"
+
+```php
+// ✅ ИСПРАВЛЕНО (с publication_status):
+INSERT INTO modx_test_tests
+(resource_id, title, description, created_by, mode, time_limit, pass_score,
+ questions_per_session, randomize_questions, randomize_answers, is_active, publication_status, created_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 1, 'public', NOW())
+```
+
+### Исправление существующих тестов
+
+Для тестов, созданных ДО этого исправления, выполните SQL скрипт:
+
+**Файл:** `fix_existing_tests_publication_status.sql`
+
+```sql
+-- 1. Проверка затронутых тестов
+SELECT id, title, publication_status, is_active
+FROM modx_test_tests
+WHERE publication_status IS NULL OR publication_status != 'public';
+
+-- 2. Обновление (установка publication_status='public')
+UPDATE modx_test_tests
+SET publication_status = 'public'
+WHERE is_active = 1
+  AND (publication_status IS NULL OR publication_status != 'public');
+
+-- 3. Проверка результата
+SELECT publication_status, COUNT(*) as count
+FROM modx_test_tests
+GROUP BY publication_status;
+```
+
+### Проверка исправления
+
+После применения исправления:
+
+1. Создайте новый тест через `/add-test`
+2. Перейдите на страницу Тесты (ID 35)
+3. Выберите категорию
+4. Тест должен отображаться в списке
+
+### Связанные файлы
+
+- `core/elements/snippets/addTestForm.php` - форма создания теста
+- `core/elements/snippets/categoriesAndTests.php` - отображение списка тестов
+- `fix_existing_tests_publication_status.sql` - SQL для исправления старых тестов
+
+---
+
 ### 📚 Связанные документы
 
 - **docs/DATABASE_SCHEMA.md** - полная схема базы данных LMS
@@ -561,4 +650,4 @@ grep -n "is_public\|category_id\|tc\.title" your_snippet.php
 
 ---
 
-**Последнее обновление:** 2025-11-20 15:30 (добавлена секция "Полная проверка сниппетов")
+**Последнее обновление:** 2025-11-20 (добавлена проблема publication_status и её решение)
