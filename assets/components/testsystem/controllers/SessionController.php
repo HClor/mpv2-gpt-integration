@@ -149,7 +149,14 @@ class SessionController extends BaseController
         $isKnowledgeArea = ((int)$session['test_id'] === -1);
         $questionData = $this->getQuestionData($nextQuestionId, $isKnowledgeArea, (bool)$session['randomize_answers']);
 
-        return $this->success($questionData);
+        // ИСПРАВЛЕНО: Разделяем вопрос и ответы в правильную структуру
+        $answers = $questionData['answers'];
+        unset($questionData['answers']);
+
+        return $this->success([
+            'question' => $questionData,
+            'answers' => $answers
+        ]);
     }
 
     /**

@@ -22,6 +22,7 @@ $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $offset = ($page - 1) * $limit;
 
 // Получаем историю тестов
+// ИСПРАВЛЕНО: resource_id вместо category_id, tc.name вместо tc.title
 $sql = "
     SELECT
         ts.id as session_id,
@@ -33,11 +34,11 @@ $sql = "
         ts.time_spent,
         tt.title as test_title,
         tc.id as category_id,
-        tc.title as category_title,
+        tc.name as category_title,
         tt.passing_score
     FROM `{$prefix}test_sessions` ts
     LEFT JOIN `{$prefix}test_tests` tt ON tt.id = ts.test_id
-    LEFT JOIN `{$prefix}test_categories` tc ON tc.id = tt.category_id
+    LEFT JOIN `{$prefix}test_categories` tc ON tc.id = tt.resource_id
     WHERE ts.user_id = " . (int)$userId . " AND ts.status = 'completed'
     ORDER BY ts.completed_at DESC
     LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
