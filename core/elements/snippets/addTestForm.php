@@ -25,6 +25,8 @@ try {
     </div>";
 }
 
+$prefix = $modx->getOption('table_prefix');
+$currentUserId = (int)$modx->user->get('id');
 $errors = [];
 
 // ============================================
@@ -92,110 +94,61 @@ if ($_POST && isset($_POST["add_test"])) {
     }
     
     if (empty($errors)) {
-        $categoryFolder = $modx->getObject('modResource', $parentId);
-        
-        if (!$categoryFolder) {
-            $errors[] = "Папка-категория с ID {$parentId} не найдена";
-            $modx->log(modX::LOG_LEVEL_ERROR, "[addTestForm] Parent folder not found: ID={$parentId}");
+        // ИСПРАВЛЕНО: Проверяем что категория существует в test_categories
+        $stmt = $modx->prepare("SELECT id FROM `{$prefix}test_categories` WHERE id = ?");
+        $stmt->execute([$parentId]);
+        $categoryExists = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$categoryExists) {
+            $errors[] = "Категория с ID {$parentId} не найдена";
+            $modx->log(modX::LOG_LEVEL_ERROR, "[addTestForm] Category not found: ID={$parentId}");
         } else {
-            $parentContext = $categoryFolder->get('context_key');
-            
-            $testResource = $modx->newObject('modResource');
-            $testResource->set('pagetitle', $title);
-            $testResource->set('longtitle', $description);
-            $testResource->set('template', 3);
-            $testResource->set('parent', $categoryFolder->id);
-            $testResource->set('context_key', $parentContext);
-            $testResource->set('published', 1);
-            $testResource->set('hidemenu', 0);
-            $testResource->set('content', '[[!testRunner]]');
-            $testResource->set('alias', '');
-            
-            if ($testResource->save()) {
-                $resourceId = $testResource->get('id');
-                
-                $stmt = $modx->prepare("
-                    INSERT INTO `{$prefix}test_tests` 
-                    (resource_id, title, description, created_by, mode, time_limit, pass_score, 
-                     questions_per_session, randomize_questions, randomize_answers, is_active, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 1, NOW())
-                ");                
-                
-                
-                // ИСПРАВЛЕНО: Добавлен $currentUserId
-                if ($stmt->execute([
-                    $resourceId, 
-                    $title, 
-                    $description, 
-                    $currentUserId,  // КРИТИЧНО: владелец теста
-                    $mode, 
-                    $timeLimit, 
-                    $passScore, 
-                    $questionsPerSession
-                    ])) {                
-                    $newTestId = $modx->lastInsertId();
-                    
-                    $testResource->set('alias', 'test-' . $newTestId);
-                    if ($testResource->save()) {
-                        $modx->log(modX::LOG_LEVEL_INFO, "[addTestForm] Test created: ID={$newTestId}, Resource={$resourceId}");
-                        
-                        // Очистка кеша
-                        $modx->cacheManager->refresh([
-                            'db' => [],
-                            'auto_publish' => ['contexts' => ['web']],
-                            'context_settings' => ['contexts' => ['web']],
-                            'resource' => ['contexts' => ['web']],
-                            'menu' => [],
-                            'scripts' => [],
-                        ]);
-                        
-                        $modx->cacheManager->delete($resourceId, [xPDO::OPT_CACHE_KEY => 'resource']);
-                        $modx->cacheManager->delete($categoryFolder->id, [xPDO::OPT_CACHE_KEY => 'resource']);
-                        
-                        $parentIds = $modx->getParentIds($resourceId, 10, ['context' => 'web']);
-                        foreach ($parentIds as $pid) {
-                            $modx->cacheManager->delete($pid, [xPDO::OPT_CACHE_KEY => 'resource']);
-                        }
-                        
-                        $cacheDir = MODX_CORE_PATH . 'cache/';
-                        if (is_dir($cacheDir)) {
-                            $modx->cacheManager->deleteTree($cacheDir, [
-                                'deleteTop' => false,
-                                'skipDirs' => false,
-                                'extensions' => ['.cache.php', '.msg.php']
-                            ]);
-                        }
-                        
-                        // Редирект на страницу импорта
-                        $params = ['test_id' => $newTestId];
-                        if ($uploadedFilePath) {
-                            $params['file'] = $uploadedFilePath;
-                        }
-                        
-                        $importUrl = $modx->makeUrl($IMPORT_PAGE_ID, '', $params);
-                        
-                        if (empty($importUrl)) {
-                            $baseUrl = rtrim($modx->getOption('site_url'), '/');
-                            $importUrl = $baseUrl . '/' . http_build_query($params);
-                        }
-                        
-                        $modx->log(modX::LOG_LEVEL_INFO, "[addTestForm] Redirecting to: {$importUrl}");
-                        
-                        $modx->sendRedirect($importUrl);
-                        exit;
-                    } else {
-                        $errors[] = "Ошибка при обновлении alias ресурса";
-                        $modx->log(modX::LOG_LEVEL_ERROR, "[addTestForm] Failed to update alias");
-                    }
-                } else {
-                    $testResource->remove();
-                    $errorInfo = $stmt->errorInfo();
-                    $errors[] = "Ошибка при создании теста в БД: " . $errorInfo[2];
-                    $modx->log(modX::LOG_LEVEL_ERROR, "[addTestForm] Failed to create test: " . print_r($errorInfo, true));
+            // ИСПРАВЛЕНО: Создаём тест БЕЗ MODX ресурса, только запись в БД
+            // Тесты отображаются через /test-run?testId=X
+
+            $stmt = $modx->prepare("
+                INSERT INTO `{$prefix}test_tests`
+                (resource_id, title, description, created_by, mode, time_limit, pass_score,
+                 questions_per_session, randomize_questions, randomize_answers, is_active, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 1, NOW())
+            ");
+
+            // resource_id = category_id (НЕ ID страницы MODX!)
+            if ($stmt->execute([
+                $parentId,  // resource_id = category_id
+                $title,
+                $description,
+                $currentUserId,  // КРИТИЧНО: владелец теста
+                $mode,
+                $timeLimit,
+                $passScore,
+                $questionsPerSession
+                ])) {
+                $newTestId = $modx->lastInsertId();
+
+                $modx->log(modX::LOG_LEVEL_INFO, "[addTestForm] Test created: ID={$newTestId}, Category={$parentId}");
+
+                // Редирект на страницу импорта
+                $params = ['test_id' => $newTestId];
+                if ($uploadedFilePath) {
+                    $params['file'] = $uploadedFilePath;
                 }
+
+                $importUrl = $modx->makeUrl($IMPORT_PAGE_ID, '', $params);
+
+                if (empty($importUrl)) {
+                    $baseUrl = rtrim($modx->getOption('site_url'), '/');
+                    $importUrl = $baseUrl . '/import-csv?' . http_build_query($params);
+                }
+
+                $modx->log(modX::LOG_LEVEL_INFO, "[addTestForm] Redirecting to: {$importUrl}");
+
+                $modx->sendRedirect($importUrl);
+                exit;
             } else {
-                $errors[] = "Ошибка при создании ресурса";
-                $modx->log(modX::LOG_LEVEL_ERROR, "[addTestForm] Failed to create resource");
+                $errorInfo = $stmt->errorInfo();
+                $errors[] = "Ошибка при создании теста в БД: " . $errorInfo[2];
+                $modx->log(modX::LOG_LEVEL_ERROR, "[addTestForm] Failed to create test: " . print_r($errorInfo, true));
             }
         }
     }
@@ -203,15 +156,13 @@ if ($_POST && isset($_POST["add_test"])) {
 }
 
 // ============================================
-// ПОЛУЧЕНИЕ КАТЕГОРИЙ (ПАПОК)
+// ПОЛУЧЕНИЕ КАТЕГОРИЙ
 // ============================================
-$sql = "SELECT id, pagetitle as name 
-        FROM `{$prefix}site_content` 
-        WHERE parent = {$TESTS_ROOT_ID}
-        AND isfolder = 1 
-        AND deleted = 0
-        AND published = 1
-        ORDER BY menuindex";
+// ИСПРАВЛЕНО: Берем категории из test_categories, а не из site_content
+$sql = "SELECT id, name
+        FROM `{$prefix}test_categories`
+        WHERE 1=1
+        ORDER BY sort_order, name";
 $stmt = $modx->query($sql);
 $categories = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
 
