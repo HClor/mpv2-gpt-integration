@@ -9,7 +9,7 @@ $stmt = $modx->query("
         c.description,
         COUNT(t.id) as test_count
     FROM modx_test_categories c
-    LEFT JOIN modx_test_tests t ON t.category_id = c.id AND t.is_active = 1
+    LEFT JOIN modx_test_tests t ON t.resource_id = c.id AND t.is_active = 1
     GROUP BY c.id
     ORDER BY c.sort_order
 ");
