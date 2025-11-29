@@ -77,13 +77,8 @@
                 {else}
                     <!-- Гость -->
                     <li class="nav-item">
-                        <a class="nav-link" href="{$_modx->makeUrl(1006)}">
-                            <i class="fas fa-sign-in-alt"></i> Вход
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="btn btn-primary ms-2" href="{$_modx->makeUrl(1007)}">
-                            <i class="fas fa-user-plus"></i> Регистрация
+                        <a class="btn btn-primary ms-2" href="{$_modx->makeUrl(24)}">
+                            <i class="fas fa-sign-in-alt"></i> Вход / Регистрация
                         </a>
                     </li>
                 {/if}
