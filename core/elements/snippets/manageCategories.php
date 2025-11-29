@@ -36,13 +36,14 @@ if ($_POST && isset($_POST["add_category"])) {
     }
 
     if (empty($errors)) {
+        $prefix = $modx->getOption('table_prefix');
         $stmt = $modx->prepare("
-            INSERT INTO modx_test_categories (name, description, sort_order) 
+            INSERT INTO {$prefix}test_categories (name, description, sort_order)
             VALUES (?, ?, ?)
         ");
-        
+
         if ($stmt->execute([$name, $description, $sortOrder])) {
-            $newCatId = $modx->pdo->lastInsertId();
+            $newCatId = $modx->lastInsertId();
             
             // /* TS AUTO FOLDER v1 */ Автосоздание папки для категории
             $testsContainer = $modx->getObject('modResource', ['alias' => 'tests']);
@@ -86,8 +87,9 @@ if ($_POST && isset($_POST["edit_category"])) {
     }
 
     if (empty($errors) && $catId) {
+        $prefix = $modx->getOption('table_prefix');
         $stmt = $modx->prepare("
-            UPDATE modx_test_categories 
+            UPDATE {$prefix}test_categories
             SET name = ?, description = ?, sort_order = ?
             WHERE id = ?
         ");
@@ -111,15 +113,16 @@ if ($_POST && isset($_POST["delete_category"])) {
     $catId = (int)($_POST["category_id"] ?? 0);
 
     if ($catId) {
+        $prefix = $modx->getOption('table_prefix');
         // Проверяем есть ли тесты в категории
-        $stmt = $modx->prepare("SELECT COUNT(*) FROM modx_test_tests WHERE category_id = ?");
+        $stmt = $modx->prepare("SELECT COUNT(*) FROM {$prefix}test_tests WHERE category_id = ?");
         $stmt->execute([$catId]);
         $testCount = $stmt->fetchColumn();
-        
+
         if ($testCount > 0) {
             $errors[] = "Нельзя удалить категорию, в которой есть тесты ($testCount шт.)";
         } else {
-            $stmt = $modx->prepare("DELETE FROM modx_test_categories WHERE id = ?");
+            $stmt = $modx->prepare("DELETE FROM {$prefix}test_categories WHERE id = ?");
             if ($stmt->execute([$catId])) {
                 $success = "Категория успешно удалена!";
                 $modx->cacheManager->refresh();
@@ -132,15 +135,16 @@ if ($_POST && isset($_POST["delete_category"])) {
 }
 
 // Получаем все категории
+$prefix = $modx->getOption('table_prefix');
 $stmt = $modx->query("
-    SELECT 
+    SELECT
         c.id,
         c.name,
         c.description,
         c.sort_order,
         COUNT(t.id) as test_count
-    FROM modx_test_categories c
-    LEFT JOIN modx_test_tests t ON t.category_id = c.id
+    FROM {$prefix}test_categories c
+    LEFT JOIN {$prefix}test_tests t ON t.category_id = c.id
     GROUP BY c.id
     ORDER BY c.sort_order, c.name
 ");
