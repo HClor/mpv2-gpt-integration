@@ -36,7 +36,8 @@ class PermissionHelper
         $isExpert = in_array(Config::getGroup('experts'), $userGroups, true);
 
         // Проверка на админа (superadmin или LMS Admins group)
-        $isAdmin = in_array(Config::getGroup('admins'), $userGroups, true) || $userId === 1;
+        // ФИКС: User ID 2 - админ фронтенда, User ID 1 - админ бэкенда
+        $isAdmin = in_array(Config::getGroup('admins'), $userGroups, true) || $userId === 1 || $userId === 2;
 
         return [
             'isAdmin' => $isAdmin,
@@ -63,7 +64,8 @@ class PermissionHelper
         }
 
         // Superadmin всегда может
-        if ($userId === 1) {
+        // ФИКС: User ID 2 - админ фронтенда, User ID 1 - админ бэкенда
+        if ($userId === 1 || $userId === 2) {
             return true;
         }
 
@@ -236,7 +238,9 @@ class PermissionHelper
     {
         $userId = (int)$modx->user->get('id');
         $userGroups = $modx->user->getUserGroupNames();
-        return ($userId === 1) || in_array(Config::getGroup('admins'), $userGroups, true);
+
+        // ФИКС: User ID 2 - админ фронтенда, User ID 1 - админ бэкенда
+        return ($userId === 1 || $userId === 2) || in_array(Config::getGroup('admins'), $userGroups, true);
     }
 
     /**
