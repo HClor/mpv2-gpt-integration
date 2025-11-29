@@ -6,10 +6,11 @@
  * ИСПРАВЛЕНО: Использует MODX сессии через $_SESSION напрямую
  *
  * @package TestSystem
- * @version 2.1
+ * @version 2.2
  * @created 2025-11-13
  * @updated 2025-11-20 - переход на MODX сессии (v2.0)
  * @updated 2025-11-20 - убран session_start(), используем только $_SESSION (v2.1)
+ * @updated 2025-11-29 - убрана проверка hasSessionContext для неавторизованных (v2.2)
  */
 
 class CsrfProtection {
@@ -71,10 +72,9 @@ class CsrfProtection {
     public static function validateToken($token) {
         $modx = self::getModx();
 
-        // Проверяем что пользователь имеет активную web сессию
-        if (!$modx->user->hasSessionContext('web')) {
-            return false;
-        }
+        // ИСПРАВЛЕНО: Убрана проверка hasSessionContext('web')
+        // CSRF защита должна работать и для неавторизованных пользователей!
+        // Форма входа используется именно неавторизованными пользователями.
 
         // Проверяем наличие токена в сессии
         // MODX уже инициализировал $_SESSION, просто проверяем
