@@ -168,7 +168,7 @@ class LearningMaterialService
     }
 
     /**
-     * Получение списка материалов
+     * Получение списка материалов (MODX ресурсы с template=6)
      *
      * @param modX $modx
      * @param array $filters
@@ -178,58 +178,52 @@ class LearningMaterialService
     {
         $prefix = $modx->getOption('table_prefix', null, 'modx_');
 
-        $where = ['1=1'];
-        $params = [];
+        $templateId = 6; // Template "LMS Bootstrap 5 - учебные материалы"
+        $parentId = $filters['parent_id'] ?? 0;
 
-        if (isset($filters['category_id'])) {
-            $where[] = 'm.category_id = ?';
-            $params[] = $filters['category_id'];
+        $sql = "
+            SELECT
+                id, pagetitle, longtitle, description, introtext,
+                parent, createdby, createdon, publishedon, published, alias
+            FROM {$prefix}site_content
+            WHERE template = ?
+                AND deleted = 0
+        ";
+
+        $params = [$templateId];
+
+        if ($parentId > 0) {
+            $sql .= " AND parent = ?";
+            $params[] = $parentId;
         }
 
-        if (isset($filters['status'])) {
-            $where[] = 'm.status = ?';
-            $params[] = $filters['status'];
-        }
-
-        if (isset($filters['content_type'])) {
-            $where[] = 'm.content_type = ?';
-            $params[] = $filters['content_type'];
-        }
-
-        if (isset($filters['created_by'])) {
-            $where[] = 'm.created_by = ?';
-            $params[] = $filters['created_by'];
-        }
-
-        if (isset($filters['search'])) {
-            $where[] = '(m.title LIKE ? OR m.description LIKE ?)';
-            $searchTerm = '%' . $filters['search'] . '%';
-            $params[] = $searchTerm;
-            $params[] = $searchTerm;
-        }
-
-        $orderBy = $filters['order_by'] ?? 'm.sort_order ASC, m.created_at DESC';
-        $limit = $filters['limit'] ?? 50;
-        $offset = $filters['offset'] ?? 0;
-
-        $sql = "SELECT m.*, u.username as author_name,
-                       c.name as category_name,
-                       (SELECT COUNT(*) FROM {$prefix}test_material_progress
-                        WHERE material_id = m.id AND status = 'completed') as completions_count
-                FROM {$prefix}test_learning_materials m
-                LEFT JOIN {$prefix}users u ON u.id = m.created_by
-                LEFT JOIN {$prefix}test_categories c ON c.id = m.category_id
-                WHERE " . implode(' AND ', $where) . "
-                ORDER BY {$orderBy}
-                LIMIT ? OFFSET ?";
-
-        $params[] = (int)$limit;
-        $params[] = (int)$offset;
+        $sql .= " ORDER BY menuindex ASC, createdon DESC";
 
         $stmt = $modx->prepare($sql);
         $stmt->execute($params);
+        $materials = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // Проверяем права редактирования (только для авторизованных)
+        require_once MODX_CORE_PATH . 'components/testsystem/helpers/PermissionHelper.php';
+
+        $isAuthenticated = PermissionHelper::isAuthenticated($modx);
+        $userId = $isAuthenticated ? PermissionHelper::getCurrentUserId($modx) : 0;
+        $isAdmin = $isAuthenticated ? PermissionHelper::isAdmin($modx) : false;
+
+        foreach ($materials as &$material) {
+            $material['can_edit'] = $isAuthenticated &&
+                ((int)$material['createdby'] === $userId || $isAdmin);
+
+            // Генерируем URL
+            $url = $modx->makeUrl($material['id']);
+            if (empty($url)) {
+                $material['url'] = $modx->getOption('site_url') . $material['alias'];
+            } else {
+                $material['url'] = $url;
+            }
+        }
+
+        return $materials;
     }
 
     /**

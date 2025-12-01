@@ -28,6 +28,22 @@ $modx->getService('error','error.modError');
 // Подключаем bootstrap для автозагрузки классов безопасности
 require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
 
+// Подключаем сервисы
+require_once MODX_CORE_PATH . 'components/testsystem/services/AccessService.php';
+require_once MODX_CORE_PATH . 'components/testsystem/services/AnalyticsService.php';
+require_once MODX_CORE_PATH . 'components/testsystem/services/AuthService.php';
+require_once MODX_CORE_PATH . 'components/testsystem/services/CategoryPermissionService.php';
+require_once MODX_CORE_PATH . 'components/testsystem/services/CertificateService.php';
+require_once MODX_CORE_PATH . 'components/testsystem/services/DataIntegrityService.php';
+require_once MODX_CORE_PATH . 'components/testsystem/services/GamificationService.php';
+require_once MODX_CORE_PATH . 'components/testsystem/services/LearningMaterialService.php';
+require_once MODX_CORE_PATH . 'components/testsystem/services/LearningPathService.php';
+require_once MODX_CORE_PATH . 'components/testsystem/services/NotificationService.php';
+require_once MODX_CORE_PATH . 'components/testsystem/services/QuestionTypeService.php';
+require_once MODX_CORE_PATH . 'components/testsystem/services/ReportService.php';
+require_once MODX_CORE_PATH . 'components/testsystem/services/SessionService.php';
+require_once MODX_CORE_PATH . 'components/testsystem/services/TestService.php';
+
 // Подключаем контроллеры
 require_once dirname(__DIR__) . '/controllers/BaseController.php';
 require_once dirname(__DIR__) . '/controllers/SessionController.php';
