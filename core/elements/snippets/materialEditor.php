@@ -253,9 +253,15 @@ $output = <<<HTML
         saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Сохранение...';
 
         try {
+            const csrfToken = getCsrfToken();
+            const headers = { 'Content-Type': 'application/json' };
+            if (csrfToken) {
+                headers['X-CSRF-TOKEN'] = csrfToken;
+            }
+
             const response = await fetch(API_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: headers,
                 body: JSON.stringify({
                     action: 'saveMaterial',
                     data: {

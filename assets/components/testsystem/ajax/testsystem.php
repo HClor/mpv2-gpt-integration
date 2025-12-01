@@ -96,7 +96,8 @@ $csrfExemptActions = [
     'checkSiteSettings',         // Проверка настроек сайта
     'getParentUri',              // Получение URI родителя
     'getPublicTestBySlug',       // Публичный тест по slug
-    'getQuestionAnswers'         // Ответы на вопрос (для просмотра)
+    'getQuestionAnswers',        // Ответы на вопрос (для просмотра)
+    'getMaterialsList'           // Список учебных материалов (только чтение)
 ];
 
 // Если это POST запрос и action требует CSRF проверки
