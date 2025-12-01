@@ -157,7 +157,20 @@ if (empty($filteredIds)) {
         $output .= '<div class="row g-3">';
         
         foreach ($data['resources'] as $material) {
-            $viewUrl = $modx->makeUrl($material['id']) . '?view=learning';
+            // Генерируем URL с проверкой
+            $materialResource = $modx->getObject('modResource', $material['id']);
+            $viewUrl = '';
+            if ($materialResource) {
+                $url = $modx->makeUrl($material['id']);
+                if (empty($url)) {
+                    // Резервный вариант: генерируем URL вручную
+                    $alias = $materialResource->get('alias');
+                    $viewUrl = $modx->getOption('site_url') . $alias . '?view=learning';
+                } else {
+                    $viewUrl = $url . '?view=learning';
+                }
+            }
+
             $desc = $material['description'] ?: 'Изучайте материал в формате карточек';
             $descShort = mb_strlen($desc) > 100 ? mb_substr($desc, 0, 100) . '...' : $desc;
             
