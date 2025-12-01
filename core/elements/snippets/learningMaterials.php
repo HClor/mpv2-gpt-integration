@@ -10,20 +10,20 @@ $prefix = $modx->getOption('table_prefix');
 $tableTests = $prefix . 'test_tests';
 $tableQuestions = $prefix . 'test_questions';
 
-// ИСПРАВЛЕНИЕ: Получаем только тесты с вопросами is_learning = 1
+// ИСПРАВЛЕНИЕ: Получаем тесты с вопросами is_learning = 1 (test_id + resource_id)
 $stmt = $modx->prepare("
-    SELECT DISTINCT t.resource_id 
+    SELECT DISTINCT t.id AS test_id, t.resource_id, t.title
     FROM {$tableTests} t
     INNER JOIN {$tableQuestions} q ON q.test_id = t.id
-    WHERE t.is_active = 1 
+    WHERE t.is_active = 1
     AND t.resource_id IS NOT NULL
     AND q.is_learning = 1
     AND q.published = 1
 ");
 $stmt->execute();
-$learningResourceIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+$learningTests = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-if (empty($learningResourceIds)) {
+if (empty($learningTests)) {
     return '<div class="alert alert-info">
         <h5>Нет обучающих материалов</h5>
         <p>Добавьте вопросы в режим обучения, чтобы они отобразились здесь.</p>
@@ -32,8 +32,8 @@ if (empty($learningResourceIds)) {
 
 // Получаем категории с обучающими материалами
 $categoryStats = [];
-foreach ($learningResourceIds as $resId) {
-    $resource = $modx->getObject('modResource', $resId);
+foreach ($learningTests as $test) {
+    $resource = $modx->getObject('modResource', $test['resource_id']);
     if ($resource) {
         $parentId = $resource->get('parent');
         if (!isset($categoryStats[$parentId])) {
@@ -58,7 +58,7 @@ $output .= '<div class="list-group list-group-flush">';
 
 $currentUrl = $modx->makeUrl($modx->resource->id);
 $isAllActive = !$categoryId ? 'active' : '';
-$totalCount = count($learningResourceIds);
+$totalCount = count($learningTests);
 
 $output .= '<a href="' . $currentUrl . '" class="list-group-item list-group-item-action ' . $isAllActive . '">';
 $output .= '<div class="d-flex justify-content-between align-items-center">';
@@ -93,52 +93,52 @@ $output .= '<p class="lead text-muted">Изучайте материалы в у
 $output .= '</div>';
 
 // Фильтруем по категории
-$filteredIds = $learningResourceIds;
+$filteredTests = $learningTests;
 if ($categoryId > 0) {
-    $filteredIds = [];
-    foreach ($learningResourceIds as $resId) {
-        $res = $modx->getObject('modResource', $resId);
+    $filteredTests = [];
+    foreach ($learningTests as $test) {
+        $res = $modx->getObject('modResource', $test['resource_id']);
         if ($res && $res->get('parent') == $categoryId) {
-            $filteredIds[] = $resId;
+            $filteredTests[] = $test;
         }
     }
 }
 
-if (empty($filteredIds)) {
+if (empty($filteredTests)) {
     $output .= '<div class="alert alert-info">В этой категории нет материалов</div>';
 } else {
     // Группируем по родителям
     $byParent = [];
-    foreach ($filteredIds as $resId) {
-        $res = $modx->getObject('modResource', $resId);
+    foreach ($filteredTests as $test) {
+        $res = $modx->getObject('modResource', $test['resource_id']);
         if (!$res) continue;
-        
+
         $parentId = $res->get('parent');
         $parent = $modx->getObject('modResource', $parentId);
         $parentName = $parent ? $parent->get('pagetitle') : 'Без категории';
-        
+
         if (!isset($byParent[$parentName])) {
             $byParent[$parentName] = ['resources' => []];
         }
-        
-        // ИСПРАВЛЕНИЕ: Считаем только вопросы с is_learning = 1
+
+        // Считаем только вопросы с is_learning = 1 для этого теста
         $stmt = $modx->prepare("
-            SELECT COUNT(*) 
+            SELECT COUNT(*)
             FROM {$tableQuestions} q
-            JOIN {$tableTests} t ON t.id = q.test_id
-            WHERE t.resource_id = ? 
-            AND q.is_learning = 1 
+            WHERE q.test_id = ?
+            AND q.is_learning = 1
             AND q.published = 1
         ");
-        $stmt->execute([$resId]);
+        $stmt->execute([$test['test_id']]);
         $questionsCount = (int)$stmt->fetchColumn();
-        
+
         // Пропускаем если нет обучающих вопросов
         if ($questionsCount === 0) continue;
-        
+
         $byParent[$parentName]['resources'][] = [
-            'id' => $resId,
-            'title' => $res->get('pagetitle'),
+            'test_id' => $test['test_id'],
+            'resource_id' => $test['resource_id'],
+            'title' => $test['title'] ?: $res->get('pagetitle'),
             'description' => $res->get('introtext'),
             'questions_count' => $questionsCount
         ];
@@ -157,17 +157,17 @@ if (empty($filteredIds)) {
         $output .= '<div class="row g-3">';
         
         foreach ($data['resources'] as $material) {
-            // Генерируем URL с проверкой
-            $materialResource = $modx->getObject('modResource', $material['id']);
+            // Генерируем URL для запуска теста в режиме обучения
+            $materialResource = $modx->getObject('modResource', $material['resource_id']);
             $viewUrl = '';
             if ($materialResource) {
-                $url = $modx->makeUrl($material['id']);
+                $url = $modx->makeUrl($material['resource_id']);
                 if (empty($url)) {
                     // Резервный вариант: генерируем URL вручную
                     $alias = $materialResource->get('alias');
-                    $viewUrl = $modx->getOption('site_url') . $alias . '?view=learning';
+                    $viewUrl = $modx->getOption('site_url') . $alias . '?test_id=' . $material['test_id'] . '&mode=learning';
                 } else {
-                    $viewUrl = $url . '?view=learning';
+                    $viewUrl = $url . '?test_id=' . $material['test_id'] . '&mode=learning';
                 }
             }
 
