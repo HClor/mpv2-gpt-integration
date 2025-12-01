@@ -165,6 +165,7 @@ if (empty($filteredIds)) {
             $output .= '<div class="card h-100 learning-card">';
             $output .= '<div class="card-body">';
             $output .= '<h6 class="card-title">' . htmlspecialchars($material['title']) . '</h6>';
+            $output .= '<div class="mb-2"><span class="badge bg-info"><i class="bi bi-collection me-1"></i>Вопросы из теста</span></div>';
             $output .= '<p class="card-text text-muted small">' . $descShort . '</p>';
             $output .= '<a href="' . $viewUrl . '" class="btn btn-sm btn-primary stretched-link">';
             $output .= '<i class="bi bi-play-circle me-1"></i> Начать изучение';
