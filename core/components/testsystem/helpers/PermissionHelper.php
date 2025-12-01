@@ -69,6 +69,11 @@ class PermissionHelper
             return true;
         }
 
+        // Проверка авторизации перед getUserGroupNames()
+        if (!$modx->user->hasSessionContext('web')) {
+            return false;
+        }
+
         // Админы и эксперты могут
         $userGroups = $modx->user->getUserGroupNames();
         if (in_array(Config::getGroup('admins'), $userGroups, true) || in_array(Config::getGroup('experts'), $userGroups, true)) {
@@ -236,6 +241,10 @@ class PermissionHelper
      */
     public static function isAdmin($modx)
     {
+        if (!$modx->user->hasSessionContext('web')) {
+            return false;
+        }
+
         $userId = (int)$modx->user->get('id');
         $userGroups = $modx->user->getUserGroupNames();
 
@@ -251,6 +260,10 @@ class PermissionHelper
      */
     public static function isExpert($modx)
     {
+        if (!$modx->user->hasSessionContext('web')) {
+            return false;
+        }
+
         $userGroups = $modx->user->getUserGroupNames();
         return in_array(Config::getGroup('experts'), $userGroups, true);
     }
