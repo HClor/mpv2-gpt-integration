@@ -2307,7 +2307,7 @@ if (empty($allQuestionIds)) {
             // Добавляем права редактирования
             foreach ($materials as &$material) {
                 $material['can_edit'] = (int)$material['createdby'] === $userId
-                    || PermissionHelper::hasUserGroup($modx, $userId, 'LMS Admins');
+                    || PermissionHelper::isAdmin($modx);
             }
 
             $response = ResponseHelper::success($materials);
@@ -2320,7 +2320,10 @@ if (empty($allQuestionIds)) {
             $userId = PermissionHelper::getCurrentUserId($modx);
 
             // Проверяем права
-            if (!PermissionHelper::hasUserGroup($modx, $userId, ['LMS Experts', 'LMS Admins'])) {
+            $isAdmin = PermissionHelper::isAdmin($modx);
+            $isExpert = PermissionHelper::isExpert($modx);
+
+            if (!$isAdmin && !$isExpert) {
                 throw new Exception('Нет прав для создания материалов');
             }
 
@@ -2402,7 +2405,11 @@ if (empty($allQuestionIds)) {
             PermissionHelper::requireAuthentication($modx, 'Требуется авторизация');
 
             $userId = PermissionHelper::getCurrentUserId($modx);
-            $materialId = ValidationHelper::requireInt($data, 'material_id', 'Не указан ID материала');
+            $materialId = (int)($data['material_id'] ?? 0);
+
+            if ($materialId <= 0) {
+                throw new Exception('Не указан ID материала');
+            }
 
             $resource = $modx->getObject('modResource', $materialId);
 
@@ -2412,7 +2419,7 @@ if (empty($allQuestionIds)) {
 
             // Проверка прав
             $canDelete = (int)$resource->get('createdby') === $userId
-                || PermissionHelper::hasUserGroup($modx, $userId, 'LMS Admins');
+                || PermissionHelper::isAdmin($modx);
 
             if (!$canDelete) {
                 throw new Exception('Нет прав для удаления');
