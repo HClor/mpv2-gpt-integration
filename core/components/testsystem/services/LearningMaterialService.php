@@ -214,10 +214,13 @@ class LearningMaterialService
             $material['can_edit'] = $isAuthenticated &&
                 ((int)$material['createdby'] === $userId || $isAdmin);
 
-            // Генерируем URL
-            $url = $modx->makeUrl($material['id']);
-            if (empty($url)) {
-                $material['url'] = $modx->getOption('site_url') . $material['alias'];
+            // Генерируем URL с полным путем
+            $url = $modx->makeUrl($material['id'], '', '', 'full');
+            if (empty($url) || strpos($url, 'http') === false) {
+                // Резервный вариант: используем alias с site_url
+                $siteUrl = rtrim($modx->getOption('site_url'), '/');
+                $alias = ltrim($material['alias'], '/');
+                $material['url'] = $siteUrl . '/' . $alias;
             } else {
                 $material['url'] = $url;
             }
