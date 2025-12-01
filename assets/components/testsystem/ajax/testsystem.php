@@ -113,7 +113,8 @@ $csrfExemptActions = [
     'getParentUri',              // Получение URI родителя
     'getPublicTestBySlug',       // Публичный тест по slug
     'getQuestionAnswers',        // Ответы на вопрос (для просмотра)
-    'getMaterialsList'           // Список учебных материалов (только чтение)
+    'getMaterialsList',          // Список учебных материалов (только чтение)
+    'getMaterial'                // Получение одного материала (только чтение)
 ];
 
 // Если это POST запрос и action требует CSRF проверки
@@ -2331,6 +2332,36 @@ if (empty($allQuestionIds)) {
             $response = ResponseHelper::success($materials);
             break;
 
+        case 'getMaterial':
+            // Получить один материал по ID (для редактирования)
+            $materialId = ValidationHelper::requireInt($data, 'material_id', 'ID материала не указан');
+
+            $resource = $modx->getObject('modResource', $materialId);
+
+            if (!$resource) {
+                throw new Exception('Материал не найден');
+            }
+
+            // Проверяем права просмотра
+            $isAuthenticated = PermissionHelper::isAuthenticated($modx);
+            $userId = $isAuthenticated ? PermissionHelper::getCurrentUserId($modx) : 0;
+            $isAdmin = $isAuthenticated ? PermissionHelper::isAdmin($modx) : false;
+
+            $materialData = [
+                'id' => $resource->get('id'),
+                'pagetitle' => $resource->get('pagetitle'),
+                'longtitle' => $resource->get('longtitle'),
+                'content' => $resource->get('content'),
+                'introtext' => $resource->get('introtext'),
+                'published' => $resource->get('published'),
+                'parent' => $resource->get('parent'),
+                'createdby' => $resource->get('createdby'),
+                'can_edit' => $isAuthenticated && ((int)$resource->get('createdby') === $userId || $isAdmin)
+            ];
+
+            $response = ResponseHelper::success($materialData);
+            break;
+
         case 'saveMaterial':
             // Создать или обновить учебный материал (ресурс MODX)
             PermissionHelper::requireAuthentication($modx, 'Требуется авторизация');
@@ -2346,11 +2377,12 @@ if (empty($allQuestionIds)) {
             }
 
             $materialId = ValidationHelper::optionalInt($data, 'material_id', 0);
-            $title = ValidationHelper::requireString($data, 'title', 'Не указано название');
+            $pagetitle = ValidationHelper::requireString($data, 'pagetitle', 'Не указано название');
             $content = ValidationHelper::optionalString($data, 'content', '');
             $introtext = ValidationHelper::optionalString($data, 'introtext', '');
-            $parentId = ValidationHelper::optionalInt($data, 'parent_id', 0);
+            $parentId = ValidationHelper::optionalInt($data, 'parent', 0);
             $published = ValidationHelper::optionalInt($data, 'published', 1);
+            $template = ValidationHelper::optionalInt($data, 'template', 6);
 
             if ($materialId > 0) {
                 // Обновление существующего
@@ -2361,15 +2393,14 @@ if (empty($allQuestionIds)) {
                 }
 
                 // Проверка прав
-                $canEdit = (int)$resource->get('createdby') === $userId
-                    || PermissionHelper::hasUserGroup($modx, $userId, 'LMS Admins');
+                $canEdit = ((int)$resource->get('createdby') === $userId) || $isAdmin;
 
                 if (!$canEdit) {
                     throw new Exception('Нет прав для редактирования');
                 }
 
-                $resource->set('pagetitle', $title);
-                $resource->set('longtitle', $title);
+                $resource->set('pagetitle', $pagetitle);
+                $resource->set('longtitle', $pagetitle);
                 $resource->set('content', $content);
                 $resource->set('introtext', $introtext);
                 $resource->set('published', $published);
@@ -2404,12 +2435,18 @@ if (empty($allQuestionIds)) {
             } else {
                 // Создание нового
                 $resource = $modx->newObject('modResource');
-                $resource->set('pagetitle', $title);
-                $resource->set('longtitle', $title);
-                $resource->set('alias', transliterate($title) . '-' . time());
+                $resource->set('pagetitle', $pagetitle);
+                $resource->set('longtitle', $pagetitle);
+
+                // Генерируем alias из pagetitle
+                $alias = $modx->filterPathSegment($pagetitle);
+                if (empty($alias)) {
+                    $alias = 'material-' . time();
+                }
+                $resource->set('alias', $alias);
                 $resource->set('content', $content);
                 $resource->set('introtext', $introtext);
-                $resource->set('template', 6); // Template ID = 6
+                $resource->set('template', $template);
                 $resource->set('parent', $parentId);
                 $resource->set('published', $published);
                 $resource->set('createdby', $userId);
