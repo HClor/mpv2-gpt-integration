@@ -158,17 +158,19 @@ if (empty($filteredTests)) {
         
         foreach ($data['resources'] as $material) {
             // Генерируем URL для запуска теста в режиме обучения
-            $materialResource = $modx->getObject('modResource', $material['resource_id']);
-            $viewUrl = '';
-            if ($materialResource) {
-                $url = $modx->makeUrl($material['resource_id']);
-                if (empty($url)) {
-                    // Резервный вариант: генерируем URL вручную
-                    $alias = $materialResource->get('alias');
-                    $viewUrl = $modx->getOption('site_url') . $alias . '?test_id=' . $material['test_id'] . '&mode=learning';
-                } else {
-                    $viewUrl = $url . '?test_id=' . $material['test_id'] . '&mode=learning';
-                }
+            // Находим ресурс test-run (обычно это фиксированный ресурс)
+            $testRunResource = $modx->getObject('modResource', ['uri' => 'test-run']);
+            if (!$testRunResource) {
+                // Резервный поиск по алиасу
+                $testRunResource = $modx->getObject('modResource', ['alias' => 'test-run']);
+            }
+
+            if ($testRunResource) {
+                $testRunUrl = $modx->makeUrl($testRunResource->get('id'));
+                $viewUrl = $testRunUrl . '?testId=' . $material['test_id'] . '&mode=learning';
+            } else {
+                // Если test-run не найден, используем прямой URL
+                $viewUrl = $modx->getOption('site_url') . 'test-run?testId=' . $material['test_id'] . '&mode=learning';
             }
 
             $desc = $material['description'] ?: 'Изучайте материал в формате карточек';
