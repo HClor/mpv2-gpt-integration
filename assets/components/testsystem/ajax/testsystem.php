@@ -2275,7 +2275,7 @@ if (empty($allQuestionIds)) {
 
         case 'getMaterialsList':
             // Получить список учебных материалов (ресурсы MODX с template_id = 6)
-            PermissionHelper::requireAuthentication($modx, 'Требуется авторизация');
+            // Доступен всем, авторизация не требуется
 
             $templateId = 6; // Template "LMS Bootstrap 5 - учебные материалы"
             $parentId = ValidationHelper::optionalInt($data, 'parent_id', 0);
@@ -2302,12 +2302,14 @@ if (empty($allQuestionIds)) {
             $stmt->execute($params);
             $materials = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            $userId = PermissionHelper::getCurrentUserId($modx);
+            // Проверяем права редактирования (только для авторизованных)
+            $isAuthenticated = PermissionHelper::isAuthenticated($modx);
+            $userId = $isAuthenticated ? PermissionHelper::getCurrentUserId($modx) : 0;
+            $isAdmin = $isAuthenticated ? PermissionHelper::isAdmin($modx) : false;
 
-            // Добавляем права редактирования
             foreach ($materials as &$material) {
-                $material['can_edit'] = (int)$material['createdby'] === $userId
-                    || PermissionHelper::isAdmin($modx);
+                $material['can_edit'] = $isAuthenticated &&
+                    ((int)$material['createdby'] === $userId || $isAdmin);
             }
 
             $response = ResponseHelper::success($materials);
@@ -2368,7 +2370,7 @@ if (empty($allQuestionIds)) {
 
                 $response = ResponseHelper::success([
                     'material_id' => $materialId,
-                    'url' => $modx->makeUrl($materialId)
+                    'url' => '/index.php?id=' . $materialId
                 ], 'Материал обновлен');
 
             } else {
@@ -2395,7 +2397,7 @@ if (empty($allQuestionIds)) {
 
                 $response = ResponseHelper::success([
                     'material_id' => $materialId,
-                    'url' => $modx->makeUrl($materialId)
+                    'url' => '/index.php?id=' . $materialId
                 ], 'Материал создан');
             }
             break;
