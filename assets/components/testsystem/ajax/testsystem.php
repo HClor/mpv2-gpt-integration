@@ -2267,7 +2267,168 @@ if (empty($allQuestionIds)) {
 
             $response = ResponseHelper::success(null, 'Test updated successfully');
             break;
-            
+
+        // ============================================
+        // УЧЕБНЫЕ МАТЕРИАЛЫ (Learning Materials as MODX Resources)
+        // ============================================
+
+        case 'getMaterialsList':
+            // Получить список учебных материалов (ресурсы MODX с template_id = 6)
+            PermissionHelper::requireAuthentication($modx, 'Требуется авторизация');
+
+            $templateId = 6; // Template "LMS Bootstrap 5 - учебные материалы"
+            $parentId = ValidationHelper::optionalInt($data, 'parent_id', 0);
+
+            $sql = "
+                SELECT
+                    id, pagetitle, longtitle, description, introtext,
+                    parent, createdby, createdon, publishedon, published
+                FROM {$prefix}site_content
+                WHERE template = ?
+                    AND deleted = 0
+            ";
+
+            $params = [$templateId];
+
+            if ($parentId > 0) {
+                $sql .= " AND parent = ?";
+                $params[] = $parentId;
+            }
+
+            $sql .= " ORDER BY menuindex ASC, createdon DESC";
+
+            $stmt = $modx->prepare($sql);
+            $stmt->execute($params);
+            $materials = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+
+            // Добавляем права редактирования
+            foreach ($materials as &$material) {
+                $material['can_edit'] = (int)$material['createdby'] === $userId
+                    || PermissionHelper::hasUserGroup($modx, $userId, 'LMS Admins');
+            }
+
+            $response = ResponseHelper::success($materials);
+            break;
+
+        case 'saveMaterial':
+            // Создать или обновить учебный материал (ресурс MODX)
+            PermissionHelper::requireAuthentication($modx, 'Требуется авторизация');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+
+            // Проверяем права
+            if (!PermissionHelper::hasUserGroup($modx, $userId, ['LMS Experts', 'LMS Admins'])) {
+                throw new Exception('Нет прав для создания материалов');
+            }
+
+            $materialId = ValidationHelper::optionalInt($data, 'material_id', 0);
+            $title = ValidationHelper::requireString($data, 'title', 'Не указано название');
+            $content = ValidationHelper::optionalString($data, 'content', '');
+            $introtext = ValidationHelper::optionalString($data, 'introtext', '');
+            $parentId = ValidationHelper::optionalInt($data, 'parent_id', 0);
+            $published = ValidationHelper::optionalInt($data, 'published', 1);
+
+            if ($materialId > 0) {
+                // Обновление существующего
+                $resource = $modx->getObject('modResource', $materialId);
+
+                if (!$resource) {
+                    throw new Exception('Материал не найден');
+                }
+
+                // Проверка прав
+                $canEdit = (int)$resource->get('createdby') === $userId
+                    || PermissionHelper::hasUserGroup($modx, $userId, 'LMS Admins');
+
+                if (!$canEdit) {
+                    throw new Exception('Нет прав для редактирования');
+                }
+
+                $resource->set('pagetitle', $title);
+                $resource->set('longtitle', $title);
+                $resource->set('content', $content);
+                $resource->set('introtext', $introtext);
+                $resource->set('published', $published);
+                $resource->set('editedon', time());
+                $resource->set('editedby', $userId);
+
+                if ($parentId > 0) {
+                    $resource->set('parent', $parentId);
+                }
+
+                if (!$resource->save()) {
+                    throw new Exception('Ошибка обновления материала');
+                }
+
+                $response = ResponseHelper::success([
+                    'material_id' => $materialId,
+                    'url' => $modx->makeUrl($materialId)
+                ], 'Материал обновлен');
+
+            } else {
+                // Создание нового
+                $resource = $modx->newObject('modResource');
+                $resource->set('pagetitle', $title);
+                $resource->set('longtitle', $title);
+                $resource->set('alias', transliterate($title) . '-' . time());
+                $resource->set('content', $content);
+                $resource->set('introtext', $introtext);
+                $resource->set('template', 6); // Template ID = 6
+                $resource->set('parent', $parentId);
+                $resource->set('published', $published);
+                $resource->set('createdby', $userId);
+                $resource->set('createdon', time());
+                $resource->set('publishedon', $published ? time() : 0);
+                $resource->set('context_key', 'web');
+
+                if (!$resource->save()) {
+                    throw new Exception('Ошибка создания материала');
+                }
+
+                $materialId = $resource->get('id');
+
+                $response = ResponseHelper::success([
+                    'material_id' => $materialId,
+                    'url' => $modx->makeUrl($materialId)
+                ], 'Материал создан');
+            }
+            break;
+
+        case 'deleteMaterial':
+            // Удалить учебный материал
+            PermissionHelper::requireAuthentication($modx, 'Требуется авторизация');
+
+            $userId = PermissionHelper::getCurrentUserId($modx);
+            $materialId = ValidationHelper::requireInt($data, 'material_id', 'Не указан ID материала');
+
+            $resource = $modx->getObject('modResource', $materialId);
+
+            if (!$resource) {
+                throw new Exception('Материал не найден');
+            }
+
+            // Проверка прав
+            $canDelete = (int)$resource->get('createdby') === $userId
+                || PermissionHelper::hasUserGroup($modx, $userId, 'LMS Admins');
+
+            if (!$canDelete) {
+                throw new Exception('Нет прав для удаления');
+            }
+
+            // Soft delete
+            $resource->set('deleted', 1);
+            $resource->set('deletedon', time());
+            $resource->set('deletedby', $userId);
+
+            if (!$resource->save()) {
+                throw new Exception('Ошибка удаления материала');
+            }
+
+            $response = ResponseHelper::success(null, 'Материал удален');
+            break;
+
 
     default:
                 throw new Exception('Unknown action: ' . $action);
