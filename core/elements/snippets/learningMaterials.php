@@ -167,10 +167,10 @@ if (empty($filteredTests)) {
 
             if ($testRunResource) {
                 $testRunUrl = $modx->makeUrl($testRunResource->get('id'));
-                $viewUrl = $testRunUrl . '?testId=' . $material['test_id'] . '&mode=learning';
+                $viewUrl = $testRunUrl . '?testId=' . $material['test_id'] . '&view=learning';
             } else {
                 // Если test-run не найден, используем прямой URL
-                $viewUrl = $modx->getOption('site_url') . 'test-run?testId=' . $material['test_id'] . '&mode=learning';
+                $viewUrl = $modx->getOption('site_url') . 'test-run?testId=' . $material['test_id'] . '&view=learning';
             }
 
             $desc = $material['description'] ?: 'Изучайте материал в формате карточек';

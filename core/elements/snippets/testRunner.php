@@ -533,18 +533,9 @@ if ($canEditTest) {
     $editLinks .= '</div></div>';
 }
 
-// Проверяем, передан ли режим обучения через URL
-$modeFromUrl = isset($_GET['mode']) ? $_GET['mode'] : '';
-$isLearningMode = ($modeFromUrl === 'learning');
-
 // Валидация доступных режимов
-// ВАЖНО: Если передан mode=learning, принудительно устанавливаем режим обучения
-if ($isLearningMode) {
-    $testMode = 'training';
-} else {
-    // Всегда показываем оба режима для выбора пользователя
-    $testMode = 'both';
-}
+// ВАЖНО: Всегда показываем оба режима для выбора пользователя
+$testMode = 'both';
 
 $passScore = (int)$test['pass_score'];
 $timeLimit = (int)$test['time_limit'];
@@ -731,12 +722,6 @@ $jsPath = $assetsUrl . 'components/testsystem/js/tsrunner.js';
 
 // XSS Protection: Подключаем DOMPurify для санитизации HTML
 $output .= '<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>';
-
-// Устанавливаем глобальную переменную для режима обучения
-$output .= '<script>';
-$output .= 'window.isLearningMode = ' . ($isLearningMode ? 'true' : 'false') . ';';
-$output .= 'window.TEST_MODE = "' . htmlspecialchars($testMode, ENT_QUOTES, 'UTF-8') . '";';
-$output .= '</script>';
 
 $output .= '<script src="' . htmlspecialchars($jsPath, ENT_QUOTES, 'UTF-8') . '"></script>';
 
