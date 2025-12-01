@@ -2368,9 +2368,21 @@ if (empty($allQuestionIds)) {
                     throw new Exception('Ошибка обновления материала');
                 }
 
+                // Очищаем кэш
+                $modx->cacheManager->refresh([
+                    'db' => [],
+                    'auto_publish' => ['contexts' => ['web']],
+                    'context_settings' => ['contexts' => ['web']],
+                    'resource' => ['contexts' => ['web']],
+                ]);
+
+                // Генерируем URL
+                $alias = $resource->get('alias');
+                $url = $modx->getOption('site_url') . ($alias ? $alias : 'index.php?id=' . $materialId);
+
                 $response = ResponseHelper::success([
                     'material_id' => $materialId,
-                    'url' => '/index.php?id=' . $materialId
+                    'url' => $url
                 ], 'Материал обновлен');
 
             } else {
@@ -2395,9 +2407,21 @@ if (empty($allQuestionIds)) {
 
                 $materialId = $resource->get('id');
 
+                // Очищаем кэш для нового ресурса
+                $modx->cacheManager->refresh([
+                    'db' => [],
+                    'auto_publish' => ['contexts' => ['web']],
+                    'context_settings' => ['contexts' => ['web']],
+                    'resource' => ['contexts' => ['web']],
+                ]);
+
+                // Генерируем URL (для черновиков используем прямой URL)
+                $alias = $resource->get('alias');
+                $url = $modx->getOption('site_url') . ($alias ? $alias : 'index.php?id=' . $materialId);
+
                 $response = ResponseHelper::success([
                     'material_id' => $materialId,
-                    'url' => '/index.php?id=' . $materialId
+                    'url' => $url
                 ], 'Материал создан');
             }
             break;
