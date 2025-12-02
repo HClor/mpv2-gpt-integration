@@ -2327,6 +2327,8 @@ if (empty($allQuestionIds)) {
             foreach ($materials as &$material) {
                 $material['can_edit'] = $isAuthenticated &&
                     ((int)$material['createdby'] === $userId || $isAdmin);
+                // Формируем URL через MODX makeUrl
+                $material['url'] = $modx->makeUrl($material['id'], '', '', 'full');
             }
 
             $response = ResponseHelper::success($materials);
@@ -2342,10 +2344,10 @@ if (empty($allQuestionIds)) {
                 throw new Exception('Материал не найден');
             }
 
-            // Проверяем права просмотра
-            $isAuthenticated = PermissionHelper::isAuthenticated($modx);
-            $userId = $isAuthenticated ? PermissionHelper::getCurrentUserId($modx) : 0;
-            $isAdmin = $isAuthenticated ? PermissionHelper::isAdmin($modx) : false;
+            // Проверяем права просмотра (поддержка web и mgr контекстов)
+            $isAuthenticated = PermissionHelper::isAuthenticated($modx) || $modx->user->isAuthenticated('mgr');
+            $userId = $isAuthenticated ? (PermissionHelper::isAuthenticated($modx) ? PermissionHelper::getCurrentUserId($modx) : $modx->user->get('id')) : 0;
+            $isAdmin = $isAuthenticated ? (PermissionHelper::isAdmin($modx) || $modx->user->isAuthenticated('mgr')) : false;
 
             $materialData = [
                 'id' => $resource->get('id'),
@@ -2477,6 +2479,67 @@ if (empty($allQuestionIds)) {
                     'url' => $url
                 ], 'Материал создан');
             }
+            break;
+
+        case 'uploadImage':
+            // Загрузка изображения для учебных материалов
+            PermissionHelper::requireAuthentication($modx, 'Требуется авторизация');
+
+            // Проверяем права
+            $isAdmin = PermissionHelper::isAdmin($modx);
+            $isExpert = PermissionHelper::isExpert($modx);
+
+            if (!$isAdmin && !$isExpert) {
+                throw new Exception('Нет прав для загрузки изображений');
+            }
+
+            // Получаем base64 данные
+            $imageData = ValidationHelper::requireString($data, 'image', 'Изображение не предоставлено');
+
+            // Парсим base64 data URL
+            if (!preg_match('/^data:image\/(\w+);base64,(.+)$/', $imageData, $matches)) {
+                throw new Exception('Неверный формат изображения');
+            }
+
+            $imageType = $matches[1];
+            $imageBase64 = $matches[2];
+
+            // Проверяем допустимые типы
+            $allowedTypes = ['jpeg', 'jpg', 'png', 'gif', 'webp'];
+            if (!in_array(strtolower($imageType), $allowedTypes)) {
+                throw new Exception('Недопустимый тип изображения. Разрешены: ' . implode(', ', $allowedTypes));
+            }
+
+            // Декодируем base64
+            $imageContent = base64_decode($imageBase64);
+            if ($imageContent === false) {
+                throw new Exception('Ошибка декодирования изображения');
+            }
+
+            // Создаем папку если не существует
+            $uploadDir = MODX_BASE_PATH . 'assets/uploads/images/';
+            if (!is_dir($uploadDir)) {
+                if (!mkdir($uploadDir, 0755, true)) {
+                    throw new Exception('Не удалось создать папку для загрузки');
+                }
+            }
+
+            // Генерируем уникальное имя файла
+            $fileName = uniqid('img_', true) . '.' . $imageType;
+            $filePath = $uploadDir . $fileName;
+
+            // Сохраняем файл
+            if (file_put_contents($filePath, $imageContent) === false) {
+                throw new Exception('Ошибка сохранения файла');
+            }
+
+            // Возвращаем URL изображения
+            $imageUrl = $modx->getOption('site_url') . 'assets/uploads/images/' . $fileName;
+
+            $response = ResponseHelper::success([
+                'url' => $imageUrl,
+                'filename' => $fileName
+            ], 'Изображение загружено');
             break;
 
         case 'deleteMaterial':

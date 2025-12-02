@@ -119,9 +119,61 @@ function initMaterialQuill(content) {
         theme: 'snow',
         modules: { toolbar: [['bold', 'italic', 'underline', 'strike'],['blockquote', 'code-block'],[{ 'header': 1 }, { 'header': 2 }],[{ 'list': 'ordered'}, { 'list': 'bullet' }],[{ 'indent': '-1'}, { 'indent': '+1' }],[{ 'size': ['small', false, 'large', 'huge'] }],[{ 'header': [1, 2, 3, 4, 5, 6, false] }],[{ 'color': [] }, { 'background': [] }],[{ 'align': [] }],['link', 'image'],['clean']] }
     });
+
+    // Настраиваем обработчик загрузки изображений
+    const toolbar = materialQuillEditor.getModule('toolbar');
+    toolbar.addHandler('image', imageHandler);
+
     if (content) {
         materialQuillEditor.clipboard.dangerouslyPasteHTML(content);
     }
+}
+
+async function imageHandler() {
+    const input = document.createElement('input');
+    input.setAttribute('type', 'file');
+    input.setAttribute('accept', 'image/jpeg,image/jpg,image/png,image/gif,image/webp');
+    input.click();
+
+    input.onchange = async () => {
+        const file = input.files[0];
+        if (!file) return;
+
+        // Проверка размера (макс 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Размер изображения не должен превышать 5MB');
+            return;
+        }
+
+        try {
+            // Читаем файл как base64
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const base64Image = e.target.result;
+
+                try {
+                    // Отправляем на сервер
+                    const result = await apiCall('uploadImage', { image: base64Image });
+
+                    if (result.success && result.data.url) {
+                        // Вставляем изображение в редактор
+                        const range = materialQuillEditor.getSelection(true);
+                        materialQuillEditor.insertEmbed(range.index, 'image', result.data.url);
+                        materialQuillEditor.setSelection(range.index + 1);
+                    } else {
+                        throw new Error(result.message || 'Ошибка загрузки изображения');
+                    }
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    alert('Ошибка загрузки: ' + error.message);
+                }
+            };
+            reader.readAsDataURL(file);
+        } catch (error) {
+            console.error('File read error:', error);
+            alert('Ошибка чтения файла');
+        }
+    };
 }
 
 async function saveMaterialFromModal() {
