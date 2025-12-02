@@ -143,11 +143,15 @@ function initMaterialQuill(content) {
     // Добавляем кнопку для документов вручную после инициализации Quill
     setTimeout(() => {
         const toolbarElement = editorContainer.previousElementSibling;
+        console.log('[Document Button] Toolbar element:', toolbarElement);
+
         if (toolbarElement && toolbarElement.classList.contains('ql-toolbar')) {
             // Находим группу с link и image
             const linkImageGroup = Array.from(toolbarElement.querySelectorAll('.ql-formats')).find(group =>
                 group.querySelector('.ql-link') && group.querySelector('.ql-image')
             );
+
+            console.log('[Document Button] Link/Image group:', linkImageGroup);
 
             if (linkImageGroup) {
                 // Создаем кнопку для документов
@@ -159,6 +163,7 @@ function initMaterialQuill(content) {
                 docButton.style.width = 'auto';
                 docButton.addEventListener('click', (e) => {
                     e.preventDefault();
+                    console.log('[Document Button] Clicked!');
                     documentHandler();
                 });
 
@@ -169,7 +174,13 @@ function initMaterialQuill(content) {
                 } else {
                     linkImageGroup.appendChild(docButton);
                 }
+
+                console.log('[Document Button] Added successfully!');
+            } else {
+                console.error('[Document Button] Link/Image group not found!');
             }
+        } else {
+            console.error('[Document Button] Toolbar element not found or invalid!');
         }
     }, 100);
 
@@ -232,6 +243,8 @@ async function imageHandler() {
 }
 
 async function documentHandler() {
+    console.log('[Document Handler] Started');
+
     const input = document.createElement('input');
     input.setAttribute('type', 'file');
     input.setAttribute('accept', '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar');
@@ -239,6 +252,8 @@ async function documentHandler() {
 
     input.onchange = async () => {
         const file = input.files[0];
+        console.log('[Document Handler] File selected:', file);
+
         if (!file) return;
 
         // Проверка размера (макс 20MB)
@@ -252,17 +267,22 @@ async function documentHandler() {
             const reader = new FileReader();
             reader.onload = async (e) => {
                 const base64Document = e.target.result;
+                console.log('[Document Handler] File read as base64, length:', base64Document.length);
 
                 try {
                     // Определяем resource_id: при редактировании - currentEditMaterialId, иначе MATERIAL_PAGE_ID
                     const resourceId = currentEditMaterialId || (typeof MATERIAL_PAGE_ID !== 'undefined' ? MATERIAL_PAGE_ID : 0);
+                    console.log('[Document Handler] Using resource_id:', resourceId);
 
                     // Отправляем на сервер
+                    console.log('[Document Handler] Sending to server...');
                     const result = await apiCall('uploadDocument', {
                         document: base64Document,
                         filename: file.name,
                         resource_id: resourceId
                     });
+
+                    console.log('[Document Handler] Server response:', result);
 
                     if (result.success && result.data.url) {
                         // Определяем иконку по расширению

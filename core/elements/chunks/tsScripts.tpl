@@ -10,7 +10,7 @@
 <script src="/assets/components/testsystem/js/knowledge-areas.js"></script>
 
 <!-- Sprint 9: Учебные материалы -->
-<script src="/assets/components/testsystem/js/learning-materials.js"></script>
+<!-- learning-materials.js подключается в learningMaterialsTemplate.php, не подключать здесь! -->
 
 <!-- Sprint 10: Права доступа -->
 <script src="/assets/components/testsystem/js/category-permissions.js"></script>
