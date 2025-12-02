@@ -2368,7 +2368,7 @@ if (empty($allQuestionIds)) {
             // Создать или обновить учебный материал (ресурс MODX)
             PermissionHelper::requireAuthentication($modx, 'Требуется авторизация');
 
-            $userId = PermissionHelper::getCurrentUserId($modx);
+            $userId = PermissionHelper::getCurrentUserIdWithMgr($modx);
 
             // Проверяем права
             $isAdmin = PermissionHelper::isAdmin($modx);
@@ -2660,7 +2660,7 @@ if (empty($allQuestionIds)) {
             // Удалить учебный материал
             PermissionHelper::requireAuthentication($modx, 'Требуется авторизация');
 
-            $userId = PermissionHelper::getCurrentUserId($modx);
+            $userId = PermissionHelper::getCurrentUserIdWithMgr($modx);
             $materialId = (int)($data['material_id'] ?? 0);
 
             if ($materialId <= 0) {

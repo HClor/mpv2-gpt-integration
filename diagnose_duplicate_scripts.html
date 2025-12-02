@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Diagnostic: Script Duplication</title>
+</head>
+<body>
+<h1>Script Duplication Diagnostic</h1>
+<div id="results"></div>
+
+<script>
+// Этот скрипт нужно вставить в консоль браузера на странице с проблемой
+
+function diagnoseScriptDuplication() {
+    const results = [];
+
+    // 1. Проверяем все script теги
+    const scripts = document.querySelectorAll('script');
+    results.push(`<h3>Total scripts: ${scripts.length}</h3>`);
+
+    // 2. Ищем learning-materials.js
+    const learningMaterialsScripts = Array.from(scripts).filter(s =>
+        s.src && s.src.includes('learning-materials.js')
+    );
+
+    results.push(`<h3>learning-materials.js scripts: ${learningMaterialsScripts.length}</h3>`);
+    learningMaterialsScripts.forEach((script, i) => {
+        results.push(`<p>${i + 1}. ${script.src}</p>`);
+    });
+
+    // 3. Проверяем встроенные скрипты с materialQuillEditor
+    const inlineScripts = Array.from(scripts).filter(s =>
+        !s.src && s.textContent.includes('materialQuillEditor')
+    );
+
+    results.push(`<h3>Inline scripts with materialQuillEditor: ${inlineScripts.length}</h3>`);
+    inlineScripts.forEach((script, i) => {
+        const preview = script.textContent.substring(0, 200) + '...';
+        results.push(`<p>${i + 1}. <pre>${preview}</pre></p>`);
+    });
+
+    // 4. Проверяем объявления в window
+    results.push(`<h3>Window variables:</h3>`);
+    results.push(`<p>typeof materialQuillEditor: ${typeof window.materialQuillEditor}</p>`);
+    results.push(`<p>typeof currentEditMaterialId: ${typeof window.currentEditMaterialId}</p>`);
+    results.push(`<p>typeof MATERIAL_PAGE_ID: ${typeof window.MATERIAL_PAGE_ID}</p>`);
+
+    document.getElementById('results').innerHTML = results.join('');
+
+    // Возвращаем для консоли
+    return {
+        totalScripts: scripts.length,
+        learningMaterialsScripts: learningMaterialsScripts.length,
+        inlineScripts: inlineScripts.length,
+        scripts: learningMaterialsScripts,
+        inline: inlineScripts
+    };
+}
+
+// Автоматически запускаем
+console.log('=== SCRIPT DUPLICATION DIAGNOSTIC ===');
+const diagnostic = diagnoseScriptDuplication();
+console.log(diagnostic);
+</script>
+
+<hr>
+<h2>Instructions:</h2>
+<ol>
+    <li>Open this file in browser OR copy script to console</li>
+    <li>OR paste this into browser console on the problem page:</li>
+</ol>
+<pre>
+// Вставьте это в консоль браузера на странице с ошибкой:
+
+const scripts = document.querySelectorAll('script');
+console.log('Total scripts:', scripts.length);
+
+const learningMaterials = Array.from(scripts).filter(s =>
+    s.src && s.src.includes('learning-materials.js')
+);
+console.log('learning-materials.js loaded:', learningMaterials.length, 'times');
+learningMaterials.forEach((s, i) => console.log(`  ${i+1}.`, s.src));
+
+const inline = Array.from(scripts).filter(s =>
+    !s.src && s.textContent.includes('materialQuillEditor')
+);
+console.log('Inline scripts with materialQuillEditor:', inline.length);
+inline.forEach((s, i) => console.log(`  ${i+1}. Preview:`, s.textContent.substring(0, 100)));
+</pre>
+
+</body>
+</html>

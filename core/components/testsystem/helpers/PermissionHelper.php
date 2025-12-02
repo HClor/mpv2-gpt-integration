@@ -291,7 +291,7 @@ class PermissionHelper
     }
 
     /**
-     * Требует авторизации
+     * Требует авторизации (поддерживает web и mgr контексты)
      *
      * @param object $modx MODX объект
      * @param string|null $errorMessage Сообщение об ошибке
@@ -300,9 +300,34 @@ class PermissionHelper
      */
     public static function requireAuthentication($modx, $errorMessage = null)
     {
-        if (!self::isAuthenticated($modx)) {
+        // Проверяем оба контекста: web и mgr
+        $isAuthenticatedWeb = self::isAuthenticated($modx);
+        $isAuthenticatedMgr = $modx->user->isAuthenticated('mgr');
+
+        if (!$isAuthenticatedWeb && !$isAuthenticatedMgr) {
             $message = $errorMessage ?? 'Authentication required';
             throw new AuthenticationException($message);
         }
+    }
+
+    /**
+     * Получить ID текущего пользователя (с поддержкой mgr контекста)
+     *
+     * @param object $modx MODX объект
+     * @return int ID пользователя
+     */
+    public static function getCurrentUserIdWithMgr($modx)
+    {
+        // Сначала пробуем web контекст
+        if (self::isAuthenticated($modx)) {
+            return self::getCurrentUserId($modx);
+        }
+
+        // Если не авторизован в web, проверяем mgr
+        if ($modx->user->isAuthenticated('mgr')) {
+            return (int)$modx->user->get('id');
+        }
+
+        return 0;
     }
 }
