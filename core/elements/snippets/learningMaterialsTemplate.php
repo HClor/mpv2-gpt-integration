@@ -11,6 +11,7 @@ $materialId = (int)$modx->resource->get('id');
 $parentId = (int)$modx->resource->get('parent');
 
 // Проверяем права на редактирование
+require_once MODX_CORE_PATH . 'components/testsystem/helpers/Config.php';
 require_once MODX_CORE_PATH . 'components/testsystem/helpers/PermissionHelper.php';
 $canEdit = false;
 if (PermissionHelper::isAuthenticated($modx)) {
