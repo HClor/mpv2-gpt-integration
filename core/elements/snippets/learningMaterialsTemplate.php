@@ -164,11 +164,17 @@ $output .= '</div>';
 $output .= '</div></div></div>';
 
 // Генерируем CSRF token для AJAX запросов
-$csrfToken = bin2hex(random_bytes(32));
-$_SESSION['csrf_token'] = $csrfToken;
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-// Добавляем CSRF token в meta тег
-$modx->regClientStartupHTMLBlock('<meta name="csrf-token" content="' . $csrfToken . '">');
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+$csrfToken = $_SESSION['csrf_token'];
+
+// Добавляем CSRF token в meta тег напрямую в output
+$output .= '<meta name="csrf-token" content="' . htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') . '">';
 
 // Подключение Quill
 $output .= '<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">';
