@@ -164,14 +164,19 @@ $output .= '</div>';
 $output .= '</div></div></div>';
 
 // Генерируем CSRF token для AJAX запросов
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+try {
+    if (session_status() === PHP_SESSION_NONE) {
+        @session_start();
+    }
 
-if (!isset($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    if (!isset($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = md5(uniqid(mt_rand(), true));
+    }
+    $csrfToken = $_SESSION['csrf_token'];
+} catch (Exception $e) {
+    // Если сессия не работает, генерируем временный токен
+    $csrfToken = md5(uniqid(mt_rand(), true));
 }
-$csrfToken = $_SESSION['csrf_token'];
 
 // Добавляем CSRF token в meta тег напрямую в output
 $output .= '<meta name="csrf-token" content="' . htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') . '">';
