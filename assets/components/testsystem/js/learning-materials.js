@@ -116,7 +116,7 @@ function initMaterialQuill(content) {
     const editorContainer = document.getElementById('material-quill-editor');
     editorContainer.innerHTML = '';
 
-    // Создаем toolbar с кнопкой для документов
+    // Создаем toolbar БЕЗ кнопки document (добавим её вручную)
     const toolbarOptions = [
         ['bold', 'italic', 'underline', 'strike'],
         ['blockquote', 'code-block'],
@@ -128,7 +128,6 @@ function initMaterialQuill(content) {
         [{ 'color': [] }, { 'background': [] }],
         [{ 'align': [] }],
         ['link', 'image'],
-        ['document'], // Кнопка для загрузки документов
         ['clean']
     ];
 
@@ -137,17 +136,42 @@ function initMaterialQuill(content) {
         modules: { toolbar: toolbarOptions }
     });
 
-    // Настраиваем обработчики
+    // Настраиваем обработчик для изображений
     const toolbar = materialQuillEditor.getModule('toolbar');
     toolbar.addHandler('image', imageHandler);
-    toolbar.addHandler('document', documentHandler);
 
-    // Добавляем иконку для кнопки документа
-    const documentButton = document.querySelector('.ql-document');
-    if (documentButton) {
-        documentButton.innerHTML = '<i class="bi bi-file-earmark-arrow-up"></i>';
-        documentButton.title = 'Загрузить документ';
-    }
+    // Добавляем кнопку для документов вручную после инициализации Quill
+    setTimeout(() => {
+        const toolbarElement = editorContainer.previousElementSibling;
+        if (toolbarElement && toolbarElement.classList.contains('ql-toolbar')) {
+            // Находим группу с link и image
+            const linkImageGroup = Array.from(toolbarElement.querySelectorAll('.ql-formats')).find(group =>
+                group.querySelector('.ql-link') && group.querySelector('.ql-image')
+            );
+
+            if (linkImageGroup) {
+                // Создаем кнопку для документов
+                const docButton = document.createElement('button');
+                docButton.type = 'button';
+                docButton.className = 'ql-document-upload';
+                docButton.innerHTML = '<i class="bi bi-file-earmark-arrow-up"></i>';
+                docButton.title = 'Загрузить документ (PDF, DOC, XLS и т.д.)';
+                docButton.style.width = 'auto';
+                docButton.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    documentHandler();
+                });
+
+                // Добавляем кнопку после image
+                const imageButton = linkImageGroup.querySelector('.ql-image');
+                if (imageButton && imageButton.nextSibling) {
+                    linkImageGroup.insertBefore(docButton, imageButton.nextSibling);
+                } else {
+                    linkImageGroup.appendChild(docButton);
+                }
+            }
+        }
+    }, 100);
 
     if (content) {
         materialQuillEditor.clipboard.dangerouslyPasteHTML(content);
