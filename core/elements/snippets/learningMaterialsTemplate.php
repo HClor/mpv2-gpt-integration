@@ -163,6 +163,13 @@ $output .= '</div>';
 
 $output .= '</div></div></div>';
 
+// Генерируем CSRF token для AJAX запросов
+$csrfToken = bin2hex(random_bytes(32));
+$_SESSION['csrf_token'] = $csrfToken;
+
+// Добавляем CSRF token в meta тег
+$modx->regClientStartupHTMLBlock('<meta name="csrf-token" content="' . $csrfToken . '">');
+
 // Подключение Quill
 $output .= '<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">';
 $output .= '<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>';
