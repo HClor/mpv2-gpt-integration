@@ -2493,8 +2493,9 @@ if (empty($allQuestionIds)) {
                 throw new Exception('Нет прав для загрузки изображений');
             }
 
-            // Получаем base64 данные
+            // Получаем base64 данные и resource_id
             $imageData = ValidationHelper::requireString($data, 'image', 'Изображение не предоставлено');
+            $resourceId = ValidationHelper::optionalInt($data, 'resource_id', 0);
 
             // Парсим base64 data URL
             if (!preg_match('/^data:image\/(\w+);base64,(.+)$/', $imageData, $matches)) {
@@ -2516,8 +2517,12 @@ if (empty($allQuestionIds)) {
                 throw new Exception('Ошибка декодирования изображения');
             }
 
-            // Создаем папку если не существует
+            // Создаем папку с учетом resource_id
             $uploadDir = MODX_BASE_PATH . 'assets/uploads/images/';
+            if ($resourceId > 0) {
+                $uploadDir .= $resourceId . '/';
+            }
+
             if (!is_dir($uploadDir)) {
                 if (!mkdir($uploadDir, 0755, true)) {
                     throw new Exception('Не удалось создать папку для загрузки');
@@ -2534,12 +2539,121 @@ if (empty($allQuestionIds)) {
             }
 
             // Возвращаем URL изображения
-            $imageUrl = $modx->getOption('site_url') . 'assets/uploads/images/' . $fileName;
+            $imageUrl = $modx->getOption('site_url') . 'assets/uploads/images/';
+            if ($resourceId > 0) {
+                $imageUrl .= $resourceId . '/';
+            }
+            $imageUrl .= $fileName;
 
             $response = ResponseHelper::success([
                 'url' => $imageUrl,
                 'filename' => $fileName
             ], 'Изображение загружено');
+            break;
+
+        case 'uploadDocument':
+            // Загрузка документа (PDF, DOC, DOCX и т.д.) для учебных материалов
+            PermissionHelper::requireAuthentication($modx, 'Требуется авторизация');
+
+            // Проверяем права
+            $isAdmin = PermissionHelper::isAdmin($modx);
+            $isExpert = PermissionHelper::isExpert($modx);
+
+            if (!$isAdmin && !$isExpert) {
+                throw new Exception('Нет прав для загрузки документов');
+            }
+
+            // Получаем base64 данные, имя файла и resource_id
+            $documentData = ValidationHelper::requireString($data, 'document', 'Документ не предоставлен');
+            $originalName = ValidationHelper::optionalString($data, 'filename', 'document');
+            $resourceId = ValidationHelper::optionalInt($data, 'resource_id', 0);
+
+            // Парсим base64 data URL
+            if (!preg_match('/^data:([^;]+);base64,(.+)$/', $documentData, $matches)) {
+                throw new Exception('Неверный формат документа');
+            }
+
+            $mimeType = $matches[1];
+            $documentBase64 = $matches[2];
+
+            // Определяем расширение по MIME типу
+            $mimeToExt = [
+                'application/pdf' => 'pdf',
+                'application/msword' => 'doc',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => 'docx',
+                'application/vnd.ms-excel' => 'xls',
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' => 'xlsx',
+                'application/vnd.ms-powerpoint' => 'ppt',
+                'application/vnd.openxmlformats-officedocument.presentationml.presentation' => 'pptx',
+                'text/plain' => 'txt',
+                'application/zip' => 'zip',
+                'application/x-rar-compressed' => 'rar',
+            ];
+
+            $extension = $mimeToExt[$mimeType] ?? null;
+
+            // Если не нашли по MIME, пробуем извлечь из имени файла
+            if (!$extension && preg_match('/\.([a-z0-9]+)$/i', $originalName, $extMatches)) {
+                $extension = strtolower($extMatches[1]);
+            }
+
+            if (!$extension) {
+                throw new Exception('Неподдерживаемый тип документа');
+            }
+
+            // Проверяем допустимые расширения
+            $allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip', 'rar'];
+            if (!in_array(strtolower($extension), $allowedExtensions)) {
+                throw new Exception('Недопустимый тип документа. Разрешены: ' . implode(', ', $allowedExtensions));
+            }
+
+            // Декодируем base64
+            $documentContent = base64_decode($documentBase64);
+            if ($documentContent === false) {
+                throw new Exception('Ошибка декодирования документа');
+            }
+
+            // Проверка размера (макс 20MB)
+            if (strlen($documentContent) > 20 * 1024 * 1024) {
+                throw new Exception('Размер документа не должен превышать 20MB');
+            }
+
+            // Создаем папку с учетом resource_id
+            $uploadDir = MODX_BASE_PATH . 'assets/uploads/documents/';
+            if ($resourceId > 0) {
+                $uploadDir .= $resourceId . '/';
+            }
+
+            if (!is_dir($uploadDir)) {
+                if (!mkdir($uploadDir, 0755, true)) {
+                    throw new Exception('Не удалось создать папку для загрузки');
+                }
+            }
+
+            // Очищаем имя файла и генерируем безопасное имя
+            $safeName = preg_replace('/[^a-zA-Z0-9_\-\.а-яА-ЯёЁ]/', '_', pathinfo($originalName, PATHINFO_FILENAME));
+            $safeName = mb_substr($safeName, 0, 100); // Ограничиваем длину
+            $fileName = $safeName . '_' . uniqid() . '.' . $extension;
+            $filePath = $uploadDir . $fileName;
+
+            // Сохраняем файл
+            if (file_put_contents($filePath, $documentContent) === false) {
+                throw new Exception('Ошибка сохранения файла');
+            }
+
+            // Возвращаем URL документа
+            $documentUrl = $modx->getOption('site_url') . 'assets/uploads/documents/';
+            if ($resourceId > 0) {
+                $documentUrl .= $resourceId . '/';
+            }
+            $documentUrl .= $fileName;
+
+            $response = ResponseHelper::success([
+                'url' => $documentUrl,
+                'filename' => $fileName,
+                'original_name' => $originalName,
+                'extension' => $extension
+            ], 'Документ загружен');
             break;
 
         case 'deleteMaterial':
@@ -2576,7 +2690,74 @@ if (empty($allQuestionIds)) {
                 throw new Exception('Ошибка удаления материала');
             }
 
-            $response = ResponseHelper::success(null, 'Материал удален');
+            // Удаляем все файлы материала (изображения и документы)
+            $deletedFiles = 0;
+            $imagePath = MODX_BASE_PATH . 'assets/uploads/images/' . $materialId . '/';
+            $documentPath = MODX_BASE_PATH . 'assets/uploads/documents/' . $materialId . '/';
+
+            // Рекурсивное удаление папки
+            $deleteDirectory = function($dir) use (&$deleteDirectory, &$deletedFiles) {
+                if (!is_dir($dir)) return false;
+                $files = array_diff(scandir($dir), ['.', '..']);
+                foreach ($files as $file) {
+                    $path = $dir . '/' . $file;
+                    if (is_dir($path)) {
+                        $deleteDirectory($path);
+                    } else {
+                        unlink($path);
+                        $deletedFiles++;
+                    }
+                }
+                return rmdir($dir);
+            };
+
+            $deleteDirectory($imagePath);
+            $deleteDirectory($documentPath);
+
+            $response = ResponseHelper::success([
+                'deleted_files' => $deletedFiles
+            ], 'Материал и файлы удалены');
+            break;
+
+        case 'cleanupResourceFiles':
+            // Очистка файлов для конкретного ресурса (можно вызвать вручную)
+            PermissionHelper::requireAuthentication($modx, 'Требуется авторизация');
+
+            $isAdmin = PermissionHelper::isAdmin($modx);
+            if (!$isAdmin) {
+                throw new Exception('Требуются права администратора');
+            }
+
+            $resourceId = ValidationHelper::requireInt($data, 'resource_id', 'Не указан ID ресурса');
+
+            $deletedFiles = 0;
+            $imagePath = MODX_BASE_PATH . 'assets/uploads/images/' . $resourceId . '/';
+            $documentPath = MODX_BASE_PATH . 'assets/uploads/documents/' . $resourceId . '/';
+
+            // Рекурсивное удаление папки
+            $deleteDirectory = function($dir) use (&$deleteDirectory, &$deletedFiles) {
+                if (!is_dir($dir)) return false;
+                $files = array_diff(scandir($dir), ['.', '..']);
+                foreach ($files as $file) {
+                    $path = $dir . '/' . $file;
+                    if (is_dir($path)) {
+                        $deleteDirectory($path);
+                    } else {
+                        unlink($path);
+                        $deletedFiles++;
+                    }
+                }
+                return rmdir($dir);
+            };
+
+            $imageDeleted = $deleteDirectory($imagePath);
+            $documentDeleted = $deleteDirectory($documentPath);
+
+            $response = ResponseHelper::success([
+                'deleted_files' => $deletedFiles,
+                'images_folder_deleted' => $imageDeleted,
+                'documents_folder_deleted' => $documentDeleted
+            ], 'Файлы очищены');
             break;
 
 
