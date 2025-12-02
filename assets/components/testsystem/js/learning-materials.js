@@ -115,13 +115,163 @@ async function editMaterial(materialId) {
 function initMaterialQuill(content) {
     const editorContainer = document.getElementById('material-quill-editor');
     editorContainer.innerHTML = '';
+
+    // Создаем toolbar с кнопкой для документов
+    const toolbarOptions = [
+        ['bold', 'italic', 'underline', 'strike'],
+        ['blockquote', 'code-block'],
+        [{ 'header': 1 }, { 'header': 2 }],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        [{ 'indent': '-1'}, { 'indent': '+1' }],
+        [{ 'size': ['small', false, 'large', 'huge'] }],
+        [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+        [{ 'color': [] }, { 'background': [] }],
+        [{ 'align': [] }],
+        ['link', 'image'],
+        ['document'], // Кнопка для загрузки документов
+        ['clean']
+    ];
+
     materialQuillEditor = new Quill('#material-quill-editor', {
         theme: 'snow',
-        modules: { toolbar: [['bold', 'italic', 'underline', 'strike'],['blockquote', 'code-block'],[{ 'header': 1 }, { 'header': 2 }],[{ 'list': 'ordered'}, { 'list': 'bullet' }],[{ 'indent': '-1'}, { 'indent': '+1' }],[{ 'size': ['small', false, 'large', 'huge'] }],[{ 'header': [1, 2, 3, 4, 5, 6, false] }],[{ 'color': [] }, { 'background': [] }],[{ 'align': [] }],['link', 'image'],['clean']] }
+        modules: { toolbar: toolbarOptions }
     });
+
+    // Настраиваем обработчики
+    const toolbar = materialQuillEditor.getModule('toolbar');
+    toolbar.addHandler('image', imageHandler);
+    toolbar.addHandler('document', documentHandler);
+
+    // Добавляем иконку для кнопки документа
+    const documentButton = document.querySelector('.ql-document');
+    if (documentButton) {
+        documentButton.innerHTML = '<i class="bi bi-file-earmark-arrow-up"></i>';
+        documentButton.title = 'Загрузить документ';
+    }
+
     if (content) {
         materialQuillEditor.clipboard.dangerouslyPasteHTML(content);
     }
+}
+
+async function imageHandler() {
+    const input = document.createElement('input');
+    input.setAttribute('type', 'file');
+    input.setAttribute('accept', 'image/jpeg,image/jpg,image/png,image/gif,image/webp');
+    input.click();
+
+    input.onchange = async () => {
+        const file = input.files[0];
+        if (!file) return;
+
+        // Проверка размера (макс 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            alert('Размер изображения не должен превышать 5MB');
+            return;
+        }
+
+        try {
+            // Читаем файл как base64
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const base64Image = e.target.result;
+
+                try {
+                    // Определяем resource_id: при редактировании - currentEditMaterialId, иначе MATERIAL_PAGE_ID
+                    const resourceId = currentEditMaterialId || (typeof MATERIAL_PAGE_ID !== 'undefined' ? MATERIAL_PAGE_ID : 0);
+
+                    // Отправляем на сервер
+                    const result = await apiCall('uploadImage', {
+                        image: base64Image,
+                        resource_id: resourceId
+                    });
+
+                    if (result.success && result.data.url) {
+                        // Вставляем изображение в редактор
+                        const range = materialQuillEditor.getSelection(true);
+                        materialQuillEditor.insertEmbed(range.index, 'image', result.data.url);
+                        materialQuillEditor.setSelection(range.index + 1);
+                    } else {
+                        throw new Error(result.message || 'Ошибка загрузки изображения');
+                    }
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    alert('Ошибка загрузки: ' + error.message);
+                }
+            };
+            reader.readAsDataURL(file);
+        } catch (error) {
+            console.error('File read error:', error);
+            alert('Ошибка чтения файла');
+        }
+    };
+}
+
+async function documentHandler() {
+    const input = document.createElement('input');
+    input.setAttribute('type', 'file');
+    input.setAttribute('accept', '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar');
+    input.click();
+
+    input.onchange = async () => {
+        const file = input.files[0];
+        if (!file) return;
+
+        // Проверка размера (макс 20MB)
+        if (file.size > 20 * 1024 * 1024) {
+            alert('Размер документа не должен превышать 20MB');
+            return;
+        }
+
+        try {
+            // Читаем файл как base64
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const base64Document = e.target.result;
+
+                try {
+                    // Определяем resource_id: при редактировании - currentEditMaterialId, иначе MATERIAL_PAGE_ID
+                    const resourceId = currentEditMaterialId || (typeof MATERIAL_PAGE_ID !== 'undefined' ? MATERIAL_PAGE_ID : 0);
+
+                    // Отправляем на сервер
+                    const result = await apiCall('uploadDocument', {
+                        document: base64Document,
+                        filename: file.name,
+                        resource_id: resourceId
+                    });
+
+                    if (result.success && result.data.url) {
+                        // Определяем иконку по расширению
+                        const extension = result.data.extension || '';
+                        let icon = 'bi-file-earmark';
+                        if (extension === 'pdf') icon = 'bi-file-earmark-pdf';
+                        else if (['doc', 'docx'].includes(extension)) icon = 'bi-file-earmark-word';
+                        else if (['xls', 'xlsx'].includes(extension)) icon = 'bi-file-earmark-excel';
+                        else if (['ppt', 'pptx'].includes(extension)) icon = 'bi-file-earmark-ppt';
+                        else if (['zip', 'rar'].includes(extension)) icon = 'bi-file-earmark-zip';
+
+                        // Создаем красивую ссылку на документ
+                        const originalName = result.data.original_name || result.data.filename;
+                        const linkHtml = `<p><a href="${result.data.url}" target="_blank" class="btn btn-outline-primary btn-sm"><i class="bi ${icon}"></i> ${escapeHtml(originalName)}</a></p>`;
+
+                        // Вставляем в редактор
+                        const range = materialQuillEditor.getSelection(true);
+                        materialQuillEditor.clipboard.dangerouslyPasteHTML(range.index, linkHtml);
+                        materialQuillEditor.setSelection(range.index + linkHtml.length);
+                    } else {
+                        throw new Error(result.message || 'Ошибка загрузки документа');
+                    }
+                } catch (error) {
+                    console.error('Upload error:', error);
+                    alert('Ошибка загрузки: ' + error.message);
+                }
+            };
+            reader.readAsDataURL(file);
+        } catch (error) {
+            console.error('File read error:', error);
+            alert('Ошибка чтения файла');
+        }
+    };
 }
 
 async function saveMaterialFromModal() {
