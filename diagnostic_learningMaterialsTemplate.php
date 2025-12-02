@@ -77,22 +77,46 @@ echo "5. ПРОВЕРКА ПОЛЬЗОВАТЕЛЯ:\n";
 try {
     $userId = (int)$modx->user->get('id');
     $username = $modx->user->get('username');
-    $isAuth = $modx->user->isAuthenticated('web');
+    $isAuthWeb = $modx->user->isAuthenticated('web');
+    $isAuthMgr = $modx->user->isAuthenticated('mgr');
+    $hasWebSession = $modx->user->hasSessionContext('web');
+    $hasMgrSession = $modx->user->hasSessionContext('mgr');
 
     echo "   User ID: {$userId}\n";
     echo "   Username: {$username}\n";
-    echo "   Авторизован (web): " . ($isAuth ? 'ДА' : 'НЕТ') . "\n";
+    echo "\n";
+    echo "   КОНТЕКСТ MGR (админка):\n";
+    echo "     - isAuthenticated('mgr'): " . ($isAuthMgr ? 'ДА' : 'НЕТ') . "\n";
+    echo "     - hasSessionContext('mgr'): " . ($hasMgrSession ? 'ДА' : 'НЕТ') . "\n";
+    echo "\n";
+    echo "   КОНТЕКСТ WEB (фронт):\n";
+    echo "     - isAuthenticated('web'): " . ($isAuthWeb ? 'ДА' : 'НЕТ') . "\n";
+    echo "     - hasSessionContext('web'): " . ($hasWebSession ? 'ДА' : 'НЕТ') . "\n";
 
-    if ($isAuth) {
+    if (!$isAuthWeb && $userId > 0) {
+        echo "\n   ⚠️  ВНИМАНИЕ: Вы авторизованы в админке, но НЕ на фронте!\n";
+        echo "       Сниппет работает в контексте WEB и требует авторизации там.\n";
+        echo "       Авторизуйтесь на фронте сайта (ID 2 или группа LMS Admins)\n";
+    }
+
+    if ($hasWebSession || $userId > 0) {
         $userGroups = $modx->user->getUserGroupNames();
-        echo "   Группы: " . implode(', ', $userGroups) . "\n";
+        echo "\n   Группы пользователя: " . (empty($userGroups) ? 'НЕТ' : implode(', ', $userGroups)) . "\n";
 
         // Проверка прав через PermissionHelper
         if (class_exists('PermissionHelper')) {
+            echo "\n   Проверка прав через PermissionHelper:\n";
             $isAdmin = PermissionHelper::isAdmin($modx);
             $isExpert = PermissionHelper::isExpert($modx);
-            echo "   PermissionHelper::isAdmin(): " . ($isAdmin ? 'ДА' : 'НЕТ') . "\n";
-            echo "   PermissionHelper::isExpert(): " . ($isExpert ? 'ДА' : 'НЕТ') . "\n";
+            $isAuth = PermissionHelper::isAuthenticated($modx);
+            echo "     - isAuthenticated(): " . ($isAuth ? 'ДА' : 'НЕТ') . "\n";
+            echo "     - isAdmin(): " . ($isAdmin ? 'ДА' : 'НЕТ') . "\n";
+            echo "     - isExpert(): " . ($isExpert ? 'ДА' : 'НЕТ') . "\n";
+
+            if (!$isAuth) {
+                echo "\n   ⚠️  PermissionHelper НЕ видит авторизацию!\n";
+                echo "       Это значит $canEdit = false в сниппете.\n";
+            }
         }
     }
 } catch (Exception $e) {
@@ -225,4 +249,81 @@ try {
 }
 echo "\n";
 
-echo "=== ДИАГНОСТИКА ЗАВЕРШЕНА ===\n";
+// 11. Рекомендации
+echo "11. РЕКОМЕНДАЦИИ ПО РЕШЕНИЮ ПРОБЛЕМ:\n";
+
+$hasIssues = false;
+
+// Проверка авторизации
+try {
+    $isAuthWeb = $modx->user->isAuthenticated('web');
+    $userId = (int)$modx->user->get('id');
+
+    if (!$isAuthWeb && $userId > 0) {
+        echo "\n   ⚠️  ПРОБЛЕМА: Не авторизованы в WEB контексте\n";
+        echo "   РЕШЕНИЕ:\n";
+        echo "   1. Авторизуйтесь на фронте сайта через форму входа\n";
+        echo "   2. Используйте пользователя с ID=2 или из группы 'LMS Admins'\n";
+        echo "   3. Или измените проверку прав в сниппете (см. ниже)\n\n";
+        $hasIssues = true;
+    }
+
+    if ($isAuthWeb) {
+        $userGroups = $modx->user->getUserGroupNames();
+        $config = require MODX_CORE_PATH . 'components/testsystem/config/site.config.php';
+        $isInAdminGroup = in_array($config['groups']['admins'], $userGroups);
+        $isInExpertGroup = in_array($config['groups']['experts'], $userGroups);
+
+        if (!$isInAdminGroup && !$isInExpertGroup && $userId !== 1 && $userId !== 2) {
+            echo "\n   ⚠️  ПРОБЛЕМА: У пользователя нет прав админа/эксперта\n";
+            echo "   РЕШЕНИЕ:\n";
+            echo "   1. Добавьте пользователя в группу 'LMS Admins' или 'LMS Experts'\n";
+            echo "   2. В MODX Manager: Безопасность → Управление пользователями → Группы\n\n";
+            $hasIssues = true;
+        }
+    }
+} catch (Exception $e) {
+    // ignore
+}
+
+// Проверка сниппета в БД
+try {
+    $snippet = $modx->getObject('modSnippet', ['name' => 'learningMaterialsTemplate']);
+    if (!$snippet) {
+        echo "\n   ⚠️  ПРОБЛЕМА: Сниппет не найден в БД\n";
+        echo "   РЕШЕНИЕ:\n";
+        echo "   1. Создайте сниппет в MODX Manager: Элементы → Сниппеты → Создать\n";
+        echo "   2. Или запустите build скрипт для установки элементов\n\n";
+        $hasIssues = true;
+    } else {
+        $content = $snippet->get('snippet');
+        if (strpos($content, 'Config.php') === false) {
+            echo "\n   ⚠️  ПРОБЛЕМА: В сниппете нет подключения Config.php\n";
+            echo "   РЕШЕНИЕ:\n";
+            echo "   1. Обновите сниппет из файла:\n";
+            echo "      " . MODX_CORE_PATH . "elements/snippets/learningMaterialsTemplate.php\n";
+            echo "   2. В MODX Manager: Элементы → Сниппеты → learningMaterialsTemplate → Редактировать\n\n";
+            $hasIssues = true;
+        }
+    }
+} catch (Exception $e) {
+    // ignore
+}
+
+if (!$hasIssues) {
+    echo "\n   ✅ Критических проблем не обнаружено!\n";
+    echo "   Сниппет должен работать корректно.\n\n";
+}
+
+echo "\n=== ДОПОЛНИТЕЛЬНАЯ ИНФОРМАЦИЯ ===\n\n";
+echo "Альтернативное решение - изменить проверку прав:\n";
+echo "Если хотите, чтобы админы из mgr могли редактировать материалы,\n";
+echo "измените в learningMaterialsTemplate.php строку 17:\n\n";
+echo "БЫЛО:\n";
+echo "if (PermissionHelper::isAuthenticated(\$modx)) {\n\n";
+echo "СТАЛО:\n";
+echo "if (PermissionHelper::isAuthenticated(\$modx) || \$modx->user->isAuthenticated('mgr')) {\n\n";
+echo "Это позволит редактировать материалы пользователям,\n";
+echo "авторизованным в админке (mgr контексте).\n";
+
+echo "\n=== ДИАГНОСТИКА ЗАВЕРШЕНА ===\n";
