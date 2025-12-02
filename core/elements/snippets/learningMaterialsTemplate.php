@@ -10,6 +10,12 @@ $editMaterialId = isset($_GET['edit_material']) ? (int)$_GET['edit_material'] : 
 $materialId = $modx->resource ? (int)$modx->resource->get('id') : 0;
 $parentId = $modx->resource ? (int)$modx->resource->get('parent') : 0;
 
+// === DEBUG ===
+$log = MODX_CORE_PATH . 'cache/logs/snippet_debug.log';
+@mkdir(dirname($log), 0755, true);
+file_put_contents($log, date('Y-m-d H:i:s') . " - ID:$materialId Parent:$parentId\n", FILE_APPEND);
+// === END DEBUG ===
+
 // Проверяем права на редактирование
 require_once MODX_CORE_PATH . 'components/testsystem/helpers/Config.php';
 require_once MODX_CORE_PATH . 'components/testsystem/helpers/PermissionHelper.php';
@@ -421,5 +427,9 @@ JAVASCRIPT;
 
 // Добавляем ID страницы для JS
 $output .= '<script>const MATERIAL_PAGE_ID = ' . $materialId . ';</script>';
+
+// === DEBUG ===
+file_put_contents($log, date('Y-m-d H:i:s') . " - RETURN: " . strlen($output) . " bytes\n", FILE_APPEND);
+// === END DEBUG ===
 
 return $output;
