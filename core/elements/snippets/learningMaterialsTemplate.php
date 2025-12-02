@@ -7,17 +7,17 @@
 // Определяем режим работы
 $isEdit = isset($_GET['edit']) && $_GET['edit'] == '1';
 $editMaterialId = isset($_GET['edit_material']) ? (int)$_GET['edit_material'] : 0;
-$materialId = (int)$modx->resource->get('id');
-$parentId = (int)$modx->resource->get('parent');
+$materialId = $modx->resource ? (int)$modx->resource->get('id') : 0;
+$parentId = $modx->resource ? (int)$modx->resource->get('parent') : 0;
 
 // Проверяем права на редактирование
 require_once MODX_CORE_PATH . 'components/testsystem/helpers/Config.php';
 require_once MODX_CORE_PATH . 'components/testsystem/helpers/PermissionHelper.php';
 $canEdit = false;
-if (PermissionHelper::isAuthenticated($modx)) {
+if (PermissionHelper::isAuthenticated($modx) || $modx->user->isAuthenticated('mgr')) {
     $userId = PermissionHelper::getCurrentUserId($modx);
-    $isAdmin = PermissionHelper::isAdmin($modx);
-    $canEdit = ($modx->resource->get('createdby') == $userId) || $isAdmin;
+    $isAdmin = PermissionHelper::isAdmin($modx) || $modx->user->isAuthenticated('mgr');
+    $canEdit = $modx->resource && (($modx->resource->get('createdby') == $userId) || $isAdmin);
 }
 
 // РЕЖИМ 1: Редирект на редактирование (через старый параметр ?edit=1)
