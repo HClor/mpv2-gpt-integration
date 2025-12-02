@@ -2760,6 +2760,44 @@ if (empty($allQuestionIds)) {
             ], 'Файлы очищены');
             break;
 
+        case 'diagnoseMaterialsAuth':
+            // Диагностика аутентификации для учебных материалов
+            $diagnosis = [
+                'user' => [
+                    'id' => $modx->user->get('id'),
+                    'username' => $modx->user->get('username'),
+                ],
+                'authentication' => [
+                    'web' => $modx->user->isAuthenticated('web'),
+                    'mgr' => $modx->user->isAuthenticated('mgr'),
+                    'helper_isAuthenticated' => PermissionHelper::isAuthenticated($modx),
+                    'helper_requireAuthentication_would_pass' => false,
+                ],
+                'permissions' => [
+                    'isAdmin' => PermissionHelper::isAdmin($modx),
+                    'isExpert' => method_exists('PermissionHelper', 'isExpert') ? PermissionHelper::isExpert($modx) : 'method not exists',
+                ],
+                'methods_exist' => [
+                    'getCurrentUserIdWithMgr' => method_exists('PermissionHelper', 'getCurrentUserIdWithMgr'),
+                ],
+            ];
+
+            // Проверяем requireAuthentication
+            try {
+                PermissionHelper::requireAuthentication($modx, 'Test');
+                $diagnosis['authentication']['helper_requireAuthentication_would_pass'] = true;
+            } catch (Exception $e) {
+                $diagnosis['authentication']['helper_requireAuthentication_error'] = $e->getMessage();
+            }
+
+            // Проверяем getCurrentUserIdWithMgr если метод существует
+            if (method_exists('PermissionHelper', 'getCurrentUserIdWithMgr')) {
+                $diagnosis['user']['id_with_mgr'] = PermissionHelper::getCurrentUserIdWithMgr($modx);
+            }
+
+            $response = ResponseHelper::success($diagnosis, 'Диагностика завершена');
+            break;
+
 
     default:
                 throw new Exception('Unknown action: ' . $action);
