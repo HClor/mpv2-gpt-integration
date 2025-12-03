@@ -85,8 +85,8 @@ if ($parentId > 0) {
         // Константы
         $output .= '<script>const MATERIAL_PAGE_ID = ' . $rootPageId . ';</script>';
 
-        // Скрипты управления материалами
-        $output .= '<script src="/assets/components/testsystem/js/learning-materials.js"></script>';
+        // Скрипты управления материалами (с версией для обхода кэша)
+        $output .= '<script src="/assets/components/testsystem/js/learning-materials.js?v=' . time() . '"></script>';
 
         // Модальное окно для редактирования (копируем из режима 3)
         $output .= '<div class="modal fade" id="materialEditorModal" tabindex="-1">';
@@ -235,7 +235,7 @@ $output .= '<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>';
 // ВАЖНО: Определяем ID корневой страницы ДО загрузки скрипта
 $output .= '<script>const MATERIAL_PAGE_ID = ' . $rootPageId . ';</script>';
 
-// JavaScript для работы с материалами
-$output .= '<script src="/assets/components/testsystem/js/learning-materials.js"></script>';
+// JavaScript для работы с материалами (с версией для обхода кэша)
+$output .= '<script src="/assets/components/testsystem/js/learning-materials.js?v=' . time() . '"></script>';
 
 return $output;
