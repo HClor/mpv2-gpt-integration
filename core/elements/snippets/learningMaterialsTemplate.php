@@ -163,23 +163,8 @@ $output .= '</div>';
 
 $output .= '</div></div></div>';
 
-// Генерируем CSRF token для AJAX запросов
-try {
-    if (session_status() === PHP_SESSION_NONE) {
-        @session_start();
-    }
-
-    if (!isset($_SESSION['csrf_token'])) {
-        $_SESSION['csrf_token'] = md5(uniqid(mt_rand(), true));
-    }
-    $csrfToken = $_SESSION['csrf_token'];
-} catch (Exception $e) {
-    // Если сессия не работает, генерируем временный токен
-    $csrfToken = md5(uniqid(mt_rand(), true));
-}
-
-// Добавляем CSRF token в meta тег напрямую в output
-$output .= '<meta name="csrf-token" content="' . htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') . '">';
+// CSRF токен уже генерируется в tsHead через [[!csrfToken]]
+// Не нужно дублировать генерацию токена здесь
 
 // Подключение Quill
 $output .= '<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">';
