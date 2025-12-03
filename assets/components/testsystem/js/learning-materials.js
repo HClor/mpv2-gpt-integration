@@ -99,14 +99,30 @@ function renderArticles(materials) {
 
         // Кнопки редактирования и удаления для авторов
         if (material.can_edit) {
-            html += `<button class="btn btn-outline-secondary btn-sm" onclick="editMaterial(${material.id})"><i class="bi bi-pencil"></i> Редактировать</button>`;
-            html += `<button class="btn btn-outline-danger btn-sm" onclick="deleteMaterial(${material.id}, '${escapeHtml(material.pagetitle)}')"><i class="bi bi-trash"></i> Удалить</button>`;
+            html += `<button class="btn btn-outline-secondary btn-sm" data-action="edit" data-id="${material.id}"><i class="bi bi-pencil"></i> Редактировать</button>`;
+            html += `<button class="btn btn-outline-danger btn-sm" data-action="delete" data-id="${material.id}" data-title="${escapeHtml(material.pagetitle)}"><i class="bi bi-trash"></i> Удалить</button>`;
         }
 
         html += `</div></div></div></div>`;
     });
     html += '</div>';
     container.innerHTML = html;
+
+    // Добавляем обработчики событий для кнопок редактирования и удаления
+    container.querySelectorAll('[data-action="edit"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const materialId = parseInt(btn.getAttribute('data-id'));
+            editMaterial(materialId);
+        });
+    });
+
+    container.querySelectorAll('[data-action="delete"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const materialId = parseInt(btn.getAttribute('data-id'));
+            const materialTitle = btn.getAttribute('data-title');
+            deleteMaterial(materialId, materialTitle);
+        });
+    });
 }
 
 function openCreateMaterialModal() {
