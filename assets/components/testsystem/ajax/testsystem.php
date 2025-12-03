@@ -2919,7 +2919,20 @@ if (empty($allQuestionIds)) {
     }
 
 header('Content-Type: application/json; charset=utf-8');
-echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+
+// Финальная проверка перед отправкой
+error_log("[testsystem.php] Encoding response to JSON...");
+$jsonResponse = json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+
+if ($jsonResponse === false) {
+    error_log("[testsystem.php] ERROR: json_encode failed - " . json_last_error_msg());
+    error_log("[testsystem.php] Response data: " . print_r($response, true));
+    die(json_encode(['success' => false, 'message' => 'JSON encoding error: ' . json_last_error_msg()]));
+}
+
+error_log("[testsystem.php] JSON length: " . strlen($jsonResponse) . " bytes");
+echo $jsonResponse;
+error_log("[testsystem.php] Response sent successfully");
 
 // ============================================
 // ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ТРАНСЛИТЕРАЦИИ
