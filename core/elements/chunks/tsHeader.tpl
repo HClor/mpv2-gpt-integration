@@ -38,13 +38,6 @@
                         </span>`
                     ]]
 
-                    <!-- Избранное -->
-                    <li class="nav-item">
-                        <a class="nav-link" href="{$_modx->makeUrl(1002)}">
-                            <i class="fas fa-heart"></i> Избранное
-                        </a>
-                    </li>
-
                     <!-- Профиль -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">

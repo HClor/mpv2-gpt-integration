@@ -60,12 +60,12 @@ $stmtRank->execute();
 $rank = $stmtRank->fetchColumn();
 
 $html = [];
-$html[] = '<div class="mb-2 p-2 bg-light rounded text-center">';
+$html[] = '<div class="mb-4 p-2 bg-light rounded text-center">';
 $html[] = '<div class="h5 fw-bold text-primary mb-0">#' . $rank . '</div>';
 $html[] = '<small class="text-muted">Ваше место в рейтинге</small>';
 $html[] = '</div>';
 
-$html[] = '<ul class="list-unstyled mb-0 text-light">';
+$html[] = '<ul class="list-unstyled mb-0 text-light small">';
 $html[] = '<li class="mb-2 d-flex justify-content-between">';
 $html[] = '<span class="text-light"><i class="bi bi-clipboard-check text-primary"></i> Пройдено тестов:</span>';
 $html[] = '<strong class="text-light">' . (int)$stats['total_sessions'] . '</strong>';
