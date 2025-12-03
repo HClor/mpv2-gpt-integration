@@ -87,10 +87,6 @@ $output .= '</div></div></div>';
 
 // ПРАВАЯ КОЛОНКА
 $output .= '<div class="col-lg-9 col-md-8">';
-$output .= '<div class="learning-header mb-4">';
-$output .= '<h1 class="display-5"><i class="bi bi-book-half text-primary"></i> Обучающие материалы</h1>';
-$output .= '<p class="lead text-muted">Изучайте материалы в удобном режиме просмотра карточек</p>';
-$output .= '</div>';
 
 // Фильтруем по категории
 $filteredTests = $learningTests;
