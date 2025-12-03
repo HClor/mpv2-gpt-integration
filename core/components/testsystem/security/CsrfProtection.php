@@ -6,12 +6,13 @@
  * ИСПРАВЛЕНО: Использует MODX сессии через $_SESSION напрямую
  *
  * @package TestSystem
- * @version 2.3
+ * @version 2.4
  * @created 2025-11-13
  * @updated 2025-11-20 - переход на MODX сессии (v2.0)
  * @updated 2025-11-20 - убран session_start(), используем только $_SESSION (v2.1)
  * @updated 2025-11-29 - убрана проверка hasSessionContext для неавторизованных (v2.2)
  * @updated 2025-12-03 - добавлена проверка и инициализация сессии (v2.3)
+ * @updated 2025-12-03 - добавлена миграция со старого формата токена (v2.4)
  */
 
 class CsrfProtection {
@@ -113,6 +114,13 @@ class CsrfProtection {
 
         $sessionData = $_SESSION[self::TOKEN_NAME];
 
+        // Проверяем формат данных (защита от старого формата)
+        if (!is_array($sessionData) || !isset($sessionData['token']) || !isset($sessionData['created_at'])) {
+            // Неверный формат - очищаем и отклоняем
+            self::clearToken();
+            return false;
+        }
+
         // Проверяем срок действия токена
         if (time() - $sessionData['created_at'] > self::TOKEN_LIFETIME) {
             // Токен истек
@@ -143,8 +151,15 @@ class CsrfProtection {
         if (isset($_SESSION[self::TOKEN_NAME])) {
             $sessionData = $_SESSION[self::TOKEN_NAME];
 
-            if (time() - $sessionData['created_at'] <= self::TOKEN_LIFETIME) {
-                return $sessionData['token'];
+            // Проверяем формат данных (миграция со старого формата)
+            if (is_array($sessionData) && isset($sessionData['token']) && isset($sessionData['created_at'])) {
+                // Новый формат - проверяем срок действия
+                if (time() - $sessionData['created_at'] <= self::TOKEN_LIFETIME) {
+                    return $sessionData['token'];
+                }
+            } else {
+                // Старый формат (строка) или поврежденные данные - очищаем
+                self::clearToken();
             }
         }
 
