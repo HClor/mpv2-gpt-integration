@@ -103,7 +103,16 @@ try {
 
 // Функция для вывода карточки статьи
 function renderArticleCard($article, $modx) {
-    $publishDate = date('d.m.Y', $article['publishedon']);
+    // Исправляем: преобразуем publishedon в timestamp если это строка
+    $publishedon = $article['publishedon'];
+    if (is_string($publishedon)) {
+        $publishedon = strtotime($publishedon);
+    }
+    if (!$publishedon) {
+        $publishedon = time(); // Если не удалось преобразовать, используем текущее время
+    }
+
+    $publishDate = date('d.m.Y', $publishedon);
     $intro = $article['introtext'] ?: '';
     $introShort = mb_strlen($intro) > 150 ? mb_substr($intro, 0, 150) . '...' : $intro;
 
