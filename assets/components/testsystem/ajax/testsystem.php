@@ -2727,10 +2727,28 @@ if (empty($allQuestionIds)) {
 
             // Очищаем имя файла и генерируем безопасное имя
             error_log("[uploadDocument] Cleaning filename...");
-            $safeName = preg_replace('/[^a-zA-Z0-9_\-\.а-яА-ЯёЁ]/', '_', pathinfo($originalName, PATHINFO_FILENAME));
-            $safeName = mb_substr($safeName, 0, 100); // Ограничиваем длину
+            $baseName = pathinfo($originalName, PATHINFO_FILENAME);
+            error_log("[uploadDocument] Original basename: $baseName");
+
+            // Заменяем пробелы на подчеркивания
+            $baseName = str_replace(' ', '_', $baseName);
+
+            // Транслитерируем кириллицу в латиницу
+            $safeName = transliterate($baseName);
+
+            // Дополнительная очистка - оставляем только буквы, цифры, дефис и подчеркивание
+            $safeName = preg_replace('/[^a-zA-Z0-9_\-]/', '_', $safeName);
+
+            // Убираем повторяющиеся подчеркивания
+            $safeName = preg_replace('/_+/', '_', $safeName);
+
+            // Ограничиваем длину
+            $safeName = mb_substr($safeName, 0, 100);
+
+            // Генерируем финальное имя файла
             $fileName = $safeName . '_' . uniqid() . '.' . $extension;
             $filePath = $uploadDir . $fileName;
+            error_log("[uploadDocument] Transliterated filename: $fileName");
             error_log("[uploadDocument] File path: $filePath");
 
             // Сохраняем файл
