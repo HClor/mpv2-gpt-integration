@@ -2338,10 +2338,23 @@ if (empty($allQuestionIds)) {
             // Получить один материал по ID (для редактирования)
             $materialId = ValidationHelper::requireInt($data, 'material_id', 'ID материала не указан');
 
+            // Диагностика: проверяем существование ресурса через прямой SQL запрос
+            $stmt = $modx->prepare("SELECT id, pagetitle, deleted FROM {$prefix}site_content WHERE id = ?");
+            $stmt->execute([$materialId]);
+            $checkResource = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$checkResource) {
+                throw new Exception('Material not found in database (ID: ' . $materialId . ')');
+            }
+
+            if ($checkResource['deleted'] == 1) {
+                throw new Exception('Material is deleted (ID: ' . $materialId . ')');
+            }
+
             $resource = $modx->getObject('modResource', $materialId);
 
             if (!$resource) {
-                throw new Exception('Материал не найден');
+                throw new Exception('Material found in DB but getObject failed (ID: ' . $materialId . ', Title: ' . $checkResource['pagetitle'] . ')');
             }
 
             // Проверяем права просмотра (поддержка web и mgr контекстов)
