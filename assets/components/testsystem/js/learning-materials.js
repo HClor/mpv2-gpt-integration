@@ -131,6 +131,13 @@ function openCreateMaterialModal() {
     document.getElementById('material-pagetitle').value = '';
     document.getElementById('material-introtext').value = '';
     document.getElementById('material-published').checked = false;
+
+    // Сброс категории
+    const categorySelect = document.getElementById('material-category');
+    if (categorySelect) {
+        categorySelect.value = '';
+    }
+
     initMaterialQuill('');
     const modal = new bootstrap.Modal(document.getElementById('materialEditorModal'));
     modal.show();
@@ -148,6 +155,13 @@ async function editMaterial(materialId) {
         document.getElementById('material-pagetitle').value = material.pagetitle || '';
         document.getElementById('material-introtext').value = material.introtext || '';
         document.getElementById('material-published').checked = material.published == 1;
+
+        // Устанавливаем категорию
+        const categorySelect = document.getElementById('material-category');
+        if (categorySelect && material.category_id) {
+            categorySelect.value = material.category_id;
+        }
+
         initMaterialQuill(material.content || '');
         const modal = new bootstrap.Modal(document.getElementById('materialEditorModal'));
         modal.show();
@@ -451,12 +465,25 @@ async function saveMaterialFromModal() {
     const introtext = document.getElementById('material-introtext').value.trim();
     const published = document.getElementById('material-published').checked ? 1 : 0;
     const content = materialQuillEditor.root.innerHTML;
+
+    // Получаем категорию
+    const categorySelect = document.getElementById('material-category');
+    const categoryId = categorySelect ? categorySelect.value : '';
+
     if (!pagetitle) {
         alert('Введите название материала');
         return;
     }
     try {
-        const data = { pagetitle, introtext, content, published, template: 6, parent: MATERIAL_PAGE_ID };
+        const data = {
+            pagetitle,
+            introtext,
+            content,
+            published,
+            template: 6,
+            parent: MATERIAL_PAGE_ID,
+            category_id: categoryId
+        };
         if (currentEditMaterialId) { data.material_id = currentEditMaterialId; }
         const result = await apiCall('saveMaterial', data);
         if (result.success) {

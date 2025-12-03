@@ -21,8 +21,8 @@
                 &sortby=`menuindex`
                 &sortdir=`ASC`
                 &tplOuter=`@INLINE <ul class="navbar-nav me-auto mb-2 mb-lg-0">[[+wrapper]]</ul>`
-                &tpl=`@INLINE <li class="nav-item[[+classnames]]"><a class="nav-link[[+classnames]]" href="[[+link]]">[[+menutitle]]</a>[[+wrapper]]</li>`
-                &tplHere=`@INLINE <li class="nav-item[[+classnames]]"><a class="nav-link active[[+classnames]]" href="[[+link]]">[[+menutitle]]</a>[[+wrapper]]</li>`
+                &tpl=`@INLINE <li class="nav-item [[+classnames]]"><a class="nav-link [[+classnames]]" href="[[+link]]">[[+menutitle]]</a>[[+wrapper]]</li>`
+                &tplHere=`@INLINE <li class="nav-item [[+classnames]]"><a class="nav-link active [[+classnames]]" href="[[+link]]">[[+menutitle]]</a>[[+wrapper]]</li>`
             ]]
 
             <!-- Меню пользователя -->
@@ -50,7 +50,7 @@
                         <a class="nav-link dropdown-toggle" href="#" id="userMenu" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-user-circle"></i> {$_modx->user.username}
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end" style="position: absolute; z-index: 1050;">
+                        <ul class="dropdown-menu dropdown-menu-end">
                             <li>
                                 <a class="dropdown-item" href="{$_modx->makeUrl(1003)}">
                                     <i class="fas fa-user"></i> Мой профиль

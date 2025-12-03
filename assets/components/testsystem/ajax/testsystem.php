@@ -2392,6 +2392,7 @@ if (empty($allQuestionIds)) {
                 'published' => $resource->get('published'),
                 'parent' => $resource->get('parent'),
                 'createdby' => $resource->get('createdby'),
+                'category_id' => $resource->getTVValue('category_id'),
                 'can_edit' => $isAuthenticated && ((int)$resource->get('createdby') === $userId || $isAdmin)
             ];
 
@@ -2419,6 +2420,7 @@ if (empty($allQuestionIds)) {
             $parentId = ValidationHelper::optionalInt($data, 'parent', 0);
             $published = ValidationHelper::optionalInt($data, 'published', 1);
             $template = ValidationHelper::optionalInt($data, 'template', 6);
+            $categoryId = ValidationHelper::optionalString($data, 'category_id', '');
 
             if ($materialId > 0) {
                 // Обновление существующего
@@ -2449,6 +2451,11 @@ if (empty($allQuestionIds)) {
 
                 if (!$resource->save()) {
                     throw new Exception('Ошибка обновления материала');
+                }
+
+                // Сохраняем категорию в TV
+                if ($categoryId !== '') {
+                    $resource->setTVValue('category_id', $categoryId);
                 }
 
                 // Очищаем кэш
@@ -2495,6 +2502,11 @@ if (empty($allQuestionIds)) {
                 }
 
                 $materialId = $resource->get('id');
+
+                // Сохраняем категорию в TV
+                if ($categoryId !== '') {
+                    $resource->setTVValue('category_id', $categoryId);
+                }
 
                 // Очищаем кэш для нового ресурса
                 $modx->cacheManager->refresh([

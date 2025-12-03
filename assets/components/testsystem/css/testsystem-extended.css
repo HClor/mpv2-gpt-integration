@@ -10,6 +10,27 @@
     cursor: pointer;
 }
 
+/* Навигационная панель - улучшения */
+.user-xp {
+    display: inline-block;
+    margin-right: 1rem !important;
+    align-self: center;
+}
+
+/* Dropdown меню - правильное позиционирование */
+.navbar-nav .dropdown-menu {
+    position: absolute !important;
+    top: 100% !important;
+    right: 0 !important;
+    left: auto !important;
+    margin-top: 0.125rem !important;
+}
+
+.navbar-nav .dropdown-menu-end {
+    right: 0 !important;
+    left: auto !important;
+}
+
 .handle {
     cursor: move;
 }

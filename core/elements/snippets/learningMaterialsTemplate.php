@@ -127,7 +127,7 @@ if ($parentId > 0) {
     return $output;
 }
 
-// РЕЖИМ 3: Корневая страница со вкладками
+// РЕЖИМ 3: Корневая страница с вертикальной структурой
 $output = '<div class="container-fluid mt-4">';
 $output .= '<div class="row">';
 $output .= '<div class="col-12">';
@@ -143,40 +143,31 @@ if ($canCreate) {
 
 $output .= '</div>';
 
-// Tabs Navigation
-$output .= '<ul class="nav nav-tabs mb-4" id="learningTabs" role="tablist">';
-$output .= '<li class="nav-item" role="presentation">';
-$output .= '<button class="nav-link active" id="questions-tab" data-bs-toggle="tab" data-bs-target="#questions" type="button" role="tab">';
-$output .= '<i class="bi bi-collection"></i> Вопросы из тестов';
-$output .= '</button>';
-$output .= '</li>';
-$output .= '<li class="nav-item" role="presentation">';
-$output .= '<button class="nav-link" id="articles-tab" data-bs-toggle="tab" data-bs-target="#articles" type="button" role="tab">';
-$output .= '<i class="bi bi-journal-text"></i> Учебные статьи';
-$output .= '</button>';
-$output .= '</li>';
-$output .= '</ul>';
-
-// Tabs Content
-$output .= '<div class="tab-content" id="learningTabsContent">';
-
-// Вкладка "Вопросы из тестов"
-$output .= '<div class="tab-pane fade show active" id="questions" role="tabpanel">';
+// СЕКЦИЯ 1: Вопросы из тестов
+$output .= '<section class="mb-5">';
+$output .= '<div class="section-header mb-4 pb-3 border-bottom">';
+$output .= '<h2 class="h3 mb-2">';
+$output .= '<i class="bi bi-collection text-primary"></i> Вопросы из тестов';
+$output .= '</h2>';
+$output .= '<p class="text-muted mb-0">Учебные материалы из тестовых вопросов, сгруппированные по категориям</p>';
+$output .= '</div>';
 $output .= $modx->runSnippet('learningMaterials');
+$output .= '</section>';
+
+// СЕКЦИЯ 2: Учебные статьи
+$output .= '<section class="mb-5">';
+$output .= '<div class="section-header mb-4 pb-3 border-bottom">';
+$output .= '<h2 class="h3 mb-2">';
+$output .= '<i class="bi bi-journal-text text-success"></i> Учебные статьи';
+$output .= '</h2>';
+$output .= '<p class="text-muted mb-0">Статьи и материалы, созданные экспертами, сгруппированные по категориям</p>';
 $output .= '</div>';
 
-// Вкладка "Учебные статьи"
-$output .= '<div class="tab-pane fade" id="articles" role="tabpanel">';
-$output .= '<div id="articles-container">';
-$output .= '<div class="text-center py-5">';
-$output .= '<div class="spinner-border" role="status">';
-$output .= '<span class="visually-hidden">Загрузка...</span>';
-$output .= '</div>';
-$output .= '</div>';
-$output .= '</div>';
-$output .= '</div>';
+// Используем новый сниппет с поддержкой категорий
+$output .= $modx->runSnippet('learningArticles', ['rootPageId' => $rootPageId]);
 
-$output .= '</div>'; // tab-content
+$output .= '</section>';
+
 $output .= '</div></div></div>';
 
 // МОДАЛЬНОЕ ОКНО для создания/редактирования
@@ -199,6 +190,26 @@ $output .= '</div>';
 $output .= '<div class="mb-3">';
 $output .= '<label for="material-introtext" class="form-label">Краткое описание</label>';
 $output .= '<textarea class="form-control" id="material-introtext" rows="2"></textarea>';
+$output .= '</div>';
+
+// Получаем категории для выпадающего списка
+$prefix = $modx->getOption('table_prefix');
+$categoriesStmt = $modx->query("
+    SELECT id, name
+    FROM {$prefix}test_categories
+    ORDER BY sort_order, name
+");
+$categoriesList = $categoriesStmt->fetchAll(PDO::FETCH_ASSOC);
+
+$output .= '<div class="mb-3">';
+$output .= '<label for="material-category" class="form-label">Категория</label>';
+$output .= '<select class="form-select" id="material-category">';
+$output .= '<option value="">Без категории</option>';
+foreach ($categoriesList as $cat) {
+    $output .= '<option value="' . $cat['id'] . '">' . htmlspecialchars($cat['name']) . '</option>';
+}
+$output .= '</select>';
+$output .= '<small class="form-text text-muted">Выберите категорию для группировки материала. Категориями можно управлять на странице "Управление категориями".</small>';
 $output .= '</div>';
 
 $output .= '<div class="mb-3">';
