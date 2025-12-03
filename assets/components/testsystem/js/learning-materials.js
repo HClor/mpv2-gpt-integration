@@ -424,7 +424,7 @@ async function documentHandler() {
 
                         // Создаем ссылку на документ с emoji (без CSS классов, которые Quill удаляет)
                         const originalName = result.data.original_name || result.data.filename;
-                        const linkHtml = `<p><a href="${result.data.url}" target="_blank">${emoji} ${escapeHtml(originalName)}</a></p>`;
+                        const linkHtml = `<p><a href="${result.data.url}" target="_blank">${emoji}${escapeHtml(originalName)}</a></p>`;
 
                         // Вставляем в редактор
                         const range = materialQuillEditor.getSelection(true);
