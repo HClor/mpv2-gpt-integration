@@ -522,8 +522,33 @@ async function deleteMaterial(materialId, materialTitle) {
         const result = await apiCall('deleteMaterial', { material_id: materialId });
 
         if (result.success) {
+            // Закрываем модальное окно если оно открыто
+            const modalElement = document.getElementById('materialEditorModal');
+            if (modalElement) {
+                const modalInstance = bootstrap.Modal.getInstance(modalElement);
+                if (modalInstance) {
+                    modalInstance.hide();
+                }
+            }
+
             alert('Материал удален');
-            loadArticles(); // Перезагружаем список
+
+            // Определяем контекст: на странице материала или на корневой
+            const articlesContainer = document.getElementById('articles-container');
+
+            if (articlesContainer) {
+                // Мы на корневой странице (Mode 3) - перезагружаем страницу
+                // (т.к. статьи рендерятся PHP-сниппетом, а не JavaScript)
+                window.location.reload();
+            } else {
+                // Мы на странице материала (Mode 2) - редирект на родительскую страницу
+                if (typeof MATERIAL_PAGE_URL !== 'undefined' && MATERIAL_PAGE_URL) {
+                    window.location.href = MATERIAL_PAGE_URL;
+                } else {
+                    // Фоллбэк: просто перезагружаем текущую страницу (не идеально, но работает)
+                    window.location.reload();
+                }
+            }
         } else {
             throw new Error(result.message || 'Ошибка удаления');
         }
