@@ -2494,6 +2494,47 @@ if (empty($allQuestionIds)) {
             }
             break;
 
+        case 'deleteMaterial':
+            // Мягкое удаление учебного материала (пометить deleted=1)
+            PermissionHelper::requireAuthentication($modx, 'Требуется авторизация');
+
+            $userId = PermissionHelper::getCurrentUserIdWithMgr($modx);
+            $materialId = ValidationHelper::requireInt($data, 'material_id', 'ID материала не указан');
+
+            $resource = $modx->getObject('modResource', $materialId);
+
+            if (!$resource) {
+                throw new Exception('Материал не найден');
+            }
+
+            // Проверка прав (только автор или админ могут удалять)
+            $isAdmin = PermissionHelper::isAdmin($modx);
+            $canDelete = ((int)$resource->get('createdby') === $userId) || $isAdmin;
+
+            if (!$canDelete) {
+                throw new Exception('Нет прав для удаления этого материала');
+            }
+
+            // Мягкое удаление - помечаем deleted=1
+            $resource->set('deleted', 1);
+            $resource->set('deletedon', time());
+            $resource->set('deletedby', $userId);
+
+            if (!$resource->save()) {
+                throw new Exception('Ошибка удаления материала');
+            }
+
+            // Очищаем кэш
+            $modx->cacheManager->refresh([
+                'db' => [],
+                'auto_publish' => ['contexts' => ['web']],
+                'context_settings' => ['contexts' => ['web']],
+                'resource' => ['contexts' => ['web']],
+            ]);
+
+            $response = ResponseHelper::success([], 'Материал удален');
+            break;
+
         case 'uploadImage':
             // Загрузка изображения для учебных материалов
             PermissionHelper::requireAuthentication($modx, 'Требуется авторизация');

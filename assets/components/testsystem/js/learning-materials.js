@@ -74,7 +74,22 @@ function renderArticles(materials) {
     let html = '<div class="row g-4">';
     materials.forEach(material => {
         const statusBadge = material.published == 1 ? '<span class="badge bg-success">Опубликован</span>' : '<span class="badge bg-secondary">Черновик</span>';
-        html += `<div class="col-md-6 col-lg-4"><div class="card h-100"><div class="card-body"><h5 class="card-title">${escapeHtml(material.pagetitle)}</h5><p class="card-text text-muted small">${escapeHtml(material.introtext || material.description || 'Нет описания')}</p><div class="mb-3">${statusBadge}</div></div><div class="card-footer bg-white"><div class="d-grid gap-2"><a href="${material.url}" class="btn btn-primary"><i class="bi bi-book-half"></i> Читать</a>${material.can_edit ? `<button class="btn btn-outline-secondary btn-sm" onclick="editMaterial(${material.id})"><i class="bi bi-pencil"></i> Редактировать</button>` : ''}</div></div></div></div>`;
+        const isPublished = material.published == 1;
+
+        html += `<div class="col-md-6 col-lg-4"><div class="card h-100"><div class="card-body"><h5 class="card-title">${escapeHtml(material.pagetitle)}</h5><p class="card-text text-muted small">${escapeHtml(material.introtext || material.description || 'Нет описания')}</p><div class="mb-3">${statusBadge}</div></div><div class="card-footer bg-white"><div class="d-grid gap-2">`;
+
+        // Кнопка "Читать" только для опубликованных материалов
+        if (isPublished) {
+            html += `<a href="${material.url}" class="btn btn-primary"><i class="bi bi-book-half"></i> Читать</a>`;
+        }
+
+        // Кнопки редактирования и удаления для авторов
+        if (material.can_edit) {
+            html += `<button class="btn btn-outline-secondary btn-sm" onclick="editMaterial(${material.id})"><i class="bi bi-pencil"></i> Редактировать</button>`;
+            html += `<button class="btn btn-outline-danger btn-sm" onclick="deleteMaterial(${material.id}, '${escapeHtml(material.pagetitle)}')"><i class="bi bi-trash"></i> Удалить</button>`;
+        }
+
+        html += `</div></div></div></div>`;
     });
     html += '</div>';
     container.innerHTML = html;
@@ -114,7 +129,19 @@ async function editMaterial(materialId) {
 
 function initMaterialQuill(content) {
     const editorContainer = document.getElementById('material-quill-editor');
+
+    // ИСПРАВЛЕНИЕ: Уничтожаем предыдущий экземпляр редактора
+    if (materialQuillEditor) {
+        materialQuillEditor = null;
+    }
+
+    // Очищаем контейнер (удаляем старые toolbar и editor)
     editorContainer.innerHTML = '';
+    // Также удаляем toolbar который Quill создает рядом
+    const existingToolbar = editorContainer.previousElementSibling;
+    if (existingToolbar && existingToolbar.classList.contains('ql-toolbar')) {
+        existingToolbar.remove();
+    }
 
     // Создаем toolbar БЕЗ кнопки document (добавим её вручную)
     const toolbarOptions = [
@@ -348,6 +375,27 @@ async function saveMaterialFromModal() {
     }
 }
 
+async function deleteMaterial(materialId, materialTitle) {
+    if (!confirm(`Вы уверены, что хотите удалить материал "${materialTitle}"?\n\nМатериал будет помечен как удаленный и скрыт из списка.`)) {
+        return;
+    }
+
+    try {
+        const result = await apiCall('deleteMaterial', { material_id: materialId });
+
+        if (result.success) {
+            alert('Материал удален');
+            loadArticles(); // Перезагружаем список
+        } else {
+            throw new Error(result.message || 'Ошибка удаления');
+        }
+    } catch (error) {
+        console.error('Delete error:', error);
+        alert('Ошибка удаления: ' + error.message);
+    }
+}
+
 window.openCreateMaterialModal = openCreateMaterialModal;
 window.editMaterial = editMaterial;
 window.saveMaterialFromModal = saveMaterialFromModal;
+window.deleteMaterial = deleteMaterial;

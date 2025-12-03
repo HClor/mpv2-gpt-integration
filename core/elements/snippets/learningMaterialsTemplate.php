@@ -10,6 +10,9 @@ $editMaterialId = isset($_GET['edit_material']) ? (int)$_GET['edit_material'] : 
 $materialId = $modx->resource ? (int)$modx->resource->get('id') : 0;
 $parentId = $modx->resource ? (int)$modx->resource->get('parent') : 0;
 
+// ID корневой страницы учебных материалов
+$rootPageId = 149;
+
 // Проверяем права на редактирование
 require_once MODX_CORE_PATH . 'components/testsystem/helpers/Config.php';
 require_once MODX_CORE_PATH . 'components/testsystem/helpers/PermissionHelper.php';
@@ -22,9 +25,7 @@ if (PermissionHelper::isAuthenticated($modx) || $modx->user->isAuthenticated('mg
 
 // РЕЖИМ 1: Редирект на редактирование (через старый параметр ?edit=1)
 if ($isEdit && $canEdit) {
-    $rootUrl = $modx->makeUrl(149); // ID корневой страницы learning-articles
-    $redirectUrl = $rootUrl . '?edit_material=' . $materialId;
-
+    $redirectUrl = $modx->makeUrl($materialId) . '?edit_material=' . $materialId;
     $output = '<script>window.location.href = "' . htmlspecialchars($redirectUrl, ENT_QUOTES, 'UTF-8') . '";</script>';
     $output .= '<p>Перенаправление на редактирование...</p>';
     return $output;
@@ -48,10 +49,10 @@ if ($parentId > 0) {
     $output .= '</div>';
 
     if ($canEdit) {
-        $editUrl = $modx->makeUrl(149) . '?edit_material=' . $materialId;
-        $output .= '<a href="' . htmlspecialchars($editUrl, ENT_QUOTES, 'UTF-8') . '" class="btn btn-primary">';
+        // Редактирование открывается на текущей странице материала
+        $output .= '<button class="btn btn-primary" onclick="editMaterial(' . $materialId . ')">';
         $output .= '<i class="bi bi-pencil"></i> Редактировать материал';
-        $output .= '</a>';
+        $output .= '</button>';
     }
 
     $output .= '</div>';
@@ -61,6 +62,54 @@ if ($parentId > 0) {
     $output .= '</div>';
 
     $output .= '</div></div></div>';
+
+    // Добавляем скрипты для редактирования на странице материала
+    if ($canEdit) {
+        // Quill editor
+        $output .= '<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">';
+        $output .= '<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>';
+
+        // Константы
+        $output .= '<script>const MATERIAL_PAGE_ID = ' . $rootPageId . ';</script>';
+
+        // Скрипты управления материалами
+        $output .= '<script src="/assets/components/testsystem/js/learning-materials.js"></script>';
+
+        // Модальное окно для редактирования (копируем из режима 3)
+        $output .= '<div class="modal fade" id="materialEditorModal" tabindex="-1">';
+        $output .= '<div class="modal-dialog modal-xl">';
+        $output .= '<div class="modal-content">';
+        $output .= '<div class="modal-header">';
+        $output .= '<h5 class="modal-title" id="materialModalTitle">Редактировать материал</h5>';
+        $output .= '<button type="button" class="btn-close" data-bs-dismiss="modal"></button>';
+        $output .= '</div>';
+        $output .= '<div class="modal-body">';
+        $output .= '<div class="mb-3">';
+        $output .= '<label for="material-pagetitle" class="form-label">Название материала</label>';
+        $output .= '<input type="text" class="form-control" id="material-pagetitle" required>';
+        $output .= '</div>';
+        $output .= '<div class="mb-3">';
+        $output .= '<label for="material-introtext" class="form-label">Краткое описание</label>';
+        $output .= '<textarea class="form-control" id="material-introtext" rows="2"></textarea>';
+        $output .= '</div>';
+        $output .= '<div class="mb-3">';
+        $output .= '<label class="form-label">Содержимое (поддерживает HTML)</label>';
+        $output .= '<div id="material-quill-editor" style="min-height: 300px; background: white;"></div>';
+        $output .= '<textarea id="material-content" style="display:none;"></textarea>';
+        $output .= '</div>';
+        $output .= '<div class="form-check form-switch mb-3">';
+        $output .= '<input class="form-check-input" type="checkbox" id="material-published" style="width: 3em; height: 1.5em;">';
+        $output .= '<label class="form-check-label ms-2 fw-bold" for="material-published">Опубликовать материал</label>';
+        $output .= '</div>';
+        $output .= '</div>';
+        $output .= '<div class="modal-footer">';
+        $output .= '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>';
+        $output .= '<button type="button" class="btn btn-primary" onclick="saveMaterialFromModal()">';
+        $output .= '<i class="bi bi-check-circle"></i> Сохранить';
+        $output .= '</button>';
+        $output .= '</div>';
+        $output .= '</div></div></div>';
+    }
 
     return $output;
 }
@@ -170,8 +219,8 @@ $output .= '</div></div></div>';
 $output .= '<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">';
 $output .= '<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>';
 
-// ВАЖНО: Определяем ID страницы ДО загрузки скрипта
-$output .= '<script>const MATERIAL_PAGE_ID = ' . $materialId . ';</script>';
+// ВАЖНО: Определяем ID корневой страницы ДО загрузки скрипта
+$output .= '<script>const MATERIAL_PAGE_ID = ' . $rootPageId . ';</script>';
 
 // JavaScript для работы с материалами
 $output .= '<script src="/assets/components/testsystem/js/learning-materials.js"></script>';
