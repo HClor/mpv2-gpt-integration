@@ -2548,14 +2548,30 @@ if (empty($allQuestionIds)) {
                 throw new Exception('Нет прав для удаления этого материала');
             }
 
+            // ДИАГНОСТИКА: логируем перед изменением
+            error_log("[deleteMaterial] Before: ID=$materialId, deleted=" . $resource->get('deleted'));
+
             // Мягкое удаление - помечаем deleted=1
             $resource->set('deleted', 1);
             $resource->set('deletedon', time());
             $resource->set('deletedby', $userId);
 
-            if (!$resource->save()) {
+            // ДИАГНОСТИКА: логируем после set()
+            error_log("[deleteMaterial] After set: deleted=" . $resource->get('deleted'));
+
+            $saveResult = $resource->save();
+
+            // ДИАГНОСТИКА: логируем результат save()
+            error_log("[deleteMaterial] Save result: " . ($saveResult ? 'TRUE' : 'FALSE'));
+
+            if (!$saveResult) {
                 throw new Exception('Ошибка удаления материала');
             }
+
+            // Проверяем что действительно сохранилось
+            $checkResource = $modx->getObject('modResource', $materialId);
+            $actualDeleted = $checkResource ? $checkResource->get('deleted') : 'NOT_FOUND';
+            error_log("[deleteMaterial] After save check: deleted=" . $actualDeleted);
 
             // Очищаем кэш
             $modx->cacheManager->refresh([
@@ -2565,7 +2581,12 @@ if (empty($allQuestionIds)) {
                 'resource' => ['contexts' => ['web']],
             ]);
 
-            $response = ResponseHelper::success([], 'Материал удален');
+            $response = ResponseHelper::success([
+                'debug' => [
+                    'save_result' => $saveResult,
+                    'actual_deleted' => $actualDeleted
+                ]
+            ], 'Материал удален');
             break;
 
         case 'uploadImage':
