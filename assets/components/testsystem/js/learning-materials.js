@@ -396,14 +396,31 @@ async function documentHandler() {
                     console.log('[Document Handler] Server response:', result);
 
                     if (result.success && result.data.url) {
-                        // Определяем иконку по расширению
+                        // Определяем иконку по расширению (Bootstrap Icons)
                         const extension = result.data.extension || '';
-                        let icon = 'bi-file-earmark';
+                        let icon = 'bi-file-earmark'; // По умолчанию
+
+                        // Документы
                         if (extension === 'pdf') icon = 'bi-file-earmark-pdf';
                         else if (['doc', 'docx'].includes(extension)) icon = 'bi-file-earmark-word';
-                        else if (['xls', 'xlsx'].includes(extension)) icon = 'bi-file-earmark-excel';
+                        else if (['xls', 'xlsx', 'csv'].includes(extension)) icon = 'bi-file-earmark-excel';
                         else if (['ppt', 'pptx'].includes(extension)) icon = 'bi-file-earmark-ppt';
-                        else if (['zip', 'rar'].includes(extension)) icon = 'bi-file-earmark-zip';
+                        else if (extension === 'txt') icon = 'bi-file-earmark-text';
+
+                        // Архивы
+                        else if (['zip', 'rar', '7z', 'tar', 'gz'].includes(extension)) icon = 'bi-file-earmark-zip';
+
+                        // Изображения
+                        else if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'].includes(extension)) icon = 'bi-file-earmark-image';
+
+                        // Видео
+                        else if (['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv'].includes(extension)) icon = 'bi-file-earmark-play';
+
+                        // Аудио
+                        else if (['mp3', 'wav', 'ogg', 'flac', 'm4a'].includes(extension)) icon = 'bi-file-earmark-music';
+
+                        // Код
+                        else if (['js', 'ts', 'jsx', 'tsx', 'json', 'html', 'css', 'php', 'py', 'java', 'cpp', 'c', 'cs'].includes(extension)) icon = 'bi-file-earmark-code';
 
                         // Создаем красивую ссылку на документ
                         const originalName = result.data.original_name || result.data.filename;
