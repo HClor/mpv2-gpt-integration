@@ -6,6 +6,16 @@
 
 $rootPageId = (int)$modx->getOption('rootPageId', $scriptProperties, 149);
 
+// ОТЛАДКА: Логируем начало работы
+$debugMode = true; // Включаем отладку
+$debugOutput = '';
+
+if ($debugMode) {
+    $debugOutput .= '<div class="alert alert-info">';
+    $debugOutput .= '<strong>ОТЛАДКА learningArticles:</strong><br>';
+    $debugOutput .= 'Root Page ID: ' . $rootPageId . '<br>';
+}
+
 // Получаем все категории из test_categories
 $prefix = $modx->getOption('table_prefix');
 $stmt = $modx->query("
@@ -25,6 +35,18 @@ $c->where([
 ]);
 $c->sortby('publishedon', 'DESC');
 $articles = $modx->getCollection('modResource', $c);
+
+if ($debugMode) {
+    $debugOutput .= 'Найдено дочерних ресурсов: ' . count($articles) . '<br>';
+    if (count($articles) > 0) {
+        $debugOutput .= '<ul>';
+        foreach ($articles as $art) {
+            $debugOutput .= '<li>ID: ' . $art->get('id') . ', Название: ' . htmlspecialchars($art->get('pagetitle')) . '</li>';
+        }
+        $debugOutput .= '</ul>';
+    }
+    $debugOutput .= '</div>';
+}
 
 // Группируем статьи по категориям
 // Используем TV поле category_id если есть, иначе показываем в "Без категории"
@@ -87,6 +109,11 @@ function renderArticleCard($article, $modx) {
 
 // Выводим результаты
 $output = '';
+
+// Добавляем отладочную информацию
+if ($debugMode && !empty($debugOutput)) {
+    $output .= $debugOutput;
+}
 
 // Если есть статьи с категориями
 if (!empty($articlesByCategory)) {
