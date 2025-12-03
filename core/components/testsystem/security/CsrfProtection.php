@@ -6,13 +6,14 @@
  * ИСПРАВЛЕНО: Использует MODX сессии через $_SESSION напрямую
  *
  * @package TestSystem
- * @version 2.4
+ * @version 2.5
  * @created 2025-11-13
  * @updated 2025-11-20 - переход на MODX сессии (v2.0)
  * @updated 2025-11-20 - убран session_start(), используем только $_SESSION (v2.1)
  * @updated 2025-11-29 - убрана проверка hasSessionContext для неавторизованных (v2.2)
  * @updated 2025-12-03 - добавлена проверка и инициализация сессии (v2.3)
  * @updated 2025-12-03 - добавлена миграция со старого формата токена (v2.4)
+ * @updated 2025-12-03 - убран session_start, graceful degradation если сессия не активна (v2.5)
  */
 
 class CsrfProtection {
@@ -42,21 +43,14 @@ class CsrfProtection {
     }
 
     /**
-     * Проверка и инициализация сессии если необходимо
+     * Проверка состояния сессии
      *
      * @return bool True если сессия активна
      */
     private static function ensureSession() {
-        if (session_status() === PHP_SESSION_NONE) {
-            // Сессия не запущена, пробуем запустить
-            try {
-                @session_start();
-                return session_status() === PHP_SESSION_ACTIVE;
-            } catch (Exception $e) {
-                return false;
-            }
-        }
-        return true;
+        // Проверяем только состояние, НЕ запускаем сессию
+        // MODX должен сам управлять сессией
+        return session_status() === PHP_SESSION_ACTIVE;
     }
 
     /**
@@ -173,8 +167,13 @@ class CsrfProtection {
      * @return string HTML input field
      */
     public static function getTokenField() {
-        $token = self::getToken();
-        return '<input type="hidden" name="' . self::TOKEN_NAME . '" value="' . htmlspecialchars($token, ENT_QUOTES, 'UTF-8') . '">';
+        try {
+            $token = self::getToken();
+            return '<input type="hidden" name="' . self::TOKEN_NAME . '" value="' . htmlspecialchars($token, ENT_QUOTES, 'UTF-8') . '">';
+        } catch (Exception $e) {
+            // Если не удалось получить токен, возвращаем пустую строку
+            return '<!-- CSRF token unavailable: session not active -->';
+        }
     }
 
     /**
@@ -183,8 +182,14 @@ class CsrfProtection {
      * @return string HTML meta tag
      */
     public static function getTokenMeta() {
-        $token = self::getToken();
-        return '<meta name="csrf-token" content="' . htmlspecialchars($token, ENT_QUOTES, 'UTF-8') . '">';
+        try {
+            $token = self::getToken();
+            return '<meta name="csrf-token" content="' . htmlspecialchars($token, ENT_QUOTES, 'UTF-8') . '">';
+        } catch (Exception $e) {
+            // Если не удалось получить токен, возвращаем пустую строку
+            // Это предотвращает ошибку 500 на странице
+            return '<!-- CSRF token unavailable: session not active -->';
+        }
     }
 
     /**
