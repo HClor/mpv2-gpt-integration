@@ -60,12 +60,14 @@ class ControllerFactory
         'cleanOldSessions' => 'AdminController',
         'getSystemStats' => 'AdminController',
 
-        // Material Controller
+        // Material Controller (OLD - using test_learning_materials table)
+        // DISABLED: getMaterial and getMaterialsList now use MODX resources (site_content)
+        // handled directly in testsystem.php switch case
         'createMaterial' => 'MaterialController',
-        'getMaterial' => 'MaterialController',
+        // 'getMaterial' => 'MaterialController',  // DISABLED - using site_content now
         'updateMaterial' => 'MaterialController',
         'deleteMaterial' => 'MaterialController',
-        'getMaterialsList' => 'MaterialController',
+        // 'getMaterialsList' => 'MaterialController',  // DISABLED - using site_content now
         'addContentBlock' => 'MaterialController',
         'updateContentBlock' => 'MaterialController',
         'deleteContentBlock' => 'MaterialController',
