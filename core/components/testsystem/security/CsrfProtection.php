@@ -6,11 +6,12 @@
  * ИСПРАВЛЕНО: Использует MODX сессии через $_SESSION напрямую
  *
  * @package TestSystem
- * @version 2.2
+ * @version 2.3
  * @created 2025-11-13
  * @updated 2025-11-20 - переход на MODX сессии (v2.0)
  * @updated 2025-11-20 - убран session_start(), используем только $_SESSION (v2.1)
  * @updated 2025-11-29 - убрана проверка hasSessionContext для неавторизованных (v2.2)
+ * @updated 2025-12-03 - добавлена проверка и инициализация сессии (v2.3)
  */
 
 class CsrfProtection {
@@ -40,12 +41,35 @@ class CsrfProtection {
     }
 
     /**
+     * Проверка и инициализация сессии если необходимо
+     *
+     * @return bool True если сессия активна
+     */
+    private static function ensureSession() {
+        if (session_status() === PHP_SESSION_NONE) {
+            // Сессия не запущена, пробуем запустить
+            try {
+                @session_start();
+                return session_status() === PHP_SESSION_ACTIVE;
+            } catch (Exception $e) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * Генерация нового CSRF токена
      *
      * @return string Сгенерированный токен
      */
     public static function generateToken() {
         $modx = self::getModx();
+
+        // Убеждаемся что сессия активна
+        if (!self::ensureSession()) {
+            throw new Exception('Cannot initialize session for CSRF token');
+        }
 
         // Генерируем криптографически стойкий токен
         $token = bin2hex(random_bytes(32));
@@ -71,6 +95,11 @@ class CsrfProtection {
      */
     public static function validateToken($token) {
         $modx = self::getModx();
+
+        // Убеждаемся что сессия активна
+        if (!self::ensureSession()) {
+            return false;
+        }
 
         // ИСПРАВЛЕНО: Убрана проверка hasSessionContext('web')
         // CSRF защита должна работать и для неавторизованных пользователей!
@@ -104,6 +133,11 @@ class CsrfProtection {
      */
     public static function getToken() {
         $modx = self::getModx();
+
+        // Убеждаемся что сессия активна
+        if (!self::ensureSession()) {
+            throw new Exception('Cannot access session for CSRF token');
+        }
 
         // Если токен существует и не истек, возвращаем его
         if (isset($_SESSION[self::TOKEN_NAME])) {
@@ -142,7 +176,9 @@ class CsrfProtection {
      * Очистка токена из сессии
      */
     public static function clearToken() {
-        unset($_SESSION[self::TOKEN_NAME]);
+        if (self::ensureSession()) {
+            unset($_SESSION[self::TOKEN_NAME]);
+        }
     }
 
     /**
