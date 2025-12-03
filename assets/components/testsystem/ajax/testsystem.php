@@ -2548,30 +2548,33 @@ if (empty($allQuestionIds)) {
                 throw new Exception('Нет прав для удаления этого материала');
             }
 
-            // ДИАГНОСТИКА: логируем перед изменением
-            error_log("[deleteMaterial] Before: ID=$materialId, deleted=" . $resource->get('deleted'));
+            // ИСПРАВЛЕНИЕ: Используем прямой SQL запрос вместо $resource->save()
+            // так как MODX может блокировать изменение поля deleted из web контекста
+            $prefix = $modx->getOption('table_prefix');
+            $now = time();
 
-            // Мягкое удаление - помечаем deleted=1
-            $resource->set('deleted', 1);
-            $resource->set('deletedon', time());
-            $resource->set('deletedby', $userId);
+            $stmt = $modx->prepare("
+                UPDATE {$prefix}site_content
+                SET deleted = 1,
+                    deletedon = :deletedon,
+                    deletedby = :deletedby
+                WHERE id = :id
+            ");
 
-            // ДИАГНОСТИКА: логируем после set()
-            error_log("[deleteMaterial] After set: deleted=" . $resource->get('deleted'));
-
-            $saveResult = $resource->save();
-
-            // ДИАГНОСТИКА: логируем результат save()
-            error_log("[deleteMaterial] Save result: " . ($saveResult ? 'TRUE' : 'FALSE'));
+            $saveResult = $stmt->execute([
+                ':id' => $materialId,
+                ':deletedon' => $now,
+                ':deletedby' => $userId
+            ]);
 
             if (!$saveResult) {
-                throw new Exception('Ошибка удаления материала');
+                throw new Exception('Ошибка удаления материала (SQL failed)');
             }
 
             // Проверяем что действительно сохранилось
-            $checkResource = $modx->getObject('modResource', $materialId);
-            $actualDeleted = $checkResource ? $checkResource->get('deleted') : 'NOT_FOUND';
-            error_log("[deleteMaterial] After save check: deleted=" . $actualDeleted);
+            $checkStmt = $modx->prepare("SELECT deleted FROM {$prefix}site_content WHERE id = ?");
+            $checkStmt->execute([$materialId]);
+            $actualDeleted = $checkStmt->fetchColumn();
 
             // Очищаем кэш
             $modx->cacheManager->refresh([
@@ -2583,10 +2586,11 @@ if (empty($allQuestionIds)) {
 
             $response = ResponseHelper::success([
                 'debug' => [
-                    'save_result' => $saveResult,
-                    'actual_deleted' => $actualDeleted
+                    'sql_executed' => $saveResult,
+                    'actual_deleted' => $actualDeleted,
+                    'material_id' => $materialId
                 ]
-            ], 'Материал удален');
+            ], 'Материал удален успешно');
             break;
 
         case 'uploadImage':
