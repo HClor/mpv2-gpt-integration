@@ -9,7 +9,7 @@ try {
     $rootPageId = (int)$modx->getOption('rootPageId', $scriptProperties, 149);
 
     // ОТЛАДКА: Логируем начало работы
-    $debugMode = true; // Включаем отладку
+    $debugMode = false; // Отладка отключена
     $debugOutput = '';
 
     if ($debugMode) {

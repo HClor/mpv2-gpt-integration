@@ -105,6 +105,26 @@ if ($parentId > 0) {
         $output .= '<label for="material-introtext" class="form-label">Краткое описание</label>';
         $output .= '<textarea class="form-control" id="material-introtext" rows="2"></textarea>';
         $output .= '</div>';
+
+        // Получаем категории для выпадающего списка (для режима 2)
+        $prefix = $modx->getOption('table_prefix');
+        $categoriesStmt = $modx->query("
+            SELECT id, name
+            FROM {$prefix}test_categories
+            ORDER BY sort_order, name
+        ");
+        $categoriesList = $categoriesStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $output .= '<div class="mb-3">';
+        $output .= '<label for="material-category" class="form-label">Категория</label>';
+        $output .= '<select class="form-select" id="material-category">';
+        $output .= '<option value="">Без категории</option>';
+        foreach ($categoriesList as $cat) {
+            $output .= '<option value="' . $cat['id'] . '">' . htmlspecialchars($cat['name']) . '</option>';
+        }
+        $output .= '</select>';
+        $output .= '</div>';
+
         $output .= '<div class="mb-3">';
         $output .= '<label class="form-label">Содержимое (поддерживает HTML)</label>';
         $output .= '<div id="material-quill-editor" style="min-height: 300px; background: white;"></div>';
@@ -116,6 +136,9 @@ if ($parentId > 0) {
         $output .= '</div>';
         $output .= '</div>';
         $output .= '<div class="modal-footer">';
+        $output .= '<button type="button" class="btn btn-danger me-auto" onclick="deleteMaterial(' . $materialId . ', \'' . htmlspecialchars($modx->resource->get('pagetitle'), ENT_QUOTES) . '\')">';
+        $output .= '<i class="bi bi-trash"></i> Удалить материал';
+        $output .= '</button>';
         $output .= '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>';
         $output .= '<button type="button" class="btn btn-primary" onclick="saveMaterialFromModal()">';
         $output .= '<i class="bi bi-check-circle"></i> Сохранить';
@@ -132,16 +155,7 @@ $output = '<div class="container-fluid mt-4">';
 $output .= '<div class="row">';
 $output .= '<div class="col-12">';
 
-$output .= '<div class="d-flex justify-content-between align-items-center mb-4">';
-$output .= '<h1>' . htmlspecialchars($modx->resource->get('pagetitle'), ENT_QUOTES, 'UTF-8') . '</h1>';
-
-if ($canCreate) {
-    $output .= '<button class="btn btn-success" onclick="openCreateMaterialModal()">';
-    $output .= '<i class="bi bi-plus-circle"></i> Создать материал';
-    $output .= '</button>';
-}
-
-$output .= '</div>';
+$output .= '<h1 class="mb-4">' . htmlspecialchars($modx->resource->get('pagetitle'), ENT_QUOTES, 'UTF-8') . '</h1>';
 
 // СЕКЦИЯ 1: Вопросы из тестов
 $output .= '<section class="mb-5">';
@@ -156,11 +170,20 @@ $output .= '</section>';
 
 // СЕКЦИЯ 2: Учебные статьи
 $output .= '<section class="mb-5">';
-$output .= '<div class="section-header mb-4 pb-3 border-bottom">';
+$output .= '<div class="section-header mb-4 pb-3 border-bottom d-flex justify-content-between align-items-center">';
+$output .= '<div>';
 $output .= '<h2 class="h3 mb-2">';
 $output .= '<i class="bi bi-journal-text text-success"></i> Учебные статьи';
 $output .= '</h2>';
 $output .= '<p class="text-muted mb-0">Статьи и материалы, созданные экспертами, сгруппированные по категориям</p>';
+$output .= '</div>';
+
+if ($canCreate) {
+    $output .= '<button class="btn btn-success" onclick="openCreateMaterialModal()">';
+    $output .= '<i class="bi bi-plus-circle"></i> Создать материал';
+    $output .= '</button>';
+}
+
 $output .= '</div>';
 
 // Используем новый сниппет с поддержкой категорий
