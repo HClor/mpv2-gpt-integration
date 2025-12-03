@@ -28,7 +28,21 @@ async function apiCall(action, data) {
     });
 
     if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        // Попытка получить текст ошибки
+        let errorText = '';
+        try {
+            errorText = await response.text();
+        } catch (e) {
+            errorText = 'No error details available';
+        }
+        throw new Error(`HTTP ${response.status}: ${errorText.substring(0, 200)}`);
+    }
+
+    // Проверяем, что ответ действительно JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+        const textResponse = await response.text();
+        throw new Error(`Server returned non-JSON response: ${textResponse.substring(0, 200)}`);
     }
 
     return await response.json();
@@ -216,6 +230,48 @@ function initMaterialQuill(content) {
     }
 }
 
+// Функция ресайза изображения
+function resizeImage(base64Image, maxSize = 1280) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            let width = img.width;
+            let height = img.height;
+
+            // Определяем нужно ли ресайзить
+            if (width <= maxSize && height <= maxSize) {
+                resolve(base64Image); // Изображение уже меньше лимита
+                return;
+            }
+
+            // Вычисляем новые размеры сохраняя пропорции
+            if (width > height) {
+                if (width > maxSize) {
+                    height = Math.round((height * maxSize) / width);
+                    width = maxSize;
+                }
+            } else {
+                if (height > maxSize) {
+                    width = Math.round((width * maxSize) / height);
+                    height = maxSize;
+                }
+            }
+
+            // Создаем canvas и ресайзим
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, width, height);
+
+            // Возвращаем ресайзнутое изображение в base64
+            resolve(canvas.toDataURL('image/jpeg', 0.9));
+        };
+        img.onerror = reject;
+        img.src = base64Image;
+    });
+}
+
 async function imageHandler() {
     const input = document.createElement('input');
     input.setAttribute('type', 'file');
@@ -236,22 +292,34 @@ async function imageHandler() {
             // Читаем файл как base64
             const reader = new FileReader();
             reader.onload = async (e) => {
-                const base64Image = e.target.result;
-
                 try {
+                    // Ресайзим изображение до 1280px
+                    const resizedImage = await resizeImage(e.target.result, 1280);
+
                     // Определяем resource_id: при редактировании - currentEditMaterialId, иначе MATERIAL_PAGE_ID
                     const resourceId = currentEditMaterialId || (typeof MATERIAL_PAGE_ID !== 'undefined' ? MATERIAL_PAGE_ID : 0);
 
                     // Отправляем на сервер
                     const result = await apiCall('uploadImage', {
-                        image: base64Image,
+                        image: resizedImage,
                         resource_id: resourceId
                     });
 
                     if (result.success && result.data.url) {
-                        // Вставляем изображение в редактор
+                        // Вставляем изображение в редактор с bootstrap классом
                         const range = materialQuillEditor.getSelection(true);
                         materialQuillEditor.insertEmbed(range.index, 'image', result.data.url);
+
+                        // Добавляем bootstrap класс к только что вставленному изображению
+                        setTimeout(() => {
+                            const images = materialQuillEditor.root.querySelectorAll('img');
+                            images.forEach(img => {
+                                if (!img.classList.contains('img-fluid')) {
+                                    img.classList.add('img-fluid');
+                                }
+                            });
+                        }, 100);
+
                         materialQuillEditor.setSelection(range.index + 1);
                     } else {
                         throw new Error(result.message || 'Ошибка загрузки изображения');
@@ -362,10 +430,20 @@ async function saveMaterialFromModal() {
             alert(currentEditMaterialId ? 'Материал обновлен!' : 'Материал создан!');
             const modal = bootstrap.Modal.getInstance(document.getElementById('materialEditorModal'));
             modal?.hide();
-            loadArticles();
-            const url = new URL(window.location);
-            url.searchParams.delete('edit_material');
-            window.history.replaceState({}, '', url);
+
+            // Если редактируем на странице материала - перезагружаем страницу
+            // Проверяем наличие контейнера articles-container (есть только на корневой)
+            const articlesContainer = document.getElementById('articles-container');
+            if (currentEditMaterialId && !articlesContainer) {
+                // Мы на странице материала - перезагружаем
+                window.location.reload();
+            } else {
+                // Мы на корневой - просто обновляем список
+                loadArticles();
+                const url = new URL(window.location);
+                url.searchParams.delete('edit_material');
+                window.history.replaceState({}, '', url);
+            }
         } else {
             throw new Error(result.message || 'Ошибка сохранения');
         }
