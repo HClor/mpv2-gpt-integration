@@ -69,6 +69,28 @@ try {
     $articlesByCategory = [];
     $articlesWithoutCategory = [];
 
+    // Определяем права пользователя для кнопок управления
+    $userId = 0;
+    $isAdmin = false;
+    $isExpert = false;
+
+    if ($modx->user && $modx->user->isAuthenticated()) {
+        $userId = $modx->user->get('id');
+        $userGroups = $modx->user->getUserGroups();
+        foreach ($userGroups as $groupId => $groupData) {
+            $group = $modx->getObject('modUserGroup', $groupId);
+            if ($group) {
+                $groupName = $group->get('name');
+                if ($groupName === 'Administrator') {
+                    $isAdmin = true;
+                }
+                if ($groupName === 'Expert') {
+                    $isExpert = true;
+                }
+            }
+        }
+    }
+
     foreach ($articles as $article) {
         // Получаем TV поле category_id (с обработкой ошибок)
         $categoryIdTV = '';
@@ -83,12 +105,17 @@ try {
 
         $categoryId = $categoryIdTV ? (int)$categoryIdTV : 0;
 
+        // Проверяем права редактирования для этой статьи
+        $createdBy = (int)$article->get('createdby');
+        $canEdit = ($userId > 0) && ($createdBy === $userId || $isAdmin || $isExpert);
+
     $articleData = [
         'id' => $article->get('id'),
         'pagetitle' => $article->get('pagetitle'),
         'introtext' => $article->get('introtext'),
         'publishedon' => $article->get('publishedon'),
-        'url' => $modx->makeUrl($article->get('id'))
+        'url' => $modx->makeUrl($article->get('id')),
+        'can_edit' => $canEdit
     ];
 
     if ($categoryId > 0) {
@@ -133,7 +160,21 @@ function renderArticleCard($article, $modx) {
     $html .= '<a href="' . $article['url'] . '" class="btn btn-sm btn-outline-primary">';
     $html .= '<i class="bi bi-book me-1"></i> Читать';
     $html .= '</a>';
-    $html .= '<small class="text-muted">' . $publishDate . '</small>';
+
+    // Кнопки управления (если есть права)
+    if (!empty($article['can_edit'])) {
+        $html .= '<div class="btn-group">';
+        $html .= '<button class="btn btn-sm btn-outline-secondary" onclick="editMaterial(' . $article['id'] . ')" title="Редактировать">';
+        $html .= '<i class="bi bi-pencil"></i>';
+        $html .= '</button>';
+        $html .= '<button class="btn btn-sm btn-outline-danger" onclick="deleteMaterial(' . $article['id'] . ', \'' . htmlspecialchars($article['pagetitle'], ENT_QUOTES) . '\')" title="Удалить">';
+        $html .= '<i class="bi bi-trash"></i>';
+        $html .= '</button>';
+        $html .= '</div>';
+    } else {
+        $html .= '<small class="text-muted">' . $publishDate . '</small>';
+    }
+
     $html .= '</div>';
     $html .= '</div>';
     $html .= '</div>';
