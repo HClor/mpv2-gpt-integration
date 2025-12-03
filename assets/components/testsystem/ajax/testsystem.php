@@ -2814,68 +2814,8 @@ if (empty($allQuestionIds)) {
             error_log("[uploadDocument] SUCCESS - END");
             break;
 
-        case 'deleteMaterial':
-            // Удалить учебный материал
-            PermissionHelper::requireAuthentication($modx, 'Требуется авторизация');
-
-            $userId = PermissionHelper::getCurrentUserIdWithMgr($modx);
-            $materialId = (int)($data['material_id'] ?? 0);
-
-            if ($materialId <= 0) {
-                throw new Exception('Не указан ID материала');
-            }
-
-            $resource = $modx->getObject('modResource', $materialId);
-
-            if (!$resource) {
-                throw new Exception('Материал не найден');
-            }
-
-            // Проверка прав
-            $canDelete = (int)$resource->get('createdby') === $userId
-                || PermissionHelper::isAdmin($modx);
-
-            if (!$canDelete) {
-                throw new Exception('Нет прав для удаления');
-            }
-
-            // Soft delete
-            $resource->set('deleted', 1);
-            $resource->set('deletedon', time());
-            $resource->set('deletedby', $userId);
-
-            if (!$resource->save()) {
-                throw new Exception('Ошибка удаления материала');
-            }
-
-            // Удаляем все файлы материала (изображения и документы)
-            $deletedFiles = 0;
-            $imagePath = MODX_BASE_PATH . 'assets/uploads/images/' . $materialId . '/';
-            $documentPath = MODX_BASE_PATH . 'assets/uploads/documents/' . $materialId . '/';
-
-            // Рекурсивное удаление папки
-            $deleteDirectory = function($dir) use (&$deleteDirectory, &$deletedFiles) {
-                if (!is_dir($dir)) return false;
-                $files = array_diff(scandir($dir), ['.', '..']);
-                foreach ($files as $file) {
-                    $path = $dir . '/' . $file;
-                    if (is_dir($path)) {
-                        $deleteDirectory($path);
-                    } else {
-                        unlink($path);
-                        $deletedFiles++;
-                    }
-                }
-                return rmdir($dir);
-            };
-
-            $deleteDirectory($imagePath);
-            $deleteDirectory($documentPath);
-
-            $response = ResponseHelper::success([
-                'deleted_files' => $deletedFiles
-            ], 'Материал и файлы удалены');
-            break;
+        // УДАЛЕНО: дубликат case 'deleteMaterial' (использовался старый код с $resource->save())
+        // Теперь используется только один case 'deleteMaterial' на строке 2530 с SQL запросом
 
         case 'cleanupResourceFiles':
             // Очистка файлов для конкретного ресурса (можно вызвать вручную)
