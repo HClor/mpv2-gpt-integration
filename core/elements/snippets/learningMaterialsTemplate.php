@@ -16,11 +16,24 @@ $rootPageId = 149;
 // Проверяем права на редактирование
 require_once MODX_CORE_PATH . 'components/testsystem/helpers/Config.php';
 require_once MODX_CORE_PATH . 'components/testsystem/helpers/PermissionHelper.php';
+
 $canEdit = false;
+$canCreate = false; // Право создавать новые материалы
+
 if (PermissionHelper::isAuthenticated($modx) || $modx->user->isAuthenticated('mgr')) {
     $userId = PermissionHelper::getCurrentUserId($modx);
     $isAdmin = PermissionHelper::isAdmin($modx) || $modx->user->isAuthenticated('mgr');
-    $canEdit = $modx->resource && (($modx->resource->get('createdby') == $userId) || $isAdmin);
+    $isExpert = PermissionHelper::isExpert($modx);
+
+    // Право создавать материалы: Admin или Expert
+    $canCreate = $isAdmin || $isExpert;
+
+    // Право редактировать/удалять: автор, Admin или Expert
+    $canEdit = $modx->resource && (
+        ($modx->resource->get('createdby') == $userId) ||
+        $isAdmin ||
+        $isExpert
+    );
 }
 
 // РЕЖИМ 1: Редирект на редактирование (через старый параметр ?edit=1)
@@ -122,7 +135,7 @@ $output .= '<div class="col-12">';
 $output .= '<div class="d-flex justify-content-between align-items-center mb-4">';
 $output .= '<h1>' . htmlspecialchars($modx->resource->get('pagetitle'), ENT_QUOTES, 'UTF-8') . '</h1>';
 
-if ($canEdit) {
+if ($canCreate) {
     $output .= '<button class="btn btn-success" onclick="openCreateMaterialModal()">';
     $output .= '<i class="bi bi-plus-circle"></i> Создать материал';
     $output .= '</button>';
