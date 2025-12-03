@@ -1,6 +1,5 @@
 <?php
-/* TS API v3.4.1 - FIXED getNextQuestion response structure */
-
+/* TS API v3.4.2 - FIXED deleteMaterial with direct SQL - BUILD 20251203-2145 */
 
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -180,7 +179,17 @@ try {
         // Иначе используем старый switch для обратной совместимости
 
     switch ($action) {
-        
+
+        case 'getApiVersion':
+            // Проверка версии API и информации о файле
+            $response = ResponseHelper::success([
+                'version' => '3.4.2',
+                'build' => '20251203-2145',
+                'file' => __FILE__,
+                'mtime' => date('Y-m-d H:i:s', filemtime(__FILE__)),
+                'deleteMaterial_fixed' => true
+            ], 'API version info');
+            break;
 
         case 'getTestInfo':
             // Валидация входных данных
