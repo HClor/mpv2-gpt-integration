@@ -110,6 +110,7 @@ $response = ['success' => false, 'message' => 'Unknown action'];
 // ============================================
 // Список actions, которые НЕ требуют CSRF проверки (только чтение данных)
 $csrfExemptActions = [
+    'getApiVersion',             // Информация о версии API
     'getTestInfo',
     'getQuestion',
     'getTestSettings',
