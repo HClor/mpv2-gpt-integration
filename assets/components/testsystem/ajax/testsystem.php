@@ -66,7 +66,28 @@ $prefix = $modx->getOption('table_prefix', null, 'modx_');
 header('Content-Type: application/json; charset=utf-8');
 
 $input = file_get_contents('php://input');
+$inputLength = strlen($input);
+
+// Диагностика: логируем размер входных данных
+if ($inputLength > 50000) {
+    error_log("[testsystem.php] Large POST body: " . round($inputLength/1024, 2) . " KB");
+}
+
 $request = json_decode($input, true);
+
+// Проверяем результат декодирования
+if ($request === null && $inputLength > 0) {
+    $jsonError = json_last_error_msg();
+    error_log("[testsystem.php] JSON decode error: $jsonError, input length: $inputLength bytes");
+    die(json_encode([
+        'success' => false,
+        'message' => 'JSON decode error: ' . $jsonError,
+        'debug' => [
+            'input_length' => $inputLength,
+            'input_preview' => substr($input, 0, 200)
+        ]
+    ]));
+}
 
 $action = $request['action'] ?? $_GET['action'] ?? $_POST['action'] ?? '';
 $data = $request['data'] ?? [];
