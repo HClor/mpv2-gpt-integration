@@ -396,35 +396,35 @@ async function documentHandler() {
                     console.log('[Document Handler] Server response:', result);
 
                     if (result.success && result.data.url) {
-                        // Определяем иконку по расширению (Bootstrap Icons)
+                        // Определяем emoji иконку по расширению
                         const extension = result.data.extension || '';
-                        let icon = 'bi-file-earmark'; // По умолчанию
+                        let emoji = '📄'; // По умолчанию - документ
 
                         // Документы
-                        if (extension === 'pdf') icon = 'bi-file-earmark-pdf';
-                        else if (['doc', 'docx'].includes(extension)) icon = 'bi-file-earmark-word';
-                        else if (['xls', 'xlsx', 'csv'].includes(extension)) icon = 'bi-file-earmark-excel';
-                        else if (['ppt', 'pptx'].includes(extension)) icon = 'bi-file-earmark-ppt';
-                        else if (extension === 'txt') icon = 'bi-file-earmark-text';
+                        if (extension === 'pdf') emoji = '📕'; // Красная книга
+                        else if (['doc', 'docx'].includes(extension)) emoji = '📘'; // Синяя книга (Word)
+                        else if (['xls', 'xlsx', 'csv'].includes(extension)) emoji = '📗'; // Зеленая книга (Excel)
+                        else if (['ppt', 'pptx'].includes(extension)) emoji = '📙'; // Оранжевая книга (PowerPoint)
+                        else if (extension === 'txt') emoji = '📝'; // Блокнот с карандашом
 
                         // Архивы
-                        else if (['zip', 'rar', '7z', 'tar', 'gz'].includes(extension)) icon = 'bi-file-earmark-zip';
+                        else if (['zip', 'rar', '7z', 'tar', 'gz'].includes(extension)) emoji = '📦'; // Коробка
 
                         // Изображения
-                        else if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'].includes(extension)) icon = 'bi-file-earmark-image';
+                        else if (['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'].includes(extension)) emoji = '🖼️'; // Картина в рамке
 
                         // Видео
-                        else if (['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv'].includes(extension)) icon = 'bi-file-earmark-play';
+                        else if (['mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv'].includes(extension)) emoji = '🎬'; // Кинохлопушка
 
                         // Аудио
-                        else if (['mp3', 'wav', 'ogg', 'flac', 'm4a'].includes(extension)) icon = 'bi-file-earmark-music';
+                        else if (['mp3', 'wav', 'ogg', 'flac', 'm4a'].includes(extension)) emoji = '🎵'; // Музыкальная нота
 
                         // Код
-                        else if (['js', 'ts', 'jsx', 'tsx', 'json', 'html', 'css', 'php', 'py', 'java', 'cpp', 'c', 'cs'].includes(extension)) icon = 'bi-file-earmark-code';
+                        else if (['js', 'ts', 'jsx', 'tsx', 'json', 'html', 'css', 'php', 'py', 'java', 'cpp', 'c', 'cs'].includes(extension)) emoji = '💻'; // Ноутбук
 
-                        // Создаем красивую ссылку на документ
+                        // Создаем ссылку на документ с emoji (без CSS классов, которые Quill удаляет)
                         const originalName = result.data.original_name || result.data.filename;
-                        const linkHtml = `<p><a href="${result.data.url}" target="_blank" class="btn btn-outline-primary btn-sm"><i class="bi ${icon}"></i> ${escapeHtml(originalName)}</a></p>`;
+                        const linkHtml = `<p><a href="${result.data.url}" target="_blank">${emoji} ${escapeHtml(originalName)}</a></p>`;
 
                         // Вставляем в редактор
                         const range = materialQuillEditor.getSelection(true);
