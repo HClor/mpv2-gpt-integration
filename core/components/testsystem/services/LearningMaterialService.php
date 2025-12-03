@@ -160,11 +160,28 @@ class LearningMaterialService
      */
     public static function deleteMaterial($modx, $materialId)
     {
-        $prefix = $modx->getOption('table_prefix', null, 'modx_');
+        // ИСПРАВЛЕНО: Soft delete из site_content (учебные материалы теперь MODX ресурсы)
+        // Используем прямой SQL т.к. MODX ORM блокирует изменение поля deleted из web контекста
 
-        // Каскадное удаление происходит автоматически благодаря FOREIGN KEY
-        $stmt = $modx->prepare("DELETE FROM {$prefix}test_learning_materials WHERE id = ?");
-        return $stmt->execute([$materialId]);
+        require_once MODX_CORE_PATH . 'components/testsystem/helpers/PermissionHelper.php';
+
+        $prefix = $modx->getOption('table_prefix', null, 'modx_');
+        $userId = PermissionHelper::getCurrentUserIdWithMgr($modx);
+        $now = time();
+
+        $stmt = $modx->prepare("
+            UPDATE {$prefix}site_content
+            SET deleted = 1,
+                deletedon = :deletedon,
+                deletedby = :deletedby
+            WHERE id = :id
+        ");
+
+        return $stmt->execute([
+            ':id' => $materialId,
+            ':deletedon' => $now,
+            ':deletedby' => $userId
+        ]);
     }
 
     /**
