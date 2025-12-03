@@ -2627,29 +2627,42 @@ if (empty($allQuestionIds)) {
             break;
 
         case 'uploadDocument':
+            error_log("[uploadDocument] START");
+
             // Загрузка документа (PDF, DOC, DOCX и т.д.) для учебных материалов
             PermissionHelper::requireAuthentication($modx, 'Требуется авторизация');
+            error_log("[uploadDocument] Auth OK");
 
             // Проверяем права
             $isAdmin = PermissionHelper::isAdmin($modx);
             $isExpert = PermissionHelper::isExpert($modx);
+            error_log("[uploadDocument] isAdmin=$isAdmin, isExpert=$isExpert");
 
             if (!$isAdmin && !$isExpert) {
                 throw new Exception('Нет прав для загрузки документов');
             }
 
             // Получаем base64 данные, имя файла и resource_id
+            error_log("[uploadDocument] Getting document data...");
             $documentData = ValidationHelper::requireString($data, 'document', 'Документ не предоставлен');
+            error_log("[uploadDocument] Document data length: " . strlen($documentData));
+
             $originalName = ValidationHelper::optionalString($data, 'filename', 'document');
+            error_log("[uploadDocument] Original name: $originalName");
+
             $resourceId = ValidationHelper::optionalInt($data, 'resource_id', 0);
+            error_log("[uploadDocument] Resource ID: $resourceId");
 
             // Парсим base64 data URL
+            error_log("[uploadDocument] Parsing base64 data URL...");
             if (!preg_match('/^data:([^;]+);base64,(.+)$/', $documentData, $matches)) {
+                error_log("[uploadDocument] ERROR: Invalid data URL format");
                 throw new Exception('Неверный формат документа');
             }
 
             $mimeType = $matches[1];
             $documentBase64 = $matches[2];
+            error_log("[uploadDocument] MIME type: $mimeType, base64 length: " . strlen($documentBase64));
 
             // Определяем расширение по MIME типу
             $mimeToExt = [
@@ -2683,13 +2696,17 @@ if (empty($allQuestionIds)) {
             }
 
             // Декодируем base64
+            error_log("[uploadDocument] Decoding base64...");
             $documentContent = base64_decode($documentBase64);
             if ($documentContent === false) {
+                error_log("[uploadDocument] ERROR: base64_decode failed");
                 throw new Exception('Ошибка декодирования документа');
             }
+            error_log("[uploadDocument] Decoded size: " . strlen($documentContent) . " bytes");
 
             // Проверка размера (макс 20MB)
             if (strlen($documentContent) > 20 * 1024 * 1024) {
+                error_log("[uploadDocument] ERROR: Document too large");
                 throw new Exception('Размер документа не должен превышать 20MB');
             }
 
@@ -2698,23 +2715,31 @@ if (empty($allQuestionIds)) {
             if ($resourceId > 0) {
                 $uploadDir .= $resourceId . '/';
             }
+            error_log("[uploadDocument] Upload dir: $uploadDir");
 
             if (!is_dir($uploadDir)) {
+                error_log("[uploadDocument] Creating directory...");
                 if (!mkdir($uploadDir, 0755, true)) {
+                    error_log("[uploadDocument] ERROR: mkdir failed");
                     throw new Exception('Не удалось создать папку для загрузки');
                 }
             }
 
             // Очищаем имя файла и генерируем безопасное имя
+            error_log("[uploadDocument] Cleaning filename...");
             $safeName = preg_replace('/[^a-zA-Z0-9_\-\.а-яА-ЯёЁ]/', '_', pathinfo($originalName, PATHINFO_FILENAME));
             $safeName = mb_substr($safeName, 0, 100); // Ограничиваем длину
             $fileName = $safeName . '_' . uniqid() . '.' . $extension;
             $filePath = $uploadDir . $fileName;
+            error_log("[uploadDocument] File path: $filePath");
 
             // Сохраняем файл
+            error_log("[uploadDocument] Saving file...");
             if (file_put_contents($filePath, $documentContent) === false) {
+                error_log("[uploadDocument] ERROR: file_put_contents failed");
                 throw new Exception('Ошибка сохранения файла');
             }
+            error_log("[uploadDocument] File saved successfully");
 
             // Возвращаем URL документа
             $documentUrl = $modx->getOption('site_url') . 'assets/uploads/documents/';
@@ -2722,13 +2747,16 @@ if (empty($allQuestionIds)) {
                 $documentUrl .= $resourceId . '/';
             }
             $documentUrl .= $fileName;
+            error_log("[uploadDocument] Document URL: $documentUrl");
 
+            error_log("[uploadDocument] Creating response...");
             $response = ResponseHelper::success([
                 'url' => $documentUrl,
                 'filename' => $fileName,
                 'original_name' => $originalName,
                 'extension' => $extension
             ], 'Документ загружен');
+            error_log("[uploadDocument] SUCCESS - END");
             break;
 
         case 'deleteMaterial':
