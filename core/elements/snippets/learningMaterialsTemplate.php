@@ -170,10 +170,10 @@ $output .= '</div></div></div>';
 $output .= '<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">';
 $output .= '<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>';
 
+// ВАЖНО: Определяем ID страницы ДО загрузки скрипта
+$output .= '<script>const MATERIAL_PAGE_ID = ' . $materialId . ';</script>';
+
 // JavaScript для работы с материалами
 $output .= '<script src="/assets/components/testsystem/js/learning-materials.js"></script>';
-
-// Добавляем ID страницы для JS
-$output .= '<script>const MATERIAL_PAGE_ID = ' . $materialId . ';</script>';
 
 return $output;
