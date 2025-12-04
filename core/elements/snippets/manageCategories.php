@@ -151,6 +151,7 @@ $stmt = $modx->query("
 $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $html = [];
+$modals = []; // Массив для модальных окон
 
 $html[] = "<div class=\"container mt-4\">";
 
@@ -254,134 +255,134 @@ if (empty($categories)) {
 
         $html[] = "</td>";
         $html[] = "</tr>";
-        
+
         // Модальное окно редактирования
-        $html[] = "<div class=\"modal fade\" id=\"editModal" . $cat["id"] . "\" tabindex=\"-1\">";
-        $html[] = "<div class=\"modal-dialog\">";
-        $html[] = "<div class=\"modal-content\">";
-        $html[] = "<form method=\"POST\">";
-        $html[] = CsrfProtection::getTokenField(); // CSRF Protection
-        $html[] = "<input type=\"hidden\" name=\"edit_category\" value=\"1\">";
-        $html[] = "<input type=\"hidden\" name=\"category_id\" value=\"" . $cat["id"] . "\">";
+        $modals[] = "<div class=\"modal fade\" id=\"editModal" . $cat["id"] . "\" tabindex=\"-1\">";
+        $modals[] = "<div class=\"modal-dialog\">";
+        $modals[] = "<div class=\"modal-content\">";
+        $modals[] = "<form method=\"POST\">";
+        $modals[] = CsrfProtection::getTokenField(); // CSRF Protection
+        $modals[] = "<input type=\"hidden\" name=\"edit_category\" value=\"1\">";
+        $modals[] = "<input type=\"hidden\" name=\"category_id\" value=\"" . $cat["id"] . "\">";
 
-        $html[] = "<div class=\"modal-header\">";
-        $html[] = "<h5 class=\"modal-title\">Редактировать категорию</h5>";
-        $html[] = "<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"modal\"></button>";
-        $html[] = "</div>";
-        
-        $html[] = "<div class=\"modal-body\">";
-        $html[] = "<div class=\"mb-3\">";
-        $html[] = "<label class=\"form-label\">Название</label>";
-        $html[] = "<input type=\"text\" name=\"name\" class=\"form-control\" value=\"" . htmlspecialchars($cat["name"]) . "\" required>";
-        $html[] = "</div>";
-        $html[] = "<div class=\"mb-3\">";
-        $html[] = "<label class=\"form-label\">Описание</label>";
-        $html[] = "<textarea name=\"description\" class=\"form-control\" rows=\"3\">" . htmlspecialchars($cat["description"]) . "</textarea>";
-        $html[] = "</div>";
-        $html[] = "<div class=\"mb-3\">";
-        $html[] = "<label class=\"form-label\">Порядок сортировки</label>";
-        $html[] = "<input type=\"number\" name=\"sort_order\" class=\"form-control\" value=\"" . $cat["sort_order"] . "\">";
-        $html[] = "</div>";
-        $html[] = "</div>";
-        
-        $html[] = "<div class=\"modal-footer\">";
-        $html[] = "<button type=\"button\" class=\"btn btn-secondary\" data-bs-dismiss=\"modal\">Отмена</button>";
-        $html[] = "<button type=\"submit\" class=\"btn btn-primary\">Сохранить</button>";
-        $html[] = "</div>";
-        
-        $html[] = "</form>";
-        $html[] = "</div>";
-        $html[] = "</div>";
-        $html[] = "</div>";
-        
+        $modals[] = "<div class=\"modal-header\">";
+        $modals[] = "<h5 class=\"modal-title\">Редактировать категорию</h5>";
+        $modals[] = "<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"modal\"></button>";
+        $modals[] = "</div>";
+
+        $modals[] = "<div class=\"modal-body\">";
+        $modals[] = "<div class=\"mb-3\">";
+        $modals[] = "<label class=\"form-label\">Название</label>";
+        $modals[] = "<input type=\"text\" name=\"name\" class=\"form-control\" value=\"" . htmlspecialchars($cat["name"]) . "\" required>";
+        $modals[] = "</div>";
+        $modals[] = "<div class=\"mb-3\">";
+        $modals[] = "<label class=\"form-label\">Описание</label>";
+        $modals[] = "<textarea name=\"description\" class=\"form-control\" rows=\"3\">" . htmlspecialchars($cat["description"]) . "</textarea>";
+        $modals[] = "</div>";
+        $modals[] = "<div class=\"mb-3\">";
+        $modals[] = "<label class=\"form-label\">Порядок сортировки</label>";
+        $modals[] = "<input type=\"number\" name=\"sort_order\" class=\"form-control\" value=\"" . $cat["sort_order"] . "\">";
+        $modals[] = "</div>";
+        $modals[] = "</div>";
+
+        $modals[] = "<div class=\"modal-footer\">";
+        $modals[] = "<button type=\"button\" class=\"btn btn-secondary\" data-bs-dismiss=\"modal\">Отмена</button>";
+        $modals[] = "<button type=\"submit\" class=\"btn btn-primary\">Сохранить</button>";
+        $modals[] = "</div>";
+
+        $modals[] = "</form>";
+        $modals[] = "</div>";
+        $modals[] = "</div>";
+        $modals[] = "</div>";
+
         // Модальное окно удаления
-        $html[] = "<div class=\"modal fade\" id=\"deleteModal" . $cat["id"] . "\" tabindex=\"-1\">";
-        $html[] = "<div class=\"modal-dialog\">";
-        $html[] = "<div class=\"modal-content\">";
-        $html[] = "<form method=\"POST\">";
-        $html[] = CsrfProtection::getTokenField(); // CSRF Protection
-        $html[] = "<input type=\"hidden\" name=\"delete_category\" value=\"1\">";
-        $html[] = "<input type=\"hidden\" name=\"category_id\" value=\"" . $cat["id"] . "\">";
+        $modals[] = "<div class=\"modal fade\" id=\"deleteModal" . $cat["id"] . "\" tabindex=\"-1\">";
+        $modals[] = "<div class=\"modal-dialog\">";
+        $modals[] = "<div class=\"modal-content\">";
+        $modals[] = "<form method=\"POST\">";
+        $modals[] = CsrfProtection::getTokenField(); // CSRF Protection
+        $modals[] = "<input type=\"hidden\" name=\"delete_category\" value=\"1\">";
+        $modals[] = "<input type=\"hidden\" name=\"category_id\" value=\"" . $cat["id"] . "\">";
 
-        $html[] = "<div class=\"modal-header\">";
-        $html[] = "<h5 class=\"modal-title\">Удалить категорию?</h5>";
-        $html[] = "<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"modal\"></button>";
-        $html[] = "</div>";
-        
-        $html[] = "<div class=\"modal-body\">";
-        $html[] = "<p>Вы уверены, что хотите удалить категорию <strong>" . htmlspecialchars($cat["name"]) . "</strong>?</p>";
-        $html[] = "<p class=\"text-danger\">Это действие нельзя отменить!</p>";
-        $html[] = "</div>";
-        
-        $html[] = "<div class=\"modal-footer\">";
-        $html[] = "<button type=\"button\" class=\"btn btn-secondary\" data-bs-dismiss=\"modal\">Отмена</button>";
-        $html[] = "<button type=\"submit\" class=\"btn btn-danger\">Удалить</button>";
-        $html[] = "</div>";
-        
-        $html[] = "</form>";
-        $html[] = "</div>";
-        $html[] = "</div>";
-        $html[] = "</div>";
+        $modals[] = "<div class=\"modal-header\">";
+        $modals[] = "<h5 class=\"modal-title\">Удалить категорию?</h5>";
+        $modals[] = "<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"modal\"></button>";
+        $modals[] = "</div>";
+
+        $modals[] = "<div class=\"modal-body\">";
+        $modals[] = "<p>Вы уверены, что хотите удалить категорию <strong>" . htmlspecialchars($cat["name"]) . "</strong>?</p>";
+        $modals[] = "<p class=\"text-danger\">Это действие нельзя отменить!</p>";
+        $modals[] = "</div>";
+
+        $modals[] = "<div class=\"modal-footer\">";
+        $modals[] = "<button type=\"button\" class=\"btn btn-secondary\" data-bs-dismiss=\"modal\">Отмена</button>";
+        $modals[] = "<button type=\"submit\" class=\"btn btn-danger\">Удалить</button>";
+        $modals[] = "</div>";
+
+        $modals[] = "</form>";
+        $modals[] = "</div>";
+        $modals[] = "</div>";
+        $modals[] = "</div>";
 
         // Модальное окно управления экспертами
-        $html[] = "<div class=\"modal fade\" id=\"expertsModal" . $cat["id"] . "\" tabindex=\"-1\">";
-        $html[] = "<div class=\"modal-dialog modal-lg\">";
-        $html[] = "<div class=\"modal-content\">";
+        $modals[] = "<div class=\"modal fade\" id=\"expertsModal" . $cat["id"] . "\" tabindex=\"-1\">";
+        $modals[] = "<div class=\"modal-dialog modal-lg\">";
+        $modals[] = "<div class=\"modal-content\">";
 
-        $html[] = "<div class=\"modal-header\">";
-        $html[] = "<h5 class=\"modal-title\">Управление экспертами: " . htmlspecialchars($cat["name"]) . "</h5>";
-        $html[] = "<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"modal\"></button>";
-        $html[] = "</div>";
+        $modals[] = "<div class=\"modal-header\">";
+        $modals[] = "<h5 class=\"modal-title\">Управление экспертами: " . htmlspecialchars($cat["name"]) . "</h5>";
+        $modals[] = "<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"modal\"></button>";
+        $modals[] = "</div>";
 
-        $html[] = "<div class=\"modal-body\">";
+        $modals[] = "<div class=\"modal-body\">";
 
         // Список текущих экспертов
-        $html[] = "<h6>Текущие эксперты</h6>";
-        $html[] = "<div id=\"expertsList" . $cat["id"] . "\" class=\"mb-4\">";
-        $html[] = "<div class=\"text-center text-muted py-3\">Загрузка...</div>";
-        $html[] = "</div>";
+        $modals[] = "<h6>Текущие эксперты</h6>";
+        $modals[] = "<div id=\"expertsList" . $cat["id"] . "\" class=\"mb-4\">";
+        $modals[] = "<div class=\"text-center text-muted py-3\">Загрузка...</div>";
+        $modals[] = "</div>";
 
         // Форма добавления эксперта
-        $html[] = "<hr>";
-        $html[] = "<h6>Назначить эксперта</h6>";
-        $html[] = "<form id=\"addExpertForm" . $cat["id"] . "\" class=\"needs-validation\" novalidate>";
-        $html[] = "<input type=\"hidden\" name=\"category_id\" value=\"" . $cat["id"] . "\">";
+        $modals[] = "<hr>";
+        $modals[] = "<h6>Назначить эксперта</h6>";
+        $modals[] = "<form id=\"addExpertForm" . $cat["id"] . "\" class=\"needs-validation\" novalidate>";
+        $modals[] = "<input type=\"hidden\" name=\"category_id\" value=\"" . $cat["id"] . "\">";
 
-        $html[] = "<div class=\"mb-3\">";
-        $html[] = "<label class=\"form-label\">Выберите эксперта</label>";
-        $html[] = "<select name=\"expert_user_id\" class=\"form-select\" id=\"expertSelect" . $cat["id"] . "\" required>";
-        $html[] = "<option value=\"\">Загрузка...</option>";
-        $html[] = "</select>";
-        $html[] = "</div>";
+        $modals[] = "<div class=\"mb-3\">";
+        $modals[] = "<label class=\"form-label\">Выберите эксперта</label>";
+        $modals[] = "<select name=\"expert_user_id\" class=\"form-select\" id=\"expertSelect" . $cat["id"] . "\" required>";
+        $modals[] = "<option value=\"\">Загрузка...</option>";
+        $modals[] = "</select>";
+        $modals[] = "</div>";
 
-        $html[] = "<div class=\"mb-3\">";
-        $html[] = "<label class=\"form-label\">Права доступа</label>";
-        $html[] = "<div class=\"form-check\">";
-        $html[] = "<input class=\"form-check-input\" type=\"checkbox\" name=\"can_manage_tests\" id=\"canManageTests" . $cat["id"] . "\" checked>";
-        $html[] = "<label class=\"form-check-label\" for=\"canManageTests" . $cat["id"] . "\">Управление тестами</label>";
-        $html[] = "</div>";
-        $html[] = "<div class=\"form-check\">";
-        $html[] = "<input class=\"form-check-input\" type=\"checkbox\" name=\"can_manage_questions\" id=\"canManageQuestions" . $cat["id"] . "\" checked>";
-        $html[] = "<label class=\"form-check-label\" for=\"canManageQuestions" . $cat["id"] . "\">Управление вопросами</label>";
-        $html[] = "</div>";
-        $html[] = "<div class=\"form-check\">";
-        $html[] = "<input class=\"form-check-input\" type=\"checkbox\" name=\"can_approve\" id=\"canApprove" . $cat["id"] . "\">";
-        $html[] = "<label class=\"form-check-label\" for=\"canApprove" . $cat["id"] . "\">Подтверждение изменений</label>";
-        $html[] = "</div>";
-        $html[] = "</div>";
+        $modals[] = "<div class=\"mb-3\">";
+        $modals[] = "<label class=\"form-label\">Права доступа</label>";
+        $modals[] = "<div class=\"form-check\">";
+        $modals[] = "<input class=\"form-check-input\" type=\"checkbox\" name=\"can_manage_tests\" id=\"canManageTests" . $cat["id"] . "\" checked>";
+        $modals[] = "<label class=\"form-check-label\" for=\"canManageTests" . $cat["id"] . "\">Управление тестами</label>";
+        $modals[] = "</div>";
+        $modals[] = "<div class=\"form-check\">";
+        $modals[] = "<input class=\"form-check-input\" type=\"checkbox\" name=\"can_manage_questions\" id=\"canManageQuestions" . $cat["id"] . "\" checked>";
+        $modals[] = "<label class=\"form-check-label\" for=\"canManageQuestions" . $cat["id"] . "\">Управление вопросами</label>";
+        $modals[] = "</div>";
+        $modals[] = "<div class=\"form-check\">";
+        $modals[] = "<input class=\"form-check-input\" type=\"checkbox\" name=\"can_approve\" id=\"canApprove" . $cat["id"] . "\">";
+        $modals[] = "<label class=\"form-check-label\" for=\"canApprove" . $cat["id"] . "\">Подтверждение изменений</label>";
+        $modals[] = "</div>";
+        $modals[] = "</div>";
 
-        $html[] = "<button type=\"submit\" class=\"btn btn-primary\">Назначить эксперта</button>";
-        $html[] = "</form>";
+        $modals[] = "<button type=\"submit\" class=\"btn btn-primary\">Назначить эксперта</button>";
+        $modals[] = "</form>";
 
-        $html[] = "</div>";
+        $modals[] = "</div>";
 
-        $html[] = "<div class=\"modal-footer\">";
-        $html[] = "<button type=\"button\" class=\"btn btn-secondary\" data-bs-dismiss=\"modal\">Закрыть</button>";
-        $html[] = "</div>";
+        $modals[] = "<div class=\"modal-footer\">";
+        $modals[] = "<button type=\"button\" class=\"btn btn-secondary\" data-bs-dismiss=\"modal\">Закрыть</button>";
+        $modals[] = "</div>";
 
-        $html[] = "</div>";
-        $html[] = "</div>";
-        $html[] = "</div>";
+        $modals[] = "</div>";
+        $modals[] = "</div>";
+        $modals[] = "</div>";
     }
 
     $html[] = "</tbody>";
@@ -395,6 +396,9 @@ $html[] = "</div>";
 
 $html[] = "</div>";
 $html[] = "</div>";
+
+// Выводим модальные окна вне контейнера
+$html = array_merge($html, $modals);
 
 // Подключаем JavaScript для управления экспертами
 $html[] = "<script src=\"/assets/components/testsystem/js/category-experts.js\"></script>";
