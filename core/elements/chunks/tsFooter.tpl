@@ -22,28 +22,28 @@
                 <h5>Быстрые ссылки</h5>
                 <ul class="list-unstyled">
                     <li class="mb-2">
-                        <a href="{$_modx->makeUrl(999)}" class="text-light text-decoration-none">
+                        <a href="{$_modx->makeUrl(35)}" class="text-light text-decoration-none">
                             <i class="fas fa-clipboard-list"></i> Все тесты
                         </a>
                     </li>
                     <li class="mb-2">
-                        <a href="{$_modx->makeUrl(1000)}" class="text-light text-decoration-none">
+                        <a href="{$_modx->makeUrl(149)}" class="text-light text-decoration-none">
                             <i class="fas fa-book"></i> Учебные материалы
                         </a>
                     </li>
                     <li class="mb-2">
-                        <a href="{$_modx->makeUrl(1001)}" class="text-light text-decoration-none">
+                        <a href="{$_modx->makeUrl(159)}" class="text-light text-decoration-none">
                             <i class="fas fa-trophy"></i> Таблица лидеров
                         </a>
                     </li>
                     {if $_modx->user.id > 0}
                     <li class="mb-2">
-                        <a href="{$_modx->makeUrl(1003)}" class="text-light text-decoration-none">
+                        <a href="{$_modx->makeUrl(28)}" class="text-light text-decoration-none">
                             <i class="fas fa-user"></i> Мой профиль
                         </a>
                     </li>
                     <li class="mb-2">
-                        <a href="{$_modx->makeUrl(1002)}" class="text-light text-decoration-none">
+                        <a href="{$_modx->makeUrl(169)}" class="text-light text-decoration-none">
                             <i class="fas fa-heart"></i> Избранное
                         </a>
                     </li>
@@ -85,13 +85,13 @@
                 </p>
             </div>
             <div class="col-md-6 text-md-end">
-                <a href="{$_modx->makeUrl(1008)}" class="text-light text-decoration-none">О системе</a>
+                <a href="{$_modx->makeUrl(181)}" class="text-light text-decoration-none">О системе</a>
                 <span class="mx-2 text-muted">|</span>
-                <a href="{$_modx->makeUrl(1009)}" class="text-light text-decoration-none">Правила</a>
+                <a href="{$_modx->makeUrl(182)}" class="text-light text-decoration-none">Правила</a>
                 <span class="mx-2 text-muted">|</span>
-                <a href="{$_modx->makeUrl(1010)}" class="text-light text-decoration-none">Контакты</a>
+                <a href="{$_modx->makeUrl(183)}" class="text-light text-decoration-none">Контакты</a>
                 <span class="mx-2 text-muted">|</span>
-                <a href="{$_modx->makeUrl(1011)}" class="text-light text-decoration-none">Помощь</a>
+                <a href="{$_modx->makeUrl(184)}" class="text-light text-decoration-none">Помощь</a>
             </div>
         </div>
     </div>
