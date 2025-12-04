@@ -606,10 +606,22 @@
             
             if (result.success) {
                 showNotification(editingAreaId ? 'Область обновлена' : 'Область создана', 'success');
-                
-                const modal = bootstrap.Modal.getInstance(document.getElementById('areaModal'));
+
+                const modalEl = document.getElementById('areaModal');
+                const modal = bootstrap.Modal.getInstance(modalEl);
                 modal.hide();
-                
+
+                // ИСПРАВЛЕНИЕ: Удаляем backdrop принудительно
+                setTimeout(() => {
+                    const backdrop = document.querySelector('.modal-backdrop');
+                    if (backdrop) {
+                        backdrop.remove();
+                    }
+                    document.body.classList.remove('modal-open');
+                    document.body.style.overflow = '';
+                    document.body.style.paddingRight = '';
+                }, 300);
+
                 await loadAreas();
             } else {
                 throw new Error(result.message);
@@ -644,10 +656,22 @@
             
             if (result.success) {
                 showNotification('Область удалена', 'success');
-                
-                const modal = bootstrap.Modal.getInstance(document.getElementById('deleteAreaModal'));
+
+                const modalEl = document.getElementById('deleteAreaModal');
+                const modal = bootstrap.Modal.getInstance(modalEl);
                 modal.hide();
-                
+
+                // ИСПРАВЛЕНИЕ: Удаляем backdrop принудительно
+                setTimeout(() => {
+                    const backdrop = document.querySelector('.modal-backdrop');
+                    if (backdrop) {
+                        backdrop.remove();
+                    }
+                    document.body.classList.remove('modal-open');
+                    document.body.style.overflow = '';
+                    document.body.style.paddingRight = '';
+                }, 300);
+
                 await loadAreas();
             } else {
                 throw new Error(result.message);

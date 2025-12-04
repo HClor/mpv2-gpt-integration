@@ -1280,6 +1280,7 @@ try {
             $userId = PermissionHelper::getCurrentUserId($modx);
             
             // Получаем тесты с учетом publication_status
+            // ИСПРАВЛЕНО: используем category_id из таблицы тестов, а не parent ресурса
             $stmt = $modx->prepare("
                 SELECT DISTINCT
                     t.id as test_id,
@@ -1287,18 +1288,17 @@ try {
                     t.resource_id,
                     t.publication_status,
                     t.created_by,
-                    r.parent as category_id,
-                    rc.pagetitle as category_title,
+                    t.category_id,
+                    c.name as category_title,
                     (SELECT COUNT(*) FROM modx_test_questions WHERE test_id = t.id AND published = 1) as questions_count,
-                    CASE 
+                    CASE
                         WHEN t.created_by = ? THEN 'owner'
                         WHEN t.publication_status IN ('public', 'unlisted') THEN 'public'
                         WHEN p.user_id IS NOT NULL THEN 'shared'
                         ELSE NULL
                     END as access_type
                 FROM modx_test_tests t
-                LEFT JOIN modx_site_content r ON r.id = t.resource_id
-                LEFT JOIN modx_site_content rc ON rc.id = r.parent
+                LEFT JOIN modx_test_categories c ON c.id = t.category_id
                 LEFT JOIN modx_test_permissions p ON p.test_id = t.id AND p.user_id = ?
                 WHERE t.is_active = 1
                 AND (
@@ -1307,7 +1307,7 @@ try {
                     OR p.user_id = ?
                 )
                 HAVING access_type IS NOT NULL
-                ORDER BY rc.pagetitle, t.title
+                ORDER BY c.name, t.title
             ");
             
             $stmt->execute([$userId, $userId, $userId, $userId]);
