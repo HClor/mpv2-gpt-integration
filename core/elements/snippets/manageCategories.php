@@ -222,7 +222,7 @@ if (empty($categories)) {
     $html[] = "<th style=\"width: 60px;\">Порядок</th>";
     $html[] = "<th>Название</th>";
     $html[] = "<th style=\"width: 100px;\">Тестов</th>";
-    $html[] = "<th style=\"width: 150px;\">Действия</th>";
+    $html[] = "<th style=\"width: 250px;\">Действия</th>";
     $html[] = "</tr>";
     $html[] = "</thead>";
     $html[] = "<tbody>";
@@ -238,17 +238,20 @@ if (empty($categories)) {
         $html[] = "</td>";
         $html[] = "<td><span class=\"badge bg-secondary\">" . $cat["test_count"] . "</span></td>";
         $html[] = "<td>";
-        
+
+        // Кнопка управления экспертами
+        $html[] = "<button class=\"btn btn-sm btn-info\" data-bs-toggle=\"modal\" data-bs-target=\"#expertsModal" . $cat["id"] . "\">Эксперты</button> ";
+
         // Кнопка редактирования
         $html[] = "<button class=\"btn btn-sm btn-warning\" data-bs-toggle=\"modal\" data-bs-target=\"#editModal" . $cat["id"] . "\">Редактировать</button> ";
-        
+
         // Кнопка удаления
         if ($cat["test_count"] == 0) {
             $html[] = "<button class=\"btn btn-sm btn-danger\" data-bs-toggle=\"modal\" data-bs-target=\"#deleteModal" . $cat["id"] . "\">Удалить</button>";
         } else {
             $html[] = "<button class=\"btn btn-sm btn-secondary\" disabled title=\"Есть тесты\">Удалить</button>";
         }
-        
+
         $html[] = "</td>";
         $html[] = "</tr>";
         
@@ -319,8 +322,68 @@ if (empty($categories)) {
         $html[] = "</div>";
         $html[] = "</div>";
         $html[] = "</div>";
+
+        // Модальное окно управления экспертами
+        $html[] = "<div class=\"modal fade\" id=\"expertsModal" . $cat["id"] . "\" tabindex=\"-1\">";
+        $html[] = "<div class=\"modal-dialog modal-lg\">";
+        $html[] = "<div class=\"modal-content\">";
+
+        $html[] = "<div class=\"modal-header\">";
+        $html[] = "<h5 class=\"modal-title\">Управление экспертами: " . htmlspecialchars($cat["name"]) . "</h5>";
+        $html[] = "<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"modal\"></button>";
+        $html[] = "</div>";
+
+        $html[] = "<div class=\"modal-body\">";
+
+        // Список текущих экспертов
+        $html[] = "<h6>Текущие эксперты</h6>";
+        $html[] = "<div id=\"expertsList" . $cat["id"] . "\" class=\"mb-4\">";
+        $html[] = "<div class=\"text-center text-muted py-3\">Загрузка...</div>";
+        $html[] = "</div>";
+
+        // Форма добавления эксперта
+        $html[] = "<hr>";
+        $html[] = "<h6>Назначить эксперта</h6>";
+        $html[] = "<form id=\"addExpertForm" . $cat["id"] . "\" class=\"needs-validation\" novalidate>";
+        $html[] = "<input type=\"hidden\" name=\"category_id\" value=\"" . $cat["id"] . "\">";
+
+        $html[] = "<div class=\"mb-3\">";
+        $html[] = "<label class=\"form-label\">Выберите эксперта</label>";
+        $html[] = "<select name=\"expert_user_id\" class=\"form-select\" id=\"expertSelect" . $cat["id"] . "\" required>";
+        $html[] = "<option value=\"\">Загрузка...</option>";
+        $html[] = "</select>";
+        $html[] = "</div>";
+
+        $html[] = "<div class=\"mb-3\">";
+        $html[] = "<label class=\"form-label\">Права доступа</label>";
+        $html[] = "<div class=\"form-check\">";
+        $html[] = "<input class=\"form-check-input\" type=\"checkbox\" name=\"can_manage_tests\" id=\"canManageTests" . $cat["id"] . "\" checked>";
+        $html[] = "<label class=\"form-check-label\" for=\"canManageTests" . $cat["id"] . "\">Управление тестами</label>";
+        $html[] = "</div>";
+        $html[] = "<div class=\"form-check\">";
+        $html[] = "<input class=\"form-check-input\" type=\"checkbox\" name=\"can_manage_questions\" id=\"canManageQuestions" . $cat["id"] . "\" checked>";
+        $html[] = "<label class=\"form-check-label\" for=\"canManageQuestions" . $cat["id"] . "\">Управление вопросами</label>";
+        $html[] = "</div>";
+        $html[] = "<div class=\"form-check\">";
+        $html[] = "<input class=\"form-check-input\" type=\"checkbox\" name=\"can_approve\" id=\"canApprove" . $cat["id"] . "\">";
+        $html[] = "<label class=\"form-check-label\" for=\"canApprove" . $cat["id"] . "\">Подтверждение изменений</label>";
+        $html[] = "</div>";
+        $html[] = "</div>";
+
+        $html[] = "<button type=\"submit\" class=\"btn btn-primary\">Назначить эксперта</button>";
+        $html[] = "</form>";
+
+        $html[] = "</div>";
+
+        $html[] = "<div class=\"modal-footer\">";
+        $html[] = "<button type=\"button\" class=\"btn btn-secondary\" data-bs-dismiss=\"modal\">Закрыть</button>";
+        $html[] = "</div>";
+
+        $html[] = "</div>";
+        $html[] = "</div>";
+        $html[] = "</div>";
     }
-    
+
     $html[] = "</tbody>";
     $html[] = "</table>";
     $html[] = "</div>";
@@ -332,5 +395,8 @@ $html[] = "</div>";
 
 $html[] = "</div>";
 $html[] = "</div>";
+
+// Подключаем JavaScript для управления экспертами
+$html[] = "<script src=\"/assets/components/testsystem/js/category-experts.js\"></script>";
 
 return implode("", $html);
