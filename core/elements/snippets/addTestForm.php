@@ -40,15 +40,19 @@ if ($_POST && isset($_POST["add_test"])) {
     $parentId = (int)($_POST["category_id"] ?? 0);
     $title = trim($_POST["title"] ?? "");
     $description = trim($_POST["description"] ?? "");
-    
+
     // Преобразуем mode для БД (enum принимает только 'training' или 'exam')
     $modeInput = $_POST["mode"] ?? "both";
     $mode = ($modeInput === 'exam') ? 'exam' : 'training';
-    
+
     $timeLimit = (int)($_POST["time_limit"] ?? 0);
     $passScore = (int)($_POST["pass_score"] ?? 70);
     $questionsPerSession = (int)($_POST["questions_per_session"] ?? 20);
     $uploadFile = isset($_POST["upload_file"]) && $_POST["upload_file"] === "1";
+
+    // Определяем приватность теста
+    $isPrivate = isset($_POST["is_private"]) && $_POST["is_private"] === "1";
+    $publicationStatus = $isPrivate ? 'private' : 'public';
     
     if (!$parentId) $errors[] = "Выберите категорию";
     if (empty($title)) $errors[] = "Введите название теста";
@@ -109,8 +113,8 @@ if ($_POST && isset($_POST["add_test"])) {
             $stmt = $modx->prepare("
                 INSERT INTO `{$prefix}test_tests`
                 (resource_id, title, description, created_by, mode, time_limit, pass_score,
-                 questions_per_session, randomize_questions, randomize_answers, is_active, publication_status, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 1, 'public', NOW())
+                 questions_per_session, randomize_questions, randomize_answers, is_active, publication_status, created_at, category_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 1, ?, NOW(), ?)
             ");
 
             // resource_id = category_id (НЕ ID страницы MODX!)
@@ -122,7 +126,9 @@ if ($_POST && isset($_POST["add_test"])) {
                 $mode,
                 $timeLimit,
                 $passScore,
-                $questionsPerSession
+                $questionsPerSession,
+                $publicationStatus,  // 'public' или 'private'
+                $parentId  // category_id
                 ])) {
                 $newTestId = $modx->lastInsertId();
 
@@ -170,28 +176,35 @@ $categories = $stmt ? $stmt->fetchAll(PDO::FETCH_ASSOC) : [];
 // ФОРМИРОВАНИЕ HTML
 // ============================================
 $output = "";
-$output .= "<div class=\"row\">";
-$output .= "<div class=\"col-md-8 offset-md-2\">";
+$output .= "<div class=\"container-fluid\">";
 
 if (!empty($errors)) {
-    $output .= "<div class=\"alert alert-danger\"><ul class=\"mb-0\">";
+    $output .= "<div class=\"alert alert-danger alert-dismissible fade show\">";
+    $output .= "<strong>Ошибки при создании теста:</strong>";
+    $output .= "<ul class=\"mb-0 mt-2\">";
     foreach ($errors as $error) {
         $output .= "<li>" . htmlspecialchars($error, ENT_QUOTES, 'UTF-8') . "</li>";
     }
-    $output .= "</ul></div>";
+    $output .= "</ul>";
+    $output .= "<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"alert\"></button>";
+    $output .= "</div>";
 }
 
-$output .= "<div class=\"card\">";
-$output .= "<div class=\"card-header bg-primary text-white\">";
-$output .= "<h4 class=\"mb-0\">Создать новый тест</h4>";
+$output .= "<div class=\"card shadow-sm\">";
+$output .= "<div class=\"card-header border-bottom\">";
+$output .= "<h4 class=\"mb-0\"><i class=\"bi bi-plus-circle\"></i> Создать новый тест</h4>";
 $output .= "</div>";
 $output .= "<div class=\"card-body\">";
 $output .= "<form method=\"POST\" enctype=\"multipart/form-data\">";
 $output .= CsrfProtection::getTokenField(); // CSRF Protection
 $output .= "<input type=\"hidden\" name=\"add_test\" value=\"1\">";
 
-$output .= "<div class=\"mb-3\">";
-$output .= "<label class=\"form-label\">Категория *</label>";
+// Основная информация
+$output .= "<h5 class=\"mb-3\"><i class=\"bi bi-info-circle\"></i> Основная информация</h5>";
+
+$output .= "<div class=\"row\">";
+$output .= "<div class=\"col-md-6 mb-3\">";
+$output .= "<label class=\"form-label\"><i class=\"bi bi-folder\"></i> Категория *</label>";
 $output .= "<select name=\"category_id\" class=\"form-select\" required>";
 $output .= "<option value=\"\">-- Выберите категорию --</option>";
 foreach ($categories as $cat) {
@@ -199,58 +212,79 @@ foreach ($categories as $cat) {
     $output .= "<option value=\"" . (int)$cat["id"] . "\" " . $selected . ">" . htmlspecialchars($cat["name"], ENT_QUOTES, 'UTF-8') . "</option>";
 }
 $output .= "</select>";
-if (empty($categories)) { 
-    $output .= "<small class=\"form-text text-danger\">Категории не найдены. Создайте папки в разделе \"Тесты\" (ID: {$TESTS_ROOT_ID}).</small>";
-} 
+if (empty($categories)) {
+    $output .= "<small class=\"form-text text-danger\">Категории не найдены. Создайте их в разделе управления категориями.</small>";
+}
+$output .= "</div>";
+
+$output .= "<div class=\"col-md-6 mb-3\">";
+$output .= "<label class=\"form-label\"><i class=\"bi bi-file-text\"></i> Название теста *</label>";
+$output .= "<input type=\"text\" name=\"title\" class=\"form-control\" value=\"" . htmlspecialchars($_POST["title"] ?? "", ENT_QUOTES, 'UTF-8') . "\" required placeholder=\"Например: Основы SQL\">";
+$output .= "</div>";
 $output .= "</div>";
 
 $output .= "<div class=\"mb-3\">";
-$output .= "<label class=\"form-label\">Название теста *</label>";
-$output .= "<input type=\"text\" name=\"title\" class=\"form-control\" value=\"" . htmlspecialchars($_POST["title"] ?? "", ENT_QUOTES, 'UTF-8') . "\" required>";
-$output .= "<small class=\"form-text text-muted\">Например: Основы SQL</small>";
+$output .= "<label class=\"form-label\"><i class=\"bi bi-card-text\"></i> Описание</label>";
+$output .= "<textarea name=\"description\" class=\"form-control\" rows=\"3\" placeholder=\"Краткое описание теста\">" . htmlspecialchars($_POST["description"] ?? "", ENT_QUOTES, 'UTF-8') . "</textarea>";
 $output .= "</div>";
 
-$output .= "<div class=\"mb-3\">";
-$output .= "<label class=\"form-label\">Описание</label>";
-$output .= "<textarea name=\"description\" class=\"form-control\" rows=\"3\">" . htmlspecialchars($_POST["description"] ?? "", ENT_QUOTES, 'UTF-8') . "</textarea>";
+// Чекбокс "Приватный тест"
+$output .= "<div class=\"mb-4\">";
+$output .= "<div class=\"form-check form-switch\">";
+$output .= "<input class=\"form-check-input\" type=\"checkbox\" id=\"is_private\" name=\"is_private\" value=\"1\" " . (isset($_POST["is_private"]) && $_POST["is_private"] === "1" ? "checked" : "") . ">";
+$output .= "<label class=\"form-check-label\" for=\"is_private\">";
+$output .= "<i class=\"bi bi-lock\"></i> <strong>Приватный тест</strong> ";
+$output .= "<small class=\"text-muted\">(доступен только вам, но вы можете предоставить доступ другим пользователям)</small>";
+$output .= "</label>";
 $output .= "</div>";
+$output .= "</div>";
+
+$output .= "<hr class=\"my-4\">";
+
+// Настройки теста
+$output .= "<h5 class=\"mb-3\"><i class=\"bi bi-gear\"></i> Настройки теста</h5>";
 
 $output .= "<div class=\"row\">";
 $output .= "<div class=\"col-md-6 mb-3\">";
-$output .= "<label class=\"form-label\">Режим теста</label>";
+$output .= "<label class=\"form-label\"><i class=\"bi bi-trophy\"></i> Режим теста</label>";
 $output .= "<select name=\"mode\" class=\"form-select\">";
-$output .= "<option value=\"both\" " . (($_POST["mode"] ?? "both") == "both" ? "selected" : "") . ">Оба режима</option>";
-$output .= "<option value=\"training\" " . (($_POST["mode"] ?? "") == "training" ? "selected" : "") . ">Только Training</option>";
-$output .= "<option value=\"exam\" " . (($_POST["mode"] ?? "") == "exam" ? "selected" : "") . ">Только Exam</option>";
+$output .= "<option value=\"both\" " . (($_POST["mode"] ?? "both") == "both" ? "selected" : "") . ">🎯 Оба режима (Training + Exam)</option>";
+$output .= "<option value=\"training\" " . (($_POST["mode"] ?? "") == "training" ? "selected" : "") . ">📚 Только Training (обучение)</option>";
+$output .= "<option value=\"exam\" " . (($_POST["mode"] ?? "") == "exam" ? "selected" : "") . ">🏆 Только Exam (экзамен)</option>";
 $output .= "</select>";
 $output .= "</div>";
 
 $output .= "<div class=\"col-md-6 mb-3\">";
-$output .= "<label class=\"form-label\">Проходной балл (%)</label>";
-$output .= "<input type=\"number\" name=\"pass_score\" class=\"form-control\" value=\"" . (int)($_POST["pass_score"] ?? 70) . "\" min=\"0\" max=\"100\">";
+$output .= "<label class=\"form-label\"><i class=\"bi bi-percent\"></i> Проходной балл (%)</label>";
+$output .= "<input type=\"number\" name=\"pass_score\" class=\"form-control\" value=\"" . (int)($_POST["pass_score"] ?? 70) . "\" min=\"0\" max=\"100\" placeholder=\"70\">";
+$output .= "<small class=\"form-text text-muted\">Минимальный процент для успешного прохождения</small>";
 $output .= "</div>";
 $output .= "</div>";
 
 $output .= "<div class=\"row\">";
 $output .= "<div class=\"col-md-6 mb-3\">";
-$output .= "<label class=\"form-label\">Вопросов за попытку</label>";
-$output .= "<input type=\"number\" name=\"questions_per_session\" class=\"form-control\" value=\"" . (int)($_POST["questions_per_session"] ?? 20) . "\" min=\"1\">";
+$output .= "<label class=\"form-label\"><i class=\"bi bi-question-circle\"></i> Вопросов за попытку</label>";
+$output .= "<input type=\"number\" name=\"questions_per_session\" class=\"form-control\" value=\"" . (int)($_POST["questions_per_session"] ?? 20) . "\" min=\"1\" placeholder=\"20\">";
+$output .= "<small class=\"form-text text-muted\">Количество вопросов в одной сессии</small>";
 $output .= "</div>";
 
 $output .= "<div class=\"col-md-6 mb-3\">";
-$output .= "<label class=\"form-label\">Время на тест (минут)</label>";
-$output .= "<input type=\"number\" name=\"time_limit\" class=\"form-control\" value=\"" . (int)($_POST["time_limit"] ?? 0) . "\" min=\"0\">";
-$output .= "<small class=\"form-text text-muted\">0 = без ограничения</small>";
+$output .= "<label class=\"form-label\"><i class=\"bi bi-clock\"></i> Время на тест (минут)</label>";
+$output .= "<input type=\"number\" name=\"time_limit\" class=\"form-control\" value=\"" . (int)($_POST["time_limit"] ?? 0) . "\" min=\"0\" placeholder=\"0 = без ограничения\">";
+$output .= "<small class=\"form-text text-muted\">0 = без ограничения по времени</small>";
 $output .= "</div>";
 $output .= "</div>";
 
-// Блок загрузки файла - ЗАМЕНИТЬ ЭТОТ БЛОК
+// Блок загрузки файла
 $output .= "<hr class=\"my-4\">";
-$output .= "<div class=\"card bg-light\">";
+
+$output .= "<h5 class=\"mb-3\"><i class=\"bi bi-upload\"></i> Импорт вопросов</h5>";
+
+$output .= "<div class=\"card bg-light border-0\">";
 $output .= "<div class=\"card-body\">";
 $output .= "<div class=\"form-check form-switch mb-3\">";
 $output .= "<input class=\"form-check-input\" type=\"checkbox\" id=\"upload_file_toggle\" name=\"upload_file\" value=\"1\" style=\"width: 3em; height: 1.5em; cursor: pointer;\">";
-$output .= "<label class=\"form-check-label fw-bold ms-2\" for=\"upload_file_toggle\" style=\"cursor: pointer; font-size: 1.1em;\">";
+$output .= "<label class=\"form-check-label fw-bold ms-2\" for=\"upload_file_toggle\" style=\"cursor: pointer;\">";
 $output .= "<i class=\"bi bi-file-earmark-spreadsheet\"></i> Загрузить вопросы из файла (CSV или Excel)";
 $output .= "</label>";
 $output .= "</div>";
@@ -283,21 +317,25 @@ $output .= "</div>";
 $output .= "</div>";
 $output .= "</div>";
 
-$output .= "<div class=\"alert alert-info mt-3\">";
-$output .= "<strong>Обратите внимание:</strong> После создания теста вы будете перенаправлены на страницу импорта вопросов.";
+$output .= "<div class=\"alert alert-info border-0 mt-4\">";
+$output .= "<i class=\"bi bi-info-circle-fill\"></i> <strong>Обратите внимание:</strong> ";
+$output .= "После создания теста вы будете перенаправлены на страницу добавления вопросов.";
 $output .= "</div>";
 
-$output .= "<div class=\"d-flex justify-content-between mt-4\">";
+$output .= "<div class=\"d-flex justify-content-between align-items-center mt-4\">";
 $testsUrl = $modx->makeUrl($modx->getOption("lms.tests_page", null, 35));
-$output .= "<a href=\"" . htmlspecialchars($testsUrl, ENT_QUOTES, 'UTF-8') . "\" class=\"btn btn-secondary\">Отмена</a>";
-$output .= "<button type=\"submit\" class=\"btn btn-primary btn-lg\">Создать тест и перейти к добавлению вопросов →</button>";
+$output .= "<a href=\"" . htmlspecialchars($testsUrl, ENT_QUOTES, 'UTF-8') . "\" class=\"btn btn-outline-secondary\">";
+$output .= "<i class=\"bi bi-arrow-left\"></i> Отмена";
+$output .= "</a>";
+$output .= "<button type=\"submit\" class=\"btn btn-primary btn-lg\">";
+$output .= "<i class=\"bi bi-check-circle\"></i> Создать тест и перейти к вопросам";
+$output .= "</button>";
 $output .= "</div>";
 
 $output .= "</form>";
-$output .= "</div>";
-$output .= "</div>";
-$output .= "</div>";
-$output .= "</div>";
+$output .= "</div>";  // card-body
+$output .= "</div>";  // card
+$output .= "</div>";  // container-fluid
 
 // JavaScript
 $output .= "<script>
