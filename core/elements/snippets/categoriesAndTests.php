@@ -27,7 +27,7 @@ $cacheTTL = (int)$modx->getOption('testsystem.cache_ttl', null, 3600);
 $categories = $modx->cacheManager->get($cacheKey);
 
 if ($categories === null) {
-    // ИСПРАВЛЕНО: resource_id теперь хранит category_id, publication_status вместо is_public
+    // ИСПРАВЛЕНО: используем category_id вместо resource_id
     $sql = "
         SELECT
             c.id,
@@ -37,7 +37,7 @@ if ($categories === null) {
                 THEN t.id
             END) AS test_count
         FROM `{$Tcats}` c
-        LEFT JOIN `{$Ttests}` t ON t.resource_id = c.id
+        LEFT JOIN `{$Ttests}` t ON t.category_id = c.id
         GROUP BY c.id, c.name
         HAVING test_count > 0
         ORDER BY c.sort_order
@@ -100,7 +100,7 @@ if (!$categoryId) {
         $html[] = '<p>' . htmlspecialchars($category['description'], ENT_QUOTES, 'UTF-8') . '</p>';
         $html[] = '</div>';
 
-        // ИСПРАВЛЕНО: resource_id = category_id, publication_status вместо is_public
+        // ИСПРАВЛЕНО: используем category_id вместо resource_id
         $sql = "
             SELECT
                 t.id,
@@ -112,7 +112,7 @@ if (!$categoryId) {
                 COUNT(q.id) AS question_count
             FROM `{$Ttests}` t
             LEFT JOIN `{$Tquestions}` q ON q.test_id = t.id
-            WHERE t.resource_id = ?
+            WHERE t.category_id = ?
               AND t.publication_status = 'public'
               AND t.is_active = 1
             GROUP BY t.id, t.title, t.description, t.mode, t.questions_per_session, t.pass_score
