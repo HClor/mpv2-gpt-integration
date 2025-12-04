@@ -28,23 +28,25 @@ window.quickTest = async function(categoryId, expertUserId) {
     console.log('expertUserId:', expertUserId, 'type:', typeof expertUserId);
     console.log('CSRF:', csrf ? 'OK' : 'MISSING');
 
-    const data = {
+    const requestData = {
         action: 'assignCategoryExpert',
         csrf_token: csrf,
-        category_id: parseInt(categoryId),
-        expert_user_id: parseInt(expertUserId),
-        can_manage_tests: true,
-        can_manage_questions: true,
-        can_approve: false
+        data: {
+            category_id: parseInt(categoryId),
+            expert_user_id: parseInt(expertUserId),
+            can_manage_tests: true,
+            can_manage_questions: true,
+            can_approve: false
+        }
     };
 
-    console.log('Данные:', data);
+    console.log('Данные:', requestData);
 
     try {
         const response = await fetch('/assets/components/testsystem/ajax/testsystem.php', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
+            body: JSON.stringify(requestData)
         });
 
         const result = await response.json();

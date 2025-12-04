@@ -33,7 +33,7 @@ class CategoryExpertsManager {
         const requestData = {
             action: action,
             csrf_token: this.csrfToken,
-            ...data
+            data: data  // Данные должны быть вложены в объект data
         };
 
         try {

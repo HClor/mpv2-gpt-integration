@@ -65,11 +65,13 @@ window.testExpertAssignment = async function(categoryId, expertUserId) {
     const requestData = {
         action: 'assignCategoryExpert',
         csrf_token: csrfToken,
-        category_id: categoryId,
-        expert_user_id: expertUserId,
-        can_manage_tests: true,
-        can_manage_questions: true,
-        can_approve: false
+        data: {
+            category_id: categoryId,
+            expert_user_id: expertUserId,
+            can_manage_tests: true,
+            can_manage_questions: true,
+            can_approve: false
+        }
     };
 
     console.log('Отправляемые данные:', requestData);
