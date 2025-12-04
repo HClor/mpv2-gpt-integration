@@ -64,7 +64,7 @@ class CategoryExpertsManager {
     async loadCategoryExperts(categoryId) {
         try {
             const result = await this.apiRequest('getCategoryExperts', {
-                category_id: categoryId
+                category_id: parseInt(categoryId)
             });
 
             return result.data || [];
@@ -92,8 +92,8 @@ class CategoryExpertsManager {
      */
     async assignExpert(categoryId, expertUserId, permissions) {
         return await this.apiRequest('assignCategoryExpert', {
-            category_id: categoryId,
-            expert_user_id: expertUserId,
+            category_id: parseInt(categoryId),
+            expert_user_id: parseInt(expertUserId),
             can_manage_tests: permissions.can_manage_tests,
             can_manage_questions: permissions.can_manage_questions,
             can_approve: permissions.can_approve
@@ -105,8 +105,8 @@ class CategoryExpertsManager {
      */
     async removeExpert(categoryId, expertUserId) {
         return await this.apiRequest('removeCategoryExpert', {
-            category_id: categoryId,
-            expert_user_id: expertUserId
+            category_id: parseInt(categoryId),
+            expert_user_id: parseInt(expertUserId)
         });
     }
 
@@ -210,6 +210,16 @@ class CategoryExpertsManager {
         const form = event.target;
         const formData = new FormData(form);
 
+        // Получаем categoryId из скрытого поля формы или параметра
+        const formCategoryId = formData.get('category_id');
+        const finalCategoryId = parseInt(formCategoryId || categoryId);
+
+        if (!finalCategoryId) {
+            alert('Ошибка: не указан ID категории');
+            console.error('Category ID missing. FormData:', formCategoryId, 'Parameter:', categoryId);
+            return;
+        }
+
         const expertUserId = parseInt(formData.get('expert_user_id'));
         if (!expertUserId) {
             alert('Выберите эксперта');
@@ -223,7 +233,7 @@ class CategoryExpertsManager {
         };
 
         try {
-            await this.assignExpert(categoryId, expertUserId, permissions);
+            await this.assignExpert(finalCategoryId, expertUserId, permissions);
 
             // Перезагружаем список экспертов
             await this.handleModalOpen(categoryId);
@@ -245,11 +255,20 @@ class CategoryExpertsManager {
             return;
         }
 
+        const finalCategoryId = parseInt(categoryId);
+        const finalExpertUserId = parseInt(expertUserId);
+
+        if (!finalCategoryId || !finalExpertUserId) {
+            alert('Ошибка: некорректные ID');
+            console.error('Invalid IDs:', { categoryId, expertUserId });
+            return;
+        }
+
         try {
-            await this.removeExpert(categoryId, expertUserId);
+            await this.removeExpert(finalCategoryId, finalExpertUserId);
 
             // Перезагружаем список экспертов
-            await this.handleModalOpen(categoryId);
+            await this.handleModalOpen(finalCategoryId);
 
             alert('Эксперт успешно удален!');
         } catch (error) {
@@ -278,7 +297,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Привязываем обработчики к модальным окнам экспертов
     document.querySelectorAll('[id^="expertsModal"]').forEach(modal => {
-        const categoryId = modal.id.replace('expertsModal', '');
+        const categoryId = parseInt(modal.id.replace('expertsModal', ''));
+
+        if (!categoryId) {
+            console.error('Invalid category ID from modal:', modal.id);
+            return;
+        }
 
         // При открытии модального окна загружаем данные
         modal.addEventListener('show.bs.modal', function() {
