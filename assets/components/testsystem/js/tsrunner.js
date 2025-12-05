@@ -3745,9 +3745,31 @@ async function addFavoritesViewToggle(questionId) {
         }
     }
 
+    async function deleteTestConfirm(testId) {
+        if (!confirm('⚠️ Вы уверены, что хотите удалить этот тест?\n\nЭто действие необратимо. Будут удалены:\n• Все вопросы теста\n• Все результаты прохождения\n• Вся статистика\n• Все настройки доступа')) {
+            return;
+        }
+
+        try {
+            const result = await apiCall('deleteTest', { test_id: testId });
+
+            if (result.success) {
+                alert('✅ Тест успешно удален');
+                // Перенаправляем на страницу "Мои тесты"
+                window.location.href = '/moi-testyi';
+            } else {
+                throw new Error(result.message || 'Ошибка удаления теста');
+            }
+        } catch (error) {
+            console.error('Delete test error:', error);
+            alert('❌ Ошибка удаления: ' + error.message);
+        }
+    }
+
     window.openTestManagementModal = openTestManagementModal;
     window.openPublicationModal = openPublicationModal;
     window.changePublicationStatus = changePublicationStatus;
+    window.deleteTestConfirm = deleteTestConfirm;
 
 
 })();
