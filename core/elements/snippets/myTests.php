@@ -21,8 +21,20 @@ if ($createTestPageId > 0) {
     $createTestUrl = $modx->makeUrl($createTestPageId, 'web', [], 'full');
 }
 
+// Получаем ID страницы запуска тестов для JavaScript
+$testPageId = (int)$modx->getOption('lms.test_page', null, 0);
+$testPageUrl = '';
+if ($testPageId > 0) {
+    $testPageUrl = $modx->makeUrl($testPageId, 'web', [], 'full');
+}
+
 // CSRF Protection: добавляем meta тег с токеном для JavaScript
 $output = CsrfProtection::getTokenMeta();
+
+// Добавляем URL страницы тестов для JavaScript
+if (!empty($testPageUrl)) {
+    $output .= '<meta name="test-page-url" content="' . htmlspecialchars($testPageUrl, ENT_QUOTES, 'UTF-8') . '">';
+}
 $output .= '<div id="my-tests-container">';
 $output .= '<div class="d-flex justify-content-between align-items-center mb-4">';
 $output .= '<h2>Мои тесты</h2>';
@@ -79,6 +91,62 @@ $output .= '<button type="button" class="btn btn-secondary" data-bs-dismiss="mod
 $output .= '<button type="button" class="btn btn-primary" onclick="createTest()">Создать</button>';
 $output .= '</div>';
 $output .= '</div></div></div>';
+
+// Добавляем стили для кнопок (убираем градиенты, единый стиль)
+$output .= '<style>
+/* Убираем градиенты с кнопок, используем плоские цвета Bootstrap */
+#my-tests-container .btn {
+    background-image: none !important;
+    box-shadow: none !important;
+}
+
+#my-tests-container .btn-primary {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+#my-tests-container .btn-primary:hover {
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+}
+
+#my-tests-container .btn-success {
+    background-color: #198754;
+    border-color: #198754;
+}
+
+#my-tests-container .btn-success:hover {
+    background-color: #157347;
+    border-color: #146c43;
+}
+
+#my-tests-container .btn-outline-primary,
+#my-tests-container .btn-outline-success,
+#my-tests-container .btn-outline-info,
+#my-tests-container .btn-outline-danger,
+#my-tests-container .btn-outline-secondary,
+#my-tests-container .btn-outline-warning {
+    background-image: none !important;
+    background-color: transparent;
+}
+
+/* Кнопки действий над тестами */
+.btn-test-action {
+    min-width: 40px;
+    min-height: 38px;
+    padding: 0.375rem 0.75rem;
+}
+
+.test-title-clickable {
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.test-title-clickable:hover {
+    color: #0d6efd !important;
+    text-decoration: underline;
+}
+</style>';
 
 $output .= '<script src="' . htmlspecialchars($jsPath, ENT_QUOTES, 'UTF-8') . '"></script>';
 

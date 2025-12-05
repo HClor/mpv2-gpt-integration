@@ -35,6 +35,17 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// Построение URL для теста (fallback если API не вернул URL)
+function buildTestUrl(testId) {
+    // Пытаемся получить базовый URL страницы с тестами из мета-тега или используем текущий домен
+    const baseUrl = document.querySelector('meta[name="test-page-url"]')?.content;
+    if (baseUrl) {
+        return baseUrl + '?test_id=' + testId;
+    }
+    // Fallback: используем относительный URL
+    return '/test-runner?test_id=' + testId;
+}
+
 async function loadMyTests() {
     try {
         const csrfToken = getCsrfToken();
@@ -46,10 +57,16 @@ async function loadMyTests() {
                 data: { csrf_token: csrfToken }
             })
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
+            // Добавляем fallback для test_url
+            result.data.forEach(test => {
+                if (!test.test_url || test.test_url === '#') {
+                    test.test_url = buildTestUrl(test.id);
+                }
+            });
             renderMyTests(result.data);
         }
     } catch (error) {
@@ -68,10 +85,16 @@ async function loadSharedTests() {
                 data: { csrf_token: csrfToken }
             })
         });
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
+            // Добавляем fallback для test_url
+            result.data.forEach(test => {
+                if (!test.test_url || test.test_url === '#') {
+                    test.test_url = buildTestUrl(test.id);
+                }
+            });
             renderSharedTests(result.data);
         } else {
             console.error('Error loading shared tests:', result.message);
@@ -81,7 +104,7 @@ async function loadSharedTests() {
         }
     } catch (error) {
         console.error('Error loading shared tests:', error);
-        document.getElementById('shared').innerHTML = 
+        document.getElementById('shared').innerHTML =
             '<div class="alert alert-danger">Ошибка при загрузке тестов</div>';
     }
 }
@@ -786,6 +809,12 @@ async function loadPublicTests() {
         const result = await response.json();
 
         if (result.success) {
+            // Добавляем fallback для test_url
+            result.data.forEach(test => {
+                if (!test.test_url || test.test_url === '#') {
+                    test.test_url = buildTestUrl(test.id);
+                }
+            });
             renderPublicTests(result.data);
         } else {
             console.error('Error loading public tests:', result.message);
