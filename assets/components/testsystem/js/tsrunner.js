@@ -3624,6 +3624,17 @@ async function addFavoritesViewToggle(questionId) {
 
                                     <!-- Вкладка "Публикация" -->
                                     <div class="tab-pane fade" id="publication-tab">
+                                        <style>
+                                            /* Исправляем видимость текста на активном элементе при hover */
+                                            .list-group-item-action.active:hover h6,
+                                            .list-group-item-action.active:hover small {
+                                                color: #fff !important;
+                                            }
+                                            .list-group-item-action:not(.active):hover {
+                                                background-color: #f8f9fa;
+                                            }
+                                        </style>
+
                                         <div class="alert alert-info">
                                             <strong>Текущий статус:</strong> ${getStatusName(currentStatus)}
                                         </div>
@@ -3634,22 +3645,22 @@ async function addFavoritesViewToggle(questionId) {
                                             <button type="button" class="list-group-item list-group-item-action ${currentStatus === 'draft' ? 'active' : ''}"
                                                     onclick="changePublicationStatusFromModal(${testId}, 'draft')">
                                                 <h6 class="mb-1">📝 Черновик</h6>
-                                                <small>Тест виден только вам. Используйте для подготовки.</small>
+                                                <small class="d-block">Тест виден только вам. Используйте для подготовки.</small>
                                             </button>
                                             <button type="button" class="list-group-item list-group-item-action ${currentStatus === 'private' ? 'active' : ''}"
                                                     onclick="changePublicationStatusFromModal(${testId}, 'private')">
                                                 <h6 class="mb-1">🔒 Приватный</h6>
-                                                <small>Доступ только по приглашению. Вы можете предоставить доступ конкретным пользователям.</small>
+                                                <small class="d-block">Доступ только по приглашению. Вы можете предоставить доступ конкретным пользователям.</small>
                                             </button>
                                             <button type="button" class="list-group-item list-group-item-action ${currentStatus === 'unlisted' ? 'active' : ''}"
                                                     onclick="changePublicationStatusFromModal(${testId}, 'unlisted')">
                                                 <h6 class="mb-1">🔗 По ссылке</h6>
-                                                <small>Доступен всем, у кого есть ссылка. Не отображается в общем каталоге.</small>
+                                                <small class="d-block">Доступен всем, у кого есть ссылка. Не отображается в общем каталоге.</small>
                                             </button>
                                             <button type="button" class="list-group-item list-group-item-action ${currentStatus === 'public' ? 'active' : ''}"
                                                     onclick="changePublicationStatusFromModal(${testId}, 'public')">
                                                 <h6 class="mb-1">🌐 Публичный</h6>
-                                                <small>Доступен всем пользователям системы. Отображается в каталоге.</small>
+                                                <small class="d-block">Доступен всем пользователям системы. Отображается в каталоге.</small>
                                             </button>
                                         </div>
                                     </div>
