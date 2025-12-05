@@ -1839,8 +1839,9 @@ try {
 
             $userId = PermissionHelper::getCurrentUserId($modx);
             
-            // Получаем тесты с учетом publication_status
+            // Получаем тесты с учетом publication_status и прав доступа
             // ИСПРАВЛЕНО: используем category_id из таблицы тестов, а не parent ресурса
+            // ОБНОВЛЕНО: добавлена проверка can_view и expires_at
             $stmt = $modx->prepare("
                 SELECT DISTINCT
                     t.id as test_id,
@@ -1851,10 +1852,14 @@ try {
                     t.category_id,
                     c.name as category_title,
                     (SELECT COUNT(*) FROM modx_test_questions WHERE test_id = t.id AND published = 1) as questions_count,
+                    p.can_view,
+                    p.can_edit,
+                    p.expires_at,
                     CASE
                         WHEN t.created_by = ? THEN 'owner'
                         WHEN t.publication_status IN ('public', 'unlisted') THEN 'public'
-                        WHEN p.user_id IS NOT NULL THEN 'shared'
+                        WHEN p.user_id IS NOT NULL AND p.can_view = 1
+                             AND (p.expires_at IS NULL OR p.expires_at > NOW()) THEN 'shared'
                         ELSE NULL
                     END as access_type
                 FROM modx_test_tests t
@@ -1864,7 +1869,11 @@ try {
                 AND (
                     t.publication_status IN ('public', 'unlisted')
                     OR t.created_by = ?
-                    OR p.user_id = ?
+                    OR (
+                        p.user_id = ?
+                        AND p.can_view = 1
+                        AND (p.expires_at IS NULL OR p.expires_at > NOW())
+                    )
                 )
                 HAVING access_type IS NOT NULL
                 ORDER BY c.name, t.title
@@ -2465,15 +2474,18 @@ if (empty($allQuestionIds)) {
             $userId = PermissionHelper::getCurrentUserId($modx);
             
             $stmt = $modx->prepare("
-                SELECT 
+                SELECT
                     t.id, t.title, t.description, t.publication_status, t.resource_id,
-                    p.can_edit, p.granted_at,
+                    p.can_view, p.can_edit, p.granted_at, p.expires_at,
                     u.username as owner_name,
                     (SELECT COUNT(*) FROM modx_test_questions WHERE test_id = t.id) as questions_count
                 FROM modx_test_permissions p
                 INNER JOIN modx_test_tests t ON t.id = p.test_id
                 LEFT JOIN modx_users u ON u.id = t.created_by
-                WHERE p.user_id = ? AND t.is_active = 1
+                WHERE p.user_id = ?
+                    AND t.is_active = 1
+                    AND p.can_view = 1
+                    AND (p.expires_at IS NULL OR p.expires_at > NOW())
                 ORDER BY p.granted_at DESC
             ");
             
