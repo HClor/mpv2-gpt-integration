@@ -354,16 +354,25 @@ class QuestionImportHelper
      */
     public static function hasPhpSpreadsheet()
     {
+        // First check if class already exists (autoload might be included by MODX)
+        if (class_exists('\PhpOffice\PhpSpreadsheet\IOFactory', true)) {
+            return true;
+        }
+
+        // Try to load vendor/autoload.php from various locations
         $vendorPaths = [
             MODX_BASE_PATH . 'vendor/autoload.php',
-            '/home/l/lmixru/mpv2.lmix.ru/public_html/vendor/autoload.php',
-            MODX_CORE_PATH . '../vendor/autoload.php'
+            MODX_CORE_PATH . '../vendor/autoload.php',
+            MODX_CORE_PATH . '../../vendor/autoload.php',
+            dirname(dirname(dirname(dirname(__DIR__)))) . '/vendor/autoload.php',
+            '/home/l/lmixru/mpv2.lmix.ru/public_html/vendor/autoload.php'
         ];
 
         foreach ($vendorPaths as $vendorPath) {
             if (file_exists($vendorPath)) {
                 require_once $vendorPath;
-                if (class_exists('\PhpOffice\PhpSpreadsheet\IOFactory')) {
+                // Check again after requiring autoload
+                if (class_exists('\PhpOffice\PhpSpreadsheet\IOFactory', false)) {
                     return true;
                 }
             }
