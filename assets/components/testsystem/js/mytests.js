@@ -682,13 +682,14 @@ async function grantAccessToUser(testId, userId, canEdit) {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                action: 'grantAccess',
+                action: 'grantTestAccess',
                 data: {
                     test_id: testId,
                     user_id: userId,
-                    can_edit: canEdit,
-                    csrf_token: csrfToken
-                }
+                    can_view: true,
+                    can_edit: canEdit
+                },
+                csrf_token: csrfToken
             })
         });
         
@@ -719,19 +720,19 @@ async function revokeAccess(testId, userId) {
     if (!confirm('Вы уверены, что хотите отозвать доступ у этого пользователя?')) {
         return;
     }
-    
+
     try {
         const csrfToken = getCsrfToken();
         const response = await fetch('/assets/components/testsystem/ajax/testsystem.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                action: 'revokeAccess',
+                action: 'revokeTestAccess',
                 data: {
                     test_id: testId,
-                    user_id: userId,
-                    csrf_token: csrfToken
-                }
+                    user_id: userId
+                },
+                csrf_token: csrfToken
             })
         });
         
