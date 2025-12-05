@@ -510,7 +510,13 @@ if ($canEditTest) {
 
     // Объединенная кнопка "Управление тестом" - открывает модальное окно с вкладками
     $editLinks .= '<button class="btn btn-outline-primary" type="button" onclick="openTestManagementModal(' . (int)$testId . ', \'' . $publicationStatus . '\')"><i class="bi bi-gear"></i> Управление</button>';
-    
+
+    // Кнопка удаления (только для владельца или админа)
+    $canDelete = ($isAdmin || $createdBy === $userId);
+    if ($canDelete) {
+        $editLinks .= '<button class="btn btn-outline-danger" type="button" onclick="deleteTestConfirm(' . (int)$testId . ')"><i class="bi bi-trash"></i> Удалить</button>';
+    }
+
     $editLinks .= '</div>';
 
     // МОБИЛЬНАЯ версия (вертикальные кнопки)
@@ -521,6 +527,11 @@ if ($canEditTest) {
     }
     $editLinks .= '<button class="btn btn-outline-info" type="button" onclick="showAllQuestionsView()"><i class="bi bi-list-ul"></i> Список вопросов</button>';
     $editLinks .= '<button class="btn btn-outline-primary" type="button" onclick="openTestManagementModal(' . (int)$testId . ', \'' . $publicationStatus . '\')"><i class="bi bi-gear"></i> Управление тестом</button>';
+
+    // Кнопка удаления (только для владельца или админа)
+    if ($canDelete) {
+        $editLinks .= '<button class="btn btn-outline-danger" type="button" onclick="deleteTestConfirm(' . (int)$testId . ')"><i class="bi bi-trash"></i> Удалить</button>';
+    }
 
     $editLinks .= '</div>';
 

@@ -2824,12 +2824,22 @@ if (empty($allQuestionIds)) {
             PermissionHelper::requireAuthentication($modx, 'Требуется авторизация');
 
             $userId = PermissionHelper::getCurrentUserId($modx);
+            $isAdmin = PermissionHelper::isAdmin($modx);
 
             // Валидация входных данных
             $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Не указан ID теста');
 
-            // Проверяем права владельца и получаем данные теста
-            $test = TestRepository::requireTestOwner($modx, $testId, $userId, 'У вас нет прав на удаление этого теста');
+            // Получаем данные теста
+            $test = TestRepository::getTestById($modx, $testId);
+            if (!$test) {
+                throw new NotFoundException('Тест не найден');
+            }
+
+            // Проверяем права: владелец или админ
+            $isOwner = ((int)$test['created_by'] === (int)$userId);
+            if (!$isOwner && !$isAdmin) {
+                throw new PermissionException('У вас нет прав на удаление этого теста');
+            }
 
             // Удаляем тест и все связанные данные
             $success = TestRepository::deleteTest($modx, $testId);

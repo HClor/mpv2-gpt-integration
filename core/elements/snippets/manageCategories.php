@@ -176,7 +176,7 @@ $html[] = "<div class=\"row\">";
 // ЛЕВАЯ КОЛОНКА - Форма добавления
 $html[] = "<div class=\"col-md-4\">";
 $html[] = "<div class=\"card\">";
-$html[] = "<div class=\"card-header\"><h5 class=\"mb-0\">Добавить категорию</h5></div>";
+$html[] = "<div class=\"card-header bg-primary text-white\"><h5 class=\"mb-0\"><i class=\"bi bi-plus-circle\"></i> Добавить категорию</h5></div>";
 $html[] = "<div class=\"card-body\">";
 
 $html[] = "<form method=\"POST\">";
@@ -199,7 +199,7 @@ $html[] = "<input type=\"number\" name=\"sort_order\" class=\"form-control\" val
 $html[] = "<small class=\"form-text text-muted\">Чем меньше число, тем выше в списке</small>";
 $html[] = "</div>";
 
-$html[] = "<button type=\"submit\" class=\"btn btn-success w-100\">Добавить</button>";
+$html[] = "<button type=\"submit\" class=\"btn btn-success w-100\"><i class=\"bi bi-check-circle\"></i> Добавить</button>";
 
 $html[] = "</form>";
 
@@ -210,7 +210,7 @@ $html[] = "</div>";
 // ПРАВАЯ КОЛОНКА - Список категорий
 $html[] = "<div class=\"col-md-8\">";
 $html[] = "<div class=\"card\">";
-$html[] = "<div class=\"card-header\"><h5 class=\"mb-0\">Все категории (" . count($categories) . ")</h5></div>";
+$html[] = "<div class=\"card-header bg-light\"><h5 class=\"mb-0\"><i class=\"bi bi-folder-fill text-primary\"></i> Все категории (" . count($categories) . ")</h5></div>";
 $html[] = "<div class=\"card-body p-0\">";
 
 if (empty($categories)) {
@@ -241,16 +241,16 @@ if (empty($categories)) {
         $html[] = "<td>";
 
         // Кнопка управления экспертами
-        $html[] = "<button class=\"btn btn-sm btn-info\" data-bs-toggle=\"modal\" data-bs-target=\"#expertsModal" . $cat["id"] . "\">Эксперты</button> ";
+        $html[] = "<button class=\"btn btn-sm btn-info\" data-bs-toggle=\"modal\" data-bs-target=\"#expertsModal" . $cat["id"] . "\"><i class=\"bi bi-people\"></i> Эксперты</button> ";
 
         // Кнопка редактирования
-        $html[] = "<button class=\"btn btn-sm btn-warning\" data-bs-toggle=\"modal\" data-bs-target=\"#editModal" . $cat["id"] . "\">Редактировать</button> ";
+        $html[] = "<button class=\"btn btn-sm btn-warning\" data-bs-toggle=\"modal\" data-bs-target=\"#editModal" . $cat["id"] . "\"><i class=\"bi bi-pencil\"></i> Редактировать</button> ";
 
         // Кнопка удаления
         if ($cat["test_count"] == 0) {
-            $html[] = "<button class=\"btn btn-sm btn-danger\" data-bs-toggle=\"modal\" data-bs-target=\"#deleteModal" . $cat["id"] . "\">Удалить</button>";
+            $html[] = "<button class=\"btn btn-sm btn-danger\" data-bs-toggle=\"modal\" data-bs-target=\"#deleteModal" . $cat["id"] . "\"><i class=\"bi bi-trash\"></i> Удалить</button>";
         } else {
-            $html[] = "<button class=\"btn btn-sm btn-secondary\" disabled title=\"Есть тесты\">Удалить</button>";
+            $html[] = "<button class=\"btn btn-sm btn-secondary\" disabled title=\"Есть тесты\"><i class=\"bi bi-trash\"></i> Удалить</button>";
         }
 
         $html[] = "</td>";
@@ -399,6 +399,76 @@ $html[] = "</div>";
 
 // Выводим модальные окна вне контейнера
 $html = array_merge($html, $modals);
+
+// Добавляем стили для единообразия
+$html[] = '<style>
+.container .btn {
+    background-image: none !important;
+    box-shadow: none !important;
+}
+
+.container .btn-primary {
+    background-color: #0d6efd;
+    border-color: #0d6efd;
+}
+
+.container .btn-primary:hover {
+    background-color: #0b5ed7;
+    border-color: #0a58ca;
+}
+
+.container .btn-success {
+    background-color: #198754;
+    border-color: #198754;
+}
+
+.container .btn-success:hover {
+    background-color: #157347;
+    border-color: #146c43;
+}
+
+.container .btn-info {
+    background-color: #0dcaf0;
+    border-color: #0dcaf0;
+    color: #000;
+}
+
+.container .btn-info:hover {
+    background-color: #31d2f2;
+    border-color: #25cff2;
+    color: #000;
+}
+
+.container .btn-warning {
+    background-color: #ffc107;
+    border-color: #ffc107;
+    color: #000;
+}
+
+.container .btn-warning:hover {
+    background-color: #ffca2c;
+    border-color: #ffc720;
+    color: #000;
+}
+
+.container .btn-danger {
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+.container .btn-danger:hover {
+    background-color: #bb2d3b;
+    border-color: #b02a37;
+}
+
+.table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+</style>';
 
 // Подключаем JavaScript для управления экспертами
 $html[] = "<script src=\"/assets/components/testsystem/js/category-experts.js\"></script>";
