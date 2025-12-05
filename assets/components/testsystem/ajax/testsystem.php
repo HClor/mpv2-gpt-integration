@@ -1470,6 +1470,320 @@ try {
             }
             break;
 
+        // ============================================
+        // TEST PERMISSIONS MANAGEMENT
+        // ============================================
+
+        case 'grantTestAccess':
+            // Предоставить доступ к приватному тесту
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $currentUserId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация
+            $testId = ValidationHelper::requireInt($data, 'test_id', 'Test ID required');
+            $targetUserId = ValidationHelper::requireInt($data, 'user_id', 'User ID required');
+            $canView = ValidationHelper::optionalBool($data, 'can_view', true);
+            $canEdit = ValidationHelper::optionalBool($data, 'can_edit', false);
+            $expiresAt = $data['expires_at'] ?? null;
+
+            // Проверяем что тест существует и является приватным
+            $stmt = $modx->prepare("SELECT created_by, publication_status FROM {$prefix}test_tests WHERE id = ?");
+            $stmt->execute([$testId]);
+            $test = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$test) {
+                throw new Exception('Test not found');
+            }
+
+            // Только владелец или админ может управлять доступом
+            $isOwner = ((int)$test['created_by'] === $currentUserId);
+            $isAdmin = PermissionHelper::isAdmin($modx);
+
+            if (!$isOwner && !$isAdmin) {
+                throw new PermissionException('Only test owner or admin can grant access');
+            }
+
+            // Проверяем что целевой пользователь существует
+            $stmt = $modx->prepare("SELECT id FROM {$prefix}users WHERE id = ?");
+            $stmt->execute([$targetUserId]);
+            if (!$stmt->fetch()) {
+                throw new Exception('User not found');
+            }
+
+            // Вставляем или обновляем права доступа
+            $stmt = $modx->prepare("
+                INSERT INTO {$prefix}test_permissions
+                (test_id, user_id, granted_by, can_view, can_edit, expires_at, granted_at)
+                VALUES (?, ?, ?, ?, ?, ?, NOW())
+                ON DUPLICATE KEY UPDATE
+                    can_view = VALUES(can_view),
+                    can_edit = VALUES(can_edit),
+                    granted_by = VALUES(granted_by),
+                    expires_at = VALUES(expires_at),
+                    granted_at = NOW()
+            ");
+
+            $success = $stmt->execute([
+                $testId,
+                $targetUserId,
+                $currentUserId,
+                $canView ? 1 : 0,
+                $canEdit ? 1 : 0,
+                $expiresAt
+            ]);
+
+            if ($success) {
+                $response = ResponseHelper::success([
+                    'test_id' => $testId,
+                    'user_id' => $targetUserId,
+                    'can_view' => $canView,
+                    'can_edit' => $canEdit
+                ], 'Access granted successfully');
+            } else {
+                throw new Exception('Failed to grant access');
+            }
+            break;
+
+        case 'revokeTestAccess':
+            // Отозвать доступ к приватному тесту
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $currentUserId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация
+            $testId = ValidationHelper::requireInt($data, 'test_id', 'Test ID required');
+            $targetUserId = ValidationHelper::requireInt($data, 'user_id', 'User ID required');
+
+            // Проверяем что тест существует
+            $stmt = $modx->prepare("SELECT created_by FROM {$prefix}test_tests WHERE id = ?");
+            $stmt->execute([$testId]);
+            $test = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$test) {
+                throw new Exception('Test not found');
+            }
+
+            // Только владелец или админ может управлять доступом
+            $isOwner = ((int)$test['created_by'] === $currentUserId);
+            $isAdmin = PermissionHelper::isAdmin($modx);
+
+            if (!$isOwner && !$isAdmin) {
+                throw new PermissionException('Only test owner or admin can revoke access');
+            }
+
+            // Удаляем права доступа
+            $stmt = $modx->prepare("
+                DELETE FROM {$prefix}test_permissions
+                WHERE test_id = ? AND user_id = ?
+            ");
+            $stmt->execute([$testId, $targetUserId]);
+
+            $response = ResponseHelper::success(null, 'Access revoked successfully');
+            break;
+
+        case 'getTestPermissions':
+            // Получить список пользователей с доступом к тесту
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $currentUserId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация
+            $testId = ValidationHelper::requireInt($data, 'test_id', 'Test ID required');
+
+            // Проверяем что тест существует
+            $stmt = $modx->prepare("SELECT created_by, title, publication_status FROM {$prefix}test_tests WHERE id = ?");
+            $stmt->execute([$testId]);
+            $test = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$test) {
+                throw new Exception('Test not found');
+            }
+
+            // Только владелец или админ может видеть список доступов
+            $isOwner = ((int)$test['created_by'] === $currentUserId);
+            $isAdmin = PermissionHelper::isAdmin($modx);
+
+            if (!$isOwner && !$isAdmin) {
+                throw new PermissionException('Only test owner or admin can view permissions');
+            }
+
+            // Получаем список пользователей с доступом
+            $stmt = $modx->prepare("
+                SELECT
+                    tp.id,
+                    tp.user_id,
+                    u.username,
+                    ua.fullname,
+                    ua.email,
+                    tp.can_view,
+                    tp.can_edit,
+                    tp.granted_at,
+                    tp.expires_at,
+                    granted_by_user.username as granted_by_username
+                FROM {$prefix}test_permissions tp
+                JOIN {$prefix}users u ON u.id = tp.user_id
+                LEFT JOIN {$prefix}user_attributes ua ON ua.internalKey = u.id
+                LEFT JOIN {$prefix}users granted_by_user ON granted_by_user.id = tp.granted_by
+                WHERE tp.test_id = ?
+                ORDER BY tp.granted_at DESC
+            ");
+            $stmt->execute([$testId]);
+            $permissions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $response = ResponseHelper::success([
+                'test' => $test,
+                'permissions' => $permissions
+            ]);
+            break;
+
+        case 'getAvailableUsersForTest':
+            // Получить список пользователей для предоставления доступа
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $currentUserId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация
+            $testId = ValidationHelper::requireInt($data, 'test_id', 'Test ID required');
+
+            // Проверяем права
+            $stmt = $modx->prepare("SELECT created_by FROM {$prefix}test_tests WHERE id = ?");
+            $stmt->execute([$testId]);
+            $test = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$test) {
+                throw new Exception('Test not found');
+            }
+
+            $isOwner = ((int)$test['created_by'] === $currentUserId);
+            $isAdmin = PermissionHelper::isAdmin($modx);
+
+            if (!$isOwner && !$isAdmin) {
+                throw new PermissionException('Only test owner or admin can manage permissions');
+            }
+
+            // Получаем всех пользователей, которые НЕ имеют доступа к тесту
+            // Исключаем текущего пользователя и владельца теста
+            $stmt = $modx->prepare("
+                SELECT DISTINCT
+                    u.id,
+                    u.username,
+                    ua.fullname,
+                    ua.email
+                FROM {$prefix}users u
+                LEFT JOIN {$prefix}user_attributes ua ON ua.internalKey = u.id
+                WHERE u.id NOT IN (
+                    SELECT user_id FROM {$prefix}test_permissions WHERE test_id = ?
+                )
+                AND u.id != ?
+                AND u.id != ?
+                ORDER BY u.username
+                LIMIT 100
+            ");
+            $stmt->execute([$testId, $currentUserId, $test['created_by']]);
+            $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $response = ResponseHelper::success($users);
+            break;
+
+        case 'checkTestAccess':
+            // Проверить права доступа к тесту для текущего пользователя
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+
+            $currentUserId = PermissionHelper::getCurrentUserId($modx);
+
+            // Валидация
+            $testId = ValidationHelper::requireInt($data, 'test_id', 'Test ID required');
+
+            // Получаем информацию о тесте
+            $stmt = $modx->prepare("
+                SELECT created_by, publication_status, is_active
+                FROM {$prefix}test_tests
+                WHERE id = ?
+            ");
+            $stmt->execute([$testId]);
+            $test = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$test) {
+                throw new Exception('Test not found');
+            }
+
+            // Админы имеют полный доступ
+            if (PermissionHelper::isAdmin($modx)) {
+                $response = ResponseHelper::success([
+                    'has_access' => true,
+                    'can_view' => true,
+                    'can_edit' => true,
+                    'is_owner' => ((int)$test['created_by'] === $currentUserId),
+                    'access_type' => 'admin'
+                ]);
+                break;
+            }
+
+            // Владелец теста имеет полный доступ
+            if ((int)$test['created_by'] === $currentUserId) {
+                $response = ResponseHelper::success([
+                    'has_access' => true,
+                    'can_view' => true,
+                    'can_edit' => true,
+                    'is_owner' => true,
+                    'access_type' => 'owner'
+                ]);
+                break;
+            }
+
+            // Публичные тесты доступны всем
+            if (in_array($test['publication_status'], ['public', 'unlisted'])) {
+                $response = ResponseHelper::success([
+                    'has_access' => true,
+                    'can_view' => true,
+                    'can_edit' => false,
+                    'is_owner' => false,
+                    'access_type' => 'public'
+                ]);
+                break;
+            }
+
+            // Для приватных тестов проверяем права в таблице permissions
+            $stmt = $modx->prepare("
+                SELECT can_view, can_edit, expires_at
+                FROM {$prefix}test_permissions
+                WHERE test_id = ? AND user_id = ?
+            ");
+            $stmt->execute([$testId, $currentUserId]);
+            $permission = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($permission) {
+                // Проверяем не истек ли доступ
+                $isExpired = false;
+                if ($permission['expires_at'] !== null) {
+                    $expiresAt = strtotime($permission['expires_at']);
+                    $isExpired = ($expiresAt < time());
+                }
+
+                if (!$isExpired) {
+                    $response = ResponseHelper::success([
+                        'has_access' => true,
+                        'can_view' => (bool)$permission['can_view'],
+                        'can_edit' => (bool)$permission['can_edit'],
+                        'is_owner' => false,
+                        'access_type' => 'shared',
+                        'expires_at' => $permission['expires_at']
+                    ]);
+                    break;
+                }
+            }
+
+            // Нет доступа
+            $response = ResponseHelper::success([
+                'has_access' => false,
+                'can_view' => false,
+                'can_edit' => false,
+                'is_owner' => false,
+                'access_type' => 'none'
+            ]);
+            break;
+
         case 'getKnowledgeAreaDetails':
             // Проверка авторизации
             PermissionHelper::requireAuthentication($modx, 'Login required');
