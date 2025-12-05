@@ -110,9 +110,9 @@ class UrlHelper
                     $test['test_url'] = '#';
                 }
             }
-            // Приоритет 2: Если нет resource_id, но есть системная страница - используем её с test_id
+            // Приоритет 2: Если нет resource_id, но есть системная страница - используем её с testId
             elseif ($testPageId > 0 && $testId > 0) {
-                $test['test_url'] = $modx->makeUrl($testPageId, 'web', ['test_id' => $testId], 'full');
+                $test['test_url'] = $modx->makeUrl($testPageId, 'web', ['testId' => $testId], 'full');
             }
             // Приоритет 3: Иначе #
             else {

@@ -40,10 +40,10 @@ function buildTestUrl(testId) {
     // Пытаемся получить базовый URL страницы с тестами из мета-тега или используем текущий домен
     const baseUrl = document.querySelector('meta[name="test-page-url"]')?.content;
     if (baseUrl) {
-        return baseUrl + '?test_id=' + testId;
+        return baseUrl + '?testId=' + testId;
     }
     // Fallback: используем относительный URL
-    return '/test-runner?test_id=' + testId;
+    return '/test-run?testId=' + testId;
 }
 
 async function loadMyTests() {
