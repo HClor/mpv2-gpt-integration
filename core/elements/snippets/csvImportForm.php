@@ -97,23 +97,12 @@ if (!$canImport) {
     </div>";
 }
 
-// Подключаем PhpSpreadsheet
-$vendorPaths = [
-    MODX_BASE_PATH . 'vendor/autoload.php',
-    '/home/l/lmixru/mpv2.lmix.ru/public_html/vendor/autoload.php',
-    MODX_CORE_PATH . '../vendor/autoload.php'
-];
+// Подключаем QuestionImportHelper для проверки PhpSpreadsheet
+require_once MODX_CORE_PATH . 'components/testsystem/helpers/QuestionImportHelper.php';
+use MPV2\TestSystem\Helpers\QuestionImportHelper;
 
-$hasPhpSpreadsheet = false;
-foreach ($vendorPaths as $vendorPath) {
-    if (file_exists($vendorPath)) {
-        require_once $vendorPath;
-        if (class_exists('\PhpOffice\PhpSpreadsheet\IOFactory')) {
-            $hasPhpSpreadsheet = true;
-            break;
-        }
-    }
-}
+// Проверяем наличие PhpSpreadsheet
+$hasPhpSpreadsheet = QuestionImportHelper::hasPhpSpreadsheet();
 
 $errors = [];
 $success = [];

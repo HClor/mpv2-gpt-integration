@@ -3192,9 +3192,9 @@ async function addFavoritesViewToggle(questionId) {
                                 
                                 <!-- Список пользователей с доступом -->
                                 <div>
-                                    <h6>Пользователи с доступом (${result.data.length})</h6>
+                                    <h6>Пользователи с доступом (${result.data.permissions.length})</h6>
                                     <div id="permissions-list" class="list-group">
-                                        ${renderPermissionsList(result.data, testId)}
+                                        ${renderPermissionsList(result.data.permissions, testId)}
                                     </div>
                                 </div>
                             </div>
@@ -3485,8 +3485,258 @@ async function addFavoritesViewToggle(questionId) {
         return names[status] || status;
     }
     
+    // ============================================
+    // ОБЪЕДИНЕННОЕ МОДАЛЬНОЕ ОКНО УПРАВЛЕНИЯ ТЕСТОМ
+    // ============================================
+
+    async function openTestManagementModal(testId, currentStatus) {
+        try {
+            // Загружаем все необходимые данные параллельно
+            const [settingsResult, permissionsResult] = await Promise.all([
+                apiCall('getTestSettings', { test_id: testId }),
+                apiCall('getTestPermissions', { test_id: testId })
+            ]);
+
+            if (!settingsResult.success) {
+                throw new Error('Ошибка загрузки настроек теста');
+            }
+
+            const settings = settingsResult.data;
+            const permissions = permissionsResult.success ? permissionsResult.data.permissions : [];
+            const testInfo = permissionsResult.success ? permissionsResult.data.test : null;
+
+            const modalHtml = `
+                <div class="modal fade" id="testManagementModal" tabindex="-1">
+                    <div class="modal-dialog modal-xl">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title"><i class="bi bi-gear"></i> Управление тестом</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <!-- Вкладки -->
+                                <ul class="nav nav-tabs mb-4" role="tablist">
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#settings-tab" type="button">
+                                            <i class="bi bi-sliders"></i> Настройки
+                                        </button>
+                                    </li>
+                                    ${currentStatus === 'private' ? `
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#access-tab" type="button">
+                                            <i class="bi bi-people"></i> Доступ <span class="badge bg-secondary">${permissions.length}</span>
+                                        </button>
+                                    </li>
+                                    ` : ''}
+                                    <li class="nav-item" role="presentation">
+                                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#publication-tab" type="button">
+                                            <i class="bi bi-globe"></i> Публикация
+                                        </button>
+                                    </li>
+                                </ul>
+
+                                <div class="tab-content">
+                                    <!-- Вкладка "Настройки" -->
+                                    <div class="tab-pane fade show active" id="settings-tab">
+                                        <form id="test-settings-form-${testId}">
+                                            <input type="hidden" name="test_id" value="${testId}">
+
+                                            <div class="row">
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">Название теста</label>
+                                                    <input type="text" name="title" class="form-control" value="${escapeHtml(settings.title)}" required>
+                                                </div>
+                                                <div class="col-md-6 mb-3">
+                                                    <label class="form-label">Режим теста</label>
+                                                    <select name="mode" class="form-select">
+                                                        <option value="training" ${settings.mode === 'training' ? 'selected' : ''}>🎯 Тренировка</option>
+                                                        <option value="exam" ${settings.mode === 'exam' ? 'selected' : ''}>🏆 Экзамен</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+
+                                            <div class="mb-3">
+                                                <label class="form-label">Описание</label>
+                                                <textarea name="description" class="form-control" rows="3">${escapeHtml(settings.description || '')}</textarea>
+                                            </div>
+
+                                            <div class="row">
+                                                <div class="col-md-4 mb-3">
+                                                    <label class="form-label">Проходной балл (%)</label>
+                                                    <input type="number" name="pass_score" class="form-control" value="${settings.pass_score}" min="0" max="100">
+                                                </div>
+                                                <div class="col-md-4 mb-3">
+                                                    <label class="form-label">Время (минут, 0 = без ограничений)</label>
+                                                    <input type="number" name="time_limit" class="form-control" value="${settings.time_limit}" min="0">
+                                                </div>
+                                                <div class="col-md-4 mb-3">
+                                                    <label class="form-label">Вопросов за попытку</label>
+                                                    <input type="number" name="questions_per_session" class="form-control" value="${settings.questions_per_session}" min="1">
+                                                </div>
+                                            </div>
+
+                                            <div class="row">
+                                                <div class="col-md-6 mb-3">
+                                                    <div class="form-check form-switch">
+                                                        <input class="form-check-input" type="checkbox" name="randomize_questions" id="randomize-q-${testId}" ${settings.randomize_questions ? 'checked' : ''}>
+                                                        <label class="form-check-label" for="randomize-q-${testId}">Перемешивать вопросы</label>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6 mb-3">
+                                                    <div class="form-check form-switch">
+                                                        <input class="form-check-input" type="checkbox" name="randomize_answers" id="randomize-a-${testId}" ${settings.randomize_answers ? 'checked' : ''}>
+                                                        <label class="form-check-label" for="randomize-a-${testId}">Перемешивать ответы</label>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="bi bi-save"></i> Сохранить настройки
+                                            </button>
+                                        </form>
+                                    </div>
+
+                                    ${currentStatus === 'private' ? `
+                                    <!-- Вкладка "Доступ" -->
+                                    <div class="tab-pane fade" id="access-tab">
+                                        <div class="mb-4">
+                                            <h6>Добавить пользователя</h6>
+                                            <div class="input-group mb-2">
+                                                <input type="text" class="form-control" id="user-search-input-${testId}"
+                                                       placeholder="Поиск по имени, email или username...">
+                                                <button class="btn btn-primary" onclick="searchUsersForAccess(${testId})">
+                                                    <i class="bi bi-search"></i> Найти
+                                                </button>
+                                            </div>
+                                            <div id="search-results-${testId}"></div>
+                                        </div>
+
+                                        <hr>
+
+                                        <div>
+                                            <h6>Пользователи с доступом (${permissions.length})</h6>
+                                            <div id="permissions-list-${testId}" class="list-group">
+                                                ${renderPermissionsList(permissions, testId)}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    ` : ''}
+
+                                    <!-- Вкладка "Публикация" -->
+                                    <div class="tab-pane fade" id="publication-tab">
+                                        <div class="alert alert-info">
+                                            <strong>Текущий статус:</strong> ${getStatusName(currentStatus)}
+                                        </div>
+
+                                        <p>Выберите новый статус публикации:</p>
+
+                                        <div class="list-group">
+                                            <button type="button" class="list-group-item list-group-item-action ${currentStatus === 'draft' ? 'active' : ''}"
+                                                    onclick="changePublicationStatusFromModal(${testId}, 'draft')">
+                                                <h6 class="mb-1">📝 Черновик</h6>
+                                                <small>Тест виден только вам. Используйте для подготовки.</small>
+                                            </button>
+                                            <button type="button" class="list-group-item list-group-item-action ${currentStatus === 'private' ? 'active' : ''}"
+                                                    onclick="changePublicationStatusFromModal(${testId}, 'private')">
+                                                <h6 class="mb-1">🔒 Приватный</h6>
+                                                <small>Доступ только по приглашению. Вы можете предоставить доступ конкретным пользователям.</small>
+                                            </button>
+                                            <button type="button" class="list-group-item list-group-item-action ${currentStatus === 'unlisted' ? 'active' : ''}"
+                                                    onclick="changePublicationStatusFromModal(${testId}, 'unlisted')">
+                                                <h6 class="mb-1">🔗 По ссылке</h6>
+                                                <small>Доступен всем, у кого есть ссылка. Не отображается в общем каталоге.</small>
+                                            </button>
+                                            <button type="button" class="list-group-item list-group-item-action ${currentStatus === 'public' ? 'active' : ''}"
+                                                    onclick="changePublicationStatusFromModal(${testId}, 'public')">
+                                                <h6 class="mb-1">🌐 Публичный</h6>
+                                                <small>Доступен всем пользователям системы. Отображается в каталоге.</small>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // Удаляем старое модальное окно если есть
+            const oldModal = document.getElementById('testManagementModal');
+            if (oldModal) oldModal.remove();
+
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+            // Открываем модальное окно
+            const modal = new bootstrap.Modal(document.getElementById('testManagementModal'));
+            modal.show();
+
+            // Обработчик формы настроек
+            const form = document.getElementById(`test-settings-form-${testId}`);
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await saveTestSettings(testId, form);
+            });
+
+        } catch (error) {
+            console.error('Error opening test management modal:', error);
+            alert('Ошибка: ' + error.message);
+        }
+    }
+
+    async function saveTestSettings(testId, form) {
+        try {
+            const formData = new FormData(form);
+            const data = {
+                test_id: testId,
+                title: formData.get('title'),
+                description: formData.get('description'),
+                mode: formData.get('mode'),
+                pass_score: parseInt(formData.get('pass_score')),
+                time_limit: parseInt(formData.get('time_limit')),
+                questions_per_session: parseInt(formData.get('questions_per_session')),
+                randomize_questions: formData.get('randomize_questions') ? 1 : 0,
+                randomize_answers: formData.get('randomize_answers') ? 1 : 0
+            };
+
+            const result = await apiCall('updateTestSettings', data);
+
+            if (result.success) {
+                alert('✅ Настройки сохранены!');
+                location.reload(); // Перезагружаем страницу чтобы применить изменения
+            } else {
+                throw new Error(result.message || 'Ошибка сохранения');
+            }
+        } catch (error) {
+            console.error('Error saving test settings:', error);
+            alert('Ошибка: ' + error.message);
+        }
+    }
+
+    async function changePublicationStatusFromModal(testId, newStatus) {
+        if (!confirm(`Изменить статус публикации на "${getStatusName(newStatus)}"?`)) {
+            return;
+        }
+
+        try {
+            const result = await apiCall('changePublicationStatus', {
+                test_id: testId,
+                new_status: newStatus
+            });
+
+            if (result.success) {
+                alert('✅ Статус изменён!');
+                location.reload();
+            } else {
+                alert('Ошибка: ' + result.message);
+            }
+        } catch (error) {
+            alert('Ошибка: ' + error.message);
+        }
+    }
+
+    window.openTestManagementModal = openTestManagementModal;
     window.openPublicationModal = openPublicationModal;
     window.changePublicationStatus = changePublicationStatus;
-    
+
 
 })();

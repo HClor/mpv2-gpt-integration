@@ -498,38 +498,32 @@ if ($canEditTest) {
     
     // ДЕСКТОП
     $editLinks .= '<div class="btn-group btn-group-sm d-none d-md-flex" role="group">';
-    
-    // Редактировать страницу
-    $resourceEditUrl = $managerUrl . '?a=resource/update&id=' . (int)$resourceId;
-    $editLinks .= '<a class="btn btn-outline-primary" href="' . htmlspecialchars($resourceEditUrl, ENT_QUOTES, 'UTF-8') . '" target="_blank" rel="noopener"><i class="bi bi-pencil"></i> Страница</a>';
-    
+
     // Импорт CSV
     $importPageId = Config::getPageId('import_csv', 29);
     $importUrl = $modx->makeUrl($importPageId, 'web', ['test_id' => $testId], 'full');
     if (!empty($importUrl)) {
-        $editLinks .= '<a class="btn btn-outline-success" href="' . htmlspecialchars($importUrl, ENT_QUOTES, 'UTF-8') . '"><i class="bi bi-upload"></i> CSV</a>';
+        $editLinks .= '<a class="btn btn-outline-success" href="' . htmlspecialchars($importUrl, ENT_QUOTES, 'UTF-8') . '"><i class="bi bi-upload"></i> Импорт</a>';
     }
 
-    $editLinks .= '<button class="btn btn-outline-info" type="button" onclick="showAllQuestionsView()"><i class="bi bi-list-ul"></i> Список</button>';
-    $editLinks .= '<button class="btn btn-outline-warning" type="button" onclick="openTestSettingsModal(' . (int)$testId . ')"><i class="bi bi-gear"></i> Настройки</button>';
-    
-    // ДОБАВИТЬ: Кнопка управления доступом для приватных тестов
-    if ($publicationStatus === 'private') {
-        $editLinks .= '<button class="btn btn-outline-secondary" type="button" onclick="openAccessManagementModal(' . (int)$testId . ')"><i class="bi bi-people"></i> Доступ</button>';
-    }
-    
-    // ДОБАВИТЬ: Кнопка миграции для админов
-    if ($isAdminOrExpert && $publicationStatus !== 'public') {
-        $editLinks .= '<button class="btn btn-outline-primary" type="button" onclick="openPublicationModal(' . (int)$testId . ', \'' . $publicationStatus . '\')"><i class="bi bi-globe"></i> Публикация</button>';
-    }
+    $editLinks .= '<button class="btn btn-outline-info" type="button" onclick="showAllQuestionsView()"><i class="bi bi-list-ul"></i> Вопросы</button>';
+
+    // Объединенная кнопка "Управление тестом" - открывает модальное окно с вкладками
+    $editLinks .= '<button class="btn btn-outline-primary" type="button" onclick="openTestManagementModal(' . (int)$testId . ', \'' . $publicationStatus . '\')"><i class="bi bi-gear"></i> Управление</button>';
     
     $editLinks .= '</div>';
-    
-    // МОБИЛЬНАЯ версия (вертикальные кнопки) - аналогично
-    $editLinks .= '<div class="btn-group-vertical btn-group-sm d-md-none" role="group">';
-    // ... те же кнопки ...
+
+    // МОБИЛЬНАЯ версия (вертикальные кнопки)
+    $editLinks .= '<div class="btn-group-vertical btn-group-sm d-md-none w-100" role="group">';
+
+    if (!empty($importUrl)) {
+        $editLinks .= '<a class="btn btn-outline-success" href="' . htmlspecialchars($importUrl, ENT_QUOTES, 'UTF-8') . '"><i class="bi bi-upload"></i> Импорт вопросов</a>';
+    }
+    $editLinks .= '<button class="btn btn-outline-info" type="button" onclick="showAllQuestionsView()"><i class="bi bi-list-ul"></i> Список вопросов</button>';
+    $editLinks .= '<button class="btn btn-outline-primary" type="button" onclick="openTestManagementModal(' . (int)$testId . ', \'' . $publicationStatus . '\')"><i class="bi bi-gear"></i> Управление тестом</button>';
+
     $editLinks .= '</div>';
-    
+
     $editLinks .= '</div></div>';
 }
 
