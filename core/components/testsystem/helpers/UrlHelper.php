@@ -86,10 +86,15 @@ class UrlHelper
             }
         }
 
+        // Получаем ID страницы для запуска тестов
+        $testPageId = (int)$modx->getOption('lms.test_page', null, 0);
+
         // Добавляем URL к каждому тесту
         foreach ($tests as &$test) {
             $resourceId = (int)($test['resource_id'] ?? 0);
+            $testId = (int)($test['id'] ?? 0);
 
+            // Приоритет 1: Если есть resource_id, используем его (старый формат)
             if ($resourceId > 0) {
                 $resource = $modx->getObject('modResource', $resourceId);
 
@@ -104,7 +109,13 @@ class UrlHelper
                 } else {
                     $test['test_url'] = '#';
                 }
-            } else {
+            }
+            // Приоритет 2: Если нет resource_id, но есть системная страница - используем её с test_id
+            elseif ($testPageId > 0 && $testId > 0) {
+                $test['test_url'] = $modx->makeUrl($testPageId, 'web', ['test_id' => $testId], 'full');
+            }
+            // Приоритет 3: Иначе #
+            else {
                 $test['test_url'] = '#';
             }
         }

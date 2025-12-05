@@ -483,25 +483,29 @@ async function manageAccess(testId) {
     });
     
     const permsResult = await permsResponse.json();
-    
+
     if (!permsResult.success) {
-        alert('Ошибка загрузки разрешений');
+        alert('Ошибка загрузки разрешений: ' + (permsResult.message || 'Неизвестная ошибка'));
         return;
     }
-    
+
+    // API возвращает {test, permissions}
+    const permissions = permsResult.data.permissions || [];
+    const test = permsResult.data.test || {};
+
     const modalHtml = `
         <div class="modal fade" id="manageAccessModal" tabindex="-1">
             <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">Управление доступом к тесту</h5>
+                        <h5 class="modal-title"><i class="bi bi-people"></i> Управление доступом: ${escapeHtml(test.title || 'Тест')}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
                         <div class="mb-4">
                             <h6>Добавить пользователя</h6>
                             <div class="input-group mb-2">
-                                <input type="text" class="form-control" id="user-search-input" 
+                                <input type="text" class="form-control" id="user-search-input"
                                        placeholder="Поиск по имени, email или username...">
                                 <button class="btn btn-outline-primary" onclick="searchUsers(${testId})">
                                     <i class="bi bi-search"></i> Найти
@@ -509,13 +513,13 @@ async function manageAccess(testId) {
                             </div>
                             <div id="search-results"></div>
                         </div>
-                        
+
                         <hr>
-                        
+
                         <div>
-                            <h6>Пользователи с доступом (${permsResult.data.length})</h6>
+                            <h6>Пользователи с доступом (${permissions.length})</h6>
                             <div id="permissions-list" class="list-group">
-                                ${renderPermissionsList(permsResult.data, testId)}
+                                ${renderPermissionsList(permissions, testId)}
                             </div>
                         </div>
                     </div>
