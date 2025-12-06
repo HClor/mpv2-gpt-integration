@@ -31,7 +31,9 @@ class LearningPathController extends BaseController
         'getNextPathStep',
         'getPathsList',
         'bulkEnrollOnPath',
-        'getPathStatistics'
+        'getPathStatistics',
+        'getAvailableStudents',
+        'getEnrolledStudents'
     ];
 
     /**
@@ -99,6 +101,12 @@ class LearningPathController extends BaseController
 
                 case 'getPathStatistics':
                     return $this->getPathStatistics($data);
+
+                case 'getAvailableStudents':
+                    return $this->getAvailableStudents($data);
+
+                case 'getEnrolledStudents':
+                    return $this->getEnrolledStudents($data);
 
                 default:
                     return $this->error('Action not implemented', 501);
@@ -733,5 +741,135 @@ class LearningPathController extends BaseController
         $stats = LearningPathService::getPathStatistics($this->modx, $pathId);
 
         return $this->success($stats);
+    }
+
+    /**
+     * Получение списка доступных студентов для назначения
+     */
+    private function getAvailableStudents($data)
+    {
+        $this->requireAuth();
+
+        $currentUserId = $this->getCurrentUserId();
+
+        // Только админы и эксперты могут назначать траектории
+        if (!CategoryPermissionService::isGlobalAdmin($this->modx, $currentUserId) &&
+            !CategoryPermissionService::isGlobalExpert($this->modx, $currentUserId)) {
+            throw new PermissionException('Only admins and experts can access student list');
+        }
+
+        $pathId = ValidationHelper::optionalInt($data, 'path_id');
+        $prefix = $this->modx->getOption('table_prefix', null, 'modx_');
+
+        // Получаем всех активных пользователей, исключая админов и супервизоров
+        $sql = "SELECT
+                    u.id,
+                    u.username,
+                    up.fullname,
+                    up.email";
+
+        // Если указана траектория, добавляем информацию о записи
+        if ($pathId) {
+            $sql .= ",
+                    IF(e.id IS NOT NULL, 1, 0) as is_enrolled,
+                    e.enrolled_at,
+                    lpp.completion_pct";
+        }
+
+        $sql .= "
+                FROM {$prefix}users u
+                LEFT JOIN {$prefix}user_attributes up ON up.internalKey = u.id";
+
+        if ($pathId) {
+            $sql .= "
+                LEFT JOIN {$prefix}test_learning_path_enrollments e
+                    ON e.user_id = u.id AND e.path_id = ? AND e.is_active = 1
+                LEFT JOIN {$prefix}test_learning_path_progress lpp
+                    ON lpp.enrollment_id = e.id";
+        }
+
+        $sql .= "
+                WHERE u.active = 1
+                AND u.sudo = 0
+                ORDER BY up.fullname, u.username";
+
+        $stmt = $this->modx->prepare($sql);
+
+        if ($pathId) {
+            $stmt->execute([$pathId]);
+        } else {
+            $stmt->execute();
+        }
+
+        $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return $this->success($students);
+    }
+
+    /**
+     * Получение списка студентов, записанных на траекторию
+     */
+    private function getEnrolledStudents($data)
+    {
+        $this->requireAuth();
+
+        $currentUserId = $this->getCurrentUserId();
+        $pathId = ValidationHelper::requireInt($data, 'path_id', 'Path ID required');
+
+        // Проверяем права на просмотр
+        $path = LearningPathService::getPath($this->modx, $pathId, false);
+
+        if (!$path) {
+            throw new Exception('Learning path not found');
+        }
+
+        $isAuthor = (int)$path['created_by'] === $currentUserId;
+        $isAdmin = CategoryPermissionService::isGlobalAdmin($this->modx, $currentUserId);
+
+        $canView = $isAuthor || $isAdmin;
+
+        if (!$canView && $path['category_id']) {
+            $canView = CategoryPermissionService::canViewStats(
+                $this->modx,
+                $path['category_id'],
+                $currentUserId
+            );
+        }
+
+        if (!$canView) {
+            throw new PermissionException('No permission to view enrolled students');
+        }
+
+        $prefix = $this->modx->getOption('table_prefix', null, 'modx_');
+
+        $sql = "SELECT
+                    u.id,
+                    u.username,
+                    up.fullname,
+                    up.email,
+                    e.enrolled_at,
+                    e.enrolled_by,
+                    enroller.username as enrolled_by_name,
+                    lpp.status,
+                    lpp.completion_pct,
+                    lpp.started_at,
+                    lpp.completed_at,
+                    lpp.total_score,
+                    lpp.last_activity_at
+                FROM {$prefix}test_learning_path_enrollments e
+                JOIN {$prefix}users u ON u.id = e.user_id
+                LEFT JOIN {$prefix}user_attributes up ON up.internalKey = u.id
+                LEFT JOIN {$prefix}users enroller ON enroller.id = e.enrolled_by
+                LEFT JOIN {$prefix}test_learning_path_progress lpp ON lpp.enrollment_id = e.id
+                WHERE e.path_id = ?
+                AND e.is_active = 1
+                ORDER BY e.enrolled_at DESC";
+
+        $stmt = $this->modx->prepare($sql);
+        $stmt->execute([$pathId]);
+
+        $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return $this->success($students);
     }
 }

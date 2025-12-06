@@ -108,7 +108,7 @@
 
     async function loadPaths() {
         try {
-            const result = await apiCall('getLearningPaths', {});
+            const result = await apiCall('getPathsList', {});
 
             if (result.success) {
                 renderPathsList(result.data || []);
@@ -144,29 +144,30 @@
         let html = '';
 
         paths.forEach(path => {
-            const progress = path.user_progress || 0;
+            const progress = path.completion_pct || 0;
             const progressClass = progress === 100 ? 'bg-success' :
                                   progress > 0 ? 'bg-warning' : 'bg-secondary';
 
             const difficultyBadge = {
                 'beginner': '<span class="badge bg-success">Начальный</span>',
                 'intermediate': '<span class="badge bg-warning text-dark">Средний</span>',
-                'advanced': '<span class="badge bg-danger">Продвинутый</span>'
-            }[path.difficulty] || '';
+                'advanced': '<span class="badge bg-danger">Продвинутый</span>',
+                'expert': '<span class="badge bg-dark">Эксперт</span>'
+            }[path.difficulty_level] || '';
 
-            const statusBadge = path.is_published
+            const statusBadge = path.status === 'published'
                 ? '<span class="badge bg-success">Опубликован</span>'
                 : '<span class="badge bg-secondary">Черновик</span>';
 
             html += `
                 <div class="col-md-6 col-lg-4 path-card"
                      data-category="${path.category_id || ''}"
-                     data-difficulty="${path.difficulty || ''}">
+                     data-difficulty="${path.difficulty_level || ''}">
                     <div class="card h-100 shadow-sm">
                         ${path.thumbnail_url ? `
                             <img src="${escapeHtml(path.thumbnail_url)}"
                                  class="card-img-top"
-                                 alt="${escapeHtml(path.title)}"
+                                 alt="${escapeHtml(path.name)}"
                                  style="height: 180px; object-fit: cover;">
                         ` : `
                             <div class="card-img-top bg-gradient d-flex align-items-center justify-content-center"
@@ -175,13 +176,13 @@
                             </div>
                         `}
                         <div class="card-body">
-                            <h5 class="card-title">${escapeHtml(path.title)}</h5>
+                            <h5 class="card-title">${escapeHtml(path.name)}</h5>
                             <p class="card-text text-muted small">${escapeHtml(path.description || 'Нет описания')}</p>
 
                             <div class="mb-3">
                                 ${statusBadge}
                                 ${difficultyBadge}
-                                ${path.has_certificate ? '<span class="badge bg-primary">🎓 С сертификатом</span>' : ''}
+                                ${path.certificate_template ? '<span class="badge bg-primary">🎓 С сертификатом</span>' : ''}
                             </div>
 
                             <div class="d-flex justify-content-between text-muted small mb-3">
@@ -211,7 +212,7 @@
                                             <i class="bi bi-pencil"></i> Редактировать
                                         </a>
                                         <button class="btn btn-outline-danger"
-                                                onclick="LearningPaths.deletePath(${path.id}, '${escapeHtml(path.title).replace(/'/g, "\\'")}')">
+                                                onclick="LearningPaths.deletePath(${path.id}, '${escapeHtml(path.name).replace(/'/g, "\\'")}')">
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </div>
@@ -270,14 +271,14 @@
         saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Сохранение...';
 
         try {
-            const action = currentPathId ? 'updateLearningPath' : 'createLearningPath';
+            const action = currentPathId ? 'updatePath' : 'createPath';
             const data = {
-                title,
+                name: title,
                 description,
-                difficulty,
+                difficulty_level: difficulty,
                 estimated_hours: estimatedHours,
-                has_certificate: hasCertificate ? 1 : 0,
-                is_published: isPublished ? 1 : 0
+                certificate_template: hasCertificate ? 'default' : null,
+                status: isPublished ? 'published' : 'draft'
             };
 
             if (currentPathId) {
@@ -315,7 +316,7 @@
         }
 
         try {
-            const result = await apiCall('deleteLearningPath', { path_id: pathId });
+            const result = await apiCall('deletePath', { path_id: pathId });
 
             if (result.success) {
                 showNotification('Траектория удалена', 'success');
@@ -333,7 +334,7 @@
 
     async function loadPath(pathId) {
         try {
-            const result = await apiCall('getLearningPathWithSteps', { path_id: pathId });
+            const result = await apiCall('getPath', { path_id: pathId, with_steps: 1 });
 
             if (result.success) {
                 currentPathId = pathId;
@@ -363,7 +364,7 @@
 
         let html = `
             <div class="path-header mb-4">
-                <h1>${escapeHtml(data.title)}</h1>
+                <h1>${escapeHtml(data.name)}</h1>
                 ${data.description ? `<p class="lead text-muted">${escapeHtml(data.description)}</p>` : ''}
 
                 <div class="row g-3 mb-4">
@@ -468,7 +469,7 @@
                                 <div>
                                     <h5 class="card-title mb-2">
                                         <span class="badge bg-secondary me-2">Шаг ${index + 1}</span>
-                                        ${escapeHtml(step.title)}
+                                        ${escapeHtml(step.name)}
                                     </h5>
                                     <p class="text-muted mb-2">
                                         <i class="${typeIcon}"></i>
@@ -564,10 +565,10 @@
 
     async function loadPathForEdit(pathId) {
         try {
-            const result = await apiCall('getLearningPathWithSteps', { path_id: pathId });
+            const result = await apiCall('getPath', { path_id: pathId, with_steps: 1 });
 
             if (result.success) {
-                document.getElementById('editor-path-title').textContent = result.data.title;
+                document.getElementById('editor-path-title').textContent = result.data.name;
                 pathSteps = result.data.steps || [];
                 renderStepsEditor();
             } else {
@@ -600,7 +601,7 @@
                     <div class="card-header bg-light d-flex justify-content-between align-items-center">
                         <div>
                             <i class="bi bi-grip-vertical handle" style="cursor: move;"></i>
-                            <strong>Шаг ${index + 1}: ${escapeHtml(step.title)}</strong>
+                            <strong>Шаг ${index + 1}: ${escapeHtml(step.name)}</strong>
                             <span class="badge bg-secondary ms-2">${STEP_TYPE_LABELS[step.step_type]}</span>
                         </div>
                         <div class="btn-group btn-group-sm">
@@ -671,14 +672,13 @@
                 min_score: unlockMinScore
             };
 
-            const result = await apiCall('addStepToPath', {
+            const result = await apiCall('addStep', {
                 path_id: currentPathId,
-                title: title,
+                name: title,
                 description: description,
                 step_type: stepType,
-                content_id: parseInt(contentId),
-                unlock_requirements: JSON.stringify(unlockRequirements),
-                order_position: pathSteps.length
+                item_id: parseInt(contentId),
+                unlock_condition: unlockRequirements
             });
 
             if (result.success) {
@@ -710,8 +710,7 @@
         if (confirm('Удалить этот шаг?')) {
             const step = pathSteps[index];
 
-            apiCall('removeStepFromPath', {
-                path_id: currentPathId,
+            apiCall('deleteStep', {
                 step_id: step.id
             }).then(result => {
                 if (result.success) {
@@ -739,9 +738,9 @@
         });
 
         try {
-            const result = await apiCall('updateStepsOrder', {
+            const result = await apiCall('reorderSteps', {
                 path_id: currentPathId,
-                steps_order: order
+                step_order: order
             });
 
             if (result.success) {

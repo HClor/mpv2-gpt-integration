@@ -107,6 +107,8 @@ class ControllerFactory
         'getPathsList' => 'LearningPathController',
         'bulkEnrollOnPath' => 'LearningPathController',
         'getPathStatistics' => 'LearningPathController',
+        'getAvailableStudents' => 'LearningPathController',
+        'getEnrolledStudents' => 'LearningPathController',
 
         // Special Question Controller
         'getQuestionTypeData' => 'SpecialQuestionController',
