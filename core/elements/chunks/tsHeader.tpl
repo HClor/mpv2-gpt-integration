@@ -13,9 +13,9 @@
 <nav class="navbar navbar-expand-lg shadow-sm py-2">
   <div class="container">
     <!-- Логотип -->
-    <a class="navbar-brand" href="{ $_modx->config.site_start | url}">
+    <a class="navbar-brand" href="{$_modx->config.site_start | url}">
       <i class="fas fa-graduation-cap"></i>
-      { $_modx->config.site_name}
+      {$_modx->config.site_name}
     </a>
 
     <!-- Кнопка меню для мобильных -->
@@ -39,15 +39,15 @@
 
       <!-- Меню пользователя -->
       <ul class="navbar-nav align-items-center">
-        { if $_modx->user.id > 1}
+        {if $_modx->user.id > 1}
 
-          { set $userGroups = $_modx->user->getUserGroupNames()}
-          { set $isAdmin = ($_modx->user->id == 1) || ('LMS Admins' in $userGroups)}
-          { set $isExpert = 'LMS Experts' in $userGroups}
-          { set $isAdminOrExpert = $isAdmin || $isExpert}
+          {set $userGroups = $_modx->user->getUserGroupNames()}
+          {set $isAdmin = ($_modx->user->id == 1) || ('LMS Admins' in $userGroups)}
+          {set $isExpert = 'LMS Experts' in $userGroups}
+          {set $isAdminOrExpert = $isAdmin || $isExpert}
 
           <!-- Служебное меню (только для админов и экспертов) -->
-          { if $isAdminOrExpert}
+          {if $isAdminOrExpert}
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="adminMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
               <i class="fas fa-tools me-2"></i> Управление
@@ -64,18 +64,18 @@
               ]]
             </ul>
           </li>
-          { /if}
+          {/if}
 
           <!-- Профиль -->
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <i class="fas fa-user-circle me-2"></i> { $_modx->user.username}
+              <i class="fas fa-user-circle me-2"></i> {$_modx->user.username}
             </a>
 
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
-              <li><a class="dropdown-item" href="{ $_modx->makeUrl(28)}"><i class="fas fa-user me-2"></i> Мой профиль</a></li>
-              <li><a class="dropdown-item" href="{ $_modx->makeUrl(156)}"><i class="fas fa-chart-line me-2"></i> Мои результаты</a></li>
-              <li><a class="dropdown-item" href="{ $_modx->makeUrl(180)}"><i class="fas fa-certificate me-2"></i> Сертификаты</a></li>
+              <li><a class="dropdown-item" href="{$_modx->makeUrl(28)}"><i class="fas fa-user me-2"></i> Мой профиль</a></li>
+              <li><a class="dropdown-item" href="{$_modx->makeUrl(156)}"><i class="fas fa-chart-line me-2"></i> Мои результаты</a></li>
+              <li><a class="dropdown-item" href="{$_modx->makeUrl(180)}"><i class="fas fa-certificate me-2"></i> Сертификаты</a></li>
               <li><hr class="dropdown-divider"></li>
               <li>
                 <form method="post" action="" style="margin: 0;">
@@ -88,21 +88,21 @@
             </ul>
           </li>
 
-        { else}
+        {else}
           <!-- Гость: единая кнопка вход/регистрация (видна как кнопка на всех размерах) -->
           <li class="nav-item">
-            <a class="btn btn-primary ms-2" href="{ $_modx->makeUrl(24)}">
+            <a class="btn btn-primary ms-2" href="{$_modx->makeUrl(24)}">
               <i class="fas fa-sign-in-alt me-1"></i> Вход / Регистрация
             </a>
           </li>
-        { /if}
+        {/if}
       </ul>
     </div>
   </div>
 </nav>
 
 <!-- Уведомления (если есть) -->
-{ if $_modx->user.id > 0}
+{if $_modx->user.id > 0}
 <div class="container mt-3">
   [[!getNotifications?
     &limit=`5`
@@ -114,4 +114,4 @@
     </div>`
   ]]
 </div>
-{ /if}
+{/if}
