@@ -37,9 +37,8 @@
       <ul class="navbar-nav align-items-center">
         {if $_modx->user.id}
 
-          {set $isAdmin = $_modx->runSnippet('checkUserGroup', ['group' => 'LMS Admins'])}
-          {set $isExpert = $_modx->runSnippet('checkUserGroup', ['group' => 'LMS Experts'])}
-          {set $isAdminOrExpert = $isAdmin || $isExpert}
+          {set $rights = $_modx->runSnippet('getUserRights')}
+          {set $isAdminOrExpert = $rights.isAdmin || $rights.isExpert}
 
           <!-- Служебное меню (только для админов и экспертов) -->
           {if $isAdminOrExpert}
