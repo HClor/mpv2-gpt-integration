@@ -39,7 +39,7 @@
 
       <!-- Меню пользователя -->
       <ul class="navbar-nav align-items-center">
-        {if $_modx->user->isAuthenticated('web')}
+        {if $_modx->user->hasSessionContext('web')}
 
           {set $userGroups = $_modx->user->getUserGroupNames()}
           {set $isAdmin = 'LMS Admins' in $userGroups}
@@ -102,7 +102,7 @@
 </nav>
 
 <!-- Уведомления (если есть) -->
-{if $_modx->user->isAuthenticated('web')}
+{if $_modx->user->hasSessionContext('web')}
 <div class="container mt-3">
   {$_modx->runSnippet('!getNotifications', [
     'limit' => 5,
