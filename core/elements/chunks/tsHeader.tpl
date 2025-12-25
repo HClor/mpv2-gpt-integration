@@ -25,24 +25,24 @@
 
     <div class="collapse navbar-collapse" id="navbarMain">
       <!-- Основное меню -->
-      [[!pdoMenu?
-        &parents=`0`
-        &level=`1`
-        &resources=`-[[++site_start]]`
-        &showHidden=`0`
-        &sortby=`menuindex`
-        &sortdir=`ASC`
-        &tplOuter=`@INLINE <ul class="navbar-nav me-auto mb-2 mb-lg-0">[[+wrapper]]</ul>`
-        &tpl=`@INLINE <li class="nav-item [[+classnames]]"><a class="nav-link [[+classnames]]" href="[[+link]]">[[+menutitle]]</a>[[+wrapper]]</li>`
-        &tplHere=`@INLINE <li class="nav-item [[+classnames]]"><a class="nav-link active [[+classnames]]" href="[[+link]]">[[+menutitle]]</a>[[+wrapper]]</li>`
-      ]]
+      {$_modx->runSnippet('!pdoMenu', [
+        'parents' => '0',
+        'level' => 1,
+        'resources' => '-' ~ $_modx->config.site_start,
+        'showHidden' => 0,
+        'sortby' => 'menuindex',
+        'sortdir' => 'ASC',
+        'tplOuter' => '@INLINE <ul class="navbar-nav me-auto mb-2 mb-lg-0">[[+wrapper]]</ul>',
+        'tpl' => '@INLINE <li class="nav-item [[+classnames]]"><a class="nav-link [[+classnames]]" href="[[+link]]">[[+menutitle]]</a>[[+wrapper]]</li>',
+        'tplHere' => '@INLINE <li class="nav-item [[+classnames]]"><a class="nav-link active [[+classnames]]" href="[[+link]]">[[+menutitle]]</a>[[+wrapper]]</li>'
+      ])}
 
       <!-- Меню пользователя -->
       <ul class="navbar-nav align-items-center">
-        {if $_modx->user.id > 1}
+        {if $_modx->user->isAuthenticated('web')}
 
           {set $userGroups = $_modx->user->getUserGroupNames()}
-          {set $isAdmin = ($_modx->user->id == 1) || ('LMS Admins' in $userGroups)}
+          {set $isAdmin = 'LMS Admins' in $userGroups}
           {set $isExpert = 'LMS Experts' in $userGroups}
           {set $isAdminOrExpert = $isAdmin || $isExpert}
 
@@ -53,15 +53,15 @@
               <i class="fas fa-tools me-2"></i> Управление
             </a>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="adminMenu">
-              [[!pdoMenu?
-                &parents=`191`
-                &level=`1`
-                &showHidden=`1`
-                &sortby=`menuindex`
-                &sortdir=`ASC`
-                &tpl=`@INLINE <li><a class="dropdown-item" href="[[+link]]"><i class="fas fa-[[!getResourceIcon? &id=`[[+id]]` &title=`[[+pagetitle]]`]] me-2"></i>[[+menutitle]]</a></li>`
-                &tplHere=`@INLINE <li><a class="dropdown-item active" href="[[+link]]"><i class="fas fa-[[!getResourceIcon? &id=`[[+id]]` &title=`[[+pagetitle]]`]] me-2"></i>[[+menutitle]]</a></li>`
-              ]]
+              {$_modx->runSnippet('!pdoMenu', [
+                'parents' => 191,
+                'level' => 1,
+                'showHidden' => 1,
+                'sortby' => 'menuindex',
+                'sortdir' => 'ASC',
+                'tpl' => '@INLINE <li><a class="dropdown-item" href="[[+link]]"><i class="fas fa-cog me-2"></i>[[+menutitle]]</a></li>',
+                'tplHere' => '@INLINE <li><a class="dropdown-item active" href="[[+link]]"><i class="fas fa-cog me-2"></i>[[+menutitle]]</a></li>'
+              ])}
             </ul>
           </li>
           {/if}
@@ -102,16 +102,12 @@
 </nav>
 
 <!-- Уведомления (если есть) -->
-{if $_modx->user.id > 0}
+{if $_modx->user->isAuthenticated('web')}
 <div class="container mt-3">
-  [[!getNotifications?
-    &limit=`5`
-    &unreadOnly=`1`
-    &tpl=`@INLINE
-    <div class="alert alert-[[+priority:eq=`high`:then=`warning`:else=`info`]] alert-dismissible fade show">
-      <i class="fas fa-bell me-2"></i> <strong>[[+title]]</strong> [[+message]]
-      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>`
-  ]]
+  {$_modx->runSnippet('!getNotifications', [
+    'limit' => 5,
+    'unreadOnly' => 1,
+    'tpl' => '@INLINE <div class="alert alert-[[+priority:eq=`high`:then=`warning`:else=`info`]] alert-dismissible fade show"><i class="fas fa-bell me-2"></i> <strong>[[+title]]</strong> [[+message]]<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>'
+  ])}
 </div>
 {/if}
