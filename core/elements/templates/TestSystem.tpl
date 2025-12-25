@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html lang="ru">
-{$tsHead}
+{include 'tsHead'}
 
 <body>
-    {$tsHeader}
+    {include 'tsHeader'}
 
     <main class="py-4">
         <div class="container">
@@ -19,7 +19,7 @@
         </div>
     </main>
 
-    {$tsFooter}
-    {$tsScripts}
+    {include 'tsFooter'}
+    {include 'tsScripts'}
 </body>
 </html>
