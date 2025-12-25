@@ -1,6 +1,3 @@
-<!-- Обработчик выхода (logout) -->
-[[!logoutHandler]]
-
 <!-- Screenshot reference: /mnt/data/dd4c610d-0c94-4afe-87f2-1ae6c0587a1a.png -->
 <!-- Fixed Bootstrap 5 navbar for MODX Revo (variant 2). Improvements:
      - Valid UL/LI structure
@@ -25,10 +22,9 @@
 
     <div class="collapse navbar-collapse" id="navbarMain">
       <!-- Основное меню -->
-      {$_modx->runSnippet('!pdoMenu', [
-        'parents' => '0',
+      {$_modx->runSnippet('pdoMenu', [
+        'parents' => $_modx->config.site_start,
         'level' => 1,
-        'resources' => '-' ~ $_modx->config.site_start,
         'showHidden' => 0,
         'sortby' => 'menuindex',
         'sortdir' => 'ASC',
@@ -39,7 +35,7 @@
 
       <!-- Меню пользователя -->
       <ul class="navbar-nav align-items-center">
-        {if $_modx->user->hasSessionContext('web')}
+        {if $_modx->user->isAuthenticated()}
 
           {set $userGroups = $_modx->user->getUserGroupNames()}
           {set $isAdmin = 'LMS Admins' in $userGroups}
@@ -53,12 +49,13 @@
               <i class="fas fa-tools me-2"></i> Управление
             </a>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="adminMenu">
-              {$_modx->runSnippet('!pdoMenu', [
+              {$_modx->runSnippet('pdoMenu', [
                 'parents' => 191,
                 'level' => 1,
                 'showHidden' => 1,
                 'sortby' => 'menuindex',
                 'sortdir' => 'ASC',
+                'tplOuter' => '@INLINE [[+wrapper]]',
                 'tpl' => '@INLINE <li><a class="dropdown-item" href="[[+link]]"><i class="fas fa-cog me-2"></i>[[+menutitle]]</a></li>',
                 'tplHere' => '@INLINE <li><a class="dropdown-item active" href="[[+link]]"><i class="fas fa-cog me-2"></i>[[+menutitle]]</a></li>'
               ])}
@@ -78,9 +75,10 @@
               <li><a class="dropdown-item" href="{$_modx->makeUrl(180)}"><i class="fas fa-certificate me-2"></i> Сертификаты</a></li>
               <li><hr class="dropdown-divider"></li>
               <li>
-                <form method="post" action="" style="margin: 0;">
+                <form method="post" action="">
+                  [[!csrfToken]]
                   <input type="hidden" name="login_logout" value="1">
-                  <button type="submit" class="dropdown-item" style="border: none; background: none; width: 100%; text-align: left; cursor: pointer;">
+                  <button type="submit" class="dropdown-item">
                     <i class="fas fa-sign-out-alt me-2"></i> Выход
                   </button>
                 </form>
@@ -102,9 +100,9 @@
 </nav>
 
 <!-- Уведомления (если есть) -->
-{if $_modx->user->hasSessionContext('web')}
+{if $_modx->user->isAuthenticated()}
 <div class="container mt-3">
-  {$_modx->runSnippet('!getNotifications', [
+  {$_modx->runSnippet('getNotifications', [
     'limit' => 5,
     'unreadOnly' => 1,
     'tpl' => '@INLINE <div class="alert alert-[[+priority:eq=`high`:then=`warning`:else=`info`]] alert-dismissible fade show"><i class="fas fa-bell me-2"></i> <strong>[[+title]]</strong> [[+message]]<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>'
