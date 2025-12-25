@@ -37,9 +37,8 @@
       <ul class="navbar-nav align-items-center">
         {if $_modx->user->isAuthenticated()}
 
-          {set $userGroups = $_modx->user->getUserGroupNames()}
-          {set $isAdmin = 'LMS Admins' in $userGroups}
-          {set $isExpert = 'LMS Experts' in $userGroups}
+          {set $isAdmin = $_modx->user->isMember('LMS Admins')}
+          {set $isExpert = $_modx->user->isMember('LMS Experts')}
           {set $isAdminOrExpert = $isAdmin || $isExpert}
 
           <!-- Служебное меню (только для админов и экспертов) -->
@@ -76,7 +75,7 @@
               <li><hr class="dropdown-divider"></li>
               <li>
                 <form method="post" action="">
-                  [[!csrfToken]]
+                  {$_modx->runSnippet('csrfToken')}
                   <input type="hidden" name="login_logout" value="1">
                   <button type="submit" class="dropdown-item">
                     <i class="fas fa-sign-out-alt me-2"></i> Выход
