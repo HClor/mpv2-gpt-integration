@@ -14,7 +14,10 @@ if (isset($_POST["login_logout"])) {
     if (!CsrfProtection::validateRequest($_POST)) {
         die('CSRF token validation failed');
     }
-    $modx->user->endSession();
+    // Завершаем только сессию в контексте web, не затрагивая mgr (админку)
+    if ($modx->user->hasSessionContext('web')) {
+        $modx->user->removeSessionContext('web');
+    }
     $modx->sendRedirect($modx->makeUrl($modx->getOption("site_start")));
     return;
 }

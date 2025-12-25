@@ -8,7 +8,10 @@ require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
 
 // Обработка выхода
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login_logout'])) {
-    $modx->runProcessor('security/logout');
+    // Завершаем только сессию в контексте web, не затрагивая mgr (админку)
+    if ($modx->user->hasSessionContext('web')) {
+        $modx->user->removeSessionContext('web');
+    }
     // Перенаправляем на главную или страницу авторизации
     $modx->sendRedirect($modx->makeUrl($modx->getOption('site_start')));
     exit;
