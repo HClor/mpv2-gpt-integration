@@ -33,7 +33,12 @@ class LearningPathController extends BaseController
         'bulkEnrollOnPath',
         'getPathStatistics',
         'getAvailableStudents',
-        'getEnrolledStudents'
+        'getEnrolledStudents',
+        'getStepContent',
+        'getStep',
+        'startStep',
+        'getPathAchievements',
+        'getUserAchievements'
     ];
 
     /**
@@ -107,6 +112,21 @@ class LearningPathController extends BaseController
 
                 case 'getEnrolledStudents':
                     return $this->getEnrolledStudents($data);
+
+                case 'getStepContent':
+                    return $this->getStepContent($data);
+
+                case 'getStep':
+                    return $this->getStep($data);
+
+                case 'startStep':
+                    return $this->startStep($data);
+
+                case 'getPathAchievements':
+                    return $this->getPathAchievements($data);
+
+                case 'getUserAchievements':
+                    return $this->getUserAchievements($data);
 
                 default:
                     return $this->error('Action not implemented', 501);
@@ -871,5 +891,135 @@ class LearningPathController extends BaseController
         $students = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         return $this->success($students);
+    }
+
+    /**
+     * Получение контента шага (для перехода к материалу/тесту)
+     */
+    private function getStepContent($data)
+    {
+        $this->requireAuth();
+
+        $currentUserId = $this->getCurrentUserId();
+        $pathId = ValidationHelper::requireInt($data, 'path_id', 'Path ID required');
+        $stepId = ValidationHelper::requireInt($data, 'step_id', 'Step ID required');
+
+        // Проверяем, записан ли пользователь
+        if (!LearningPathService::isUserEnrolled($this->modx, $pathId, $currentUserId)) {
+            throw new PermissionException('Not enrolled on this path');
+        }
+
+        // Получаем прогресс
+        $progress = LearningPathService::getUserProgress($this->modx, $pathId, $currentUserId);
+
+        if (!$progress) {
+            throw new Exception('Progress not found');
+        }
+
+        // Проверяем доступ к шагу
+        if (!LearningPathService::canAccessStep($this->modx, $progress['id'], $stepId)) {
+            throw new PermissionException('Step is not available yet');
+        }
+
+        // Получаем данные шага
+        $step = LearningPathService::getStepById($this->modx, $stepId);
+
+        if (!$step) {
+            throw new Exception('Step not found');
+        }
+
+        // Обновляем статус шага на "в процессе"
+        LearningPathService::updateStepStatus($this->modx, $progress['id'], $stepId, 'in_progress');
+
+        return $this->success([
+            'step_id' => $step['id'],
+            'step_type' => $step['step_type'],
+            'content_id' => $step['item_id'],
+            'name' => $step['name'],
+            'description' => $step['description'],
+            'min_score' => $step['min_score'],
+            'estimated_minutes' => $step['estimated_minutes']
+        ]);
+    }
+
+    /**
+     * Получение информации о шаге
+     */
+    private function getStep($data)
+    {
+        $stepId = ValidationHelper::requireInt($data, 'step_id', 'Step ID required');
+
+        $step = LearningPathService::getStepById($this->modx, $stepId);
+
+        if (!$step) {
+            throw new Exception('Step not found');
+        }
+
+        return $this->success($step);
+    }
+
+    /**
+     * Начало прохождения шага
+     */
+    private function startStep($data)
+    {
+        $this->requireAuth();
+
+        $currentUserId = $this->getCurrentUserId();
+        $pathId = ValidationHelper::requireInt($data, 'path_id', 'Path ID required');
+        $stepId = ValidationHelper::requireInt($data, 'step_id', 'Step ID required');
+
+        // Проверяем запись на траекторию
+        if (!LearningPathService::isUserEnrolled($this->modx, $pathId, $currentUserId)) {
+            throw new PermissionException('Not enrolled on this path');
+        }
+
+        // Получаем прогресс
+        $progress = LearningPathService::getUserProgress($this->modx, $pathId, $currentUserId);
+
+        if (!$progress) {
+            throw new Exception('Progress not found');
+        }
+
+        // Проверяем доступ
+        if (!LearningPathService::canAccessStep($this->modx, $progress['id'], $stepId)) {
+            throw new PermissionException('Step is not available yet');
+        }
+
+        // Обновляем статус на "в процессе" и устанавливаем время начала
+        $success = LearningPathService::startStep($this->modx, $progress['id'], $stepId);
+
+        if ($success) {
+            return $this->success(null, 'Step started');
+        } else {
+            throw new Exception('Failed to start step');
+        }
+    }
+
+    /**
+     * Получение достижений траектории
+     */
+    private function getPathAchievements($data)
+    {
+        $pathId = ValidationHelper::requireInt($data, 'path_id', 'Path ID required');
+
+        $achievements = LearningPathService::getPathAchievements($this->modx, $pathId);
+
+        return $this->success($achievements);
+    }
+
+    /**
+     * Получение достижений пользователя
+     */
+    private function getUserAchievements($data)
+    {
+        $this->requireAuth();
+
+        $currentUserId = $this->getCurrentUserId();
+        $pathId = ValidationHelper::optionalInt($data, 'path_id');
+
+        $achievements = LearningPathService::getUserAchievements($this->modx, $currentUserId, $pathId);
+
+        return $this->success($achievements);
     }
 }

@@ -700,11 +700,106 @@
         }
     }
 
+    let editingStepIndex = null;
+
     function editStep(index) {
         const step = pathSteps[index];
-        // Здесь можно открыть модальное окно редактирования
-        showNotification('Редактирование шага (функция в разработке)', 'info');
+        editingStepIndex = index;
+
+        document.getElementById('step-modal-title').textContent = 'Редактировать шаг';
+        document.getElementById('step-title').value = step.name || '';
+        document.getElementById('step-description').value = step.description || '';
+        document.getElementById('step-type').value = step.step_type || 'material';
+        document.getElementById('step-content-id').value = step.item_id || '';
+
+        // Unlock conditions
+        const unlockCondition = step.unlock_condition || {};
+        document.getElementById('step-unlock-previous').checked = unlockCondition.previous_step !== false;
+        document.getElementById('step-unlock-min-score').value = unlockCondition.min_score || '';
+
+        // Показываем кнопку обновления вместо добавления
+        const saveBtn = document.getElementById('save-step-btn');
+        saveBtn.textContent = 'Обновить';
+        saveBtn.onclick = () => updateStepFromModal();
+
+        const modal = new bootstrap.Modal(document.getElementById('stepModal'));
+        modal.show();
     }
+
+    async function updateStepFromModal() {
+        if (editingStepIndex === null) return;
+
+        const step = pathSteps[editingStepIndex];
+        const title = document.getElementById('step-title').value.trim();
+        const description = document.getElementById('step-description').value.trim();
+        const stepType = document.getElementById('step-type').value;
+        const contentId = document.getElementById('step-content-id').value;
+        const unlockPrevious = document.getElementById('step-unlock-previous').checked;
+        const unlockMinScore = parseInt(document.getElementById('step-unlock-min-score').value) || null;
+
+        if (!title) {
+            showNotification('Введите название шага', 'warning');
+            return;
+        }
+
+        if (!contentId) {
+            showNotification('Укажите ID контента', 'warning');
+            return;
+        }
+
+        const saveBtn = document.getElementById('save-step-btn');
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Сохранение...';
+
+        try {
+            const unlockCondition = {
+                previous_step: unlockPrevious,
+                min_score: unlockMinScore
+            };
+
+            const result = await apiCall('updateStep', {
+                step_id: step.id,
+                name: title,
+                description: description,
+                step_type: stepType,
+                item_id: parseInt(contentId),
+                unlock_condition: unlockCondition
+            });
+
+            if (result.success) {
+                showNotification('Шаг обновлён', 'success');
+
+                const modal = bootstrap.Modal.getInstance(document.getElementById('stepModal'));
+                modal.hide();
+
+                editingStepIndex = null;
+                await loadPathForEdit(currentPathId);
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error) {
+            console.error('Update step error:', error);
+            showNotification('Ошибка обновления шага: ' + error.message, 'danger');
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="bi bi-check-circle"></i> Обновить';
+        }
+    }
+
+    // Сбрасываем состояние модалки при её закрытии
+    document.addEventListener('DOMContentLoaded', function() {
+        const stepModal = document.getElementById('stepModal');
+        if (stepModal) {
+            stepModal.addEventListener('hidden.bs.modal', function() {
+                editingStepIndex = null;
+                const saveBtn = document.getElementById('save-step-btn');
+                if (saveBtn) {
+                    saveBtn.textContent = 'Добавить';
+                    saveBtn.onclick = saveStep;
+                }
+            });
+        }
+    });
 
     function removeStep(index) {
         if (confirm('Удалить этот шаг?')) {
