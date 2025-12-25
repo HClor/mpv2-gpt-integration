@@ -35,11 +35,10 @@
 
       <!-- Меню пользователя -->
       <ul class="navbar-nav align-items-center">
-        {if $_modx->user->isAuthenticated()}
+        {if $_modx->user.id}
 
-          {set $isAdmin = $_modx->user->isMember('LMS Admins')}
-          {set $isExpert = $_modx->user->isMember('LMS Experts')}
-          {set $isAdminOrExpert = $isAdmin || $isExpert}
+          {set $rights = $_modx->runSnippet('getUserRights')}
+          {set $isAdminOrExpert = $rights.isAdmin || $rights.isExpert}
 
           <!-- Служебное меню (только для админов и экспертов) -->
           {if $isAdminOrExpert}
@@ -99,7 +98,7 @@
 </nav>
 
 <!-- Уведомления (если есть) -->
-{if $_modx->user->isAuthenticated()}
+{if $_modx->user.id}
 <div class="container mt-3">
   {$_modx->runSnippet('getNotifications', [
     'limit' => 5,
