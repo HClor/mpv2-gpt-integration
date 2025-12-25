@@ -23,7 +23,7 @@
     <div class="collapse navbar-collapse" id="navbarMain">
       <!-- Основное меню -->
       {$_modx->runSnippet('pdoMenu', [
-        'parents' => $_modx->config.site_start,
+        'parents' => 0,
         'level' => 1,
         'showHidden' => 0,
         'sortby' => 'menuindex',
