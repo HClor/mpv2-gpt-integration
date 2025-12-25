@@ -41,6 +41,31 @@
       <ul class="navbar-nav align-items-center">
         {if $_modx->user.id > 1}
 
+          {set $userGroups = $_modx->user->getUserGroupNames()}
+          {set $isAdmin = ($_modx->user->id == 1) || ('LMS Admins' in $userGroups)}
+          {set $isExpert = 'LMS Experts' in $userGroups}
+          {set $isAdminOrExpert = $isAdmin || $isExpert}
+
+          <!-- Служебное меню (только для админов и экспертов) -->
+          {if $isAdminOrExpert}
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="adminMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="fas fa-tools me-2"></i> Управление
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="adminMenu">
+              [[!pdoMenu?
+                &parents=`191`
+                &level=`1`
+                &showHidden=`1`
+                &sortby=`menuindex`
+                &sortdir=`ASC`
+                &tpl=`@INLINE <li><a class="dropdown-item" href="[[+link]]"><i class="fas fa-[[!getResourceIcon? &id=`[[+id]]` &title=`[[+pagetitle]]`]] me-2"></i>[[+menutitle]]</a></li>`
+                &tplHere=`@INLINE <li><a class="dropdown-item active" href="[[+link]]"><i class="fas fa-[[!getResourceIcon? &id=`[[+id]]` &title=`[[+pagetitle]]`]] me-2"></i>[[+menutitle]]</a></li>`
+              ]]
+            </ul>
+          </li>
+          {/if}
+
           <!-- Профиль -->
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
