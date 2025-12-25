@@ -1,3 +1,6 @@
+<!-- Обработчик выхода (logout) -->
+[[!logoutHandler]]
+
 <!-- Screenshot reference: /mnt/data/dd4c610d-0c94-4afe-87f2-1ae6c0587a1a.png -->
 <!-- Fixed Bootstrap 5 navbar for MODX Revo (variant 2). Improvements:
      - Valid UL/LI structure
@@ -49,7 +52,14 @@
               <li><a class="dropdown-item" href="{$_modx->makeUrl(156)}"><i class="fas fa-chart-line me-2"></i> Мои результаты</a></li>
               <li><a class="dropdown-item" href="{$_modx->makeUrl(180)}"><i class="fas fa-certificate me-2"></i> Сертификаты</a></li>
               <li><hr class="dropdown-divider"></li>
-              <li><a class="dropdown-item" href="{$_modx->makeUrl($_modx->config.site_start)}?action=logout"><i class="fas fa-sign-out-alt me-2"></i> Выход</a></li>
+              <li>
+                <form method="post" action="" style="margin: 0;">
+                  <input type="hidden" name="login_logout" value="1">
+                  <button type="submit" class="dropdown-item" style="border: none; background: none; width: 100%; text-align: left; cursor: pointer;">
+                    <i class="fas fa-sign-out-alt me-2"></i> Выход
+                  </button>
+                </form>
+              </li>
             </ul>
           </li>
 
