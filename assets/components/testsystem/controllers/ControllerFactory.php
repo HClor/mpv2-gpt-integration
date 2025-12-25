@@ -109,6 +109,11 @@ class ControllerFactory
         'getPathStatistics' => 'LearningPathController',
         'getAvailableStudents' => 'LearningPathController',
         'getEnrolledStudents' => 'LearningPathController',
+        'getStepContent' => 'LearningPathController',
+        'getStep' => 'LearningPathController',
+        'startStep' => 'LearningPathController',
+        'getPathAchievements' => 'LearningPathController',
+        'getUserAchievements' => 'LearningPathController',
 
         // Special Question Controller
         'getQuestionTypeData' => 'SpecialQuestionController',

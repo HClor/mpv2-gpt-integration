@@ -744,4 +744,323 @@ class LearningPathService
 
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
+
+    /**
+     * Получение шага по ID
+     *
+     * @param modX $modx
+     * @param int $stepId
+     * @return array|null
+     */
+    public static function getStepById($modx, $stepId)
+    {
+        $prefix = $modx->getOption('table_prefix', null, 'modx_');
+
+        $sql = "SELECT lps.*, lp.name as path_name
+                FROM {$prefix}test_learning_path_steps lps
+                JOIN {$prefix}test_learning_paths lp ON lp.id = lps.path_id
+                WHERE lps.id = ?";
+
+        $stmt = $modx->prepare($sql);
+        $stmt->execute([$stepId]);
+        $step = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($step && !empty($step['unlock_condition'])) {
+            $step['unlock_condition'] = json_decode($step['unlock_condition'], true);
+        }
+
+        return $step ?: null;
+    }
+
+    /**
+     * Обновление статуса шага
+     *
+     * @param modX $modx
+     * @param int $progressId
+     * @param int $stepId
+     * @param string $status
+     * @return bool
+     */
+    public static function updateStepStatus($modx, $progressId, $stepId, $status)
+    {
+        $prefix = $modx->getOption('table_prefix', null, 'modx_');
+
+        $validStatuses = ['locked', 'available', 'in_progress', 'completed', 'skipped'];
+        if (!in_array($status, $validStatuses)) {
+            return false;
+        }
+
+        $sql = "UPDATE {$prefix}test_learning_path_step_completion
+                SET status = ?
+                WHERE progress_id = ? AND step_id = ?";
+
+        $stmt = $modx->prepare($sql);
+        return $stmt->execute([$status, $progressId, $stepId]);
+    }
+
+    /**
+     * Начало прохождения шага
+     *
+     * @param modX $modx
+     * @param int $progressId
+     * @param int $stepId
+     * @return bool
+     */
+    public static function startStep($modx, $progressId, $stepId)
+    {
+        $prefix = $modx->getOption('table_prefix', null, 'modx_');
+
+        $sql = "UPDATE {$prefix}test_learning_path_step_completion
+                SET status = 'in_progress',
+                    started_at = COALESCE(started_at, NOW()),
+                    attempts = attempts + 1
+                WHERE progress_id = ? AND step_id = ?
+                AND status IN ('available', 'in_progress')";
+
+        $stmt = $modx->prepare($sql);
+        $result = $stmt->execute([$progressId, $stepId]);
+
+        // Обновляем общий прогресс
+        if ($result) {
+            $sql = "UPDATE {$prefix}test_learning_path_progress
+                    SET status = 'in_progress',
+                        started_at = COALESCE(started_at, NOW()),
+                        last_activity_at = NOW()
+                    WHERE id = ?";
+            $stmt = $modx->prepare($sql);
+            $stmt->execute([$progressId]);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Получение достижений траектории
+     *
+     * @param modX $modx
+     * @param int $pathId
+     * @return array
+     */
+    public static function getPathAchievements($modx, $pathId)
+    {
+        $prefix = $modx->getOption('table_prefix', null, 'modx_');
+
+        $sql = "SELECT *
+                FROM {$prefix}test_learning_path_achievements
+                WHERE path_id = ?
+                ORDER BY id";
+
+        $stmt = $modx->prepare($sql);
+        $stmt->execute([$pathId]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Получение достижений пользователя
+     *
+     * @param modX $modx
+     * @param int $userId
+     * @param int|null $pathId Опционально фильтр по траектории
+     * @return array
+     */
+    public static function getUserAchievements($modx, $userId, $pathId = null)
+    {
+        $prefix = $modx->getOption('table_prefix', null, 'modx_');
+
+        $where = ['lpua.user_id = ?'];
+        $params = [$userId];
+
+        if ($pathId) {
+            $where[] = 'lpa.path_id = ?';
+            $params[] = $pathId;
+        }
+
+        $sql = "SELECT lpua.*, lpa.name, lpa.description, lpa.badge_icon,
+                       lpa.condition_type, lpa.condition_value,
+                       lp.name as path_name
+                FROM {$prefix}test_learning_path_user_achievements lpua
+                JOIN {$prefix}test_learning_path_achievements lpa ON lpa.id = lpua.achievement_id
+                JOIN {$prefix}test_learning_paths lp ON lp.id = lpa.path_id
+                WHERE " . implode(' AND ', $where) . "
+                ORDER BY lpua.earned_at DESC";
+
+        $stmt = $modx->prepare($sql);
+        $stmt->execute($params);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Создание достижения для траектории
+     *
+     * @param modX $modx
+     * @param int $pathId
+     * @param array $data
+     * @return int ID созданного достижения
+     */
+    public static function createAchievement($modx, $pathId, $data)
+    {
+        $prefix = $modx->getOption('table_prefix', null, 'modx_');
+
+        $sql = "INSERT INTO {$prefix}test_learning_path_achievements
+                (path_id, name, description, badge_icon, condition_type, condition_value)
+                VALUES (?, ?, ?, ?, ?, ?)";
+
+        $stmt = $modx->prepare($sql);
+        $stmt->execute([
+            $pathId,
+            $data['name'],
+            $data['description'] ?? null,
+            $data['badge_icon'] ?? null,
+            $data['condition_type'] ?? 'complete_path',
+            $data['condition_value'] ?? null
+        ]);
+
+        return (int)$modx->lastInsertId();
+    }
+
+    /**
+     * Выдача достижения пользователю
+     *
+     * @param modX $modx
+     * @param int $achievementId
+     * @param int $userId
+     * @param int $progressId
+     * @return bool
+     */
+    public static function awardAchievement($modx, $achievementId, $userId, $progressId)
+    {
+        $prefix = $modx->getOption('table_prefix', null, 'modx_');
+
+        // Проверяем, не выдано ли уже
+        $sql = "SELECT id FROM {$prefix}test_learning_path_user_achievements
+                WHERE achievement_id = ? AND user_id = ?";
+        $stmt = $modx->prepare($sql);
+        $stmt->execute([$achievementId, $userId]);
+
+        if ($stmt->fetch()) {
+            return false; // Уже выдано
+        }
+
+        $sql = "INSERT INTO {$prefix}test_learning_path_user_achievements
+                (achievement_id, user_id, progress_id)
+                VALUES (?, ?, ?)";
+
+        $stmt = $modx->prepare($sql);
+        return $stmt->execute([$achievementId, $userId, $progressId]);
+    }
+
+    /**
+     * Проверка и выдача достижений при завершении траектории
+     *
+     * @param modX $modx
+     * @param int $progressId
+     * @return array Список выданных достижений
+     */
+    public static function checkAndAwardAchievements($modx, $progressId)
+    {
+        $prefix = $modx->getOption('table_prefix', null, 'modx_');
+
+        // Получаем прогресс
+        $sql = "SELECT lpp.*, lp.passing_score
+                FROM {$prefix}test_learning_path_progress lpp
+                JOIN {$prefix}test_learning_paths lp ON lp.id = lpp.path_id
+                WHERE lpp.id = ?";
+        $stmt = $modx->prepare($sql);
+        $stmt->execute([$progressId]);
+        $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$progress) {
+            return [];
+        }
+
+        // Получаем достижения траектории
+        $achievements = self::getPathAchievements($modx, $progress['path_id']);
+        $awarded = [];
+
+        foreach ($achievements as $achievement) {
+            $shouldAward = false;
+
+            switch ($achievement['condition_type']) {
+                case 'complete_path':
+                    $shouldAward = $progress['status'] === 'completed';
+                    break;
+
+                case 'score_threshold':
+                    $shouldAward = $progress['status'] === 'completed'
+                        && $progress['total_score'] >= $achievement['condition_value'];
+                    break;
+
+                case 'perfect_score':
+                    $shouldAward = $progress['status'] === 'completed'
+                        && $progress['total_score'] >= 100;
+                    break;
+
+                case 'time_limit':
+                    if ($progress['status'] === 'completed' && $progress['started_at'] && $progress['completed_at']) {
+                        $started = new DateTime($progress['started_at']);
+                        $completed = new DateTime($progress['completed_at']);
+                        $diffDays = $started->diff($completed)->days;
+                        $shouldAward = $diffDays <= $achievement['condition_value'];
+                    }
+                    break;
+            }
+
+            if ($shouldAward) {
+                if (self::awardAchievement($modx, $achievement['id'], $progress['user_id'], $progressId)) {
+                    $awarded[] = $achievement;
+                }
+            }
+        }
+
+        return $awarded;
+    }
+
+    /**
+     * Получение детального прогресса со всеми шагами
+     *
+     * @param modX $modx
+     * @param int $pathId
+     * @param int $userId
+     * @return array|null
+     */
+    public static function getDetailedProgress($modx, $pathId, $userId)
+    {
+        $progress = self::getUserProgress($modx, $pathId, $userId);
+
+        if (!$progress) {
+            return null;
+        }
+
+        $prefix = $modx->getOption('table_prefix', null, 'modx_');
+
+        // Подсчитываем статистику
+        $sql = "SELECT
+                    COUNT(*) as total_steps,
+                    SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_steps,
+                    SUM(CASE WHEN status = 'in_progress' THEN 1 ELSE 0 END) as in_progress_steps,
+                    SUM(CASE WHEN status = 'available' THEN 1 ELSE 0 END) as available_steps,
+                    SUM(CASE WHEN status = 'locked' THEN 1 ELSE 0 END) as locked_steps,
+                    SUM(time_spent_minutes) as total_time_spent,
+                    AVG(CASE WHEN status = 'completed' AND score IS NOT NULL THEN score END) as avg_score
+                FROM {$prefix}test_learning_path_step_completion
+                WHERE progress_id = ?";
+
+        $stmt = $modx->prepare($sql);
+        $stmt->execute([$progress['id']]);
+        $stats = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        $progress['stats'] = $stats;
+        $progress['completed_step_ids'] = [];
+
+        // Собираем ID завершённых шагов
+        foreach ($progress['steps'] as $step) {
+            if ($step['status'] === 'completed') {
+                $progress['completed_step_ids'][] = (int)$step['step_id'];
+            }
+        }
+
+        return $progress;
+    }
 }
