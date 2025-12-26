@@ -296,19 +296,39 @@ function renderPathEditor($modx, $prefix, $pathId, $userId) {
     <div id="path-editor-container" data-path-id="' . $pathId . '">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h2><i class="bi bi-pencil-square"></i> Редактирование траектории</h2>
+                <a href="?mode=list" class="text-muted text-decoration-none">
+                    <i class="bi bi-arrow-left"></i> К списку траекторий
+                </a>
+                <h2 class="mt-2"><i class="bi bi-pencil-square"></i> Редактирование траектории</h2>
                 <h4 id="editor-path-title" class="text-muted">Загрузка...</h4>
             </div>
             <div class="btn-group">
-                <button class="btn btn-outline-primary" id="edit-path-info-btn">
+                <button class="btn btn-outline-primary" id="edit-path-info-btn"
+                        onclick="LearningPaths.showEditPathSettings()">
                     <i class="bi bi-gear"></i> Настройки
                 </button>
-                <button class="btn btn-outline-success" id="manage-students-btn">
+                <button class="btn btn-outline-success" id="manage-students-btn"
+                        onclick="LearningPaths.showManageStudents()">
                     <i class="bi bi-people"></i> Студенты
                 </button>
                 <a href="?mode=view&id=' . $pathId . '" class="btn btn-outline-info">
                     <i class="bi bi-eye"></i> Просмотр
                 </a>
+            </div>
+        </div>
+
+        <!-- Информация о траектории -->
+        <div class="card mb-4" id="path-info-card">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <p id="editor-path-description" class="text-muted mb-0">Загрузка описания...</p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <span id="editor-path-status" class="badge bg-secondary">Загрузка...</span>
+                        <span id="editor-path-difficulty" class="badge bg-info ms-1">Загрузка...</span>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -335,6 +355,7 @@ function renderPathEditor($modx, $prefix, $pathId, $userId) {
     ';
 
     // Добавляем модальные окна
+    $html .= renderPathModal();  // Для настроек
     $html .= renderStepModal();
 
     return $html;

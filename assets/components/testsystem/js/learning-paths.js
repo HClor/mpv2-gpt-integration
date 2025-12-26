@@ -733,9 +733,19 @@
                 const modal = bootstrap.Modal.getInstance(document.getElementById('pathModal'));
                 modal.hide();
 
-                if (!currentPathId && result.path_id) {
-                    window.location.href = `/edit-path?id=${result.path_id}`;
+                // API возвращает path_id в result.data.path_id
+                const newPathId = result.data?.path_id;
+
+                // Если мы на странице редактирования - обновляем данные
+                const editorContainer = document.getElementById('path-editor-container');
+                if (editorContainer && currentPathId) {
+                    // Перезагружаем данные траектории
+                    loadPathForEdit(currentPathId);
+                } else if (!currentPathId && newPathId) {
+                    // Новая траектория - переходим в редактор
+                    window.location.href = `?mode=edit&id=${newPathId}`;
                 } else {
+                    // На странице списка - обновляем список
                     loadPaths();
                 }
             } else {
@@ -1003,12 +1013,39 @@
         document.getElementById('save-steps-order-btn')?.addEventListener('click', saveStepsOrder);
     }
 
+    // Store current path data for editing
+    let currentPathData = null;
+
     async function loadPathForEdit(pathId) {
         try {
             const result = await apiCall('getPath', { path_id: pathId, with_steps: 1 });
 
             if (result.success) {
+                currentPathData = result.data;
+                currentPathId = pathId;
+
+                // Update UI
                 document.getElementById('editor-path-title').textContent = result.data.name;
+
+                const descEl = document.getElementById('editor-path-description');
+                if (descEl) {
+                    descEl.textContent = result.data.description || 'Нет описания';
+                }
+
+                const statusEl = document.getElementById('editor-path-status');
+                if (statusEl) {
+                    const statusLabels = { published: 'Опубликован', draft: 'Черновик', archived: 'В архиве' };
+                    const statusColors = { published: 'success', draft: 'secondary', archived: 'warning' };
+                    statusEl.textContent = statusLabels[result.data.status] || result.data.status;
+                    statusEl.className = `badge bg-${statusColors[result.data.status] || 'secondary'}`;
+                }
+
+                const diffEl = document.getElementById('editor-path-difficulty');
+                if (diffEl) {
+                    const diffLabels = { beginner: 'Начальный', intermediate: 'Средний', advanced: 'Продвинутый', expert: 'Эксперт' };
+                    diffEl.textContent = diffLabels[result.data.difficulty_level] || result.data.difficulty_level;
+                }
+
                 pathSteps = result.data.steps || [];
                 renderStepsEditor();
             } else {
@@ -1018,6 +1055,40 @@
             console.error('Load path for edit error:', error);
             showNotification('Ошибка загрузки траектории: ' + error.message, 'danger');
         }
+    }
+
+    // Show settings modal for current path
+    function showEditPathSettings() {
+        if (!currentPathData) {
+            showNotification('Данные траектории не загружены', 'warning');
+            return;
+        }
+
+        document.getElementById('path-modal-title').textContent = 'Настройки траектории';
+        document.getElementById('path-title').value = currentPathData.name || '';
+        document.getElementById('path-description').value = currentPathData.description || '';
+        document.getElementById('path-difficulty').value = currentPathData.difficulty_level || 'beginner';
+        document.getElementById('path-estimated-hours').value = currentPathData.estimated_hours || '';
+        document.getElementById('path-has-certificate').checked = !!currentPathData.certificate_template;
+        document.getElementById('path-published').checked = currentPathData.status === 'published';
+
+        const templateCheckbox = document.getElementById('path-is-template');
+        if (templateCheckbox) {
+            templateCheckbox.checked = currentPathData.is_template == 1;
+        }
+
+        const modal = new bootstrap.Modal(document.getElementById('pathModal'));
+        modal.show();
+    }
+
+    // Show students management modal
+    function showManageStudents() {
+        if (!currentPathId) {
+            showNotification('Траектория не выбрана', 'warning');
+            return;
+        }
+
+        showEnrollModal(currentPathId, currentPathData?.name || 'Траектория');
     }
 
     function renderStepsEditor() {
@@ -1433,7 +1504,9 @@
         showEnrollModal,
         submitBulkEnroll,
         selectContent,
-        loadAvailableContent
+        loadAvailableContent,
+        showEditPathSettings,
+        showManageStudents
     };
 
 })();
