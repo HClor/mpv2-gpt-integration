@@ -40,7 +40,8 @@ class LearningPathController extends BaseController
         'getPathAchievements',
         'getUserAchievements',
         'clonePath',
-        'getTemplates'
+        'getTemplates',
+        'getAvailableContent'
     ];
 
     /**
@@ -135,6 +136,9 @@ class LearningPathController extends BaseController
 
                 case 'getTemplates':
                     return $this->getTemplates($data);
+
+                case 'getAvailableContent':
+                    return $this->getAvailableContent($data);
 
                 default:
                     return $this->error('Action not implemented', 501);
@@ -653,6 +657,7 @@ class LearningPathController extends BaseController
     private function getPathsList($data)
     {
         $filters = [];
+        $currentUserId = $this->getCurrentUserId();
 
         if (isset($data['category_id'])) {
             $filters['category_id'] = ValidationHelper::requireInt($data, 'category_id');
@@ -670,21 +675,47 @@ class LearningPathController extends BaseController
             $filters['is_public'] = (int)$data['is_public'];
         }
 
-        // Если не указан статус, показываем только published для не-админов
-        if (!isset($filters['status'])) {
-            $currentUserId = $this->getCurrentUserId();
-            if ($currentUserId > 0) {
-                $isAdmin = CategoryPermissionService::isGlobalAdmin($this->modx, $currentUserId);
+        // Фильтр по шаблонам
+        if (isset($data['is_template'])) {
+            $filters['is_template'] = (int)$data['is_template'];
+        }
 
-                if (!$isAdmin) {
-                    $filters['status'] = 'published';
-                }
-            } else {
+        // Проверяем права текущего пользователя
+        $isAdmin = false;
+        $isExpert = false;
+
+        if ($currentUserId > 0) {
+            $isAdmin = CategoryPermissionService::isGlobalAdmin($this->modx, $currentUserId);
+            $isExpert = CategoryPermissionService::isGlobalExpert($this->modx, $currentUserId);
+        }
+
+        // Если не указан статус, показываем только published для не-админов/не-экспертов
+        if (!isset($filters['status'])) {
+            if (!$isAdmin && !$isExpert) {
                 $filters['status'] = 'published';
             }
+            // Для админов и экспертов показываем все статусы
         }
 
         $paths = LearningPathService::getPathsList($this->modx, $filters);
+
+        // Добавляем can_edit для каждой траектории
+        foreach ($paths as &$path) {
+            $isAuthor = (int)$path['created_by'] === $currentUserId;
+
+            // Может редактировать: автор, админ, или эксперт с правами на категорию
+            $canEdit = $isAuthor || $isAdmin;
+
+            if (!$canEdit && $isExpert && !empty($path['category_id'])) {
+                $canEdit = CategoryPermissionService::canCreateContent(
+                    $this->modx,
+                    $path['category_id'],
+                    $currentUserId
+                );
+            }
+
+            $path['can_edit'] = $canEdit;
+        }
 
         return $this->success($paths);
     }
@@ -1112,5 +1143,115 @@ class LearningPathController extends BaseController
         $templates = LearningPathService::getTemplates($this->modx, $filters);
 
         return $this->success($templates);
+    }
+
+    /**
+     * Получение доступного контента для добавления в траекторию
+     *
+     * Возвращает тесты и учебные материалы для выбора при создании шага.
+     */
+    private function getAvailableContent($data)
+    {
+        $this->requireAuth();
+
+        $currentUserId = $this->getCurrentUserId();
+
+        // Только эксперты и админы могут получать список контента
+        if (!CategoryPermissionService::isGlobalExpert($this->modx, $currentUserId) &&
+            !CategoryPermissionService::isGlobalAdmin($this->modx, $currentUserId)) {
+            throw new PermissionException('Only experts and admins can access content list');
+        }
+
+        $stepType = ValidationHelper::optionalString($data, 'step_type');
+        $search = ValidationHelper::optionalString($data, 'search');
+        $prefix = $this->modx->getOption('table_prefix', null, 'modx_');
+
+        $result = [
+            'tests' => [],
+            'materials' => []
+        ];
+
+        // Получаем тесты
+        if (!$stepType || $stepType === 'test' || $stepType === 'quiz') {
+            $sql = "SELECT
+                        c.id,
+                        c.pagetitle as name,
+                        c.description,
+                        cat.name as category_name,
+                        (SELECT COUNT(*) FROM {$prefix}test_questions q WHERE q.resource_id = c.id) as questions_count
+                    FROM {$prefix}site_content c
+                    LEFT JOIN {$prefix}test_categories cat ON cat.resource_id = c.parent
+                    WHERE c.template IN (
+                        SELECT id FROM {$prefix}site_templates WHERE templatename LIKE '%test%' OR templatename LIKE '%Test%'
+                    )
+                    AND c.published = 1
+                    AND c.deleted = 0";
+
+            if ($search) {
+                $sql .= " AND (c.pagetitle LIKE ? OR c.description LIKE ?)";
+            }
+
+            $sql .= " ORDER BY c.pagetitle ASC LIMIT 100";
+
+            $stmt = $this->modx->prepare($sql);
+
+            if ($search) {
+                $searchPattern = '%' . $search . '%';
+                $stmt->execute([$searchPattern, $searchPattern]);
+            } else {
+                $stmt->execute();
+            }
+
+            $result['tests'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        // Получаем учебные материалы (MODX ресурсы)
+        if (!$stepType || $stepType === 'material') {
+            // Ищем ресурсы в папке учебных материалов или с шаблоном материала
+            $sql = "SELECT
+                        c.id,
+                        c.pagetitle as name,
+                        c.description,
+                        c.introtext,
+                        p.pagetitle as parent_name
+                    FROM {$prefix}site_content c
+                    LEFT JOIN {$prefix}site_content p ON p.id = c.parent
+                    WHERE c.published = 1
+                    AND c.deleted = 0
+                    AND c.isfolder = 0
+                    AND (
+                        c.template IN (
+                            SELECT id FROM {$prefix}site_templates
+                            WHERE templatename LIKE '%material%'
+                            OR templatename LIKE '%lesson%'
+                            OR templatename LIKE '%Материал%'
+                        )
+                        OR c.parent IN (
+                            SELECT id FROM {$prefix}site_content
+                            WHERE pagetitle LIKE '%материал%'
+                            OR pagetitle LIKE '%Материал%'
+                            OR pagetitle LIKE '%Lesson%'
+                        )
+                    )";
+
+            if ($search) {
+                $sql .= " AND (c.pagetitle LIKE ? OR c.description LIKE ? OR c.introtext LIKE ?)";
+            }
+
+            $sql .= " ORDER BY c.pagetitle ASC LIMIT 100";
+
+            $stmt = $this->modx->prepare($sql);
+
+            if ($search) {
+                $searchPattern = '%' . $search . '%';
+                $stmt->execute([$searchPattern, $searchPattern, $searchPattern]);
+            } else {
+                $stmt->execute();
+            }
+
+            $result['materials'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        return $this->success($result);
     }
 }

@@ -91,8 +91,8 @@ function renderPathsList($modx, $prefix, $userId, $canCreate) {
     </div>
 
     <!-- Фильтры -->
-    <div class="row mb-3">
-        <div class="col-md-6">
+    <div class="row mb-3 g-2">
+        <div class="col-md-3">
             <select class="form-select" id="filter-difficulty">
                 <option value="">Все уровни сложности</option>
                 <option value="beginner">Начальный</option>
@@ -101,7 +101,24 @@ function renderPathsList($modx, $prefix, $userId, $canCreate) {
                 <option value="expert">Эксперт</option>
             </select>
         </div>
-        <div class="col-md-6">
+        ' . ($canCreate ? '
+        <div class="col-md-3">
+            <select class="form-select" id="filter-status">
+                <option value="">Все статусы</option>
+                <option value="published">Опубликованные</option>
+                <option value="draft">Черновики</option>
+                <option value="archived">Архивные</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" id="filter-template">
+                <option value="">Все траектории</option>
+                <option value="1">Только шаблоны</option>
+                <option value="0">Только обычные</option>
+            </select>
+        </div>
+        ' : '') . '
+        <div class="col-md-' . ($canCreate ? '3' : '9') . '">
             <input type="text" class="form-control" id="filter-search" placeholder="Поиск по названию...">
         </div>
     </div>
@@ -397,7 +414,7 @@ function renderPathModal() {
 function renderStepModal() {
     return '
     <div class="modal fade" id="stepModal" tabindex="-1">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="step-modal-title">Добавить шаг</h5>
@@ -412,21 +429,37 @@ function renderStepModal() {
                         <label class="form-label">Описание</label>
                         <textarea class="form-control" id="step-description" rows="2"></textarea>
                     </div>
-                    <div class="row mb-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Тип контента *</label>
-                            <select class="form-select" id="step-type">
-                                <option value="material">Учебный материал</option>
-                                <option value="test">Тест</option>
-                                <option value="quiz">Викторина</option>
-                                <option value="assignment">Задание</option>
-                            </select>
+                    <div class="mb-3">
+                        <label class="form-label">Тип контента *</label>
+                        <select class="form-select" id="step-type">
+                            <option value="material">Учебный материал</option>
+                            <option value="test">Тест</option>
+                            <option value="quiz">Викторина</option>
+                            <option value="assignment">Задание</option>
+                        </select>
+                    </div>
+
+                    <!-- Выбор контента -->
+                    <div class="mb-3">
+                        <label class="form-label">Выберите контент *</label>
+                        <div class="input-group mb-2">
+                            <input type="text" class="form-control" id="step-content-search"
+                                   placeholder="Поиск по названию...">
+                            <button class="btn btn-outline-secondary" type="button" id="step-content-search-btn">
+                                <i class="bi bi-search"></i>
+                            </button>
                         </div>
-                        <div class="col-md-6">
-                            <label class="form-label">ID контента *</label>
-                            <input type="number" class="form-control" id="step-content-id" min="1">
+                        <div id="step-content-list" class="border rounded p-2" style="max-height: 200px; overflow-y: auto;">
+                            <div class="text-muted text-center py-3">
+                                <i class="bi bi-arrow-up"></i> Начните поиск или нажмите кнопку для загрузки списка
+                            </div>
+                        </div>
+                        <input type="hidden" id="step-content-id">
+                        <div id="step-content-selected" class="alert alert-success mt-2 d-none">
+                            Выбрано: <strong id="step-content-selected-name"></strong>
                         </div>
                     </div>
+
                     <hr>
                     <h6>Условия разблокировки</h6>
                     <div class="form-check mb-2">
