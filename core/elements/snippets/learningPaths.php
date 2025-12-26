@@ -210,20 +210,16 @@ function renderMyPaths($modx, $prefix, $userId) {
             const container = document.getElementById("my-paths-container");
 
             if (result.success && result.data && result.data.length > 0) {
-                container.innerHTML = result.data.map(path => renderMyPathCard(path)).join("");
+                container.innerHTML = result.data.map(function(path) { return renderMyPathCard(path); }).join("");
             } else {
-                container.innerHTML = `
-                    <div class="col-12">
-                        <div class="alert alert-info text-center py-5">
-                            <i class="bi bi-signpost fs-1 d-block mb-3"></i>
-                            <h5>Вы пока не записаны ни на одну траекторию</h5>
-                            <p class="mb-3">Просмотрите доступные траектории и запишитесь на интересующие</p>
-                            <a href="/learning-paths" class="btn btn-primary">
-                                Просмотреть траектории
-                            </a>
-                        </div>
-                    </div>
-                `;
+                container.innerHTML = "<div class=\"col-12\">" +
+                    "<div class=\"alert alert-info text-center py-5\">" +
+                        "<i class=\"bi bi-signpost fs-1 d-block mb-3\"></i>" +
+                        "<h5>Вы пока не записаны ни на одну траекторию</h5>" +
+                        "<p class=\"mb-3\">Просмотрите доступные траектории и запишитесь на интересующие</p>" +
+                        "<a href=\"/learning-paths\" class=\"btn btn-primary\">Просмотреть траектории</a>" +
+                    "</div>" +
+                "</div>";
             }
         } catch (error) {
             console.error("Error loading my paths:", error);
@@ -231,35 +227,32 @@ function renderMyPaths($modx, $prefix, $userId) {
     }
 
     function renderMyPathCard(path) {
-        const progress = path.completion_pct || 0;
-        const progressClass = progress === 100 ? "bg-success" : progress > 0 ? "bg-primary" : "bg-secondary";
+        var progress = path.completion_pct || 0;
+        var progressClass = progress === 100 ? "bg-success" : progress > 0 ? "bg-primary" : "bg-secondary";
+        var btnText = progress > 0 ? "Продолжить" : "Начать";
 
-        return `
-            <div class="col-md-6 col-lg-4">
-                <div class="card h-100 shadow-sm">
-                    <div class="card-body">
-                        <h5 class="card-title">${escapeHtml(path.name)}</h5>
-                        <p class="text-muted small">${escapeHtml(path.description || "")}</p>
-
-                        <div class="progress mb-3" style="height: 20px;">
-                            <div class="progress-bar ${progressClass}" style="width: ${progress}%">
-                                ${progress}%
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-between text-muted small mb-3">
-                            <span><i class="bi bi-check-circle"></i> ${path.completed_steps || 0}/${path.total_steps || 0} шагов</span>
-                            <span class="badge bg-${getStatusColor(path.status)}">${getStatusText(path.status)}</span>
-                        </div>
-                    </div>
-                    <div class="card-footer bg-white">
-                        <a href="?mode=view&id=${path.path_id}" class="btn btn-primary w-100">
-                            <i class="bi bi-play-fill"></i> ${progress > 0 ? "Продолжить" : "Начать"}
-                        </a>
-                    </div>
-                </div>
-            </div>
-        `;
+        return "<div class=\"col-md-6 col-lg-4\">" +
+            "<div class=\"card h-100 shadow-sm\">" +
+                "<div class=\"card-body\">" +
+                    "<h5 class=\"card-title\">" + escapeHtml(path.name) + "</h5>" +
+                    "<p class=\"text-muted small\">" + escapeHtml(path.description || "") + "</p>" +
+                    "<div class=\"progress mb-3\" style=\"height: 20px;\">" +
+                        "<div class=\"progress-bar " + progressClass + "\" style=\"width: " + progress + "%\">" +
+                            progress + "%" +
+                        "</div>" +
+                    "</div>" +
+                    "<div class=\"d-flex justify-content-between text-muted small mb-3\">" +
+                        "<span><i class=\"bi bi-check-circle\"></i> " + (path.completed_steps || 0) + "/" + (path.total_steps || 0) + " шагов</span>" +
+                        "<span class=\"badge bg-" + getStatusColor(path.status) + "\">" + getStatusText(path.status) + "</span>" +
+                    "</div>" +
+                "</div>" +
+                "<div class=\"card-footer bg-white\">" +
+                    "<a href=\"?mode=view&id=" + path.path_id + "\" class=\"btn btn-primary w-100\">" +
+                        "<i class=\"bi bi-play-fill\"></i> " + btnText +
+                    "</a>" +
+                "</div>" +
+            "</div>" +
+        "</div>";
     }
 
     function getStatusColor(status) {
