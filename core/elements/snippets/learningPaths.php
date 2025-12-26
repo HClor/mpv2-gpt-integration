@@ -17,9 +17,25 @@ require_once MODX_CORE_PATH . 'components/testsystem/services/LearningPathServic
 require_once MODX_CORE_PATH . 'components/testsystem/services/CategoryPermissionService.php';
 
 // mode: GET параметр имеет приоритет над snippet параметром
+// Используем несколько способов получения параметров для совместимости с MODX
 $snippetMode = $modx->getOption('mode', $scriptProperties, '');
-$mode = $_GET['mode'] ?? ($snippetMode ?: 'list');
-$pathId = (int)($_GET['id'] ?? $modx->getOption('pathId', $scriptProperties, 0));
+
+// Пробуем получить mode из разных источников
+$mode = $snippetMode ?: 'list';
+if (isset($_GET['mode']) && !empty($_GET['mode'])) {
+    $mode = $_GET['mode'];
+} elseif (isset($_REQUEST['mode']) && !empty($_REQUEST['mode'])) {
+    $mode = $_REQUEST['mode'];
+}
+
+// Получаем pathId из разных источников
+$pathId = (int)$modx->getOption('pathId', $scriptProperties, 0);
+if (isset($_GET['id']) && $_GET['id'] > 0) {
+    $pathId = (int)$_GET['id'];
+} elseif (isset($_REQUEST['id']) && $_REQUEST['id'] > 0) {
+    $pathId = (int)$_REQUEST['id'];
+}
+
 $userId = $modx->user->get('id');
 $isLoggedIn = $userId > 0;
 
@@ -294,11 +310,14 @@ function renderPathView($modx, $prefix, $pathId, $userId, $isLoggedIn) {
  * Редактор траектории
  */
 function renderPathEditor($modx, $prefix, $pathId, $userId) {
+    // Получаем текущий URL для корректных ссылок
+    $currentUrl = $modx->makeUrl($modx->resource->get('id'));
+
     $html = '
     <div id="path-editor-container" data-path-id="' . $pathId . '">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <a href="?mode=list" class="text-muted text-decoration-none">
+                <a href="' . $currentUrl . '" class="text-muted text-decoration-none">
                     <i class="bi bi-arrow-left"></i> К списку траекторий
                 </a>
                 <h2 class="mt-2"><i class="bi bi-pencil-square"></i> Редактирование траектории</h2>
@@ -313,7 +332,7 @@ function renderPathEditor($modx, $prefix, $pathId, $userId) {
                         onclick="LearningPaths.showManageStudents()">
                     <i class="bi bi-people"></i> Студенты
                 </button>
-                <a href="?mode=view&id=' . $pathId . '" class="btn btn-outline-info">
+                <a href="' . $currentUrl . '?mode=view&id=' . $pathId . '" class="btn btn-outline-info">
                     <i class="bi bi-eye"></i> Просмотр
                 </a>
             </div>
