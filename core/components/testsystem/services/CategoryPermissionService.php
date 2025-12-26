@@ -173,10 +173,12 @@ class CategoryPermissionService
             return false;
         }
 
-        $userGroups = array_keys($user->getUserGroups());
         $adminGroup = Config::getGroup('admins');
+        if (empty($adminGroup)) {
+            return false;
+        }
 
-        return in_array($adminGroup, $userGroups, true);
+        return $user->isMember($adminGroup);
     }
 
     /**
@@ -193,10 +195,12 @@ class CategoryPermissionService
             return false;
         }
 
-        $userGroups = array_keys($user->getUserGroups());
         $expertGroup = Config::getGroup('experts');
+        if (empty($expertGroup)) {
+            return false;
+        }
 
-        return in_array($expertGroup, $userGroups, true);
+        return $user->isMember($expertGroup);
     }
 
     /**
