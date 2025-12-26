@@ -262,6 +262,10 @@ function initLearningPathStepPanel() {
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Сохранение...';
 
         try {
+            // Получаем CSRF токен
+            var csrfToken = document.querySelector('meta[name="csrf-token"]');
+            csrfToken = csrfToken ? csrfToken.content : '';
+
             const response = await fetch(window.TS_API_URL || '/assets/components/testsystem/ajax/testsystem.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -269,7 +273,8 @@ function initLearningPathStepPanel() {
                     action: 'completePathStep',
                     data: {
                         path_id: parseInt(pathId),
-                        step_id: parseInt(stepId)
+                        step_id: parseInt(stepId),
+                        csrf_token: csrfToken
                     }
                 })
             });
