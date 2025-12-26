@@ -16,8 +16,10 @@
 require_once MODX_CORE_PATH . 'components/testsystem/services/LearningPathService.php';
 require_once MODX_CORE_PATH . 'components/testsystem/services/CategoryPermissionService.php';
 
-$mode = $modx->getOption('mode', $scriptProperties, 'list');
-$pathId = (int)$modx->getOption('pathId', $scriptProperties, $_GET['id'] ?? 0);
+// mode: GET параметр имеет приоритет над snippet параметром
+$snippetMode = $modx->getOption('mode', $scriptProperties, '');
+$mode = $_GET['mode'] ?? ($snippetMode ?: 'list');
+$pathId = (int)($_GET['id'] ?? $modx->getOption('pathId', $scriptProperties, 0));
 $userId = $modx->user->get('id');
 $isLoggedIn = $userId > 0;
 
@@ -181,7 +183,7 @@ function renderMyPaths($modx, $prefix, $userId) {
                             <i class="bi bi-signpost fs-1 d-block mb-3"></i>
                             <h5>Вы пока не записаны ни на одну траекторию</h5>
                             <p class="mb-3">Просмотрите доступные траектории и запишитесь на интересующие</p>
-                            <a href="' . $modx->makeUrl($modx->resource->get('id')) . '?mode=list" class="btn btn-primary">
+                            <a href="/learning-paths" class="btn btn-primary">
                                 Просмотреть траектории
                             </a>
                         </div>
@@ -455,8 +457,6 @@ function renderStepModal() {
                         <select class="form-select" id="step-type">
                             <option value="material">Учебный материал</option>
                             <option value="test">Тест</option>
-                            <option value="quiz">Викторина</option>
-                            <option value="assignment">Задание</option>
                         </select>
                     </div>
 

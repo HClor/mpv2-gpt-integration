@@ -290,7 +290,7 @@
                                         <i class="bi bi-copy"></i> Клонировать шаблон
                                     </button>
                                 ` : `
-                                    <a href="/learning-path?id=${path.id}" class="btn btn-primary">
+                                    <a href="?mode=view&id=${path.id}" class="btn btn-primary">
                                         <i class="bi bi-play-fill"></i>
                                         ${progress > 0 ? 'Продолжить' : 'Начать'}
                                     </a>
@@ -301,14 +301,14 @@
                                         <i class="bi bi-person-plus"></i> Назначить студентам
                                     </button>
                                     <div class="btn-group btn-group-sm w-100">
-                                        <a href="/edit-path?id=${path.id}" class="btn btn-outline-secondary">
+                                        <a href="?mode=edit&id=${path.id}" class="btn btn-outline-secondary">
                                             <i class="bi bi-pencil"></i> Редакт.
                                         </a>
                                         ${path.is_template ? '' : `
                                             <button class="btn btn-outline-info"
                                                     onclick="LearningPaths.showCloneModal(${path.id}, '${escapeHtml(path.name).replace(/'/g, "\\'")}')"
                                                     title="Клонировать">
-                                                <i class="bi bi-copy"></i>
+                                                <i class="bi bi-files"></i> Клон
                                             </button>
                                         `}
                                         <button class="btn btn-outline-danger"
