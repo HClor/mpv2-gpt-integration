@@ -59,8 +59,11 @@ $debugInfo = [
     'GET' => $_GET,
     'REQUEST_URI' => $_SERVER['REQUEST_URI'] ?? 'N/A',
     'QUERY_STRING' => $_SERVER['QUERY_STRING'] ?? 'N/A',
+    'scriptProperties' => $scriptProperties ?? [],
 ];
 $modx->log(modX::LOG_LEVEL_ERROR, '[LearningPaths DEBUG] ' . json_encode($debugInfo, JSON_UNESCAPED_UNICODE));
+// HTML debug - временно показываем на странице
+$debugHtml = '<div class="alert alert-warning mb-3" style="font-size:12px;"><strong>DEBUG:</strong> mode=' . htmlspecialchars($mode) . ', pathId=' . $pathId . ', snippetMode=' . htmlspecialchars($snippetMode) . ', GET=' . htmlspecialchars(json_encode($_GET)) . '</div>';
 // ========== END DEBUG ==========
 
 $output = '';
@@ -104,7 +107,8 @@ switch ($mode) {
         $output = '<div class="alert alert-warning">Неизвестный режим</div>';
 }
 
-return $output;
+// Добавляем debug info перед output
+return $debugHtml . $output;
 
 // ============================================
 // ФУНКЦИИ РЕНДЕРИНГА
@@ -539,4 +543,6 @@ function renderStepModal() {
         </div>
     </div>
     ';
+
+    return $html;
 }
