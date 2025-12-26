@@ -102,27 +102,71 @@
         // Event listeners
         document.getElementById('create-path-btn')?.addEventListener('click', showCreatePathModal);
         document.getElementById('save-path-info-btn')?.addEventListener('click', savePathInfo);
-        document.getElementById('filter-category')?.addEventListener('change', filterPaths);
-        document.getElementById('filter-difficulty')?.addEventListener('change', filterPaths);
+
+        // Filter listeners - reload from server
+        document.getElementById('filter-status')?.addEventListener('change', loadPaths);
+        document.getElementById('filter-template')?.addEventListener('change', loadPaths);
+
+        // Client-side filters
+        document.getElementById('filter-difficulty')?.addEventListener('change', filterPathsClient);
+        document.getElementById('filter-search')?.addEventListener('input', filterPathsClient);
     }
 
     async function loadPaths() {
+        const container = document.getElementById('learning-paths-container');
+        container.innerHTML = `
+            <div class="col-12 text-center">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Загрузка...</span>
+                </div>
+            </div>
+        `;
+
         try {
-            const result = await apiCall('getPathsList', {});
+            // Collect filter values
+            const filters = {};
+
+            const statusFilter = document.getElementById('filter-status')?.value;
+            if (statusFilter) {
+                filters.status = statusFilter;
+            }
+
+            const templateFilter = document.getElementById('filter-template')?.value;
+            if (templateFilter !== '' && templateFilter !== undefined) {
+                filters.is_template = parseInt(templateFilter);
+            }
+
+            const result = await apiCall('getPathsList', filters);
 
             if (result.success) {
                 renderPathsList(result.data || []);
+                // Apply client-side filters after rendering
+                filterPathsClient();
             } else {
                 throw new Error(result.message || 'Ошибка загрузки траекторий');
             }
         } catch (error) {
             console.error('Load paths error:', error);
-            document.getElementById('learning-paths-container').innerHTML = `
+            container.innerHTML = `
                 <div class="alert alert-danger">
                     Ошибка загрузки траекторий: ${escapeHtml(error.message)}
                 </div>
             `;
         }
+    }
+
+    function filterPathsClient() {
+        const difficulty = document.getElementById('filter-difficulty')?.value || '';
+        const search = (document.getElementById('filter-search')?.value || '').toLowerCase();
+
+        document.querySelectorAll('.path-card').forEach(card => {
+            const matchesDifficulty = !difficulty || card.dataset.difficulty === difficulty;
+            const cardTitle = card.querySelector('.card-title')?.textContent?.toLowerCase() || '';
+            const cardDesc = card.querySelector('.card-text')?.textContent?.toLowerCase() || '';
+            const matchesSearch = !search || cardTitle.includes(search) || cardDesc.includes(search);
+
+            card.style.display = matchesDifficulty && matchesSearch ? '' : 'none';
+        });
     }
 
     function renderPathsList(paths) {
@@ -252,9 +296,13 @@
                                     </a>
                                 `}
                                 ${path.can_edit ? `
-                                    <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary btn-sm mb-2 w-100"
+                                            onclick="LearningPaths.showEnrollModal(${path.id}, '${escapeHtml(path.name).replace(/'/g, "\\'")}')">
+                                        <i class="bi bi-person-plus"></i> Назначить студентам
+                                    </button>
+                                    <div class="btn-group btn-group-sm w-100">
                                         <a href="/edit-path?id=${path.id}" class="btn btn-outline-secondary">
-                                            <i class="bi bi-pencil"></i> Редактировать
+                                            <i class="bi bi-pencil"></i> Редакт.
                                         </a>
                                         ${path.is_template ? '' : `
                                             <button class="btn btn-outline-info"
@@ -279,17 +327,6 @@
         container.innerHTML = html;
     }
 
-    function filterPaths() {
-        const category = document.getElementById('filter-category')?.value || '';
-        const difficulty = document.getElementById('filter-difficulty')?.value || '';
-
-        document.querySelectorAll('.path-card').forEach(card => {
-            const matchesCategory = !category || card.dataset.category === category;
-            const matchesDifficulty = !difficulty || card.dataset.difficulty === difficulty;
-
-            card.style.display = matchesCategory && matchesDifficulty ? '' : 'none';
-        });
-    }
 
     function showCreatePathModal() {
         currentPathId = null;
@@ -315,6 +352,231 @@
 
     let cloneSourceId = null;
     let cloneSourceName = '';
+
+    // ==================== BULK ENROLLMENT ====================
+
+    let enrollPathId = null;
+    let enrollPathName = '';
+    let availableStudents = [];
+
+    async function showEnrollModal(pathId, pathName) {
+        enrollPathId = pathId;
+        enrollPathName = pathName;
+
+        // Создаём модалку если её нет
+        let enrollModal = document.getElementById('enrollModal');
+        if (!enrollModal) {
+            enrollModal = document.createElement('div');
+            enrollModal.innerHTML = `
+                <div class="modal fade" id="enrollModal" tabindex="-1">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Назначить траекторию студентам</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle"></i>
+                                    Траектория: <strong id="enroll-path-name"></strong>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Дедлайн (опционально)</label>
+                                    <input type="datetime-local" class="form-control" id="enroll-deadline">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Выберите студентов</label>
+                                    <div class="input-group mb-2">
+                                        <input type="text" class="form-control" id="enroll-search"
+                                               placeholder="Поиск по имени или email...">
+                                        <button class="btn btn-outline-secondary" type="button" id="enroll-select-all">
+                                            Выбрать всех
+                                        </button>
+                                    </div>
+                                    <div id="enroll-students-list" class="border rounded p-2"
+                                         style="max-height: 300px; overflow-y: auto;">
+                                        <div class="text-center py-3">
+                                            <span class="spinner-border spinner-border-sm"></span> Загрузка...
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="alert alert-secondary" id="enroll-selected-count">
+                                    Выбрано: <strong>0</strong> студентов
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                                <button type="button" class="btn btn-primary" id="enroll-submit-btn">
+                                    <i class="bi bi-person-plus"></i> Назначить
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(enrollModal.firstElementChild);
+
+            // Обработчики
+            document.getElementById('enroll-submit-btn').addEventListener('click', submitBulkEnroll);
+            document.getElementById('enroll-search').addEventListener('input', filterStudentsList);
+            document.getElementById('enroll-select-all').addEventListener('click', toggleSelectAllStudents);
+        }
+
+        document.getElementById('enroll-path-name').textContent = pathName;
+        document.getElementById('enroll-deadline').value = '';
+        document.getElementById('enroll-search').value = '';
+
+        const modal = new bootstrap.Modal(document.getElementById('enrollModal'));
+        modal.show();
+
+        // Загружаем список студентов
+        loadAvailableStudents(pathId);
+    }
+
+    async function loadAvailableStudents(pathId) {
+        const container = document.getElementById('enroll-students-list');
+        container.innerHTML = '<div class="text-center py-3"><span class="spinner-border spinner-border-sm"></span> Загрузка...</div>';
+
+        try {
+            const result = await apiCall('getAvailableStudents', { path_id: pathId });
+
+            if (result.success) {
+                availableStudents = result.data || [];
+                renderStudentsList(availableStudents);
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error) {
+            console.error('Load students error:', error);
+            container.innerHTML = `<div class="alert alert-danger mb-0">Ошибка загрузки: ${escapeHtml(error.message)}</div>`;
+        }
+    }
+
+    function renderStudentsList(students) {
+        const container = document.getElementById('enroll-students-list');
+
+        if (!students || students.length === 0) {
+            container.innerHTML = '<div class="text-muted text-center py-3">Нет доступных студентов</div>';
+            return;
+        }
+
+        let html = '';
+        students.forEach(student => {
+            const isEnrolled = student.is_enrolled == 1;
+            const displayName = student.fullname || student.username;
+
+            html += `
+                <div class="form-check student-item mb-2 p-2 rounded ${isEnrolled ? 'bg-light' : ''}"
+                     data-name="${escapeHtml(displayName.toLowerCase())}"
+                     data-email="${escapeHtml((student.email || '').toLowerCase())}">
+                    <input class="form-check-input student-checkbox" type="checkbox"
+                           value="${student.id}"
+                           id="student-${student.id}"
+                           ${isEnrolled ? 'disabled checked' : ''}>
+                    <label class="form-check-label w-100" for="student-${student.id}">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <strong>${escapeHtml(displayName)}</strong>
+                                ${student.email ? `<br><small class="text-muted">${escapeHtml(student.email)}</small>` : ''}
+                            </div>
+                            <div>
+                                ${isEnrolled ? `
+                                    <span class="badge bg-success">Уже записан</span>
+                                    ${student.completion_pct ? `<br><small class="text-muted">Прогресс: ${student.completion_pct}%</small>` : ''}
+                                ` : ''}
+                            </div>
+                        </div>
+                    </label>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+
+        // Добавляем обработчик изменения для обновления счётчика
+        container.querySelectorAll('.student-checkbox').forEach(cb => {
+            cb.addEventListener('change', updateSelectedCount);
+        });
+
+        updateSelectedCount();
+    }
+
+    function filterStudentsList() {
+        const query = document.getElementById('enroll-search').value.toLowerCase();
+        const items = document.querySelectorAll('.student-item');
+
+        items.forEach(item => {
+            const name = item.dataset.name || '';
+            const email = item.dataset.email || '';
+            const visible = name.includes(query) || email.includes(query);
+            item.style.display = visible ? '' : 'none';
+        });
+    }
+
+    function toggleSelectAllStudents() {
+        const checkboxes = document.querySelectorAll('.student-checkbox:not(:disabled)');
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+
+        checkboxes.forEach(cb => {
+            if (cb.closest('.student-item').style.display !== 'none') {
+                cb.checked = !allChecked;
+            }
+        });
+
+        updateSelectedCount();
+    }
+
+    function updateSelectedCount() {
+        const checkboxes = document.querySelectorAll('.student-checkbox:not(:disabled):checked');
+        document.getElementById('enroll-selected-count').innerHTML = `Выбрано: <strong>${checkboxes.length}</strong> студентов`;
+    }
+
+    async function submitBulkEnroll() {
+        const selectedIds = [];
+        document.querySelectorAll('.student-checkbox:not(:disabled):checked').forEach(cb => {
+            selectedIds.push(parseInt(cb.value));
+        });
+
+        if (selectedIds.length === 0) {
+            showNotification('Выберите хотя бы одного студента', 'warning');
+            return;
+        }
+
+        const deadline = document.getElementById('enroll-deadline').value || null;
+
+        const submitBtn = document.getElementById('enroll-submit-btn');
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Назначение...';
+
+        try {
+            const result = await apiCall('bulkEnrollOnPath', {
+                path_id: enrollPathId,
+                user_ids: selectedIds,
+                deadline: deadline
+            });
+
+            if (result.success) {
+                const msg = `Назначено ${result.data.enrolled_count} из ${result.data.total_users} студентов`;
+                showNotification(msg, 'success');
+
+                const modal = bootstrap.Modal.getInstance(document.getElementById('enrollModal'));
+                modal.hide();
+
+                loadPaths();
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error) {
+            console.error('Bulk enroll error:', error);
+            showNotification('Ошибка назначения: ' + error.message, 'danger');
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="bi bi-person-plus"></i> Назначить';
+        }
+    }
 
     function showCloneModal(pathId, pathName) {
         cloneSourceId = pathId;
@@ -809,17 +1071,130 @@
         // const sortable = new Sortable(container.querySelector('.steps-sortable'), { ... });
     }
 
+    // Content selection state
+    let selectedContentId = null;
+    let selectedContentName = '';
+    let availableContent = { tests: [], materials: [] };
+
     function showAddStepModal() {
         document.getElementById('step-modal-title').textContent = 'Добавить шаг';
         document.getElementById('step-title').value = '';
         document.getElementById('step-description').value = '';
         document.getElementById('step-type').value = 'material';
         document.getElementById('step-content-id').value = '';
+        document.getElementById('step-content-search').value = '';
         document.getElementById('step-unlock-previous').checked = true;
         document.getElementById('step-unlock-min-score').value = '';
 
+        // Reset content selection
+        selectedContentId = null;
+        selectedContentName = '';
+        document.getElementById('step-content-selected').classList.add('d-none');
+        document.getElementById('step-content-list').innerHTML = `
+            <div class="text-muted text-center py-3">
+                <i class="bi bi-arrow-up"></i> Начните поиск или нажмите кнопку для загрузки списка
+            </div>
+        `;
+
+        // Add event listeners for content selection
+        const stepType = document.getElementById('step-type');
+        const searchBtn = document.getElementById('step-content-search-btn');
+        const searchInput = document.getElementById('step-content-search');
+
+        stepType.onchange = () => loadAvailableContent();
+        searchBtn.onclick = () => loadAvailableContent();
+        searchInput.onkeypress = (e) => { if (e.key === 'Enter') loadAvailableContent(); };
+
         const modal = new bootstrap.Modal(document.getElementById('stepModal'));
         modal.show();
+    }
+
+    async function loadAvailableContent() {
+        const stepType = document.getElementById('step-type').value;
+        const search = document.getElementById('step-content-search').value.trim();
+        const container = document.getElementById('step-content-list');
+
+        container.innerHTML = '<div class="text-center py-3"><span class="spinner-border spinner-border-sm"></span> Загрузка...</div>';
+
+        try {
+            const result = await apiCall('getAvailableContent', {
+                step_type: stepType,
+                search: search
+            });
+
+            if (result.success) {
+                availableContent = result.data;
+                renderContentList(stepType);
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error) {
+            console.error('Load content error:', error);
+            container.innerHTML = `<div class="alert alert-danger mb-0">Ошибка загрузки: ${escapeHtml(error.message)}</div>`;
+        }
+    }
+
+    function renderContentList(stepType) {
+        const container = document.getElementById('step-content-list');
+        let items = [];
+
+        if (stepType === 'material') {
+            items = availableContent.materials || [];
+        } else if (stepType === 'test' || stepType === 'quiz') {
+            items = availableContent.tests || [];
+        } else {
+            items = [...(availableContent.materials || []), ...(availableContent.tests || [])];
+        }
+
+        if (items.length === 0) {
+            container.innerHTML = '<div class="text-muted text-center py-3">Контент не найден</div>';
+            return;
+        }
+
+        let html = '';
+        items.forEach(item => {
+            const isSelected = selectedContentId === item.id;
+            const extra = item.questions_count ? `<small class="text-muted">${item.questions_count} вопр.</small>` :
+                          item.parent_name ? `<small class="text-muted">${escapeHtml(item.parent_name)}</small>` : '';
+
+            html += `
+                <div class="content-item d-flex justify-content-between align-items-center p-2 mb-1 rounded
+                            ${isSelected ? 'bg-primary text-white' : 'bg-light'}"
+                     style="cursor: pointer;"
+                     onclick="LearningPaths.selectContent(${item.id}, '${escapeHtml(item.name).replace(/'/g, "\\'")}')">
+                    <div>
+                        <strong>${escapeHtml(item.name)}</strong>
+                        <br>
+                        <small class="text-${isSelected ? 'white-50' : 'muted'}">${escapeHtml(item.description || item.introtext || 'Нет описания')}</small>
+                    </div>
+                    <div>
+                        ${extra}
+                        <span class="badge bg-${isSelected ? 'light text-primary' : 'secondary'} ms-2">ID: ${item.id}</span>
+                    </div>
+                </div>
+            `;
+        });
+
+        container.innerHTML = html;
+    }
+
+    function selectContent(id, name) {
+        selectedContentId = id;
+        selectedContentName = name;
+
+        document.getElementById('step-content-id').value = id;
+        document.getElementById('step-content-selected-name').textContent = name + ' (ID: ' + id + ')';
+        document.getElementById('step-content-selected').classList.remove('d-none');
+
+        // Автозаполнение названия шага
+        const titleInput = document.getElementById('step-title');
+        if (!titleInput.value) {
+            titleInput.value = name;
+        }
+
+        // Обновляем визуальное выделение
+        const stepType = document.getElementById('step-type').value;
+        renderContentList(stepType);
     }
 
     async function saveStep() {
@@ -1054,7 +1429,11 @@
         removeStep,
         saveStepsOrder,
         showCloneModal,
-        clonePath
+        clonePath,
+        showEnrollModal,
+        submitBulkEnroll,
+        selectContent,
+        loadAvailableContent
     };
 
 })();
