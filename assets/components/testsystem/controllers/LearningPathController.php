@@ -1171,20 +1171,19 @@ class LearningPathController extends BaseController
             'materials' => []
         ];
 
-        // Получаем тесты
+        // Получаем тесты - ресурсы, у которых есть вопросы в test_questions
         if (!$stepType || $stepType === 'test' || $stepType === 'quiz') {
             $sql = "SELECT
                         c.id,
                         c.pagetitle as name,
                         c.description,
-                        cat.name as category_name,
+                        p.pagetitle as category_name,
                         (SELECT COUNT(*) FROM {$prefix}test_questions q WHERE q.resource_id = c.id) as questions_count
                     FROM {$prefix}site_content c
-                    LEFT JOIN {$prefix}test_categories cat ON cat.resource_id = c.parent
-                    WHERE c.template IN (
-                        SELECT id FROM {$prefix}site_templates WHERE templatename LIKE '%test%' OR templatename LIKE '%Test%'
+                    LEFT JOIN {$prefix}site_content p ON p.id = c.parent
+                    WHERE c.id IN (
+                        SELECT DISTINCT resource_id FROM {$prefix}test_questions WHERE resource_id IS NOT NULL
                     )
-                    AND c.published = 1
                     AND c.deleted = 0";
 
             if ($search) {
