@@ -27,8 +27,7 @@ class LearningPathService
                  is_template, parent_id, difficulty_level, estimated_hours, passing_score, certificate_template)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-        $stmt = $modx->prepare($sql);
-        $stmt->execute([
+        $params = [
             $data['name'],
             $data['description'] ?? null,
             $data['category_id'] ?? null,
@@ -41,19 +40,35 @@ class LearningPathService
             $data['estimated_hours'] ?? null,
             $data['passing_score'] ?? 70,
             $data['certificate_template'] ?? null
-        ]);
+        ];
 
-        // Получаем ID через PDO connection
-        $pdo = $modx->getConnection()->pdo ?? $modx->pdo ?? null;
-        if ($pdo) {
-            return (int)$pdo->lastInsertId();
+        $modx->log(modX::LOG_LEVEL_ERROR, '[LearningPathService::createPath] Params: ' . json_encode($params));
+
+        $stmt = $modx->prepare($sql);
+        $result = $stmt->execute($params);
+
+        $modx->log(modX::LOG_LEVEL_ERROR, '[LearningPathService::createPath] Execute: ' . ($result ? 'OK' : 'FAIL'));
+
+        if (!$result) {
+            $modx->log(modX::LOG_LEVEL_ERROR, '[LearningPathService::createPath] Error: ' . json_encode($stmt->errorInfo()));
+            return 0;
         }
 
-        // Fallback: запрос LAST_INSERT_ID()
+        // Пробуем $modx->lastInsertId() как в других сервисах
+        $lastId = (int)$modx->lastInsertId();
+        $modx->log(modX::LOG_LEVEL_ERROR, '[LearningPathService::createPath] lastInsertId: ' . $lastId);
+
+        if ($lastId > 0) {
+            return $lastId;
+        }
+
+        // Fallback: LAST_INSERT_ID()
         $result = $modx->query("SELECT LAST_INSERT_ID() as id");
         if ($result) {
             $row = $result->fetch(PDO::FETCH_ASSOC);
-            return (int)($row['id'] ?? 0);
+            $lastId = (int)($row['id'] ?? 0);
+            $modx->log(modX::LOG_LEVEL_ERROR, '[LearningPathService::createPath] LAST_INSERT_ID query: ' . $lastId);
+            return $lastId;
         }
 
         return 0;
