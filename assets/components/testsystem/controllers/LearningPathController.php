@@ -664,8 +664,8 @@ class LearningPathController extends BaseController
 
         // Если не указан статус, показываем только published для не-админов
         if (!isset($filters['status'])) {
-            if ($this->isAuthenticated()) {
-                $currentUserId = $this->getCurrentUserId();
+            $currentUserId = $this->getCurrentUserId();
+            if ($currentUserId > 0) {
                 $isAdmin = CategoryPermissionService::isGlobalAdmin($this->modx, $currentUserId);
 
                 if (!$isAdmin) {
