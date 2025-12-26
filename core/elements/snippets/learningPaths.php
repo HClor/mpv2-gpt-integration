@@ -12,8 +12,9 @@
  * @version 1.0
  */
 
-// Подключаем сервис
+// Подключаем сервисы
 require_once MODX_CORE_PATH . 'components/testsystem/services/LearningPathService.php';
+require_once MODX_CORE_PATH . 'components/testsystem/services/CategoryPermissionService.php';
 
 $mode = $modx->getOption('mode', $scriptProperties, 'list');
 $pathId = (int)$modx->getOption('pathId', $scriptProperties, $_GET['id'] ?? 0);
@@ -22,8 +23,12 @@ $isLoggedIn = $userId > 0;
 
 $prefix = $modx->getOption('table_prefix');
 
-// Проверяем права редактирования
-$canCreate = $isLoggedIn && ($modx->user->isMember('Administrator') || $modx->user->isMember('ContentManager'));
+// Проверяем права редактирования (админ или эксперт)
+$canCreate = false;
+if ($isLoggedIn) {
+    $canCreate = CategoryPermissionService::isGlobalAdmin($modx, $userId) ||
+                 CategoryPermissionService::isGlobalExpert($modx, $userId);
+}
 
 $output = '';
 
