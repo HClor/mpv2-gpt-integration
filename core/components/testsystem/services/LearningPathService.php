@@ -24,8 +24,8 @@ class LearningPathService
 
         $sql = "INSERT INTO {$prefix}test_learning_paths
                 (name, description, category_id, created_by, status, is_public,
-                 difficulty_level, estimated_hours, passing_score)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                 is_template, parent_id, difficulty_level, estimated_hours, passing_score)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         $stmt = $modx->prepare($sql);
         $stmt->execute([
@@ -35,6 +35,8 @@ class LearningPathService
             $data['created_by'],
             $data['status'] ?? 'draft',
             $data['is_public'] ?? 0,
+            $data['is_template'] ?? 0,
+            $data['parent_id'] ?? null,
             $data['difficulty_level'] ?? 'beginner',
             $data['estimated_hours'] ?? null,
             $data['passing_score'] ?? 70
@@ -125,7 +127,7 @@ class LearningPathService
         $values = [];
 
         $allowedFields = ['name', 'description', 'category_id', 'status', 'is_public',
-                          'difficulty_level', 'estimated_hours', 'passing_score', 'certificate_template'];
+                          'is_template', 'difficulty_level', 'estimated_hours', 'passing_score', 'certificate_template'];
 
         foreach ($allowedFields as $field) {
             if (isset($data[$field])) {
@@ -305,26 +307,36 @@ class LearningPathService
      * @param int $pathId
      * @param int $userId
      * @param int|null $enrolledBy ID того, кто записывает (NULL = самозапись)
-     * @param DateTime|null $expiresAt Дата истечения доступа
+     * @param DateTime|string|null $expiresAt Дата истечения доступа
+     * @param DateTime|string|null $deadline Срок выполнения траектории
      * @return int|false ID записи или false
      */
-    public static function enrollUser($modx, $pathId, $userId, $enrolledBy = null, $expiresAt = null)
+    public static function enrollUser($modx, $pathId, $userId, $enrolledBy = null, $expiresAt = null, $deadline = null)
     {
         $prefix = $modx->getOption('table_prefix', null, 'modx_');
 
-        $expiresAtStr = $expiresAt ? $expiresAt->format('Y-m-d H:i:s') : null;
+        $expiresAtStr = null;
+        if ($expiresAt) {
+            $expiresAtStr = $expiresAt instanceof DateTime ? $expiresAt->format('Y-m-d H:i:s') : $expiresAt;
+        }
+
+        $deadlineStr = null;
+        if ($deadline) {
+            $deadlineStr = $deadline instanceof DateTime ? $deadline->format('Y-m-d H:i:s') : $deadline;
+        }
 
         $sql = "INSERT INTO {$prefix}test_learning_path_enrollments
-                (path_id, user_id, enrolled_by, expires_at)
-                VALUES (?, ?, ?, ?)
+                (path_id, user_id, enrolled_by, expires_at, deadline)
+                VALUES (?, ?, ?, ?, ?)
                 ON DUPLICATE KEY UPDATE
                     is_active = 1,
                     enrolled_at = NOW(),
-                    expires_at = ?";
+                    expires_at = ?,
+                    deadline = ?";
 
         $stmt = $modx->prepare($sql);
 
-        if ($stmt->execute([$pathId, $userId, $enrolledBy, $expiresAtStr, $expiresAtStr])) {
+        if ($stmt->execute([$pathId, $userId, $enrolledBy, $expiresAtStr, $deadlineStr, $expiresAtStr, $deadlineStr])) {
             return (int)$modx->lastInsertId();
         }
 
@@ -373,11 +385,13 @@ class LearningPathService
 
         $sql = "SELECT lp.*, lpp.status as user_status, lpp.completion_pct,
                        lpp.current_step, lpp.started_at, lpp.completed_at,
-                       e.enrolled_at, e.expires_at
+                       e.enrolled_at, e.expires_at, e.deadline, e.enrolled_by,
+                       enroller.username as enrolled_by_name
                 FROM {$prefix}test_learning_path_enrollments e
                 JOIN {$prefix}test_learning_paths lp ON lp.id = e.path_id
                 LEFT JOIN {$prefix}test_learning_path_progress lpp
                     ON lpp.enrollment_id = e.id
+                LEFT JOIN {$prefix}users enroller ON enroller.id = e.enrolled_by
                 WHERE " . implode(' AND ', $where) . "
                 ORDER BY e.enrolled_at DESC";
 
@@ -656,6 +670,16 @@ class LearningPathService
             $params[] = $filters['difficulty_level'];
         }
 
+        if (isset($filters['is_template'])) {
+            $where[] = 'lp.is_template = ?';
+            $params[] = (int)$filters['is_template'];
+        }
+
+        if (!empty($filters['parent_id'])) {
+            $where[] = 'lp.parent_id = ?';
+            $params[] = $filters['parent_id'];
+        }
+
         $sql = "SELECT lp.*, u.username as author_name,
                        c.name as category_name,
                        (SELECT COUNT(*) FROM {$prefix}test_learning_path_steps WHERE path_id = lp.id) as steps_count,
@@ -680,19 +704,125 @@ class LearningPathService
      * @param int $pathId
      * @param array $userIds
      * @param int $enrolledBy
+     * @param string|null $deadline
      * @return int Количество записанных пользователей
      */
-    public static function bulkEnroll($modx, $pathId, $userIds, $enrolledBy)
+    public static function bulkEnroll($modx, $pathId, $userIds, $enrolledBy, $deadline = null)
     {
         $count = 0;
 
         foreach ($userIds as $userId) {
-            if (self::enrollUser($modx, $pathId, $userId, $enrolledBy)) {
+            if (self::enrollUser($modx, $pathId, $userId, $enrolledBy, null, $deadline)) {
                 $count++;
             }
         }
 
         return $count;
+    }
+
+    /**
+     * Клонирование траектории
+     *
+     * Создаёт копию траектории со всеми шагами.
+     * Используется для создания индивидуальных траекторий из шаблона.
+     *
+     * @param modX $modx
+     * @param int $sourcePathId ID исходной траектории
+     * @param int $createdBy ID пользователя, создающего клон
+     * @param array $overrides Переопределения полей (name, description, etc.)
+     * @return int ID созданной траектории
+     */
+    public static function clonePath($modx, $sourcePathId, $createdBy, $overrides = [])
+    {
+        $prefix = $modx->getOption('table_prefix', null, 'modx_');
+
+        // Получаем исходную траекторию
+        $sourcePath = self::getPath($modx, $sourcePathId, true);
+
+        if (!$sourcePath) {
+            throw new Exception('Source path not found');
+        }
+
+        // Формируем данные для новой траектории
+        $newPathData = [
+            'name' => $overrides['name'] ?? $sourcePath['name'] . ' (копия)',
+            'description' => $overrides['description'] ?? $sourcePath['description'],
+            'category_id' => $overrides['category_id'] ?? $sourcePath['category_id'],
+            'created_by' => $createdBy,
+            'status' => $overrides['status'] ?? 'draft',  // Клон всегда создаётся как черновик
+            'is_public' => $overrides['is_public'] ?? 0,  // Клон приватный по умолчанию
+            'is_template' => 0,  // Клон не является шаблоном
+            'parent_id' => $sourcePathId,  // Ссылка на родительскую траекторию
+            'difficulty_level' => $overrides['difficulty_level'] ?? $sourcePath['difficulty_level'],
+            'estimated_hours' => $overrides['estimated_hours'] ?? $sourcePath['estimated_hours'],
+            'passing_score' => $overrides['passing_score'] ?? $sourcePath['passing_score']
+        ];
+
+        // Создаём новую траекторию
+        $newPathId = self::createPath($modx, $newPathData);
+
+        // Клонируем шаги
+        if (!empty($sourcePath['steps'])) {
+            foreach ($sourcePath['steps'] as $step) {
+                $stepData = [
+                    'step_number' => $step['step_number'],
+                    'step_type' => $step['step_type'],
+                    'item_id' => $step['item_id'],
+                    'name' => $step['name'],
+                    'description' => $step['description'],
+                    'is_required' => $step['is_required'],
+                    'unlock_condition' => $step['unlock_condition'],
+                    'min_score' => $step['min_score'],
+                    'estimated_minutes' => $step['estimated_minutes']
+                ];
+
+                self::addStep($modx, $newPathId, $stepData);
+            }
+        }
+
+        // Клонируем достижения (опционально)
+        if (!empty($overrides['clone_achievements']) && $overrides['clone_achievements']) {
+            $achievements = self::getPathAchievements($modx, $sourcePathId);
+
+            foreach ($achievements as $achievement) {
+                self::createAchievement($modx, $newPathId, [
+                    'name' => $achievement['name'],
+                    'description' => $achievement['description'],
+                    'badge_icon' => $achievement['badge_icon'],
+                    'condition_type' => $achievement['condition_type'],
+                    'condition_value' => $achievement['condition_value']
+                ]);
+            }
+        }
+
+        return $newPathId;
+    }
+
+    /**
+     * Получение списка шаблонов траекторий
+     *
+     * @param modX $modx
+     * @param array $filters Дополнительные фильтры
+     * @return array
+     */
+    public static function getTemplates($modx, $filters = [])
+    {
+        $filters['is_template'] = 1;
+        $filters['status'] = 'published';
+
+        return self::getPathsList($modx, $filters);
+    }
+
+    /**
+     * Получение клонов траектории
+     *
+     * @param modX $modx
+     * @param int $parentId ID родительской траектории
+     * @return array
+     */
+    public static function getClones($modx, $parentId)
+    {
+        return self::getPathsList($modx, ['parent_id' => $parentId]);
     }
 
     /**
