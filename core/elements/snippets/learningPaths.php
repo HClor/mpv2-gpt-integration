@@ -16,14 +16,21 @@
 require_once MODX_CORE_PATH . 'components/testsystem/services/LearningPathService.php';
 require_once MODX_CORE_PATH . 'components/testsystem/services/CategoryPermissionService.php';
 
+// Fallback: парсим параметры из REQUEST_URI если $_GET пустой (проблема кэширования MODX)
+$urlParams = [];
+if (isset($_SERVER['QUERY_STRING']) && !empty($_SERVER['QUERY_STRING'])) {
+    parse_str($_SERVER['QUERY_STRING'], $urlParams);
+}
+
 // mode: GET параметр имеет приоритет над snippet параметром
-// Используем несколько способов получения параметров для совместимости с MODX
 $snippetMode = $modx->getOption('mode', $scriptProperties, '');
 
-// Пробуем получить mode из разных источников
+// Пробуем получить mode из разных источников (включая распарсенный QUERY_STRING)
 $mode = $snippetMode ?: 'list';
 if (isset($_GET['mode']) && !empty($_GET['mode'])) {
     $mode = $_GET['mode'];
+} elseif (isset($urlParams['mode']) && !empty($urlParams['mode'])) {
+    $mode = $urlParams['mode'];
 } elseif (isset($_REQUEST['mode']) && !empty($_REQUEST['mode'])) {
     $mode = $_REQUEST['mode'];
 }
@@ -32,6 +39,8 @@ if (isset($_GET['mode']) && !empty($_GET['mode'])) {
 $pathId = (int)$modx->getOption('pathId', $scriptProperties, 0);
 if (isset($_GET['id']) && $_GET['id'] > 0) {
     $pathId = (int)$_GET['id'];
+} elseif (isset($urlParams['id']) && $urlParams['id'] > 0) {
+    $pathId = (int)$urlParams['id'];
 } elseif (isset($_REQUEST['id']) && $_REQUEST['id'] > 0) {
     $pathId = (int)$_REQUEST['id'];
 }
@@ -57,13 +66,12 @@ $debugInfo = [
     'isLoggedIn' => $isLoggedIn,
     'canCreate' => $canCreate,
     'GET' => $_GET,
-    'REQUEST_URI' => $_SERVER['REQUEST_URI'] ?? 'N/A',
+    'urlParams' => $urlParams,
     'QUERY_STRING' => $_SERVER['QUERY_STRING'] ?? 'N/A',
-    'scriptProperties' => $scriptProperties ?? [],
 ];
 $modx->log(modX::LOG_LEVEL_ERROR, '[LearningPaths DEBUG] ' . json_encode($debugInfo, JSON_UNESCAPED_UNICODE));
 // HTML debug - временно показываем на странице
-$debugHtml = '<div class="alert alert-warning mb-3" style="font-size:12px;"><strong>DEBUG:</strong> mode=' . htmlspecialchars($mode) . ', pathId=' . $pathId . ', snippetMode=' . htmlspecialchars($snippetMode) . ', GET=' . htmlspecialchars(json_encode($_GET)) . '</div>';
+$debugHtml = '<div class="alert alert-warning mb-3" style="font-size:12px;"><strong>DEBUG:</strong> mode=' . htmlspecialchars($mode) . ', pathId=' . $pathId . ', QS=' . htmlspecialchars($_SERVER['QUERY_STRING'] ?? '') . '</div>';
 // ========== END DEBUG ==========
 
 $output = '';
