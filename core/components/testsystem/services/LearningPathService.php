@@ -43,7 +43,20 @@ class LearningPathService
             $data['certificate_template'] ?? null
         ]);
 
-        return (int)$modx->lastInsertId();
+        // Получаем ID через PDO connection
+        $pdo = $modx->getConnection()->pdo ?? $modx->pdo ?? null;
+        if ($pdo) {
+            return (int)$pdo->lastInsertId();
+        }
+
+        // Fallback: запрос LAST_INSERT_ID()
+        $result = $modx->query("SELECT LAST_INSERT_ID() as id");
+        if ($result) {
+            $row = $result->fetch(PDO::FETCH_ASSOC);
+            return (int)($row['id'] ?? 0);
+        }
+
+        return 0;
     }
 
     /**
