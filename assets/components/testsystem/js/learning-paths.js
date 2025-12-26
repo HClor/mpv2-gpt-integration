@@ -9,6 +9,11 @@
 
     const API_URL = '/assets/components/testsystem/ajax/testsystem.php';
 
+    // Get base path for URLs (e.g., /learning-paths)
+    function getBasePath() {
+        return window.location.pathname;
+    }
+
     // CSRF Protection
     function getCsrfToken() {
         const metaTag = document.querySelector('meta[name="csrf-token"]');
@@ -290,7 +295,7 @@
                                         <i class="bi bi-copy"></i> Клонировать шаблон
                                     </button>
                                 ` : `
-                                    <a href="?mode=view&id=${path.id}" class="btn btn-primary">
+                                    <a href="${getBasePath()}?mode=view&id=${path.id}" class="btn btn-primary">
                                         <i class="bi bi-play-fill"></i>
                                         ${progress > 0 ? 'Продолжить' : 'Начать'}
                                     </a>
@@ -301,7 +306,7 @@
                                         <i class="bi bi-person-plus"></i> Назначить студентам
                                     </button>
                                     <div class="btn-group btn-group-sm w-100">
-                                        <a href="?mode=edit&id=${path.id}" class="btn btn-outline-secondary">
+                                        <a href="${getBasePath()}?mode=edit&id=${path.id}" class="btn btn-outline-secondary">
                                             <i class="bi bi-pencil"></i> Редакт.
                                         </a>
                                         ${path.is_template ? '' : `
@@ -672,7 +677,7 @@
 
                 // Открываем редактор клона
                 if (result.data && result.data.path_id) {
-                    window.location.href = `/edit-path?id=${result.data.path_id}`;
+                    window.location.href = `${getBasePath()}?mode=edit&id=${result.data.path_id}`;
                 } else {
                     loadPaths();
                 }
@@ -743,9 +748,15 @@
                     loadPathForEdit(currentPathId);
                 } else if (!currentPathId && newPathId) {
                     // Новая траектория - переходим в редактор
-                    window.location.href = `?mode=edit&id=${newPathId}`;
+                    window.location.href = `${getBasePath()}?mode=edit&id=${newPathId}`;
                 } else {
                     // На странице списка - обновляем список
+                    loadPaths();
+                }
+
+                // Также обновляем список если мы на странице списка
+                const pathsContainer = document.getElementById('learning-paths-container');
+                if (pathsContainer && !newPathId) {
                     loadPaths();
                 }
             } else {

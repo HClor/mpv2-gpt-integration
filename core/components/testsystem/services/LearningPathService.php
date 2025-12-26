@@ -24,8 +24,8 @@ class LearningPathService
 
         $sql = "INSERT INTO {$prefix}test_learning_paths
                 (name, description, category_id, created_by, status, is_public,
-                 is_template, parent_id, difficulty_level, estimated_hours, passing_score)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                 is_template, parent_id, difficulty_level, estimated_hours, passing_score, certificate_template)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         $stmt = $modx->prepare($sql);
         $stmt->execute([
@@ -39,7 +39,8 @@ class LearningPathService
             $data['parent_id'] ?? null,
             $data['difficulty_level'] ?? 'beginner',
             $data['estimated_hours'] ?? null,
-            $data['passing_score'] ?? 70
+            $data['passing_score'] ?? 70,
+            $data['certificate_template'] ?? null
         ]);
 
         return (int)$modx->lastInsertId();

@@ -178,6 +178,8 @@ class LearningPathController extends BaseController
         $difficultyLevel = ValidationHelper::optionalString($data, 'difficulty_level', 'beginner');
         $estimatedHours = ValidationHelper::optionalInt($data, 'estimated_hours');
         $passingScore = ValidationHelper::optionalInt($data, 'passing_score', 70);
+        $isTemplate = ValidationHelper::optionalInt($data, 'is_template', 0);
+        $certificateTemplate = ValidationHelper::optionalString($data, 'certificate_template');
 
         // Валидация статуса
         if (!in_array($status, ['draft', 'published', 'archived'])) {
@@ -206,7 +208,9 @@ class LearningPathController extends BaseController
             'is_public' => $isPublic,
             'difficulty_level' => $difficultyLevel,
             'estimated_hours' => $estimatedHours,
-            'passing_score' => $passingScore
+            'passing_score' => $passingScore,
+            'is_template' => $isTemplate,
+            'certificate_template' => $certificateTemplate
         ]);
 
         return $this->success(['path_id' => $pathId], 'Learning path created successfully');
