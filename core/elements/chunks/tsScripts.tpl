@@ -306,10 +306,10 @@ function initLearningPathStepPanel() {
 
 function showLpNotification(message, type) {
     const notification = document.createElement('div');
-    notification.className = `alert alert-${type} position-fixed top-0 start-50 translate-middle-x mt-3 shadow`;
+    notification.className = 'alert alert-' + type + ' position-fixed top-0 start-50 translate-middle-x mt-3 shadow';
     notification.style.zIndex = '10000';
     notification.innerHTML = message;
     document.body.appendChild(notification);
-    setTimeout(() => notification.remove(), 3000);
+    setTimeout(function() { notification.remove(); }, 3000);
 }
 </script>
