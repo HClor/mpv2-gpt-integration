@@ -483,6 +483,28 @@ class LearningPathService
     {
         $prefix = $modx->getOption('table_prefix', null, 'modx_');
 
+        // Сначала проверяем, существует ли запись
+        $checkSql = "SELECT id FROM {$prefix}test_learning_path_step_completion
+                     WHERE progress_id = ? AND step_id = ?";
+        $checkStmt = $modx->prepare($checkSql);
+        $checkStmt->execute([$progressId, $stepId]);
+
+        if (!$checkStmt->fetch()) {
+            // Записи нет - создаём её
+            $insertSql = "INSERT INTO {$prefix}test_learning_path_step_completion
+                          (progress_id, step_id, status, score, completed_at, session_id, material_progress_id, attempts)
+                          VALUES (?, ?, 'completed', ?, NOW(), ?, ?, 1)";
+            $insertStmt = $modx->prepare($insertSql);
+            return $insertStmt->execute([
+                $progressId,
+                $stepId,
+                $completionData['score'] ?? null,
+                $completionData['session_id'] ?? null,
+                $completionData['material_progress_id'] ?? null
+            ]);
+        }
+
+        // Запись есть - обновляем
         $sql = "UPDATE {$prefix}test_learning_path_step_completion
                 SET status = 'completed',
                     score = ?,
@@ -493,13 +515,15 @@ class LearningPathService
                 WHERE progress_id = ? AND step_id = ?";
 
         $stmt = $modx->prepare($sql);
-        return $stmt->execute([
+        $result = $stmt->execute([
             $completionData['score'] ?? null,
             $completionData['session_id'] ?? null,
             $completionData['material_progress_id'] ?? null,
             $progressId,
             $stepId
         ]);
+
+        return $result && $stmt->rowCount() > 0;
     }
 
     /**
@@ -524,8 +548,33 @@ class LearningPathService
         $stmt->execute([$progressId, $stepId]);
         $step = $stmt->fetch(PDO::FETCH_ASSOC);
 
+        // Если записи нет в step_completion, проверяем существование шага
         if (!$step) {
-            return false;
+            // Проверяем, существует ли сам шаг в траектории
+            $sql = "SELECT lps.step_number, lps.unlock_condition
+                    FROM {$prefix}test_learning_path_steps lps
+                    JOIN {$prefix}test_learning_path_progress lpp ON lpp.path_id = lps.path_id
+                    WHERE lpp.id = ? AND lps.id = ?";
+            $stmt = $modx->prepare($sql);
+            $stmt->execute([$progressId, $stepId]);
+            $stepExists = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$stepExists) {
+                return false;
+            }
+
+            // Первый шаг или шаг без условий - разрешаем
+            if ($stepExists['step_number'] == 1 || empty($stepExists['unlock_condition'])) {
+                return true;
+            }
+
+            // Проверяем условия разблокировки
+            $condition = json_decode($stepExists['unlock_condition'], true);
+            if ($condition) {
+                return self::checkUnlockCondition($modx, $progressId, $condition);
+            }
+
+            return true;
         }
 
         // Если шаг уже доступен или завершен
