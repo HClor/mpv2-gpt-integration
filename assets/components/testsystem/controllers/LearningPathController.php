@@ -975,15 +975,53 @@ class LearningPathController extends BaseController
         // Обновляем статус шага на "в процессе"
         LearningPathService::updateStepStatus($this->modx, $progress['id'], $stepId, 'in_progress');
 
+        // Генерируем URL для контента
+        $contentUrl = $this->generateContentUrl($step['step_type'], $step['item_id'], $pathId, $stepId);
+
         return $this->success([
             'step_id' => $step['id'],
             'step_type' => $step['step_type'],
             'content_id' => $step['item_id'],
+            'content_url' => $contentUrl,
             'name' => $step['name'],
             'description' => $step['description'],
             'min_score' => $step['min_score'],
             'estimated_minutes' => $step['estimated_minutes']
         ]);
+    }
+
+    /**
+     * Генерация URL для контента шага
+     */
+    private function generateContentUrl($stepType, $itemId, $pathId, $stepId)
+    {
+        $siteUrl = rtrim($this->modx->getOption('site_url'), '/');
+
+        switch ($stepType) {
+            case 'material':
+                // Для материалов - получаем URL ресурса MODX
+                $resource = $this->modx->getObject('modResource', $itemId);
+                if ($resource) {
+                    $url = $this->modx->makeUrl($itemId);
+                    // Добавляем параметры траектории
+                    $separator = strpos($url, '?') !== false ? '&' : '?';
+                    return $url . $separator . 'path=' . $pathId . '&step=' . $stepId;
+                }
+                // Fallback - если ресурс не найден
+                return $siteUrl . '/index.php?id=' . $itemId . '&path=' . $pathId . '&step=' . $stepId;
+
+            case 'test':
+            case 'quiz':
+                // Для тестов - используем страницу test-run
+                return $siteUrl . '/test-run?testId=' . $itemId . '&path=' . $pathId . '&step=' . $stepId;
+
+            case 'assignment':
+                // Для заданий - пока используем общую страницу
+                return $siteUrl . '/assignment?id=' . $itemId . '&path=' . $pathId . '&step=' . $stepId;
+
+            default:
+                return $siteUrl . '/?id=' . $itemId . '&path=' . $pathId . '&step=' . $stepId;
+        }
     }
 
     /**
