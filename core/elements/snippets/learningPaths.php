@@ -48,6 +48,21 @@ if ($isLoggedIn) {
                  CategoryPermissionService::isGlobalExpert($modx, $userId);
 }
 
+// ========== DEBUG OUTPUT ==========
+$debugInfo = [
+    'snippetMode' => $snippetMode,
+    'mode' => $mode,
+    'pathId' => $pathId,
+    'userId' => $userId,
+    'isLoggedIn' => $isLoggedIn,
+    'canCreate' => $canCreate,
+    'GET' => $_GET,
+    'REQUEST_URI' => $_SERVER['REQUEST_URI'] ?? 'N/A',
+    'QUERY_STRING' => $_SERVER['QUERY_STRING'] ?? 'N/A',
+];
+$modx->log(modX::LOG_LEVEL_ERROR, '[LearningPaths DEBUG] ' . json_encode($debugInfo, JSON_UNESCAPED_UNICODE));
+// ========== END DEBUG ==========
+
 $output = '';
 
 switch ($mode) {
