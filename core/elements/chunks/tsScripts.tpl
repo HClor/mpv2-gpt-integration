@@ -143,5 +143,173 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     console.log('Test System initialized successfully');
+
+    // ========== LEARNING PATH STEP COMPLETION ==========
+    // Показываем панель завершения шага если есть параметры path и step в URL
+    initLearningPathStepPanel();
 });
+
+// Панель завершения шага траектории
+function initLearningPathStepPanel() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const pathId = urlParams.get('path');
+    const stepId = urlParams.get('step');
+
+    // Если нет параметров траектории - выходим
+    if (!pathId || !stepId) return;
+
+    // Не показываем панель на странице самой траектории
+    if (window.location.pathname.includes('learning-paths')) return;
+
+    // Создаём плавающую панель
+    const panel = document.createElement('div');
+    panel.id = 'learning-path-step-panel';
+    panel.innerHTML = `
+        <div class="lp-step-panel shadow-lg">
+            <div class="lp-step-header">
+                <i class="bi bi-signpost-2 me-2"></i>
+                <span>Шаг траектории</span>
+                <button type="button" class="btn-close btn-close-white btn-sm ms-auto" id="lp-panel-close"></button>
+            </div>
+            <div class="lp-step-body">
+                <p class="mb-3">Вы изучаете этот материал в рамках траектории обучения</p>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-success" id="lp-complete-step">
+                        <i class="bi bi-check-circle me-1"></i> Завершить и продолжить
+                    </button>
+                    <button class="btn btn-outline-light btn-sm" id="lp-back-to-path">
+                        <i class="bi bi-arrow-left me-1"></i> Вернуться к траектории
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Стили для панели
+    const styles = document.createElement('style');
+    styles.textContent = `
+        #learning-path-step-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 320px;
+            animation: slideInRight 0.3s ease-out;
+        }
+        @keyframes slideInRight {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .lp-step-panel {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            color: white;
+            overflow: hidden;
+        }
+        .lp-step-header {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background: rgba(0,0,0,0.1);
+            font-weight: 600;
+        }
+        .lp-step-body {
+            padding: 16px;
+        }
+        .lp-step-body p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        #learning-path-step-panel .btn-success {
+            background: #28a745;
+            border: none;
+            padding: 10px 16px;
+        }
+        #learning-path-step-panel .btn-success:hover {
+            background: #218838;
+        }
+        #learning-path-step-panel .btn-outline-light {
+            border-color: rgba(255,255,255,0.5);
+        }
+        #learning-path-step-panel .btn-outline-light:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        #learning-path-step-panel.minimized .lp-step-body {
+            display: none;
+        }
+        #learning-path-step-panel.minimized .lp-step-header {
+            cursor: pointer;
+        }
+    `;
+    document.head.appendChild(styles);
+    document.body.appendChild(panel);
+
+    // Обработчики
+    document.getElementById('lp-panel-close').addEventListener('click', function() {
+        panel.classList.toggle('minimized');
+        if (panel.classList.contains('minimized')) {
+            this.innerHTML = '<i class="bi bi-chevron-up"></i>';
+            document.querySelector('.lp-step-header').addEventListener('click', function() {
+                panel.classList.remove('minimized');
+                document.getElementById('lp-panel-close').innerHTML = '';
+            }, { once: true });
+        }
+    });
+
+    document.getElementById('lp-complete-step').addEventListener('click', async function() {
+        const btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Сохранение...';
+
+        try {
+            const response = await fetch(window.TS_API_URL || '/assets/components/testsystem/ajax/testsystem.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'completePathStep',
+                    data: {
+                        path_id: parseInt(pathId),
+                        step_id: parseInt(stepId)
+                    }
+                })
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                btn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Готово!';
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-light', 'text-success');
+
+                // Показываем уведомление
+                showLpNotification('Шаг успешно завершён!', 'success');
+
+                // Переходим к следующему шагу или обратно к траектории
+                setTimeout(function() {
+                    window.location.href = '/learning-paths?mode=view&id=' + pathId;
+                }, 1000);
+            } else {
+                throw new Error(result.message || 'Ошибка завершения шага');
+            }
+        } catch (error) {
+            console.error('Complete step error:', error);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Завершить и продолжить';
+            showLpNotification('Ошибка: ' + error.message, 'danger');
+        }
+    });
+
+    document.getElementById('lp-back-to-path').addEventListener('click', function() {
+        window.location.href = '/learning-paths?mode=view&id=' + pathId;
+    });
+}
+
+function showLpNotification(message, type) {
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type} position-fixed top-0 start-50 translate-middle-x mt-3 shadow`;
+    notification.style.zIndex = '10000';
+    notification.innerHTML = message;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 3000);
+}
 </script>
