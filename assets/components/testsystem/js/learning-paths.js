@@ -159,11 +159,45 @@
                 ? '<span class="badge bg-success">Опубликован</span>'
                 : '<span class="badge bg-secondary">Черновик</span>';
 
+            // Badge для шаблона
+            const templateBadge = path.is_template
+                ? '<span class="badge bg-info"><i class="bi bi-file-earmark-text"></i> Шаблон</span>'
+                : '';
+
+            // Если это клон - показываем ссылку на родителя
+            const cloneBadge = path.parent_id
+                ? '<span class="badge bg-light text-dark"><i class="bi bi-copy"></i> Клон</span>'
+                : '';
+
+            // Информация о дедлайне и назначении
+            let assignmentInfo = '';
+            if (path.deadline) {
+                const deadlineDate = new Date(path.deadline);
+                const now = new Date();
+                const isOverdue = deadlineDate < now;
+                assignmentInfo += `
+                    <div class="small ${isOverdue ? 'text-danger' : 'text-muted'} mb-2">
+                        <i class="bi bi-calendar-event"></i>
+                        Дедлайн: ${deadlineDate.toLocaleDateString('ru-RU')}
+                        ${isOverdue ? '<span class="badge bg-danger">Просрочено</span>' : ''}
+                    </div>
+                `;
+            }
+            if (path.enrolled_by_name) {
+                assignmentInfo += `
+                    <div class="small text-muted mb-2">
+                        <i class="bi bi-person"></i>
+                        Назначено: ${escapeHtml(path.enrolled_by_name)}
+                    </div>
+                `;
+            }
+
             html += `
                 <div class="col-md-6 col-lg-4 path-card"
                      data-category="${path.category_id || ''}"
-                     data-difficulty="${path.difficulty_level || ''}">
-                    <div class="card h-100 shadow-sm">
+                     data-difficulty="${path.difficulty_level || ''}"
+                     data-is-template="${path.is_template || 0}">
+                    <div class="card h-100 shadow-sm ${path.is_template ? 'border-info' : ''}">
                         ${path.thumbnail_url ? `
                             <img src="${escapeHtml(path.thumbnail_url)}"
                                  class="card-img-top"
@@ -171,8 +205,8 @@
                                  style="height: 180px; object-fit: cover;">
                         ` : `
                             <div class="card-img-top bg-gradient d-flex align-items-center justify-content-center"
-                                 style="height: 180px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
-                                <i class="bi bi-signpost text-white" style="font-size: 3rem;"></i>
+                                 style="height: 180px; background: linear-gradient(135deg, ${path.is_template ? '#17a2b8 0%, #138496 100%' : '#667eea 0%, #764ba2 100%'});">
+                                <i class="bi bi-${path.is_template ? 'file-earmark-text' : 'signpost'} text-white" style="font-size: 3rem;"></i>
                             </div>
                         `}
                         <div class="card-body">
@@ -180,10 +214,14 @@
                             <p class="card-text text-muted small">${escapeHtml(path.description || 'Нет описания')}</p>
 
                             <div class="mb-3">
+                                ${templateBadge}
+                                ${cloneBadge}
                                 ${statusBadge}
                                 ${difficultyBadge}
                                 ${path.certificate_template ? '<span class="badge bg-primary">🎓 С сертификатом</span>' : ''}
                             </div>
+
+                            ${assignmentInfo}
 
                             <div class="d-flex justify-content-between text-muted small mb-3">
                                 <span><i class="bi bi-list-ol"></i> ${path.steps_count || 0} шагов</span>
@@ -202,15 +240,29 @@
                         </div>
                         <div class="card-footer bg-white">
                             <div class="d-grid gap-2">
-                                <a href="/learning-path?id=${path.id}" class="btn btn-primary">
-                                    <i class="bi bi-play-fill"></i>
-                                    ${progress > 0 ? 'Продолжить' : 'Начать'}
-                                </a>
+                                ${path.is_template ? `
+                                    <button class="btn btn-info"
+                                            onclick="LearningPaths.showCloneModal(${path.id}, '${escapeHtml(path.name).replace(/'/g, "\\'")}')">
+                                        <i class="bi bi-copy"></i> Клонировать шаблон
+                                    </button>
+                                ` : `
+                                    <a href="/learning-path?id=${path.id}" class="btn btn-primary">
+                                        <i class="bi bi-play-fill"></i>
+                                        ${progress > 0 ? 'Продолжить' : 'Начать'}
+                                    </a>
+                                `}
                                 ${path.can_edit ? `
                                     <div class="btn-group btn-group-sm">
                                         <a href="/edit-path?id=${path.id}" class="btn btn-outline-secondary">
                                             <i class="bi bi-pencil"></i> Редактировать
                                         </a>
+                                        ${path.is_template ? '' : `
+                                            <button class="btn btn-outline-info"
+                                                    onclick="LearningPaths.showCloneModal(${path.id}, '${escapeHtml(path.name).replace(/'/g, "\\'")}')"
+                                                    title="Клонировать">
+                                                <i class="bi bi-copy"></i>
+                                            </button>
+                                        `}
                                         <button class="btn btn-outline-danger"
                                                 onclick="LearningPaths.deletePath(${path.id}, '${escapeHtml(path.name).replace(/'/g, "\\'")}')">
                                             <i class="bi bi-trash"></i>
@@ -249,8 +301,129 @@
         document.getElementById('path-has-certificate').checked = false;
         document.getElementById('path-published').checked = false;
 
+        // Чекбокс "Шаблон" (если есть)
+        const templateCheckbox = document.getElementById('path-is-template');
+        if (templateCheckbox) {
+            templateCheckbox.checked = false;
+        }
+
         const modal = new bootstrap.Modal(document.getElementById('pathModal'));
         modal.show();
+    }
+
+    // ==================== CLONE FUNCTIONALITY ====================
+
+    let cloneSourceId = null;
+    let cloneSourceName = '';
+
+    function showCloneModal(pathId, pathName) {
+        cloneSourceId = pathId;
+        cloneSourceName = pathName;
+
+        // Создаём модалку если её нет
+        let cloneModal = document.getElementById('cloneModal');
+        if (!cloneModal) {
+            cloneModal = document.createElement('div');
+            cloneModal.innerHTML = `
+                <div class="modal fade" id="cloneModal" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Клонировать траекторию</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body">
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle"></i>
+                                    Будет создана копия траектории "<strong id="clone-source-name"></strong>" со всеми шагами.
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Название новой траектории</label>
+                                    <input type="text" class="form-control" id="clone-new-name" placeholder="Оставьте пустым для автогенерации">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Описание (опционально)</label>
+                                    <textarea class="form-control" id="clone-new-description" rows="2"></textarea>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="clone-achievements">
+                                    <label class="form-check-label" for="clone-achievements">
+                                        Клонировать достижения
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                                <button type="button" class="btn btn-info" id="clone-path-btn">
+                                    <i class="bi bi-copy"></i> Клонировать
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(cloneModal.firstElementChild);
+
+            document.getElementById('clone-path-btn').addEventListener('click', clonePath);
+        }
+
+        document.getElementById('clone-source-name').textContent = pathName;
+        document.getElementById('clone-new-name').value = '';
+        document.getElementById('clone-new-description').value = '';
+        document.getElementById('clone-achievements').checked = false;
+
+        const modal = new bootstrap.Modal(document.getElementById('cloneModal'));
+        modal.show();
+    }
+
+    async function clonePath() {
+        if (!cloneSourceId) return;
+
+        const newName = document.getElementById('clone-new-name').value.trim();
+        const newDescription = document.getElementById('clone-new-description').value.trim();
+        const cloneAchievements = document.getElementById('clone-achievements').checked;
+
+        const cloneBtn = document.getElementById('clone-path-btn');
+        cloneBtn.disabled = true;
+        cloneBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Клонирование...';
+
+        try {
+            const data = {
+                path_id: cloneSourceId,
+                clone_achievements: cloneAchievements
+            };
+
+            if (newName) {
+                data.name = newName;
+            }
+            if (newDescription) {
+                data.description = newDescription;
+            }
+
+            const result = await apiCall('clonePath', data);
+
+            if (result.success) {
+                showNotification('Траектория клонирована успешно', 'success');
+
+                const modal = bootstrap.Modal.getInstance(document.getElementById('cloneModal'));
+                modal.hide();
+
+                // Открываем редактор клона
+                if (result.data && result.data.path_id) {
+                    window.location.href = `/edit-path?id=${result.data.path_id}`;
+                } else {
+                    loadPaths();
+                }
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error) {
+            console.error('Clone path error:', error);
+            showNotification('Ошибка клонирования: ' + error.message, 'danger');
+        } finally {
+            cloneBtn.disabled = false;
+            cloneBtn.innerHTML = '<i class="bi bi-copy"></i> Клонировать';
+        }
     }
 
     async function savePathInfo() {
@@ -260,6 +433,10 @@
         const estimatedHours = parseInt(document.getElementById('path-estimated-hours').value) || 0;
         const hasCertificate = document.getElementById('path-has-certificate').checked;
         const isPublished = document.getElementById('path-published').checked;
+
+        // Чекбокс "Шаблон"
+        const templateCheckbox = document.getElementById('path-is-template');
+        const isTemplate = templateCheckbox ? templateCheckbox.checked : false;
 
         if (!title) {
             showNotification('Введите название траектории', 'warning');
@@ -278,7 +455,8 @@
                 difficulty_level: difficulty,
                 estimated_hours: estimatedHours,
                 certificate_template: hasCertificate ? 'default' : null,
-                status: isPublished ? 'published' : 'draft'
+                status: isPublished ? 'published' : 'draft',
+                is_template: isTemplate ? 1 : 0
             };
 
             if (currentPathId) {
@@ -874,7 +1052,9 @@
         startStep,
         editStep,
         removeStep,
-        saveStepsOrder
+        saveStepsOrder,
+        showCloneModal,
+        clonePath
     };
 
 })();

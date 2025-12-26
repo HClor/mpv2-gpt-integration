@@ -358,6 +358,15 @@ function renderPathModal() {
                             Выдавать сертификат по завершению
                         </label>
                     </div>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" id="path-is-template">
+                        <label class="form-check-label" for="path-is-template">
+                            <i class="bi bi-file-earmark-text text-info"></i> Сохранить как шаблон
+                        </label>
+                        <small class="form-text text-muted d-block">
+                            Шаблоны можно клонировать для создания индивидуальных траекторий
+                        </small>
+                    </div>
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="path-published">
                         <label class="form-check-label" for="path-published">

@@ -114,6 +114,8 @@ class ControllerFactory
         'startStep' => 'LearningPathController',
         'getPathAchievements' => 'LearningPathController',
         'getUserAchievements' => 'LearningPathController',
+        'clonePath' => 'LearningPathController',
+        'getTemplates' => 'LearningPathController',
 
         // Special Question Controller
         'getQuestionTypeData' => 'SpecialQuestionController',

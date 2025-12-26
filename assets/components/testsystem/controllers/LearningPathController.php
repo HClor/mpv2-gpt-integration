@@ -38,7 +38,9 @@ class LearningPathController extends BaseController
         'getStep',
         'startStep',
         'getPathAchievements',
-        'getUserAchievements'
+        'getUserAchievements',
+        'clonePath',
+        'getTemplates'
     ];
 
     /**
@@ -127,6 +129,12 @@ class LearningPathController extends BaseController
 
                 case 'getUserAchievements':
                     return $this->getUserAchievements($data);
+
+                case 'clonePath':
+                    return $this->clonePath($data);
+
+                case 'getTemplates':
+                    return $this->getTemplates($data);
 
                 default:
                     return $this->error('Action not implemented', 501);
@@ -691,6 +699,7 @@ class LearningPathController extends BaseController
         $currentUserId = $this->getCurrentUserId();
         $pathId = ValidationHelper::requireInt($data, 'path_id', 'Path ID required');
         $userIds = ValidationHelper::requireArray($data, 'user_ids', 1, 'User IDs required');
+        $deadline = ValidationHelper::optionalString($data, 'deadline');
 
         // Проверяем права на траекторию
         $path = LearningPathService::getPath($this->modx, $pathId, false);
@@ -716,10 +725,10 @@ class LearningPathController extends BaseController
             throw new PermissionException('No permission to enroll users on this path');
         }
 
-        $count = LearningPathService::bulkEnroll($this->modx, $pathId, $userIds, $currentUserId);
+        $count = LearningPathService::bulkEnroll($this->modx, $pathId, $userIds, $currentUserId, $deadline);
 
         return $this->success(
-            ['enrolled_count' => $count, 'total_users' => count($userIds)],
+            ['enrolled_count' => $count, 'total_users' => count($userIds), 'deadline' => $deadline],
             "{$count} users enrolled successfully"
         );
     }
@@ -1021,5 +1030,87 @@ class LearningPathController extends BaseController
         $achievements = LearningPathService::getUserAchievements($this->modx, $currentUserId, $pathId);
 
         return $this->success($achievements);
+    }
+
+    /**
+     * Клонирование траектории
+     *
+     * Создаёт копию траектории (шаблона) со всеми шагами.
+     */
+    private function clonePath($data)
+    {
+        $this->requireAuth();
+
+        $currentUserId = $this->getCurrentUserId();
+        $sourcePathId = ValidationHelper::requireInt($data, 'path_id', 'Source path ID required');
+
+        // Проверяем права: клонировать могут только эксперты и админы
+        if (!CategoryPermissionService::isGlobalExpert($this->modx, $currentUserId) &&
+            !CategoryPermissionService::isGlobalAdmin($this->modx, $currentUserId)) {
+            throw new PermissionException('Only experts and admins can clone learning paths');
+        }
+
+        // Получаем исходную траекторию
+        $sourcePath = LearningPathService::getPath($this->modx, $sourcePathId, false);
+
+        if (!$sourcePath) {
+            throw new Exception('Source learning path not found');
+        }
+
+        // Проверяем, что траектория является шаблоном или пользователь - автор/админ
+        $isAdmin = CategoryPermissionService::isGlobalAdmin($this->modx, $currentUserId);
+        $isAuthor = (int)$sourcePath['created_by'] === $currentUserId;
+        $isTemplate = !empty($sourcePath['is_template']);
+
+        if (!$isTemplate && !$isAdmin && !$isAuthor) {
+            throw new PermissionException('Only templates can be cloned, or you must be the author');
+        }
+
+        // Собираем переопределения
+        $overrides = [];
+
+        if (!empty($data['name'])) {
+            $overrides['name'] = ValidationHelper::requireString($data, 'name');
+        }
+
+        if (isset($data['description'])) {
+            $overrides['description'] = $data['description'];
+        }
+
+        if (isset($data['category_id'])) {
+            $overrides['category_id'] = ValidationHelper::optionalInt($data, 'category_id');
+        }
+
+        if (isset($data['clone_achievements'])) {
+            $overrides['clone_achievements'] = (bool)$data['clone_achievements'];
+        }
+
+        // Клонируем
+        $newPathId = LearningPathService::clonePath($this->modx, $sourcePathId, $currentUserId, $overrides);
+
+        return $this->success([
+            'path_id' => $newPathId,
+            'source_path_id' => $sourcePathId
+        ], 'Learning path cloned successfully');
+    }
+
+    /**
+     * Получение списка шаблонов траекторий
+     */
+    private function getTemplates($data)
+    {
+        $filters = [];
+
+        if (isset($data['category_id'])) {
+            $filters['category_id'] = ValidationHelper::requireInt($data, 'category_id');
+        }
+
+        if (isset($data['difficulty_level'])) {
+            $filters['difficulty_level'] = $data['difficulty_level'];
+        }
+
+        $templates = LearningPathService::getTemplates($this->modx, $filters);
+
+        return $this->success($templates);
     }
 }
