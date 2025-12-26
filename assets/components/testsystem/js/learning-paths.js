@@ -76,24 +76,9 @@
     // ==================== INITIALIZATION ====================
 
     document.addEventListener('DOMContentLoaded', function() {
-        // ========== DEBUG ==========
-        console.log('%c[LearningPaths DEBUG]', 'background: #007bff; color: white; padding: 2px 6px;', {
-            pathname: window.location.pathname,
-            search: window.location.search,
-            href: window.location.href,
-            containers: {
-                'learning-paths-container': !!document.getElementById('learning-paths-container'),
-                'path-view-container': !!document.getElementById('path-view-container'),
-                'path-editor-container': !!document.getElementById('path-editor-container'),
-            },
-            pathEditorDataset: document.getElementById('path-editor-container')?.dataset,
-        });
-        // ========== END DEBUG ==========
-
         // Страница списка траекторий
         const pathsContainer = document.getElementById('learning-paths-container');
         if (pathsContainer) {
-            console.log('[LearningPaths] Initializing PATHS LIST');
             initPathsList();
         }
 
@@ -101,7 +86,6 @@
         const pathViewContainer = document.getElementById('path-view-container');
         if (pathViewContainer) {
             const pathId = pathViewContainer.dataset.pathId;
-            console.log('[LearningPaths] Initializing PATH VIEW, pathId:', pathId);
             if (pathId) {
                 loadPath(pathId);
             }
@@ -111,7 +95,6 @@
         const pathEditorContainer = document.getElementById('path-editor-container');
         if (pathEditorContainer) {
             const pathId = pathEditorContainer.dataset.pathId;
-            console.log('[LearningPaths] Initializing PATH EDITOR, pathId:', pathId);
             initPathEditor(pathId);
         }
     });
@@ -722,8 +705,6 @@
         const templateCheckbox = document.getElementById('path-is-template');
         const isTemplate = templateCheckbox ? templateCheckbox.checked : false;
 
-        console.log('[LearningPaths] savePathInfo called', { title, currentPathId });
-
         if (!title) {
             showNotification('Введите название траектории', 'warning');
             return;
@@ -749,9 +730,7 @@
                 data.path_id = currentPathId;
             }
 
-            console.log('[LearningPaths] API call:', action, data);
             const result = await apiCall(action, data);
-            console.log('[LearningPaths] API result:', result);
 
             if (result.success) {
                 showNotification(currentPathId ? 'Траектория обновлена' : 'Траектория создана', 'success');
@@ -761,31 +740,21 @@
 
                 // API возвращает path_id в result.data.path_id
                 const newPathId = result.data?.path_id;
-                console.log('[LearningPaths] Success! newPathId:', newPathId, 'currentPathId:', currentPathId);
 
                 // Если мы на странице редактирования - обновляем данные
                 const editorContainer = document.getElementById('path-editor-container');
                 const pathsContainer = document.getElementById('learning-paths-container');
 
-                console.log('[LearningPaths] Containers:', { editorContainer: !!editorContainer, pathsContainer: !!pathsContainer });
-
                 if (editorContainer && currentPathId) {
-                    console.log('[LearningPaths] Reloading editor data');
                     loadPathForEdit(currentPathId);
                 } else if (!currentPathId && newPathId) {
                     // Новая траектория - переходим в редактор
-                    const redirectUrl = `${getBasePath()}?mode=edit&id=${newPathId}`;
-                    console.log('[LearningPaths] Redirecting to:', redirectUrl);
-                    window.location.href = redirectUrl;
+                    window.location.href = `${getBasePath()}?mode=edit&id=${newPathId}`;
                 } else if (pathsContainer) {
                     // На странице списка - обновляем список
-                    console.log('[LearningPaths] Reloading paths list');
                     loadPaths();
-                } else {
-                    console.log('[LearningPaths] No action taken - unexpected state');
                 }
             } else {
-                console.error('[LearningPaths] API returned error:', result);
                 throw new Error(result.message);
             }
         } catch (error) {
@@ -1054,10 +1023,8 @@
     let currentPathData = null;
 
     async function loadPathForEdit(pathId) {
-        console.log('[LearningPaths] loadPathForEdit called, pathId:', pathId);
         try {
             const result = await apiCall('getPath', { path_id: pathId, with_steps: 1 });
-            console.log('[LearningPaths] loadPathForEdit result:', result);
 
             if (result.success) {
                 currentPathData = result.data;
