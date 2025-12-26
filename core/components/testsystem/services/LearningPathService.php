@@ -27,19 +27,26 @@ class LearningPathService
                  is_template, parent_id, difficulty_level, estimated_hours, passing_score, certificate_template)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
+        // Нормализация: 0 и пустые строки -> NULL для nullable FK полей
+        $categoryId = !empty($data['category_id']) ? (int)$data['category_id'] : null;
+        $parentId = !empty($data['parent_id']) ? (int)$data['parent_id'] : null;
+        $estimatedHours = !empty($data['estimated_hours']) ? (int)$data['estimated_hours'] : null;
+        $certificateTemplate = !empty($data['certificate_template']) ? $data['certificate_template'] : null;
+        $description = !empty($data['description']) ? $data['description'] : null;
+
         $params = [
             $data['name'],
-            $data['description'] ?? null,
-            $data['category_id'] ?? null,
+            $description,
+            $categoryId,
             $data['created_by'],
             $data['status'] ?? 'draft',
             $data['is_public'] ?? 0,
             $data['is_template'] ?? 0,
-            $data['parent_id'] ?? null,
+            $parentId,
             $data['difficulty_level'] ?? 'beginner',
-            $data['estimated_hours'] ?? null,
+            $estimatedHours,
             $data['passing_score'] ?? 70,
-            $data['certificate_template'] ?? null
+            $certificateTemplate
         ];
 
         $modx->log(modX::LOG_LEVEL_ERROR, '[LearningPathService::createPath] Params: ' . json_encode($params));
