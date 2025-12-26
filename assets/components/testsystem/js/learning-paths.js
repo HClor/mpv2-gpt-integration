@@ -978,22 +978,11 @@
             if (result.success) {
                 const step = result.data;
 
-                // Перенаправляем на соответствующую страницу в зависимости от типа шага
-                switch (step.step_type) {
-                    case 'material':
-                        window.location.href = `/learning-material?id=${step.content_id}&path=${currentPathId}&step=${stepId}`;
-                        break;
-                    case 'test':
-                        window.location.href = `/test-runner?test=${step.content_id}&path=${currentPathId}&step=${stepId}`;
-                        break;
-                    case 'quiz':
-                        window.location.href = `/quiz?id=${step.content_id}&path=${currentPathId}&step=${stepId}`;
-                        break;
-                    case 'assignment':
-                        window.location.href = `/assignment?id=${step.content_id}&path=${currentPathId}&step=${stepId}`;
-                        break;
-                    default:
-                        throw new Error('Неизвестный тип шага');
+                // Перенаправляем на URL контента, возвращённый сервером
+                if (step.content_url) {
+                    window.location.href = step.content_url;
+                } else {
+                    throw new Error('URL контента не получен от сервера');
                 }
             } else {
                 throw new Error(result.message);
