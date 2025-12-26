@@ -1171,26 +1171,23 @@ class LearningPathController extends BaseController
             'materials' => []
         ];
 
-        // Получаем тесты - ресурсы, у которых есть вопросы в test_questions
-        if (!$stepType || $stepType === 'test' || $stepType === 'quiz') {
+        // Получаем тесты из таблицы modx_test_tests
+        if (!$stepType || $stepType === 'test') {
             $sql = "SELECT
-                        c.id,
-                        c.pagetitle as name,
-                        c.description,
-                        p.pagetitle as category_name,
-                        (SELECT COUNT(*) FROM {$prefix}test_questions q WHERE q.resource_id = c.id) as questions_count
-                    FROM {$prefix}site_content c
-                    LEFT JOIN {$prefix}site_content p ON p.id = c.parent
-                    WHERE c.id IN (
-                        SELECT DISTINCT resource_id FROM {$prefix}test_questions WHERE resource_id IS NOT NULL
-                    )
-                    AND c.deleted = 0";
+                        t.id,
+                        t.title as name,
+                        t.description,
+                        c.name as category_name,
+                        (SELECT COUNT(*) FROM {$prefix}test_questions q WHERE q.test_id = t.id) as questions_count
+                    FROM {$prefix}test_tests t
+                    LEFT JOIN {$prefix}test_categories c ON c.id = t.category_id
+                    WHERE t.is_active = 1";
 
             if ($search) {
-                $sql .= " AND (c.pagetitle LIKE ? OR c.description LIKE ?)";
+                $sql .= " AND (t.title LIKE ? OR t.description LIKE ?)";
             }
 
-            $sql .= " ORDER BY c.pagetitle ASC LIMIT 100";
+            $sql .= " ORDER BY t.title ASC LIMIT 100";
 
             $stmt = $this->modx->prepare($sql);
 
