@@ -117,6 +117,7 @@ class ControllerFactory
         'clonePath' => 'LearningPathController',
         'getTemplates' => 'LearningPathController',
         'getAvailableContent' => 'LearningPathController',
+        'debugPathProgress' => 'LearningPathController',
 
         // Special Question Controller
         'getQuestionTypeData' => 'SpecialQuestionController',
