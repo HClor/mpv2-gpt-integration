@@ -42,7 +42,8 @@ class LearningPathController extends BaseController
         'clonePath',
         'getTemplates',
         'getAvailableContent',
-        'debugPathProgress'
+        'debugPathProgress',
+        'testCompleteStep'
     ];
 
     /**
@@ -143,6 +144,9 @@ class LearningPathController extends BaseController
 
                 case 'debugPathProgress':
                     return $this->debugPathProgress($data);
+
+                case 'testCompleteStep':
+                    return $this->testCompleteStep($data);
 
                 default:
                     return $this->error('Action not implemented', 501);
@@ -1406,5 +1410,53 @@ class LearningPathController extends BaseController
         } catch (Exception $e) {
             return $this->error('Debug error: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
         }
+    }
+
+    /**
+     * Тест SQL запроса для завершения шага
+     */
+    private function testCompleteStep($data)
+    {
+        $this->requireAuth();
+
+        $progressId = ValidationHelper::requireInt($data, 'progress_id', 'Progress ID required');
+        $stepId = ValidationHelper::requireInt($data, 'step_id', 'Step ID required');
+
+        $prefix = $this->modx->getOption('table_prefix', null, 'modx_');
+        $debug = [];
+
+        // Проверяем запись
+        $checkSql = "SELECT * FROM {$prefix}test_learning_path_step_completion
+                     WHERE progress_id = ? AND step_id = ?";
+        $checkStmt = $this->modx->prepare($checkSql);
+        $checkStmt->execute([$progressId, $stepId]);
+        $record = $checkStmt->fetch(PDO::FETCH_ASSOC);
+        $debug['existing_record'] = $record ?: 'NOT FOUND';
+
+        if ($record) {
+            // Пробуем UPDATE
+            $sql = "UPDATE {$prefix}test_learning_path_step_completion
+                    SET status = 'completed',
+                        completed_at = NOW(),
+                        attempts = attempts + 1
+                    WHERE progress_id = ? AND step_id = ?";
+
+            $stmt = $this->modx->prepare($sql);
+            $debug['prepare_result'] = $stmt ? 'OK' : 'FAILED';
+
+            if ($stmt) {
+                $result = $stmt->execute([$progressId, $stepId]);
+                $debug['execute_result'] = $result ? 'OK' : 'FAILED';
+                $debug['error_info'] = $stmt->errorInfo();
+                $debug['rows_affected'] = $stmt->rowCount();
+            }
+
+            // Проверяем после UPDATE
+            $checkStmt2 = $this->modx->prepare($checkSql);
+            $checkStmt2->execute([$progressId, $stepId]);
+            $debug['after_update'] = $checkStmt2->fetch(PDO::FETCH_ASSOC);
+        }
+
+        return $this->success($debug);
     }
 }

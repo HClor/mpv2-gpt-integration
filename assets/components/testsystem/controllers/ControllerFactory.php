@@ -118,6 +118,7 @@ class ControllerFactory
         'getTemplates' => 'LearningPathController',
         'getAvailableContent' => 'LearningPathController',
         'debugPathProgress' => 'LearningPathController',
+        'testCompleteStep' => 'LearningPathController',
 
         // Special Question Controller
         'getQuestionTypeData' => 'SpecialQuestionController',
