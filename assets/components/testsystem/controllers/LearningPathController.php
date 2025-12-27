@@ -41,7 +41,8 @@ class LearningPathController extends BaseController
         'getUserAchievements',
         'clonePath',
         'getTemplates',
-        'getAvailableContent'
+        'getAvailableContent',
+        'debugPathProgress'
     ];
 
     /**
@@ -139,6 +140,9 @@ class LearningPathController extends BaseController
 
                 case 'getAvailableContent':
                     return $this->getAvailableContent($data);
+
+                case 'debugPathProgress':
+                    return $this->debugPathProgress($data);
 
                 default:
                     return $this->error('Action not implemented', 501);
@@ -1318,5 +1322,82 @@ class LearningPathController extends BaseController
         }
 
         return $this->success($result);
+    }
+
+    /**
+     * Диагностика и инициализация прогресса траектории
+     */
+    private function debugPathProgress($data)
+    {
+        $this->requireAuth();
+
+        $currentUserId = $this->getCurrentUserId();
+        $pathId = ValidationHelper::requireInt($data, 'path_id', 'Path ID required');
+        $initIfMissing = ValidationHelper::optionalInt($data, 'init', 0);
+
+        $prefix = $this->modx->getOption('table_prefix', null, 'modx_');
+        $debug = [];
+
+        // 1. Проверяем enrollment
+        $sql = "SELECT * FROM {$prefix}test_learning_path_enrollments
+                WHERE path_id = ? AND user_id = ?";
+        $stmt = $this->modx->prepare($sql);
+        $stmt->execute([$pathId, $currentUserId]);
+        $enrollment = $stmt->fetch(PDO::FETCH_ASSOC);
+        $debug['enrollment'] = $enrollment ?: 'NOT FOUND';
+
+        if (!$enrollment) {
+            return $this->success($debug, 'Not enrolled');
+        }
+
+        // 2. Проверяем progress
+        $sql = "SELECT * FROM {$prefix}test_learning_path_progress
+                WHERE enrollment_id = ?";
+        $stmt = $this->modx->prepare($sql);
+        $stmt->execute([$enrollment['id']]);
+        $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+        $debug['progress'] = $progress ?: 'NOT FOUND';
+
+        // 3. Если прогресса нет и запрошена инициализация
+        if (!$progress && $initIfMissing) {
+            $progressId = LearningPathService::initializeProgress(
+                $this->modx,
+                $enrollment['id'],
+                $pathId,
+                $currentUserId
+            );
+            $debug['initialized_progress_id'] = $progressId;
+
+            // Перечитываем progress
+            $sql = "SELECT * FROM {$prefix}test_learning_path_progress WHERE id = ?";
+            $stmt = $this->modx->prepare($sql);
+            $stmt->execute([$progressId]);
+            $progress = $stmt->fetch(PDO::FETCH_ASSOC);
+            $debug['progress'] = $progress;
+        }
+
+        // 4. Проверяем step_completion
+        if ($progress) {
+            $sql = "SELECT lpsc.*, lps.name as step_name, lps.step_number
+                    FROM {$prefix}test_learning_path_step_completion lpsc
+                    JOIN {$prefix}test_learning_path_steps lps ON lps.id = lpsc.step_id
+                    WHERE lpsc.progress_id = ?
+                    ORDER BY lps.step_number";
+            $stmt = $this->modx->prepare($sql);
+            $stmt->execute([$progress['id']]);
+            $stepCompletions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $debug['step_completions'] = $stepCompletions ?: 'NONE';
+            $debug['step_completions_count'] = count($stepCompletions);
+        }
+
+        // 5. Проверяем шаги траектории
+        $sql = "SELECT * FROM {$prefix}test_learning_path_steps WHERE path_id = ? ORDER BY step_number";
+        $stmt = $this->modx->prepare($sql);
+        $stmt->execute([$pathId]);
+        $steps = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $debug['path_steps'] = $steps;
+        $debug['path_steps_count'] = count($steps);
+
+        return $this->success($debug);
     }
 }
