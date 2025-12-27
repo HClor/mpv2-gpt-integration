@@ -564,21 +564,46 @@ class LearningPathService
         $checkSql = "SELECT id FROM {$prefix}test_learning_path_step_completion
                      WHERE progress_id = ? AND step_id = ?";
         $checkStmt = $modx->prepare($checkSql);
+        if (!$checkStmt) {
+            error_log("[LearningPathService::completeStep] Failed to prepare check query");
+            return false;
+        }
         $checkStmt->execute([$progressId, $stepId]);
+        $existingRecord = $checkStmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$checkStmt->fetch()) {
-            // Записи нет - создаём её
+        if (!$existingRecord) {
+            // Записи нет - получаем user_id из progress
+            $userSql = "SELECT user_id FROM {$prefix}test_learning_path_progress WHERE id = ?";
+            $userStmt = $modx->prepare($userSql);
+            $userStmt->execute([$progressId]);
+            $userId = $userStmt->fetchColumn();
+
+            if (!$userId) {
+                error_log("[LearningPathService::completeStep] Could not find user_id for progress_id: " . $progressId);
+                return false;
+            }
+
+            // Создаём запись
             $insertSql = "INSERT INTO {$prefix}test_learning_path_step_completion
-                          (progress_id, step_id, status, score, completed_at, session_id, material_progress_id, attempts)
-                          VALUES (?, ?, 'completed', ?, NOW(), ?, ?, 1)";
+                          (progress_id, step_id, user_id, status, score, completed_at, session_id, material_progress_id, attempts)
+                          VALUES (?, ?, ?, 'completed', ?, NOW(), ?, ?, 1)";
             $insertStmt = $modx->prepare($insertSql);
-            return $insertStmt->execute([
+            if (!$insertStmt) {
+                error_log("[LearningPathService::completeStep] Failed to prepare insert query");
+                return false;
+            }
+            $result = $insertStmt->execute([
                 $progressId,
                 $stepId,
+                $userId,
                 $completionData['score'] ?? null,
                 $completionData['session_id'] ?? null,
                 $completionData['material_progress_id'] ?? null
             ]);
+            if (!$result) {
+                error_log("[LearningPathService::completeStep] Insert failed: " . json_encode($insertStmt->errorInfo()));
+            }
+            return $result;
         }
 
         // Запись есть - обновляем
@@ -592,6 +617,10 @@ class LearningPathService
                 WHERE progress_id = ? AND step_id = ?";
 
         $stmt = $modx->prepare($sql);
+        if (!$stmt) {
+            error_log("[LearningPathService::completeStep] Failed to prepare update query");
+            return false;
+        }
         $result = $stmt->execute([
             $completionData['score'] ?? null,
             $completionData['session_id'] ?? null,
@@ -600,8 +629,13 @@ class LearningPathService
             $stepId
         ]);
 
+        if (!$result) {
+            error_log("[LearningPathService::completeStep] Update failed: " . json_encode($stmt->errorInfo()));
+        } else {
+            error_log("[LearningPathService::completeStep] Update successful. Rows affected: " . $stmt->rowCount());
+        }
+
         // Возвращаем true если запрос выполнился успешно
-        // rowCount может быть 0 если данные не изменились, но это не ошибка
         return $result;
     }
 
