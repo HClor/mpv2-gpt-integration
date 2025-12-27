@@ -1014,22 +1014,32 @@ class LearningPathController extends BaseController
     {
         $siteUrl = rtrim($this->modx->getOption('site_url'), '/');
 
+        // Проверяем, что item_id указан
+        if (empty($itemId)) {
+            throw new Exception('Контент для этого шага не настроен (item_id не указан)');
+        }
+
         switch ($stepType) {
             case 'material':
                 // Для материалов - получаем URL ресурса MODX
                 $resource = $this->modx->getObject('modResource', $itemId);
-                if ($resource) {
-                    $url = $this->modx->makeUrl($itemId);
-                    // Добавляем параметры траектории
-                    $separator = strpos($url, '?') !== false ? '&' : '?';
-                    return $url . $separator . 'path=' . $pathId . '&step=' . $stepId;
+                if (!$resource) {
+                    throw new Exception('Материал не найден (ресурс ID=' . $itemId . ' не существует). Обратитесь к администратору.');
                 }
-                // Fallback - если ресурс не найден
-                return $siteUrl . '/index.php?id=' . $itemId . '&path=' . $pathId . '&step=' . $stepId;
+                $url = $this->modx->makeUrl($itemId);
+                // Добавляем параметры траектории
+                $separator = strpos($url, '?') !== false ? '&' : '?';
+                return $url . $separator . 'path=' . $pathId . '&step=' . $stepId;
 
             case 'test':
             case 'quiz':
-                // Для тестов - используем страницу test-run
+                // Для тестов - проверяем существование теста
+                $prefix = $this->modx->getOption('table_prefix', null, 'modx_');
+                $stmt = $this->modx->prepare("SELECT id FROM {$prefix}test_tests WHERE id = ?");
+                $stmt->execute([$itemId]);
+                if (!$stmt->fetch()) {
+                    throw new Exception('Тест не найден (ID=' . $itemId . '). Обратитесь к администратору.');
+                }
                 return $siteUrl . '/test-run?testId=' . $itemId . '&path=' . $pathId . '&step=' . $stepId;
 
             case 'assignment':
@@ -1037,7 +1047,7 @@ class LearningPathController extends BaseController
                 return $siteUrl . '/assignment?id=' . $itemId . '&path=' . $pathId . '&step=' . $stepId;
 
             default:
-                return $siteUrl . '/?id=' . $itemId . '&path=' . $pathId . '&step=' . $stepId;
+                throw new Exception('Неизвестный тип шага: ' . $stepType);
         }
     }
 
