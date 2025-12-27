@@ -1329,14 +1329,17 @@ class LearningPathController extends BaseController
      */
     private function debugPathProgress($data)
     {
-        $this->requireAuth();
+        try {
+            $this->requireAuth();
 
-        $currentUserId = $this->getCurrentUserId();
-        $pathId = ValidationHelper::requireInt($data, 'path_id', 'Path ID required');
-        $initIfMissing = ValidationHelper::optionalInt($data, 'init', 0);
+            $currentUserId = $this->getCurrentUserId();
+            $pathId = ValidationHelper::requireInt($data, 'path_id', 'Path ID required');
+            $initIfMissing = ValidationHelper::optionalInt($data, 'init', 0);
 
-        $prefix = $this->modx->getOption('table_prefix', null, 'modx_');
-        $debug = [];
+            $prefix = $this->modx->getOption('table_prefix', null, 'modx_');
+            $debug = [];
+            $debug['user_id'] = $currentUserId;
+            $debug['path_id'] = $pathId;
 
         // 1. Проверяем enrollment
         $sql = "SELECT * FROM {$prefix}test_learning_path_enrollments
@@ -1399,5 +1402,8 @@ class LearningPathController extends BaseController
         $debug['path_steps_count'] = count($steps);
 
         return $this->success($debug);
+        } catch (Exception $e) {
+            return $this->error('Debug error: ' . $e->getMessage() . ' at ' . $e->getFile() . ':' . $e->getLine());
+        }
     }
 }
