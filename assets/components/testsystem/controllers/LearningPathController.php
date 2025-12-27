@@ -627,12 +627,13 @@ class LearningPathController extends BaseController
         $progress = LearningPathService::getUserProgress($this->modx, $pathId, $currentUserId);
 
         if (!$progress) {
-            throw new Exception('Not enrolled on this path');
+            throw new Exception('Not enrolled on this path. User: ' . $currentUserId . ', Path: ' . $pathId);
         }
 
         // Проверяем доступ к шагу
-        if (!LearningPathService::canAccessStep($this->modx, $progress['id'], $stepId)) {
-            throw new PermissionException('Step is not available yet');
+        $canAccess = LearningPathService::canAccessStep($this->modx, $progress['id'], $stepId);
+        if (!$canAccess) {
+            throw new PermissionException('Step is not available yet. Progress ID: ' . $progress['id'] . ', Step ID: ' . $stepId);
         }
 
         $completionData = [
@@ -646,7 +647,7 @@ class LearningPathController extends BaseController
         if ($success) {
             return $this->success(null, 'Step completed successfully');
         } else {
-            throw new Exception('Failed to complete step');
+            throw new Exception('Failed to complete step. Progress ID: ' . $progress['id'] . ', Step ID: ' . $stepId);
         }
     }
 
