@@ -31,6 +31,7 @@
     let currentPathId = null;
     let pathSteps = [];
     let userProgress = {};
+    let isEnrolled = false;
 
     // Step Types
     const STEP_TYPE_LABELS = {
@@ -795,6 +796,7 @@
             if (result.success) {
                 currentPathId = pathId;
                 pathSteps = result.data.steps || [];
+                isEnrolled = result.data.is_enrolled || false;
                 userProgress = result.data.user_progress || {};
 
                 renderPathView(result.data);
@@ -862,13 +864,23 @@
                     </div>
                 </div>
 
-                <div class="progress mb-4" style="height: 25px;">
-                    <div class="progress-bar bg-success progress-bar-striped ${progress < 100 ? 'progress-bar-animated' : ''}"
-                         role="progressbar"
-                         style="width: ${progress}%">
-                        ${progress}%
+                ${isEnrolled ? `
+                    <div class="progress mb-4" style="height: 25px;">
+                        <div class="progress-bar bg-success progress-bar-striped ${progress < 100 ? 'progress-bar-animated' : ''}"
+                             role="progressbar"
+                             style="width: ${progress}%">
+                            ${progress}%
+                        </div>
                     </div>
-                </div>
+                ` : `
+                    <div class="alert alert-info mb-4">
+                        <i class="bi bi-info-circle me-2"></i>
+                        Вы ещё не записаны на эту траекторию обучения.
+                        <button class="btn btn-primary btn-sm ms-3" onclick="LearningPaths.enrollOnPath(${data.id})">
+                            <i class="bi bi-plus-circle me-1"></i> Записаться
+                        </button>
+                    </div>
+                `}
             </div>
 
             <div class="path-steps">
@@ -947,7 +959,7 @@
 
                             ${unlockRequirements}
 
-                            ${!isLocked ? `
+                            ${!isLocked && isEnrolled ? `
                                 <div class="mt-3">
                                     <button class="btn ${isCompleted ? 'btn-outline-primary' : 'btn-primary'}"
                                             onclick="LearningPaths.startStep(${step.id})">
@@ -990,6 +1002,25 @@
         } catch (error) {
             console.error('Start step error:', error);
             showNotification('Ошибка запуска шага: ' + error.message, 'danger');
+        }
+    }
+
+    async function enrollOnPath(pathId) {
+        try {
+            const result = await apiCall('enrollOnPath', {
+                path_id: pathId
+            });
+
+            if (result.success) {
+                showNotification('Вы успешно записались на траекторию!', 'success');
+                // Перезагружаем страницу, чтобы обновить состояние
+                await loadPath(pathId);
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error) {
+            console.error('Enroll error:', error);
+            showNotification('Ошибка записи на траекторию: ' + error.message, 'danger');
         }
     }
 
@@ -1491,6 +1522,7 @@
         deletePath,
         loadPath,
         startStep,
+        enrollOnPath,
         editStep,
         removeStep,
         saveStepsOrder,
