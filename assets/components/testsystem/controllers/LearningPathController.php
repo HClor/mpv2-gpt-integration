@@ -230,10 +230,12 @@ class LearningPathController extends BaseController
             throw new Exception('Learning path not found');
         }
 
+        // Получаем ID текущего пользователя (может быть null если не авторизован)
+        $currentUserId = $this->getCurrentUserId();
+
         // Проверка доступа
         if ($path['status'] !== 'published' && !$path['is_public']) {
             $this->requireAuth();
-            $currentUserId = $this->getCurrentUserId();
 
             $isAuthor = (int)$path['created_by'] === $currentUserId;
             $isAdmin = CategoryPermissionService::isGlobalAdmin($this->modx, $currentUserId);
@@ -252,6 +254,21 @@ class LearningPathController extends BaseController
             if (!$canView) {
                 throw new PermissionException('No permission to view this learning path');
             }
+        }
+
+        // Добавляем информацию о записи и прогрессе для авторизованного пользователя
+        if ($currentUserId) {
+            $path['is_enrolled'] = LearningPathService::isUserEnrolled($this->modx, $pathId, $currentUserId);
+
+            if ($path['is_enrolled']) {
+                $progress = LearningPathService::getUserProgress($this->modx, $pathId, $currentUserId);
+                $path['user_progress'] = $progress;
+            } else {
+                $path['user_progress'] = null;
+            }
+        } else {
+            $path['is_enrolled'] = false;
+            $path['user_progress'] = null;
         }
 
         return $this->success($path);
