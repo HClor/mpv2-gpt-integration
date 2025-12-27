@@ -366,10 +366,87 @@ class LearningPathService
         $stmt = $modx->prepare($sql);
 
         if ($stmt->execute([$pathId, $userId, $enrolledBy, $expiresAtStr, $deadlineStr, $expiresAtStr, $deadlineStr])) {
-            return (int)$modx->lastInsertId();
+            $enrollmentId = (int)$modx->lastInsertId();
+
+            // Если это реинроллмент (enrollmentId = 0), получаем существующий ID
+            if ($enrollmentId === 0) {
+                $sql = "SELECT id FROM {$prefix}test_learning_path_enrollments WHERE path_id = ? AND user_id = ?";
+                $stmt = $modx->prepare($sql);
+                $stmt->execute([$pathId, $userId]);
+                $enrollmentId = (int)$stmt->fetchColumn();
+            }
+
+            // Инициализируем прогресс
+            self::initializeProgress($modx, $enrollmentId, $pathId, $userId);
+
+            return $enrollmentId;
         }
 
         return false;
+    }
+
+    /**
+     * Инициализация прогресса для пользователя
+     *
+     * @param modX $modx
+     * @param int $enrollmentId
+     * @param int $pathId
+     * @param int $userId
+     * @return int|false ID записи progress или false
+     */
+    public static function initializeProgress($modx, $enrollmentId, $pathId, $userId)
+    {
+        $prefix = $modx->getOption('table_prefix', null, 'modx_');
+
+        // Проверяем, есть ли уже прогресс
+        $sql = "SELECT id FROM {$prefix}test_learning_path_progress WHERE enrollment_id = ?";
+        $stmt = $modx->prepare($sql);
+        $stmt->execute([$enrollmentId]);
+        $existingProgress = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($existingProgress) {
+            return (int)$existingProgress['id'];
+        }
+
+        // Создаём запись прогресса
+        $sql = "INSERT INTO {$prefix}test_learning_path_progress
+                (enrollment_id, path_id, user_id, current_step, status, completion_pct)
+                VALUES (?, ?, ?, 1, 'not_started', 0)";
+        $stmt = $modx->prepare($sql);
+        $stmt->execute([$enrollmentId, $pathId, $userId]);
+        $progressId = (int)$modx->lastInsertId();
+
+        if (!$progressId) {
+            return false;
+        }
+
+        // Получаем все шаги траектории
+        $sql = "SELECT id, step_number, unlock_condition FROM {$prefix}test_learning_path_steps
+                WHERE path_id = ? ORDER BY step_number";
+        $stmt = $modx->prepare($sql);
+        $stmt->execute([$pathId]);
+        $steps = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Создаём записи step_completion для каждого шага
+        foreach ($steps as $step) {
+            // Первый шаг доступен сразу, остальные заблокированы
+            $status = ($step['step_number'] == 1) ? 'available' : 'locked';
+
+            // Если у шага нет условий разблокировки, делаем его доступным
+            if (empty($step['unlock_condition']) && $step['step_number'] > 1) {
+                $status = 'available';
+            }
+
+            $sql = "INSERT INTO {$prefix}test_learning_path_step_completion
+                    (progress_id, step_id, user_id, status, attempts)
+                    VALUES (?, ?, ?, ?, 0)
+                    ON DUPLICATE KEY UPDATE status = status"; // Не перезаписываем, если уже есть
+
+            $stmt = $modx->prepare($sql);
+            $stmt->execute([$progressId, $step['id'], $userId, $status]);
+        }
+
+        return $progressId;
     }
 
     /**
@@ -508,7 +585,7 @@ class LearningPathService
         $sql = "UPDATE {$prefix}test_learning_path_step_completion
                 SET status = 'completed',
                     score = ?,
-                    completed_at = NOW(),
+                    completed_at = COALESCE(completed_at, NOW()),
                     session_id = ?,
                     material_progress_id = ?,
                     attempts = attempts + 1
@@ -523,7 +600,9 @@ class LearningPathService
             $stepId
         ]);
 
-        return $result && $stmt->rowCount() > 0;
+        // Возвращаем true если запрос выполнился успешно
+        // rowCount может быть 0 если данные не изменились, но это не ошибка
+        return $result;
     }
 
     /**

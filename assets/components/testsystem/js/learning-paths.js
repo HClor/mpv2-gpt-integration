@@ -865,12 +865,17 @@
                 </div>
 
                 ${isEnrolled ? `
-                    <div class="progress mb-4" style="height: 25px;">
-                        <div class="progress-bar bg-success progress-bar-striped ${progress < 100 ? 'progress-bar-animated' : ''}"
-                             role="progressbar"
-                             style="width: ${progress}%">
-                            ${progress}%
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="progress flex-grow-1 me-3" style="height: 25px;">
+                            <div class="progress-bar bg-success progress-bar-striped ${progress < 100 ? 'progress-bar-animated' : ''}"
+                                 role="progressbar"
+                                 style="width: ${progress}%">
+                                ${progress}%
+                            </div>
                         </div>
+                        <button class="btn btn-outline-secondary btn-sm" onclick="LearningPaths.unenrollFromPath(${data.id})">
+                            <i class="bi bi-x-circle me-1"></i> Отписаться
+                        </button>
                     </div>
                 ` : `
                     <div class="alert alert-info mb-4">
@@ -1021,6 +1026,29 @@
         } catch (error) {
             console.error('Enroll error:', error);
             showNotification('Ошибка записи на траекторию: ' + error.message, 'danger');
+        }
+    }
+
+    async function unenrollFromPath(pathId) {
+        if (!confirm('Вы уверены, что хотите отписаться от траектории? Ваш прогресс будет сохранён.')) {
+            return;
+        }
+
+        try {
+            const result = await apiCall('unenrollFromPath', {
+                path_id: pathId
+            });
+
+            if (result.success) {
+                showNotification('Вы отписались от траектории', 'success');
+                // Перезагружаем страницу, чтобы обновить состояние
+                await loadPath(pathId);
+            } else {
+                throw new Error(result.message);
+            }
+        } catch (error) {
+            console.error('Unenroll error:', error);
+            showNotification('Ошибка отписки: ' + error.message, 'danger');
         }
     }
 
@@ -1523,6 +1551,7 @@
         loadPath,
         startStep,
         enrollOnPath,
+        unenrollFromPath,
         editStep,
         removeStep,
         saveStepsOrder,
