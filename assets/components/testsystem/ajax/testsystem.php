@@ -101,6 +101,12 @@ if (empty($data)) {
     if ($action === 'getTestSettings' && isset($_GET['test_id'])) {
         $data['test_id'] = $_GET['test_id'];
     }
+    // Диагностика траекторий (временно)
+    if ($action === 'debugPathProgress' || $action === 'testCompleteStep') {
+        if (isset($_GET['path_id'])) $data['path_id'] = (int)$_GET['path_id'];
+        if (isset($_GET['step_id'])) $data['step_id'] = (int)$_GET['step_id'];
+        if (isset($_GET['progress_id'])) $data['progress_id'] = (int)$_GET['progress_id'];
+    }
 }
 
 $response = ['success' => false, 'message' => 'Unknown action'];

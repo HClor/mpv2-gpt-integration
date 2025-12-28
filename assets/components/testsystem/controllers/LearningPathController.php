@@ -1414,24 +1414,61 @@ class LearningPathController extends BaseController
 
     /**
      * Тест SQL запроса для завершения шага
+     * Можно вызвать через GET: testsystem.php?action=testCompleteStep&path_id=18&step_id=29
      */
     private function testCompleteStep($data)
     {
         $this->requireAuth();
 
-        $progressId = ValidationHelper::requireInt($data, 'progress_id', 'Progress ID required');
-        $stepId = ValidationHelper::requireInt($data, 'step_id', 'Step ID required');
-
+        $currentUserId = $this->getCurrentUserId();
         $prefix = $this->modx->getOption('table_prefix', null, 'modx_');
-        $debug = [];
+        $debug = ['user_id' => $currentUserId];
 
-        // Проверяем запись
+        // Если передан path_id, получаем progress_id автоматически
+        if (isset($data['path_id']) && isset($data['step_id'])) {
+            $pathId = (int)$data['path_id'];
+            $stepId = (int)$data['step_id'];
+            $debug['input'] = ['path_id' => $pathId, 'step_id' => $stepId];
+
+            // Находим progress
+            $progressSql = "SELECT * FROM {$prefix}test_learning_path_progress
+                            WHERE path_id = ? AND user_id = ?";
+            $progressStmt = $this->modx->prepare($progressSql);
+            $progressStmt->execute([$pathId, $currentUserId]);
+            $progress = $progressStmt->fetch(PDO::FETCH_ASSOC);
+            $debug['progress'] = $progress ?: 'NOT FOUND';
+
+            if (!$progress) {
+                return $this->success($debug);
+            }
+            $progressId = $progress['id'];
+
+        } elseif (isset($data['progress_id']) && isset($data['step_id'])) {
+            $progressId = (int)$data['progress_id'];
+            $stepId = (int)$data['step_id'];
+            $debug['input'] = ['progress_id' => $progressId, 'step_id' => $stepId];
+        } else {
+            return $this->error('Требуется (path_id + step_id) или (progress_id + step_id)');
+        }
+
+        $debug['resolved'] = ['progress_id' => $progressId, 'step_id' => $stepId];
+
+        // Проверяем step_completion запись
         $checkSql = "SELECT * FROM {$prefix}test_learning_path_step_completion
                      WHERE progress_id = ? AND step_id = ?";
         $checkStmt = $this->modx->prepare($checkSql);
         $checkStmt->execute([$progressId, $stepId]);
         $record = $checkStmt->fetch(PDO::FETCH_ASSOC);
-        $debug['existing_record'] = $record ?: 'NOT FOUND';
+        $debug['step_completion_before'] = $record ?: 'NOT FOUND';
+
+        // Получаем все записи step_completion для этого progress_id
+        $allSql = "SELECT sc.*, s.title as step_title, s.step_number
+                   FROM {$prefix}test_learning_path_step_completion sc
+                   LEFT JOIN {$prefix}test_learning_path_steps s ON s.id = sc.step_id
+                   WHERE sc.progress_id = ? ORDER BY s.step_number";
+        $allStmt = $this->modx->prepare($allSql);
+        $allStmt->execute([$progressId]);
+        $debug['all_steps'] = $allStmt->fetchAll(PDO::FETCH_ASSOC);
 
         if ($record) {
             // Пробуем UPDATE
@@ -1442,19 +1479,33 @@ class LearningPathController extends BaseController
                     WHERE progress_id = ? AND step_id = ?";
 
             $stmt = $this->modx->prepare($sql);
-            $debug['prepare_result'] = $stmt ? 'OK' : 'FAILED';
+            $debug['update_prepare'] = $stmt ? 'OK' : 'FAILED';
 
             if ($stmt) {
                 $result = $stmt->execute([$progressId, $stepId]);
-                $debug['execute_result'] = $result ? 'OK' : 'FAILED';
-                $debug['error_info'] = $stmt->errorInfo();
-                $debug['rows_affected'] = $stmt->rowCount();
+                $debug['update_execute'] = $result ? 'OK' : 'FAILED';
+                $debug['update_error'] = $stmt->errorInfo();
+                $debug['update_rows'] = $stmt->rowCount();
             }
 
             // Проверяем после UPDATE
             $checkStmt2 = $this->modx->prepare($checkSql);
             $checkStmt2->execute([$progressId, $stepId]);
-            $debug['after_update'] = $checkStmt2->fetch(PDO::FETCH_ASSOC);
+            $debug['step_completion_after'] = $checkStmt2->fetch(PDO::FETCH_ASSOC);
+        } else {
+            // Пробуем INSERT
+            $insertSql = "INSERT INTO {$prefix}test_learning_path_step_completion
+                          (progress_id, step_id, user_id, status, completed_at, attempts)
+                          VALUES (?, ?, ?, 'completed', NOW(), 1)";
+            $insertStmt = $this->modx->prepare($insertSql);
+            $debug['insert_prepare'] = $insertStmt ? 'OK' : 'FAILED';
+
+            if ($insertStmt) {
+                $result = $insertStmt->execute([$progressId, $stepId, $currentUserId]);
+                $debug['insert_execute'] = $result ? 'OK' : 'FAILED';
+                $debug['insert_error'] = $insertStmt->errorInfo();
+                $debug['insert_id'] = $this->modx->lastInsertId();
+            }
         }
 
         return $this->success($debug);
