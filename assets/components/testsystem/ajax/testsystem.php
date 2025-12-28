@@ -142,7 +142,8 @@ $csrfExemptActions = [
     'getUserCategories',         // Категории пользователя (где он эксперт)
     'checkCategoryPermission',   // Проверить права на категорию
     'getAvailableExperts',       // Список доступных экспертов
-    'debugPathProgress'          // Диагностика прогресса траектории (временно)
+    'debugPathProgress',         // Диагностика прогресса траектории (временно)
+    'testCompleteStep'           // Тест UPDATE SQL (временно)
 ];
 
 // Если это POST запрос и action требует CSRF проверки
