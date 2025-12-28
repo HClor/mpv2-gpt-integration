@@ -544,6 +544,14 @@ class LearningPathService
         $stmt->execute([$progress['id']]);
         $progress['steps'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        // Формируем массив ID завершённых шагов для фронтенда
+        $progress['completed_steps'] = [];
+        foreach ($progress['steps'] as $step) {
+            if ($step['status'] === 'completed') {
+                $progress['completed_steps'][] = (int)$step['step_id'];
+            }
+        }
+
         return $progress;
     }
 
