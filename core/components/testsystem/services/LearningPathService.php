@@ -1485,4 +1485,249 @@ class LearningPathService
 
         return $progress;
     }
+
+    // ============================================
+    // СТАТИСТИКА
+    // ============================================
+
+    /**
+     * Получить статистику обучения пользователя
+     *
+     * @param modX $modx
+     * @param int $userId
+     * @return array
+     */
+    public static function getUserLearningStats($modx, $userId)
+    {
+        $prefix = $modx->getOption('table_prefix', null, 'modx_');
+
+        $stats = [
+            'paths' => [],
+            'summary' => []
+        ];
+
+        // Общая статистика по траекториям
+        $sql = "SELECT
+                    COUNT(DISTINCT e.id) as enrolled_paths,
+                    COUNT(DISTINCT CASE WHEN p.status = 'completed' THEN e.id END) as completed_paths,
+                    COUNT(DISTINCT CASE WHEN p.status = 'in_progress' THEN e.id END) as in_progress_paths,
+                    AVG(p.completion_pct) as avg_completion,
+                    SUM(CASE WHEN p.certificate_issued = 1 THEN 1 ELSE 0 END) as certificates_earned
+                FROM {$prefix}test_learning_path_enrollments e
+                LEFT JOIN {$prefix}test_learning_path_progress p ON p.enrollment_id = e.id
+                WHERE e.user_id = ? AND e.status = 'active'";
+
+        $stmt = $modx->prepare($sql);
+        $stmt->execute([$userId]);
+        $stats['summary'] = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Статистика по шагам
+        $sql = "SELECT
+                    COUNT(*) as total_steps,
+                    SUM(CASE WHEN sc.status = 'completed' THEN 1 ELSE 0 END) as completed_steps,
+                    SUM(sc.time_spent_minutes) as total_time_spent,
+                    AVG(CASE WHEN sc.status = 'completed' AND sc.score IS NOT NULL THEN sc.score END) as avg_score
+                FROM {$prefix}test_learning_path_step_completion sc
+                WHERE sc.user_id = ?";
+
+        $stmt = $modx->prepare($sql);
+        $stmt->execute([$userId]);
+        $stepStats = $stmt->fetch(PDO::FETCH_ASSOC);
+        $stats['summary']['total_steps'] = (int)$stepStats['total_steps'];
+        $stats['summary']['completed_steps'] = (int)$stepStats['completed_steps'];
+        $stats['summary']['total_time_spent'] = (int)$stepStats['total_time_spent'];
+        $stats['summary']['avg_score'] = $stepStats['avg_score'] ? round($stepStats['avg_score'], 1) : null;
+
+        // Детальная информация по каждой траектории
+        $sql = "SELECT
+                    lp.id,
+                    lp.name,
+                    lp.difficulty_level,
+                    lp.estimated_hours,
+                    e.enrolled_at,
+                    p.status,
+                    p.completion_pct,
+                    p.started_at,
+                    p.completed_at,
+                    p.certificate_issued,
+                    (SELECT COUNT(*) FROM {$prefix}test_learning_path_steps WHERE path_id = lp.id) as total_steps,
+                    (SELECT COUNT(*) FROM {$prefix}test_learning_path_step_completion sc2
+                     WHERE sc2.progress_id = p.id AND sc2.status = 'completed') as completed_steps
+                FROM {$prefix}test_learning_path_enrollments e
+                JOIN {$prefix}test_learning_paths lp ON lp.id = e.path_id
+                LEFT JOIN {$prefix}test_learning_path_progress p ON p.enrollment_id = e.id
+                WHERE e.user_id = ? AND e.status = 'active'
+                ORDER BY e.enrolled_at DESC";
+
+        $stmt = $modx->prepare($sql);
+        $stmt->execute([$userId]);
+        $stats['paths'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return $stats;
+    }
+
+    /**
+     * Получить статистику траектории (для админов/экспертов)
+     *
+     * @param modX $modx
+     * @param int $pathId
+     * @return array
+     */
+    public static function getPathStatistics($modx, $pathId)
+    {
+        $prefix = $modx->getOption('table_prefix', null, 'modx_');
+
+        $stats = [];
+
+        // Общая информация о траектории
+        $sql = "SELECT
+                    lp.*,
+                    u.username as author_name,
+                    c.name as category_name,
+                    (SELECT COUNT(*) FROM {$prefix}test_learning_path_steps WHERE path_id = lp.id) as total_steps
+                FROM {$prefix}test_learning_paths lp
+                LEFT JOIN {$prefix}users u ON u.id = lp.created_by
+                LEFT JOIN {$prefix}test_categories c ON c.id = lp.category_id
+                WHERE lp.id = ?";
+
+        $stmt = $modx->prepare($sql);
+        $stmt->execute([$pathId]);
+        $stats['path'] = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$stats['path']) {
+            return null;
+        }
+
+        // Статистика записей
+        $sql = "SELECT
+                    COUNT(*) as total_enrollments,
+                    COUNT(CASE WHEN e.status = 'active' THEN 1 END) as active_enrollments,
+                    COUNT(CASE WHEN p.status = 'completed' THEN 1 END) as completed_count,
+                    COUNT(CASE WHEN p.status = 'in_progress' THEN 1 END) as in_progress_count,
+                    COUNT(CASE WHEN p.status = 'not_started' THEN 1 END) as not_started_count,
+                    AVG(p.completion_pct) as avg_completion,
+                    AVG(CASE WHEN p.status = 'completed' THEN TIMESTAMPDIFF(DAY, p.started_at, p.completed_at) END) as avg_days_to_complete,
+                    COUNT(CASE WHEN p.certificate_issued = 1 THEN 1 END) as certificates_issued
+                FROM {$prefix}test_learning_path_enrollments e
+                LEFT JOIN {$prefix}test_learning_path_progress p ON p.enrollment_id = e.id
+                WHERE e.path_id = ?";
+
+        $stmt = $modx->prepare($sql);
+        $stmt->execute([$pathId]);
+        $stats['enrollments'] = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Статистика по шагам
+        $sql = "SELECT
+                    s.id,
+                    s.name,
+                    s.step_number,
+                    s.step_type,
+                    s.is_required,
+                    COUNT(sc.id) as total_attempts,
+                    COUNT(CASE WHEN sc.status = 'completed' THEN 1 END) as completed_count,
+                    AVG(CASE WHEN sc.status = 'completed' THEN sc.score END) as avg_score,
+                    AVG(sc.time_spent_minutes) as avg_time_spent,
+                    ROUND(COUNT(CASE WHEN sc.status = 'completed' THEN 1 END) * 100.0 / NULLIF(COUNT(sc.id), 0), 1) as completion_rate
+                FROM {$prefix}test_learning_path_steps s
+                LEFT JOIN {$prefix}test_learning_path_step_completion sc ON sc.step_id = s.id
+                WHERE s.path_id = ?
+                GROUP BY s.id
+                ORDER BY s.step_number";
+
+        $stmt = $modx->prepare($sql);
+        $stmt->execute([$pathId]);
+        $stats['steps'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Список студентов с прогрессом
+        $sql = "SELECT
+                    u.id as user_id,
+                    u.username,
+                    ua.fullname,
+                    e.enrolled_at,
+                    p.status,
+                    p.completion_pct,
+                    p.started_at,
+                    p.completed_at,
+                    p.last_activity_at,
+                    (SELECT COUNT(*) FROM {$prefix}test_learning_path_step_completion sc
+                     WHERE sc.progress_id = p.id AND sc.status = 'completed') as completed_steps
+                FROM {$prefix}test_learning_path_enrollments e
+                JOIN {$prefix}users u ON u.id = e.user_id
+                LEFT JOIN {$prefix}user_attributes ua ON ua.internalKey = u.id
+                LEFT JOIN {$prefix}test_learning_path_progress p ON p.enrollment_id = e.id
+                WHERE e.path_id = ? AND e.status = 'active'
+                ORDER BY p.completion_pct DESC, e.enrolled_at DESC";
+
+        $stmt = $modx->prepare($sql);
+        $stmt->execute([$pathId]);
+        $stats['students'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return $stats;
+    }
+
+    /**
+     * Получить общую статистику всех траекторий (для админов)
+     *
+     * @param modX $modx
+     * @return array
+     */
+    public static function getAllPathsStatistics($modx)
+    {
+        $prefix = $modx->getOption('table_prefix', null, 'modx_');
+
+        $stats = [];
+
+        // Общая сводка
+        $sql = "SELECT
+                    (SELECT COUNT(*) FROM {$prefix}test_learning_paths) as total_paths,
+                    (SELECT COUNT(*) FROM {$prefix}test_learning_paths WHERE status = 'published') as published_paths,
+                    (SELECT COUNT(*) FROM {$prefix}test_learning_path_enrollments WHERE status = 'active') as total_enrollments,
+                    (SELECT COUNT(*) FROM {$prefix}test_learning_path_progress WHERE status = 'completed') as total_completions,
+                    (SELECT AVG(completion_pct) FROM {$prefix}test_learning_path_progress) as avg_completion,
+                    (SELECT COUNT(*) FROM {$prefix}test_learning_path_progress WHERE certificate_issued = 1) as certificates_issued,
+                    (SELECT COUNT(DISTINCT user_id) FROM {$prefix}test_learning_path_enrollments WHERE status = 'active') as unique_students";
+
+        $stmt = $modx->prepare($sql);
+        $stmt->execute();
+        $stats['summary'] = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Топ траекторий по популярности
+        $sql = "SELECT
+                    lp.id,
+                    lp.name,
+                    lp.status,
+                    lp.difficulty_level,
+                    COUNT(DISTINCT e.id) as enrollments,
+                    COUNT(DISTINCT CASE WHEN p.status = 'completed' THEN e.id END) as completions,
+                    AVG(p.completion_pct) as avg_completion,
+                    ROUND(COUNT(DISTINCT CASE WHEN p.status = 'completed' THEN e.id END) * 100.0 /
+                          NULLIF(COUNT(DISTINCT e.id), 0), 1) as completion_rate
+                FROM {$prefix}test_learning_paths lp
+                LEFT JOIN {$prefix}test_learning_path_enrollments e ON e.path_id = lp.id AND e.status = 'active'
+                LEFT JOIN {$prefix}test_learning_path_progress p ON p.enrollment_id = e.id
+                GROUP BY lp.id
+                ORDER BY enrollments DESC
+                LIMIT 10";
+
+        $stmt = $modx->prepare($sql);
+        $stmt->execute();
+        $stats['top_paths'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Активность за последние 30 дней
+        $sql = "SELECT
+                    DATE(e.enrolled_at) as date,
+                    COUNT(*) as new_enrollments,
+                    (SELECT COUNT(*) FROM {$prefix}test_learning_path_progress p2
+                     WHERE DATE(p2.completed_at) = DATE(e.enrolled_at)) as completions
+                FROM {$prefix}test_learning_path_enrollments e
+                WHERE e.enrolled_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+                GROUP BY DATE(e.enrolled_at)
+                ORDER BY date DESC";
+
+        $stmt = $modx->prepare($sql);
+        $stmt->execute();
+        $stats['activity'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return $stats;
+    }
 }

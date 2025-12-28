@@ -1,7 +1,10 @@
 <?php
-// TS USER PROFILE v1.5 (tabs: Обзор / Изменение данных)
-// Имя пользователя не редактируется; статистика и история — во вкладке «Обзор».
+// TS USER PROFILE v2.0 (tabs: Обзор / Траектории / Изменение данных)
+// v2.0 - добавлена вкладка "Траектории обучения"
 if (!$modx instanceof modX) return 'MODX context required';
+
+// Подключаем сервис траекторий
+require_once MODX_CORE_PATH . 'components/testsystem/services/LearningPathService.php';
 
 // 0) Auth
 if (!$modx->user || !$modx->user->hasSessionContext('web')) {
@@ -12,7 +15,7 @@ if (!$modx->user || !$modx->user->hasSessionContext('web')) {
 // 1) Init
 $prefix = $modx->getOption('table_prefix');
 $userId = (int)$modx->user->get('id');
-$username = (string)$modx->user->get('username'); // readonly
+$username = (string)$modx->user->get('username');
 $errors = [];
 $success = '';
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
@@ -90,7 +93,7 @@ $profile = $modx->user->getOne('Profile');
 $fullname = $profile ? $profile->get('fullname') : '';
 $email    = $profile ? $profile->get('email') : '';
 
-// 5) Stats & History (Обзор)
+// 5) Stats & History (Обзор) - Тесты
 $T_sessions = $prefix.'test_sessions';
 $T_tests    = $prefix.'test_tests';
 $S          = $prefix.'site_content';
@@ -104,12 +107,12 @@ $st->execute([$userId]); $avgScore = (float)$st->fetchColumn(); $avgScore = $avg
 $st = $modx->prepare("SELECT SUM(pass=1), SUM(pass=0) FROM `{$T_sessions}` WHERE user_id = ?");
 $st->execute([$userId]); [$passed,$failed] = array_map('intval', $st->fetch(PDO::FETCH_NUM) ?: [0,0]);
 
-$st = $modx->prepare("SELECT COUNT(*) 
-  FROM `{$T_tests}` t 
+$st = $modx->prepare("SELECT COUNT(*)
+  FROM `{$T_tests}` t
   JOIN `{$S}` sc ON sc.alias = CONCAT('test-', t.id) AND sc.published=1 AND sc.deleted=0");
 $st->execute(); $testsAvailable=(int)$st->fetchColumn();
 
-$sql = "SELECT s.id, s.test_id, s.score, s.pass, s.created_at, 
+$sql = "SELECT s.id, s.test_id, s.score, s.pass, s.created_at,
                t.title, sc.id AS rid
         FROM `{$T_sessions}` s
         JOIN `{$T_tests}` t ON t.id=s.test_id
@@ -120,7 +123,19 @@ $sql = "SELECT s.id, s.test_id, s.score, s.pass, s.created_at,
 $st=$modx->prepare($sql); $st->execute([$userId]);
 $lastAttempts = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
-// 6) UI (tabs)
+// 6) Статистика траекторий обучения
+$learningStats = LearningPathService::getUserLearningStats($modx, $userId);
+$pathsUrl = $modx->makeUrl(125, '', '', 'abs'); // ID страницы траекторий
+
+// Уровни сложности
+$difficultyLabels = [
+    'beginner' => 'Начальный',
+    'intermediate' => 'Средний',
+    'advanced' => 'Продвинутый',
+    'expert' => 'Эксперт'
+];
+
+// 7) UI (tabs)
 $out = [];
 if ($success) $out[] = '<div class="alert alert-success">'.$h($success).'</div>';
 if ($errors) {
@@ -133,6 +148,12 @@ $out[] = '
 <ul class="nav nav-tabs" id="profileTabs" role="tablist">
   <li class="nav-item" role="presentation">
     <button class="nav-link active" id="tab-overview" data-bs-toggle="tab" data-bs-target="#pane-overview" type="button" role="tab">Обзор</button>
+  </li>
+  <li class="nav-item" role="presentation">
+    <button class="nav-link" id="tab-paths" data-bs-toggle="tab" data-bs-target="#pane-paths" type="button" role="tab">
+      Траектории
+      '.($learningStats['summary']['enrolled_paths'] > 0 ? '<span class="badge bg-primary ms-1">'.(int)$learningStats['summary']['enrolled_paths'].'</span>' : '').'
+    </button>
   </li>
   <li class="nav-item" role="presentation">
     <button class="nav-link" id="tab-settings" data-bs-toggle="tab" data-bs-target="#pane-settings" type="button" role="tab">Изменение данных</button>
@@ -162,7 +183,7 @@ $out[] = '
     </div></div>
 
     <div class="card mb-3"><div class="card-body">
-      <h5 class="card-title">Моя статистика</h5>
+      <h5 class="card-title">Моя статистика (Тесты)</h5>
       <div class="row text-center">
         <div class="col-6 col-md-3"><div class="fw-bold fs-4">'.$h($testsAvailable).'</div><div class="text-muted">Доступно тестов</div></div>
         <div class="col-6 col-md-3"><div class="fw-bold fs-4">'.$h($attemptsTotal).'</div><div class="text-muted">Всего попыток</div></div>
@@ -172,7 +193,7 @@ $out[] = '
     </div></div>
 
     <div class="card"><div class="card-body">
-      <h5 class="card-title">История (последние 10)</h5>';
+      <h5 class="card-title">История тестов (последние 10)</h5>';
 if (!$lastAttempts) {
   $out[] .= '<div class="text-muted">Пока нет попыток</div>';
 } else {
@@ -190,6 +211,88 @@ if (!$lastAttempts) {
   $out[] .= '</tbody></table></div>';
 }
 $out[] .= '</div></div>
+  </div>
+
+  <!-- Траектории обучения -->
+  <div class="tab-pane fade" id="pane-paths" role="tabpanel" aria-labelledby="tab-paths">
+    <div class="card mb-3"><div class="card-body">
+      <h5 class="card-title">Статистика обучения</h5>
+      <div class="row text-center">
+        <div class="col-6 col-md-3">
+          <div class="fw-bold fs-4 text-primary">'.(int)$learningStats['summary']['enrolled_paths'].'</div>
+          <div class="text-muted">Записей на траектории</div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="fw-bold fs-4 text-success">'.(int)$learningStats['summary']['completed_paths'].'</div>
+          <div class="text-muted">Завершено</div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="fw-bold fs-4 text-info">'.(int)$learningStats['summary']['completed_steps'].'</div>
+          <div class="text-muted">Шагов пройдено</div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="fw-bold fs-4 text-warning">'.(int)$learningStats['summary']['certificates_earned'].'</div>
+          <div class="text-muted">Сертификатов</div>
+        </div>
+      </div>
+    </div></div>';
+
+if (empty($learningStats['paths'])) {
+    $out[] .= '
+    <div class="alert alert-info">
+      <i class="bi bi-info-circle me-2"></i>
+      Вы ещё не записаны ни на одну траекторию обучения.
+      <a href="'.$h($pathsUrl).'" class="alert-link">Посмотреть доступные траектории</a>
+    </div>';
+} else {
+    $out[] .= '<div class="row g-3">';
+    foreach ($learningStats['paths'] as $path) {
+        $pct = (int)$path['completion_pct'];
+        $statusClass = $path['status'] === 'completed' ? 'success' : ($path['status'] === 'in_progress' ? 'primary' : 'secondary');
+        $statusLabel = $path['status'] === 'completed' ? 'Завершено' : ($path['status'] === 'in_progress' ? 'В процессе' : 'Не начато');
+        $diffLabel = $difficultyLabels[$path['difficulty_level']] ?? $path['difficulty_level'];
+        $pathUrl = $pathsUrl . '?mode=view&id=' . (int)$path['id'];
+
+        $out[] .= '
+        <div class="col-md-6">
+          <div class="card h-100 border-'.$statusClass.'">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <h6 class="card-title mb-0">
+                  <a href="'.$h($pathUrl).'" class="text-decoration-none">'.$h($path['name']).'</a>
+                </h6>
+                <span class="badge bg-'.$statusClass.'">'.$statusLabel.'</span>
+              </div>
+              <p class="text-muted small mb-2">
+                <i class="bi bi-bar-chart me-1"></i>'.$diffLabel.'
+                '.($path['estimated_hours'] ? '<span class="ms-2"><i class="bi bi-clock me-1"></i>'.(int)$path['estimated_hours'].' ч.</span>' : '').'
+              </p>
+              <div class="progress mb-2" style="height: 8px;">
+                <div class="progress-bar bg-'.$statusClass.'" role="progressbar" style="width: '.$pct.'%"></div>
+              </div>
+              <div class="d-flex justify-content-between small text-muted">
+                <span>'.(int)$path['completed_steps'].' / '.(int)$path['total_steps'].' шагов</span>
+                <span>'.$pct.'%</span>
+              </div>
+              '.($path['certificate_issued'] ? '<div class="mt-2"><span class="badge bg-warning text-dark"><i class="bi bi-award me-1"></i>Сертификат получен</span></div>' : '').'
+            </div>
+            <div class="card-footer bg-transparent">
+              <a href="'.$h($pathUrl).'" class="btn btn-sm btn-outline-'.$statusClass.'">
+                '.($path['status'] === 'completed' ? '<i class="bi bi-eye me-1"></i>Просмотреть' : '<i class="bi bi-play-fill me-1"></i>Продолжить').'
+              </a>
+            </div>
+          </div>
+        </div>';
+    }
+    $out[] .= '</div>';
+}
+
+$out[] .= '
+    <div class="mt-3">
+      <a href="'.$h($pathsUrl).'" class="btn btn-primary">
+        <i class="bi bi-mortarboard me-1"></i>Все траектории обучения
+      </a>
+    </div>
   </div>
 
   <!-- Изменение данных -->
