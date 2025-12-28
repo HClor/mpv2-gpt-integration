@@ -561,7 +561,7 @@ class LearningPathService
         $prefix = $modx->getOption('table_prefix', null, 'modx_');
 
         // Сначала проверяем, существует ли запись
-        $checkSql = "SELECT id FROM {$prefix}test_learning_path_step_completion
+        $checkSql = "SELECT id, status FROM {$prefix}test_learning_path_step_completion
                      WHERE progress_id = ? AND step_id = ?";
         $checkStmt = $modx->prepare($checkSql);
         if (!$checkStmt) {
@@ -570,6 +570,8 @@ class LearningPathService
         }
         $checkStmt->execute([$progressId, $stepId]);
         $existingRecord = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+        $wasAlreadyCompleted = $existingRecord && $existingRecord['status'] === 'completed';
 
         if (!$existingRecord) {
             // Записи нет - получаем user_id из progress
@@ -602,41 +604,132 @@ class LearningPathService
             ]);
             if (!$result) {
                 error_log("[LearningPathService::completeStep] Insert failed: " . json_encode($insertStmt->errorInfo()));
+                return false;
             }
-            return $result;
+        } else {
+            // Запись есть - обновляем
+            $sql = "UPDATE {$prefix}test_learning_path_step_completion
+                    SET status = 'completed',
+                        score = ?,
+                        completed_at = COALESCE(completed_at, NOW()),
+                        session_id = ?,
+                        material_progress_id = ?,
+                        attempts = attempts + 1
+                    WHERE progress_id = ? AND step_id = ?";
+
+            $stmt = $modx->prepare($sql);
+            if (!$stmt) {
+                error_log("[LearningPathService::completeStep] Failed to prepare update query");
+                return false;
+            }
+            $result = $stmt->execute([
+                $completionData['score'] ?? null,
+                $completionData['session_id'] ?? null,
+                $completionData['material_progress_id'] ?? null,
+                $progressId,
+                $stepId
+            ]);
+
+            if (!$result) {
+                error_log("[LearningPathService::completeStep] Update failed: " . json_encode($stmt->errorInfo()));
+                return false;
+            }
         }
 
-        // Запись есть - обновляем
-        $sql = "UPDATE {$prefix}test_learning_path_step_completion
-                SET status = 'completed',
-                    score = ?,
-                    completed_at = COALESCE(completed_at, NOW()),
-                    session_id = ?,
-                    material_progress_id = ?,
-                    attempts = attempts + 1
-                WHERE progress_id = ? AND step_id = ?";
-
-        $stmt = $modx->prepare($sql);
-        if (!$stmt) {
-            error_log("[LearningPathService::completeStep] Failed to prepare update query");
-            return false;
+        // Если шаг ещё не был завершён - обновляем прогресс и разблокируем следующий шаг
+        // (логика перенесена из триггера trg_step_completion_update_progress)
+        if (!$wasAlreadyCompleted) {
+            self::updateProgressAfterStepCompletion($modx, $progressId, $stepId);
         }
-        $result = $stmt->execute([
-            $completionData['score'] ?? null,
-            $completionData['session_id'] ?? null,
-            $completionData['material_progress_id'] ?? null,
-            $progressId,
-            $stepId
+
+        return true;
+    }
+
+    /**
+     * Обновление прогресса после завершения шага
+     * (логика перенесена из триггера trg_step_completion_update_progress)
+     *
+     * @param modX $modx
+     * @param int $progressId
+     * @param int $stepId
+     */
+    private static function updateProgressAfterStepCompletion($modx, $progressId, $stepId)
+    {
+        $prefix = $modx->getOption('table_prefix', null, 'modx_');
+
+        // 1. Подсчитываем процент завершения
+        $pctSql = "SELECT
+                       ROUND(COUNT(CASE WHEN status = 'completed' THEN 1 END) * 100.0 / COUNT(*)) as completion_pct,
+                       COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_count,
+                       COUNT(*) as total_count
+                   FROM {$prefix}test_learning_path_step_completion
+                   WHERE progress_id = ?";
+        $pctStmt = $modx->prepare($pctSql);
+        $pctStmt->execute([$progressId]);
+        $pctData = $pctStmt->fetch(PDO::FETCH_ASSOC);
+
+        // 2. Проверяем, все ли обязательные шаги завершены
+        $requiredSql = "SELECT COUNT(*) as uncompleted
+                        FROM {$prefix}test_learning_path_step_completion sc
+                        JOIN {$prefix}test_learning_path_steps s ON s.id = sc.step_id
+                        WHERE sc.progress_id = ?
+                          AND s.is_required = 1
+                          AND sc.status != 'completed'";
+        $requiredStmt = $modx->prepare($requiredSql);
+        $requiredStmt->execute([$progressId]);
+        $uncompletedRequired = (int)$requiredStmt->fetchColumn();
+
+        $isPathCompleted = ($uncompletedRequired === 0);
+        $newStatus = $isPathCompleted ? 'completed' : 'in_progress';
+
+        // 3. Обновляем таблицу progress
+        $updateProgressSql = "UPDATE {$prefix}test_learning_path_progress
+                              SET completion_pct = ?,
+                                  status = ?,
+                                  last_activity_at = NOW(),
+                                  completed_at = CASE WHEN ? = 'completed' AND completed_at IS NULL THEN NOW() ELSE completed_at END
+                              WHERE id = ?";
+        $updateProgressStmt = $modx->prepare($updateProgressSql);
+        $updateProgressStmt->execute([
+            $pctData['completion_pct'] ?? 0,
+            $newStatus,
+            $newStatus,
+            $progressId
         ]);
 
-        if (!$result) {
-            error_log("[LearningPathService::completeStep] Update failed: " . json_encode($stmt->errorInfo()));
-        } else {
-            error_log("[LearningPathService::completeStep] Update successful. Rows affected: " . $stmt->rowCount());
+        // 4. Разблокируем следующий шаг
+        // Находим path_id и step_number текущего шага
+        $stepInfoSql = "SELECT lpp.path_id, lps.step_number
+                        FROM {$prefix}test_learning_path_progress lpp
+                        JOIN {$prefix}test_learning_path_steps lps ON lps.id = ?
+                        WHERE lpp.id = ?";
+        $stepInfoStmt = $modx->prepare($stepInfoSql);
+        $stepInfoStmt->execute([$stepId, $progressId]);
+        $stepInfo = $stepInfoStmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($stepInfo) {
+            // Находим следующий шаг
+            $nextStepSql = "SELECT id FROM {$prefix}test_learning_path_steps
+                            WHERE path_id = ? AND step_number = ?";
+            $nextStepStmt = $modx->prepare($nextStepSql);
+            $nextStepStmt->execute([$stepInfo['path_id'], $stepInfo['step_number'] + 1]);
+            $nextStepId = $nextStepStmt->fetchColumn();
+
+            if ($nextStepId) {
+                // Разблокируем следующий шаг (только если он locked)
+                $unlockSql = "UPDATE {$prefix}test_learning_path_step_completion
+                              SET status = 'available'
+                              WHERE progress_id = ? AND step_id = ? AND status = 'locked'";
+                $unlockStmt = $modx->prepare($unlockSql);
+                $unlockStmt->execute([$progressId, $nextStepId]);
+
+                if ($unlockStmt->rowCount() > 0) {
+                    error_log("[LearningPathService::completeStep] Unlocked next step: $nextStepId");
+                }
+            }
         }
 
-        // Возвращаем true если запрос выполнился успешно
-        return $result;
+        error_log("[LearningPathService::completeStep] Progress updated: completion_pct={$pctData['completion_pct']}, status=$newStatus");
     }
 
     /**
