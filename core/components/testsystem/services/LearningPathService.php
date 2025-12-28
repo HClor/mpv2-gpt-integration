@@ -1140,34 +1140,6 @@ class LearningPathService
     }
 
     /**
-     * Получение статистики по траектории
-     *
-     * @param modX $modx
-     * @param int $pathId
-     * @return array
-     */
-    public static function getPathStatistics($modx, $pathId)
-    {
-        $prefix = $modx->getOption('table_prefix', null, 'modx_');
-
-        $sql = "SELECT
-                    COUNT(DISTINCT e.user_id) as total_enrolled,
-                    COUNT(DISTINCT CASE WHEN lpp.status = 'completed' THEN e.user_id END) as total_completed,
-                    AVG(lpp.completion_pct) as avg_completion_pct,
-                    AVG(CASE WHEN lpp.status = 'completed' THEN
-                        TIMESTAMPDIFF(DAY, lpp.started_at, lpp.completed_at)
-                    END) as avg_completion_days
-                FROM {$prefix}test_learning_path_enrollments e
-                LEFT JOIN {$prefix}test_learning_path_progress lpp ON lpp.enrollment_id = e.id
-                WHERE e.path_id = ? AND e.is_active = 1";
-
-        $stmt = $modx->prepare($sql);
-        $stmt->execute([$pathId]);
-
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-
-    /**
      * Получение шага по ID
      *
      * @param modX $modx
