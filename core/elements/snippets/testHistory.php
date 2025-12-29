@@ -25,6 +25,7 @@ $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $offset = ($page - 1) * $limit;
 
 // Получаем историю пройденных тестов
+// Показываем сессии где есть finished_at (завершённые) или score (есть результат)
 $sql = "
     SELECT
         ts.id as session_id,
@@ -32,17 +33,19 @@ $sql = "
         ts.score,
         ts.passed,
         ts.started_at,
-        ts.completed_at,
-        ts.time_spent,
+        ts.finished_at,
+        TIMESTAMPDIFF(SECOND, ts.started_at, ts.finished_at) as time_spent,
         tt.title as test_title,
         tc.id as category_id,
         tc.name as category_title,
-        tt.passing_score
+        tt.pass_score as passing_score
     FROM `{$prefix}test_sessions` ts
     LEFT JOIN `{$prefix}test_tests` tt ON tt.id = ts.test_id
     LEFT JOIN `{$prefix}test_categories` tc ON tc.id = tt.category_id
-    WHERE ts.user_id = " . (int)$userId . " AND ts.status = 'completed'
-    ORDER BY ts.completed_at DESC
+    WHERE ts.user_id = " . (int)$userId . "
+      AND (ts.status = 'completed' OR ts.finished_at IS NOT NULL OR ts.score IS NOT NULL)
+      AND ts.test_id > 0
+    ORDER BY COALESCE(ts.finished_at, ts.started_at) DESC
     LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
 
 $stmt = $modx->query($sql);
@@ -66,7 +69,9 @@ if (empty($sessions)) {
 $sqlCount = "
     SELECT COUNT(*) as total
     FROM `{$prefix}test_sessions` ts
-    WHERE ts.user_id = " . (int)$userId . " AND ts.status = 'completed'
+    WHERE ts.user_id = " . (int)$userId . "
+      AND (ts.status = 'completed' OR ts.finished_at IS NOT NULL OR ts.score IS NOT NULL)
+      AND ts.test_id > 0
 ";
 
 $stmtCount = $modx->query($sqlCount);
@@ -114,7 +119,8 @@ foreach ($sessions as $session) {
     $html[] = '<td><small class="text-muted">' . htmlspecialchars($session['category_title'] ?? 'Нет категории') . '</small></td>';
     $html[] = '<td class="text-center"><span class="' . $resultClass . '">' . (int)$session['score'] . '%</span></td>';
     $html[] = '<td class="text-center">' . $statusBadge . '</td>';
-    $html[] = '<td><small>' . date('d.m.Y H:i', strtotime($session['completed_at'])) . '</small></td>';
+    $finishedAt = $session['finished_at'] ?: $session['started_at'];
+    $html[] = '<td><small>' . date('d.m.Y H:i', strtotime($finishedAt)) . '</small></td>';
     $html[] = '<td><small>' . $timeSpent . '</small></td>';
     $html[] = '<td><a href="' . $modx->makeUrl(156, '', ['session_id' => $session['session_id']]) . '" class="btn btn-sm btn-outline-primary">Подробно</a></td>';
     $html[] = '</tr>';
