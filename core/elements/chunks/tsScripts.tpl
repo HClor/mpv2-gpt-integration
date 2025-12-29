@@ -46,20 +46,16 @@
 // ========== ГЛОБАЛЬНЫЙ ХЕЛПЕР ДЛЯ API ЗАПРОСОВ С CSRF ==========
 window.TS_API_URL = '/assets/components/testsystem/ajax/testsystem.php';
 
-/**
- * Получить CSRF токен из meta тега
- */
+// Получить CSRF токен из meta тега
 function getCSRFToken() {
     const meta = document.querySelector('meta[name="csrf-token"]');
     return meta ? meta.content : '';
 }
 
-/**
- * Универсальная функция для API запросов с автоматическим CSRF
- * @param {string} action - Название action для API
- * @param {object} data - Данные для отправки
- * @returns {Promise<object>} - Результат запроса
- */
+// Универсальная функция для API запросов с автоматическим CSRF
+// action - Название action для API
+// data - Данные для отправки
+// Возвращает Promise с результатом запроса
 async function tsApiRequest(action, data = {}) {
     const csrfToken = getCSRFToken();
 
