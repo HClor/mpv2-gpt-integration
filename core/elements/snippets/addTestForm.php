@@ -484,8 +484,6 @@ $output .= '
 
 // JavaScript
 $output .= "<script>
-const API_URL = '/assets/components/testsystem/ajax/testsystem.php';
-
 document.addEventListener('DOMContentLoaded', function() {
     const toggle = document.getElementById('upload_file_toggle');
     const block = document.getElementById('file_upload_block');
@@ -522,16 +520,11 @@ async function createCategory() {
     }
 
     try {
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'createCategory',
-                data: { name: name, description: description }
-            })
+        // Используем глобальный хелпер tsApiRequest с автоматическим CSRF
+        const result = await tsApiRequest('createCategory', {
+            name: name,
+            description: description
         });
-
-        const result = await response.json();
 
         if (result.success) {
             // Добавляем новую категорию в select и выбираем её
