@@ -1,9 +1,13 @@
 {* Чанк: tsHeader - Навигационная панель для системы тестирования
    Вызывается из: TestSystem.tpl, learning-materials-template*.html
-   Содержит: логотип, меню pdoMenu, меню пользователя (вход/профиль), уведомления
-   Использует сниппеты: pdoMenu, getUserRights, csrfToken, getNotifications
+   Содержит: логотип, основное меню, меню пользователя (вход/профиль), уведомления
+   Использует сниппеты: getUserRights, csrfToken, getNotifications
+
+   Структура меню:
+   - Основное: Учебные материалы, Тесты, Траектории, Лидеры, Области знаний
+   - Пользователь: Профиль, Мои тесты, Мои траектории, Избранное, История, Сертификаты
+   - Админ: Управление (dropdown)
 *}
-<!--<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm py-2">-->
 <nav class="navbar navbar-expand-lg shadow-sm py-2">
   <div class="container">
     <!-- Логотип -->
@@ -18,30 +22,46 @@
     </button>
 
     <div class="collapse navbar-collapse" id="navbarMain">
-      <!-- Основное меню -->
-      {$_modx->runSnippet('pdoMenu', [
-        'parents' => 0,
-        'level' => 1,
-        'showHidden' => 0,
-        'sortby' => 'menuindex',
-        'sortdir' => 'ASC',
-        'tplOuter' => '@INLINE <ul class="navbar-nav me-auto mb-2 mb-lg-0">[[+wrapper]]</ul>',
-        'tpl' => '@INLINE <li class="nav-item [[+classnames]]"><a class="nav-link [[+classnames]]" href="[[+link]]">[[+menutitle]]</a>[[+wrapper]]</li>',
-        'tplHere' => '@INLINE <li class="nav-item [[+classnames]]"><a class="nav-link active [[+classnames]]" href="[[+link]]">[[+menutitle]]</a>[[+wrapper]]</li>'
-      ])}
+      <!-- Основное меню (явные пункты с иконками) -->
+      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+        <li class="nav-item">
+          <a class="nav-link{if $_modx->resource.id == 149} active{/if}" href="{$_modx->makeUrl(149)}">
+            <i class="fas fa-book me-1"></i> Учебные материалы
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link{if $_modx->resource.id == 35} active{/if}" href="{$_modx->makeUrl(35)}">
+            <i class="fas fa-tasks me-1"></i> Тесты
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link{if $_modx->resource.id == 193 || $_modx->resource.parent == 193} active{/if}" href="{$_modx->makeUrl(193)}">
+            <i class="fas fa-route me-1"></i> Траектории
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link{if $_modx->resource.id == 159} active{/if}" href="{$_modx->makeUrl(159)}">
+            <i class="fas fa-trophy me-1"></i> Лидеры
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link{if $_modx->resource.id == 185} active{/if}" href="{$_modx->makeUrl(185)}">
+            <i class="fas fa-brain me-1"></i> Области знаний
+          </a>
+        </li>
+      </ul>
 
-      <!-- Меню пользователя -->
+      <!-- Правая часть меню -->
       <ul class="navbar-nav align-items-center">
         {if $_modx->user.id}
-
           {set $rights = $_modx->runSnippet('getUserRights')}
           {set $isAdminOrExpert = $rights.isAdmin || $rights.isExpert}
 
           <!-- Служебное меню (только для админов и экспертов) -->
           {if $isAdminOrExpert}
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="adminMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <i class="fas fa-tools me-2"></i> Управление
+            <a class="nav-link dropdown-toggle" href="#" id="adminMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="fas fa-cogs me-1"></i> Управление
             </a>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="adminMenu">
               {$_modx->runSnippet('pdoMenu', [
@@ -51,29 +71,31 @@
                 'sortby' => 'menuindex',
                 'sortdir' => 'ASC',
                 'tplOuter' => '@INLINE [[+wrapper]]',
-                'tpl' => '@INLINE <li><a class="dropdown-item" href="[[+link]]"><i class="fas fa-cog me-2"></i>[[+menutitle]]</a></li>',
-                'tplHere' => '@INLINE <li><a class="dropdown-item active" href="[[+link]]"><i class="fas fa-cog me-2"></i>[[+menutitle]]</a></li>'
+                'tpl' => '@INLINE <li><a class="dropdown-item" href="[[+link]]"><i class="fas fa-wrench me-2"></i>[[+menutitle]]</a></li>',
+                'tplHere' => '@INLINE <li><a class="dropdown-item active" href="[[+link]]"><i class="fas fa-wrench me-2"></i>[[+menutitle]]</a></li>'
               ])}
             </ul>
           </li>
           {/if}
 
-          <!-- Профиль -->
+          <!-- Меню пользователя -->
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <i class="fas fa-user-circle me-2"></i> {$_modx->user.username}
+            <a class="nav-link dropdown-toggle" href="#" id="userMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="fas fa-user-circle me-1"></i> {$_modx->user.username}
             </a>
-
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
               <li><a class="dropdown-item" href="{$_modx->makeUrl(28)}"><i class="fas fa-user me-2"></i> Мой профиль</a></li>
-              <li><a class="dropdown-item" href="{$_modx->makeUrl(156)}"><i class="fas fa-chart-line me-2"></i> Мои результаты</a></li>
+              <li><a class="dropdown-item" href="{$_modx->makeUrl(186)}"><i class="fas fa-edit me-2"></i> Мои тесты</a></li>
+              <li><a class="dropdown-item" href="{$_modx->makeUrl(194)}"><i class="fas fa-map-signs me-2"></i> Мои траектории</a></li>
+              <li><a class="dropdown-item" href="{$_modx->makeUrl(169)}"><i class="fas fa-star me-2"></i> Избранное</a></li>
+              <li><a class="dropdown-item" href="{$_modx->makeUrl(157)}"><i class="fas fa-history me-2"></i> История тестов</a></li>
               <li><a class="dropdown-item" href="{$_modx->makeUrl(180)}"><i class="fas fa-certificate me-2"></i> Сертификаты</a></li>
               <li><hr class="dropdown-divider"></li>
               <li>
                 <form method="post" action="">
                   {$_modx->runSnippet('csrfToken')}
                   <input type="hidden" name="login_logout" value="1">
-                  <button type="submit" class="dropdown-item">
+                  <button type="submit" class="dropdown-item text-danger">
                     <i class="fas fa-sign-out-alt me-2"></i> Выход
                   </button>
                 </form>
@@ -82,10 +104,10 @@
           </li>
 
         {else}
-          <!-- Гость: единая кнопка вход/регистрация (видна как кнопка на всех размерах) -->
+          <!-- Гость: кнопка входа -->
           <li class="nav-item">
             <a class="btn btn-primary ms-2" href="{$_modx->makeUrl(24)}">
-              <i class="fas fa-sign-in-alt me-1"></i> Вход / Регистрация
+              <i class="fas fa-sign-in-alt me-1"></i> Вход
             </a>
           </li>
         {/if}
