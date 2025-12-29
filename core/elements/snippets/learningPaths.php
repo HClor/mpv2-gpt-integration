@@ -193,9 +193,15 @@ function renderMyPaths($modx, $prefix, $userId) {
 
     async function loadMyPaths() {
         try {
+            // Получаем CSRF токен из meta тега
+            const csrfToken = document.querySelector("meta[name=\'csrf-token\']")?.content || "";
+
             const response = await fetch(window.TS_API_URL || "/assets/components/testsystem/ajax/testsystem.php", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRF-Token": csrfToken
+                },
                 body: JSON.stringify({ action: "getMyPaths", data: {} })
             });
             const result = await response.json();
