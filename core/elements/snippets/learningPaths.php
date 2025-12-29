@@ -219,9 +219,11 @@ function renderMyPaths($modx, $prefix, $userId) {
     }
 
     function renderMyPathCard(path) {
-        var progress = path.completion_pct || 0;
+        var progress = parseInt(path.completion_pct) || 0;
         var progressClass = progress === 100 ? "bg-success" : progress > 0 ? "bg-primary" : "bg-secondary";
         var btnText = progress > 0 ? "Продолжить" : "Начать";
+        // user_status - статус прогресса пользователя (not_started, in_progress, completed)
+        var userStatus = path.user_status || "not_started";
 
         return "<div class=\"col-md-6 col-lg-4\">" +
             "<div class=\"card h-100 shadow-sm\">" +
@@ -235,11 +237,11 @@ function renderMyPaths($modx, $prefix, $userId) {
                     "</div>" +
                     "<div class=\"d-flex justify-content-between text-muted small mb-3\">" +
                         "<span><i class=\"bi bi-check-circle\"></i> " + (path.completed_steps || 0) + "/" + (path.total_steps || 0) + " шагов</span>" +
-                        "<span class=\"badge bg-" + getStatusColor(path.status) + "\">" + getStatusText(path.status) + "</span>" +
+                        "<span class=\"badge bg-" + getStatusColor(userStatus) + "\">" + getStatusText(userStatus) + "</span>" +
                     "</div>" +
                 "</div>" +
                 "<div class=\"card-footer bg-white\">" +
-                    "<a href=\"?mode=view&id=" + path.path_id + "\" class=\"btn btn-primary w-100\">" +
+                    "<a href=\"?mode=view&id=" + (path.path_id || path.id) + "\" class=\"btn btn-primary w-100\">" +
                         "<i class=\"bi bi-play-fill\"></i> " + btnText +
                     "</a>" +
                 "</div>" +

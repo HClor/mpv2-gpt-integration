@@ -491,19 +491,12 @@ async function saveMaterialFromModal() {
             const modal = bootstrap.Modal.getInstance(document.getElementById('materialEditorModal'));
             modal?.hide();
 
-            // Если редактируем на странице материала - перезагружаем страницу
-            // Проверяем наличие контейнера articles-container (есть только на корневой)
-            const articlesContainer = document.getElementById('articles-container');
-            if (currentEditMaterialId && !articlesContainer) {
-                // Мы на странице материала - перезагружаем
-                window.location.reload();
-            } else {
-                // Мы на корневой - просто обновляем список
-                loadArticles();
-                const url = new URL(window.location);
-                url.searchParams.delete('edit_material');
-                window.history.replaceState({}, '', url);
-            }
+            // Очищаем URL параметры и перезагружаем страницу
+            // (статьи рендерятся PHP-сниппетом, AJAX-обновление не работает)
+            const url = new URL(window.location);
+            url.searchParams.delete('edit_material');
+            window.history.replaceState({}, '', url);
+            window.location.reload();
         } else {
             throw new Error(result.message || 'Ошибка сохранения');
         }

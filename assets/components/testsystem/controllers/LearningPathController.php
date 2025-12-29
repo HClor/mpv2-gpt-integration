@@ -1281,45 +1281,64 @@ class LearningPathController extends BaseController
 
         // Получаем учебные материалы (MODX ресурсы)
         if (!$stepType || $stepType === 'material') {
-            // Ищем ресурсы в папке учебных материалов или с шаблоном материала
-            $sql = "SELECT
-                        c.id,
-                        c.pagetitle as name,
-                        c.description,
-                        c.introtext,
-                        p.pagetitle as parent_name
-                    FROM {$prefix}site_content c
-                    LEFT JOIN {$prefix}site_content p ON p.id = c.parent
-                    WHERE c.published = 1
-                    AND c.deleted = 0
-                    AND c.isfolder = 0
-                    AND (
-                        c.template IN (
-                            SELECT id FROM {$prefix}site_templates
-                            WHERE templatename LIKE '%material%'
-                            OR templatename LIKE '%lesson%'
-                            OR templatename LIKE '%Материал%'
-                        )
-                        OR c.parent IN (
-                            SELECT id FROM {$prefix}site_content
-                            WHERE pagetitle LIKE '%материал%'
-                            OR pagetitle LIKE '%Материал%'
-                            OR pagetitle LIKE '%Lesson%'
-                        )
-                    )";
-
+            // Если есть поисковый запрос - ищем во всех опубликованных ресурсах
+            // Иначе ограничиваем шаблонами и папками для учебных материалов
             if ($search) {
-                $sql .= " AND (c.pagetitle LIKE ? OR c.description LIKE ? OR c.introtext LIKE ?)";
-            }
+                // При поиске ищем во всех опубликованных ресурсах
+                $sql = "SELECT
+                            c.id,
+                            c.pagetitle as name,
+                            c.description,
+                            c.introtext,
+                            p.pagetitle as parent_name
+                        FROM {$prefix}site_content c
+                        LEFT JOIN {$prefix}site_content p ON p.id = c.parent
+                        WHERE c.published = 1
+                        AND c.deleted = 0
+                        AND c.isfolder = 0
+                        AND (c.pagetitle LIKE ? OR c.description LIKE ? OR c.introtext LIKE ?)
+                        ORDER BY c.pagetitle ASC LIMIT 100";
 
-            $sql .= " ORDER BY c.pagetitle ASC LIMIT 100";
-
-            $stmt = $this->modx->prepare($sql);
-
-            if ($search) {
                 $searchPattern = '%' . $search . '%';
+                $stmt = $this->modx->prepare($sql);
                 $stmt->execute([$searchPattern, $searchPattern, $searchPattern]);
             } else {
+                // Без поискового запроса - ищем только в учебных материалах
+                // Используем шаблон ID 6 (learning-materials) и другие подходящие шаблоны
+                $sql = "SELECT
+                            c.id,
+                            c.pagetitle as name,
+                            c.description,
+                            c.introtext,
+                            p.pagetitle as parent_name
+                        FROM {$prefix}site_content c
+                        LEFT JOIN {$prefix}site_content p ON p.id = c.parent
+                        WHERE c.published = 1
+                        AND c.deleted = 0
+                        AND c.isfolder = 0
+                        AND (
+                            c.template = 6
+                            OR c.template IN (
+                                SELECT id FROM {$prefix}site_templates
+                                WHERE templatename LIKE '%material%'
+                                OR templatename LIKE '%lesson%'
+                                OR templatename LIKE '%Материал%'
+                                OR templatename LIKE '%статья%'
+                                OR templatename LIKE '%article%'
+                            )
+                            OR c.parent IN (
+                                SELECT id FROM {$prefix}site_content
+                                WHERE pagetitle LIKE '%материал%'
+                                OR pagetitle LIKE '%Материал%'
+                                OR pagetitle LIKE '%Lesson%'
+                                OR pagetitle LIKE '%Учебн%'
+                                OR pagetitle LIKE '%Статьи%'
+                                OR pagetitle LIKE '%Articles%'
+                            )
+                        )
+                        ORDER BY c.pagetitle ASC LIMIT 100";
+
+                $stmt = $this->modx->prepare($sql);
                 $stmt->execute();
             }
 

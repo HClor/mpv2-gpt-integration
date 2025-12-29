@@ -15,6 +15,8 @@ class CategoryController extends BaseController
      * Список доступных действий
      */
     private $actions = [
+        'createCategory',
+        'getCategories',
         'grantCategoryPermission',
         'revokeCategoryPermission',
         'getCategoryUsers',
@@ -40,6 +42,12 @@ class CategoryController extends BaseController
 
         try {
             switch ($action) {
+                case 'createCategory':
+                    return $this->createCategory($data);
+
+                case 'getCategories':
+                    return $this->getCategories($data);
+
                 case 'grantCategoryPermission':
                     return $this->grantCategoryPermission($data);
 
@@ -351,5 +359,83 @@ class CategoryController extends BaseController
             'revoked_count' => $count,
             'total_users' => count($userIds)
         ], "{$count} permissions revoked");
+    }
+
+    /**
+     * Создание новой категории
+     */
+    private function createCategory($data)
+    {
+        $this->requireAuth();
+
+        $currentUserId = $this->getCurrentUserId();
+
+        // Проверка прав - только админы и эксперты могут создавать категории
+        $isGlobalAdmin = CategoryPermissionService::isGlobalAdmin($this->modx, $currentUserId);
+        $isGlobalExpert = CategoryPermissionService::isGlobalExpert($this->modx, $currentUserId);
+
+        if (!$isGlobalAdmin && !$isGlobalExpert) {
+            throw new PermissionException('Только администраторы и эксперты могут создавать категории');
+        }
+
+        $name = ValidationHelper::requireString($data, 'name', 'Название категории обязательно');
+        $description = $data['description'] ?? '';
+        $parentId = isset($data['parent_id']) ? (int)$data['parent_id'] : null;
+
+        // Проверяем уникальность имени
+        $stmt = $this->modx->prepare("
+            SELECT id FROM {$this->prefix}test_categories WHERE name = ?
+        ");
+        $stmt->execute([$name]);
+        if ($stmt->fetch()) {
+            throw new ValidationException('Категория с таким именем уже существует');
+        }
+
+        // Получаем максимальный sort_order
+        $stmt = $this->modx->prepare("SELECT COALESCE(MAX(sort_order), 0) + 1 FROM {$this->prefix}test_categories");
+        $stmt->execute();
+        $sortOrder = (int)$stmt->fetchColumn();
+
+        // Создаём категорию
+        $stmt = $this->modx->prepare("
+            INSERT INTO {$this->prefix}test_categories (name, description, parent_id, sort_order, created_by, created_at)
+            VALUES (?, ?, ?, ?, ?, NOW())
+        ");
+
+        $result = $stmt->execute([
+            $name,
+            $description,
+            $parentId,
+            $sortOrder,
+            $currentUserId
+        ]);
+
+        if (!$result) {
+            throw new Exception('Ошибка при создании категории');
+        }
+
+        $categoryId = (int)$this->modx->lastInsertId();
+
+        return $this->success([
+            'id' => $categoryId,
+            'name' => $name,
+            'description' => $description
+        ], 'Категория успешно создана');
+    }
+
+    /**
+     * Получение списка категорий
+     */
+    private function getCategories($data)
+    {
+        $stmt = $this->modx->prepare("
+            SELECT id, name, description, parent_id, sort_order
+            FROM {$this->prefix}test_categories
+            ORDER BY sort_order, name
+        ");
+        $stmt->execute();
+        $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return $this->success($categories);
     }
 }

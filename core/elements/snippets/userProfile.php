@@ -110,7 +110,10 @@ $st->execute([$userId]); $attemptsTotal = (int)$st->fetchColumn();
 $st = $modx->prepare("SELECT AVG(score) FROM `{$T_sessions}` WHERE user_id = ?");
 $st->execute([$userId]); $avgScore = (float)$st->fetchColumn(); $avgScore = $avgScore ? round($avgScore,1) : 0;
 
-$st = $modx->prepare("SELECT SUM(pass=1), SUM(pass=0) FROM `{$T_sessions}` WHERE user_id = ?");
+$st = $modx->prepare("SELECT
+    SUM(CASE WHEN status = 'completed' AND score >= 70 THEN 1 ELSE 0 END),
+    SUM(CASE WHEN status = 'completed' AND score < 70 THEN 1 ELSE 0 END)
+    FROM `{$T_sessions}` WHERE user_id = ?");
 $st->execute([$userId]); [$passed,$failed] = array_map('intval', $st->fetch(PDO::FETCH_NUM) ?: [0,0]);
 
 $st = $modx->prepare("SELECT COUNT(*)
@@ -118,13 +121,14 @@ $st = $modx->prepare("SELECT COUNT(*)
   JOIN `{$S}` sc ON sc.alias = CONCAT('test-', t.id) AND sc.published=1 AND sc.deleted=0");
 $st->execute(); $testsAvailable=(int)$st->fetchColumn();
 
-$sql = "SELECT s.id, s.test_id, s.score, s.pass, s.created_at,
+$sql = "SELECT s.id, s.test_id, s.score, s.status, s.started_at,
+               CASE WHEN s.status = 'completed' AND s.score >= 70 THEN 1 ELSE 0 END AS passed,
                t.title, sc.id AS rid
         FROM `{$T_sessions}` s
         JOIN `{$T_tests}` t ON t.id=s.test_id
         LEFT JOIN `{$S}` sc ON sc.alias = CONCAT('test-', s.test_id) AND sc.published=1 AND sc.deleted=0
-        WHERE s.user_id = ?
-        ORDER BY s.created_at DESC
+        WHERE s.user_id = ? AND s.status = 'completed'
+        ORDER BY s.started_at DESC
         LIMIT 10";
 $st=$modx->prepare($sql); $st->execute([$userId]);
 $lastAttempts = $st->fetchAll(PDO::FETCH_ASSOC) ?: [];
@@ -208,8 +212,8 @@ if (!$lastAttempts) {
   foreach($lastAttempts as $a){
     $title = $h($a['title'] ?? ('Тест #'.$a['test_id']));
     $score = (int)$a['score'].'%';
-    $status= ((int)$a['pass']===1) ? '<span class="badge bg-success">пройден</span>' : '<span class="badge bg-secondary">нет</span>';
-    $date  = $h($a['created_at'] ?? '');
+    $status= ((int)$a['passed']===1) ? '<span class="badge bg-success">пройден</span>' : '<span class="badge bg-secondary">нет</span>';
+    $date  = $h($a['started_at'] ?? '');
     $link  = !empty($a['rid']) ? $h($modx->makeUrl((int)$a['rid'],'','', 'abs')) : '#';
     $cellTitle = $link!=='#' ? '<a href="'.$link.'">'.$title.'</a>' : $title;
     $out[] .= '<tr><td>'.$cellTitle.'</td><td class="text-end">'.$score.'</td><td class="text-center">'.$status.'</td><td class="text-end">'.$date.'</td></tr>';

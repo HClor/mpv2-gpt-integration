@@ -316,15 +316,20 @@ $output .= "<h5 class=\"mb-3\"><i class=\"bi bi-info-circle\"></i> Основн�
 $output .= "<div class=\"row\">";
 $output .= "<div class=\"col-md-6 mb-3\">";
 $output .= "<label class=\"form-label\"><i class=\"bi bi-folder\"></i> Категория *</label>";
-$output .= "<select name=\"category_id\" class=\"form-select\" required>";
+$output .= "<div class=\"input-group\">";
+$output .= "<select name=\"category_id\" id=\"category_select\" class=\"form-select\" required>";
 $output .= "<option value=\"\">-- Выберите категорию --</option>";
 foreach ($categories as $cat) {
     $selected = (isset($_POST["category_id"]) && $_POST["category_id"] == $cat["id"]) ? "selected" : "";
     $output .= "<option value=\"" . (int)$cat["id"] . "\" " . $selected . ">" . htmlspecialchars($cat["name"], ENT_QUOTES, 'UTF-8') . "</option>";
 }
 $output .= "</select>";
+$output .= "<button type=\"button\" class=\"btn btn-outline-success\" onclick=\"openCreateCategoryModal()\" title=\"Создать новую категорию\">";
+$output .= "<i class=\"bi bi-plus-lg\"></i>";
+$output .= "</button>";
+$output .= "</div>";
 if (empty($categories)) {
-    $output .= "<small class=\"form-text text-danger\">Категории не найдены. Создайте их в разделе управления категориями.</small>";
+    $output .= "<small class=\"form-text text-warning\">Нет категорий. Нажмите + чтобы создать.</small>";
 }
 $output .= "</div>";
 
@@ -448,13 +453,44 @@ $output .= "</div>";  // card-body
 $output .= "</div>";  // card
 $output .= "</div>";  // container-fluid
 
+// Модальное окно создания категории
+$output .= '
+<div class="modal fade" id="createCategoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="bi bi-folder-plus"></i> Создать категорию</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Название категории *</label>
+                    <input type="text" id="new_category_name" class="form-control" placeholder="Например: Базы данных" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Описание (необязательно)</label>
+                    <textarea id="new_category_description" class="form-control" rows="2" placeholder="Краткое описание категории"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="btn btn-success" onclick="createCategory()">
+                    <i class="bi bi-check-circle"></i> Создать
+                </button>
+            </div>
+        </div>
+    </div>
+</div>';
+
 // JavaScript
 $output .= "<script>
+const API_URL = '/assets/components/testsystem/ajax/testsystem.php';
+
 document.addEventListener('DOMContentLoaded', function() {
     const toggle = document.getElementById('upload_file_toggle');
     const block = document.getElementById('file_upload_block');
     const fileInput = document.getElementById('questions_file_input');
-    
+
     if (toggle && block) {
         toggle.addEventListener('change', function() {
             if (this.checked) {
@@ -468,6 +504,57 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+function openCreateCategoryModal() {
+    document.getElementById('new_category_name').value = '';
+    document.getElementById('new_category_description').value = '';
+    const modal = new bootstrap.Modal(document.getElementById('createCategoryModal'));
+    modal.show();
+}
+
+async function createCategory() {
+    const name = document.getElementById('new_category_name').value.trim();
+    const description = document.getElementById('new_category_description').value.trim();
+
+    if (!name) {
+        alert('Введите название категории');
+        return;
+    }
+
+    try {
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'createCategory',
+                data: { name: name, description: description }
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Добавляем новую категорию в select и выбираем её
+            const select = document.getElementById('category_select');
+            const option = document.createElement('option');
+            option.value = result.data.id;
+            option.textContent = result.data.name;
+            option.selected = true;
+            select.appendChild(option);
+
+            // Закрываем модальное окно
+            const modal = bootstrap.Modal.getInstance(document.getElementById('createCategoryModal'));
+            modal.hide();
+
+            alert('Категория \"' + name + '\" успешно создана!');
+        } else {
+            alert('Ошибка: ' + (result.message || 'Неизвестная ошибка'));
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Ошибка создания категории: ' + error.message);
+    }
+}
 </script>";
 
 return $output;

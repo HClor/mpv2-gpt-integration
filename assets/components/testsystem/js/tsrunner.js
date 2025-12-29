@@ -11,9 +11,13 @@
     let currentQuestionNumber = 0;
     let testMode = "training";
     let canEdit = false;
-    
+
     let allQuestions = [];
     let currentIndex = 0;
+
+    // Timer variables
+    let timerInterval = null;
+    let timeRemaining = 0;
     
     // ИСПРАВЛЕНИЕ: Определяем параметры ОДИН РАЗ в начале
     const urlParams = new URLSearchParams(window.location.search);
@@ -95,7 +99,56 @@
             throw error;
         }
     }
-    
+
+    // ===== TIMER FUNCTIONS =====
+    function startTimer(minutes) {
+        if (minutes <= 0) return;
+
+        timeRemaining = minutes * 60; // Convert to seconds
+        const timerElement = document.getElementById("exam-timer");
+        const timerDisplay = document.getElementById("timer-display");
+
+        if (timerElement && timerDisplay) {
+            timerElement.style.display = "inline-block";
+            updateTimerDisplay();
+
+            timerInterval = setInterval(() => {
+                timeRemaining--;
+
+                if (timeRemaining <= 0) {
+                    stopTimer();
+                    alert("Время вышло! Тест будет завершён автоматически.");
+                    finishTest();
+                } else {
+                    updateTimerDisplay();
+
+                    // Warning when 1 minute left
+                    if (timeRemaining === 60) {
+                        timerElement.classList.remove("bg-warning", "text-dark");
+                        timerElement.classList.add("bg-danger", "text-white");
+                    }
+                }
+            }, 1000);
+        }
+    }
+
+    function updateTimerDisplay() {
+        const timerDisplay = document.getElementById("timer-display");
+        if (timerDisplay) {
+            const minutes = Math.floor(timeRemaining / 60);
+            const seconds = timeRemaining % 60;
+            timerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+    }
+
+    function stopTimer() {
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+    }
+    // ===== END TIMER FUNCTIONS =====
+
     async function checkEditRights() {
         try {
             const result = await apiCall("checkEditRights", {});
@@ -598,9 +651,10 @@ async function addFavoritesViewToggle(questionId) {
                 const result = await apiCall("toggleFavorite", {
                     question_id: questionId
                 });
-                
+
                 if (result.success) {
-                    if (result.is_favorite) {
+                    const isFavorite = result.data?.is_favorite ?? result.is_favorite;
+                    if (isFavorite) {
                         showNotification("⭐ Добавлено в избранное", "success");
                     } else {
                         showNotification("Убрано из избранного", "info");
@@ -1388,12 +1442,17 @@ async function addFavoritesViewToggle(questionId) {
                         modeBadge.textContent = mode.toUpperCase();
                         modeBadge.className = mode === "exam" ? "badge bg-danger" : "badge bg-primary";
                     }
-                    
+
                     const totalQElement = document.getElementById("total-q");
                     if (totalQElement) {
                         totalQElement.textContent = totalQuestions;
                     }
-                    
+
+                    // Start timer for exam mode
+                    if (mode === "exam" && result.data.time_limit > 0) {
+                        startTimer(result.data.time_limit);
+                    }
+
                     loadNextQuestion();
                 } else {
                     console.error("Regular session failed:", result.message);
@@ -1618,9 +1677,10 @@ async function addFavoritesViewToggle(questionId) {
                 const result = await apiCall("toggleFavorite", {
                     question_id: currentQuestionId
                 });
-                
+
                 if (result.success) {
-                    if (result.is_favorite) {
+                    const isFavorite = result.data?.is_favorite ?? result.is_favorite;
+                    if (isFavorite) {
                         showNotification("⭐ Добавлено в избранное", "success");
                     } else {
                         showNotification("Убрано из избранного", "info");
@@ -1634,9 +1694,8 @@ async function addFavoritesViewToggle(questionId) {
             }
         });
     }
-    
 
-    
+
     // Экспортируем функцию
     window.addFavoriteButton = addFavoriteButton;    
         
@@ -2133,6 +2192,9 @@ async function addFavoritesViewToggle(questionId) {
     
 
     async function finishTest() {
+        // Stop timer if running
+        stopTimer();
+
         try {
             const result = await apiCall("finishTest", {
                 session_id: currentSessionId
