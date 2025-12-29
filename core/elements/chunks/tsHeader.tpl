@@ -100,13 +100,22 @@
                 <form method="post" action="" id="logout-form">
                   {$_modx->runSnippet('csrfTokenField')}
                   <input type="hidden" name="login_logout" value="1">
-                  <button type="submit" class="dropdown-item text-danger">
+                  <button type="submit" class="dropdown-item text-danger" id="logout-btn">
                     <i class="fas fa-sign-out-alt me-2"></i> Выход
                   </button>
                 </form>
               </li>
             </ul>
           </li>
+
+          <script>
+          // Обработчик logout - предотвращаем закрытие dropdown до отправки
+          document.getElementById('logout-btn')?.addEventListener('click', function(e) {
+              e.preventDefault();
+              e.stopPropagation();
+              document.getElementById('logout-form').submit();
+          });
+          </script>
 
         {else}
           <!-- Гость: кнопка входа -->
