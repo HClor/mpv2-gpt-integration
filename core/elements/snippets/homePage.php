@@ -125,7 +125,7 @@ if (empty($popularTests)) {
     $output[] = '<div class="list-group-item text-muted">Пока нет тестов</div>';
 } else {
     foreach ($popularTests as $test) {
-        $testUrl = $modx->makeUrl(155, '', ['test_id' => $test['id']]);
+        $testUrl = $modx->makeUrl(155, '', ['testId' => $test['id']]);
         $avgScore = $test['avg_score'] ? round($test['avg_score']) : 0;
         $badgeClass = $avgScore >= 80 ? 'success' : ($avgScore >= 60 ? 'warning' : 'secondary');
 
@@ -275,7 +275,7 @@ if (!empty($paths)) {
     $output[] = '<div class="row g-3">';
 
     foreach ($paths as $path) {
-        $pathUrl = $modx->makeUrl(195, '', ['id' => $path['id']]);
+        $pathUrl = $modx->makeUrl(193, '', ['mode' => 'view', 'id' => $path['id']]);
         $diff = $difficultyLabels[$path['difficulty_level']] ?? ['label' => $path['difficulty_level'], 'class' => 'secondary'];
 
         $output[] = '<div class="col-md-6 col-lg-3">';
