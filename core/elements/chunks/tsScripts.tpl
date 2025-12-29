@@ -43,11 +43,43 @@
 {$_modx->resource.jsTV}
 
 <script>
+// ========== ГЛОБАЛЬНЫЙ ХЕЛПЕР ДЛЯ API ЗАПРОСОВ С CSRF ==========
+window.TS_API_URL = '/assets/components/testsystem/ajax/testsystem.php';
+
+/**
+ * Получить CSRF токен из meta тега
+ */
+function getCSRFToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.content : '';
+}
+
+/**
+ * Универсальная функция для API запросов с автоматическим CSRF
+ * @param {string} action - Название action для API
+ * @param {object} data - Данные для отправки
+ * @returns {Promise<object>} - Результат запроса
+ */
+async function tsApiRequest(action, data = {}) {
+    const csrfToken = getCSRFToken();
+
+    const response = await fetch(window.TS_API_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': csrfToken
+        },
+        body: JSON.stringify({
+            action: action,
+            data: data
+        })
+    });
+
+    return await response.json();
+}
+
 // Инициализация Test System
 document.addEventListener('DOMContentLoaded', function() {
-    // API endpoint для AJAX запросов
-    window.TS_API_URL = '/assets/components/testsystem/ajax/testsystem.php';
-
     // ID текущего пользователя
     window.TS_USER_ID = {$_modx->user.id ?: 0};
 
