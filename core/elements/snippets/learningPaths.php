@@ -250,12 +250,12 @@ function renderMyPaths($modx, $prefix, $userId) {
     }
 
     function getStatusColor(status) {
-        const colors = { completed: "success", in_progress: "primary", not_started: "secondary" };
+        const colors = { completed: "success", in_progress: "primary", not_started: "secondary", created: "info" };
         return colors[status] || "secondary";
     }
 
     function getStatusText(status) {
-        const texts = { completed: "Завершено", in_progress: "В процессе", not_started: "Не начато" };
+        const texts = { completed: "Завершено", in_progress: "В процессе", not_started: "Не начато", created: "Создано мной" };
         return texts[status] || status;
     }
 

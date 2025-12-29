@@ -520,6 +520,40 @@ class LearningPathService
     }
 
     /**
+     * Получение траекторий, созданных пользователем
+     *
+     * @param modX $modx
+     * @param int $userId
+     * @param string|null $status Фильтр по статусу
+     * @return array
+     */
+    public static function getCreatedPaths($modx, $userId, $status = null)
+    {
+        $prefix = $modx->getOption('table_prefix', null, 'modx_');
+
+        $where = ['lp.created_by = ?'];
+        $params = [$userId];
+
+        if ($status) {
+            $where[] = 'lp.status = ?';
+            $params[] = $status;
+        }
+
+        $sql = "SELECT lp.*,
+                       (SELECT COUNT(*) FROM {$prefix}test_learning_path_steps WHERE path_id = lp.id) as steps_count,
+                       (SELECT COUNT(*) FROM {$prefix}test_learning_path_enrollments
+                        WHERE path_id = lp.id AND is_active = 1) as enrolled_count
+                FROM {$prefix}test_learning_paths lp
+                WHERE " . implode(' AND ', $where) . "
+                ORDER BY lp.created_at DESC";
+
+        $stmt = $modx->prepare($sql);
+        $stmt->execute($params);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
      * Получение прогресса пользователя по траектории
      *
      * @param modX $modx
