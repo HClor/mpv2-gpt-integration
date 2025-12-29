@@ -1343,6 +1343,37 @@ try {
             $response = ResponseHelper::success(null, 'Expert removed from category');
             break;
 
+        case 'createCategory':
+            // Создать новую категорию тестов
+            PermissionHelper::requireAuthentication($modx, 'Login required');
+            PermissionHelper::requireEditRights($modx, 'Only experts and admins can create categories');
+
+            $name = ValidationHelper::requireString($data, 'name', 'Category name required');
+            $description = ValidationHelper::optionalString($data, 'description', '');
+
+            // Проверяем что категория с таким именем не существует
+            $prefix = $modx->getOption('table_prefix');
+            $stmt = $modx->prepare("SELECT id FROM {$prefix}test_categories WHERE name = ?");
+            $stmt->execute([$name]);
+            if ($stmt->fetch()) {
+                throw new ValidationException('Category with this name already exists');
+            }
+
+            // Создаём категорию
+            $stmt = $modx->prepare("
+                INSERT INTO {$prefix}test_categories (name, description, is_active, sort_order, created_at)
+                VALUES (?, ?, 1, 0, NOW())
+            ");
+            $stmt->execute([$name, $description]);
+            $categoryId = $modx->lastInsertId();
+
+            $response = ResponseHelper::success([
+                'id' => $categoryId,
+                'name' => $name,
+                'description' => $description
+            ], 'Category created successfully');
+            break;
+
         case 'getCategoryExperts':
             // Получить список экспертов категории
             PermissionHelper::requireAuthentication($modx, 'Login required');
