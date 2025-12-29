@@ -247,7 +247,7 @@ function renderMyPaths($modx, $prefix, $userId) {
                     "</div>" +
                 "</div>" +
                 "<div class=\"card-footer bg-white\">" +
-                    "<a href=\"?mode=view&id=" + (path.path_id || path.id) + "\" class=\"btn btn-primary w-100\">" +
+                    "<a href=\"/learning-paths?mode=view&id=" + (path.path_id || path.id) + "\" class=\"btn btn-primary w-100\">" +
                         "<i class=\"bi bi-play-fill\"></i> " + btnText +
                     "</a>" +
                 "</div>" +
