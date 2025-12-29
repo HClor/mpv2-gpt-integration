@@ -11,13 +11,21 @@
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login_logout'])) {
     // CSRF Protection
     require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
+
+    // Диагностика: логируем попытку logout
+    $modx->log(modX::LOG_LEVEL_INFO, '[logoutHandler] Logout attempt. POST: ' . json_encode($_POST));
+
     if (!CsrfProtection::validateRequest($_POST)) {
+        $modx->log(modX::LOG_LEVEL_WARN, '[logoutHandler] CSRF validation failed');
         return ''; // Тихо игнорируем невалидный запрос
     }
+
+    $modx->log(modX::LOG_LEVEL_INFO, '[logoutHandler] CSRF valid, proceeding with logout');
 
     // Завершаем сессию пользователя в контексте web
     if ($modx->user->hasSessionContext('web')) {
         $modx->user->removeSessionContext('web');
+        $modx->log(modX::LOG_LEVEL_INFO, '[logoutHandler] Session context removed');
     }
 
     // Перенаправляем на главную страницу

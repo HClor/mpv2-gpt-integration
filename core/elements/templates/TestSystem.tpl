@@ -13,7 +13,7 @@
             [[pdoCrumbs?
                 &showHome=`1`
                 &showCurrent=`1`
-                &outputSeparator=` / `
+                &tplWrapper=`@INLINE <nav aria-label="breadcrumb"><ol class="breadcrumb">[[+output]]</ol></nav>`
             ]]
 
             <!-- Основной контент -->

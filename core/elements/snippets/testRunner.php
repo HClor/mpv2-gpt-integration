@@ -716,10 +716,8 @@ $output .= '<div id="result-details" class="mt-3"></div>';
 $retryUrl = $modx->makeUrl($modx->resource->get('id'), 'web', '', 'full');
 $output .= '<a href="' . htmlspecialchars($retryUrl, ENT_QUOTES, 'UTF-8') . '" class="btn btn-primary mt-3 me-2">Пройти еще раз</a>';
 
-// ID страницы со списком тестов (по умолчанию 35)
-$testPageId = (int)$modx->getOption('lms.test_page', null, 35);
-$testPageUrl = $modx->makeUrl($testPageId, 'web', '', 'full');
-$output .= '<a href="' . htmlspecialchars($testPageUrl, ENT_QUOTES, 'UTF-8') . '" class="btn btn-secondary mt-3">К списку тестов</a>';
+// Страница со списком тестов - жёсткий URL /tests (id 35)
+$output .= '<a href="/tests" class="btn btn-secondary mt-3">К списку тестов</a>';
 
 $output .= '</div></div></div>';
 $output .= '</div>';
