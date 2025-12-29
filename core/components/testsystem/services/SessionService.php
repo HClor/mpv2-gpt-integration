@@ -48,10 +48,14 @@ class SessionService
         // Создаём сессию
         $sessionId = self::createSession($modx, $prefix, $testId, $userId, $mode, $questionIds);
 
+        // Для режима exam возвращаем time_limit
+        $timeLimit = ($mode === 'exam') ? (int)($testSettings['time_limit'] ?? 0) : 0;
+
         return [
             'session_id' => $sessionId,
             'mode' => $mode,
-            'total_questions' => count($questionIds)
+            'total_questions' => count($questionIds),
+            'time_limit' => $timeLimit
         ];
     }
 
@@ -87,7 +91,7 @@ class SessionService
     private static function getTestSettings($modx, $prefix, $testId)
     {
         $stmt = $modx->prepare("
-            SELECT questions_per_session, randomize_questions
+            SELECT questions_per_session, randomize_questions, time_limit
             FROM {$prefix}test_tests
             WHERE id = ?
         ");

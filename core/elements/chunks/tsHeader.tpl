@@ -74,6 +74,10 @@
                 'tpl' => '@INLINE <li><a class="dropdown-item" href="[[+link]]"><i class="fas fa-wrench me-2"></i>[[+menutitle]]</a></li>',
                 'tplHere' => '@INLINE <li><a class="dropdown-item active" href="[[+link]]"><i class="fas fa-wrench me-2"></i>[[+menutitle]]</a></li>'
               ])}
+              <li><hr class="dropdown-divider"></li>
+              <li class="dropdown-header"><i class="fas fa-chart-bar me-2"></i>Статистика</li>
+              <li><a class="dropdown-item{if $_modx->resource.id == 195} active{/if}" href="{$_modx->makeUrl(195)}"><i class="fas fa-route me-2"></i>Статистика траекторий</a></li>
+              <li><a class="dropdown-item{if $_modx->resource.id == 196} active{/if}" href="{$_modx->makeUrl(196)}"><i class="fas fa-users me-2"></i>Статистика пользователей</a></li>
             </ul>
           </li>
           {/if}

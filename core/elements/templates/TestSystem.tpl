@@ -1,3 +1,5 @@
+{* Обработка выхода из системы (до любого вывода) *}
+{$_modx->runSnippet('logoutHandler')}
 <!DOCTYPE html>
 <html lang="ru">
 {include 'tsHead'}

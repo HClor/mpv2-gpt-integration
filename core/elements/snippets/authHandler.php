@@ -47,7 +47,8 @@ if ($modx->user->hasSessionContext("web") && $modx->user->id > 0) {
 }
 
 $errors = [];
-$mode = $_POST["mode"] ?? "login";
+$success = [];
+$mode = $_GET["mode"] ?? ($_POST["mode"] ?? "login");
 
 // ВХОД
 if ($_POST && $mode === "login") {
@@ -179,7 +180,141 @@ if ($_POST && $mode === "register") {
     } // Закрываем else блок CSRF проверки
 }
 
+// ВОССТАНОВЛЕНИЕ ПАРОЛЯ - запрос
+if ($_POST && $mode === "forgot") {
+    if (!CsrfProtection::validateRequest($_POST)) {
+        $errors[] = "Ошибка безопасности. Обновите страницу и попробуйте снова.";
+    } else {
+        $email = trim($_POST["email"] ?? "");
+
+        if (empty($email)) {
+            $errors[] = "Введите email";
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $errors[] = "Неверный формат email";
+        } else {
+            // Ищем пользователя по email
+            $prefix = $modx->getOption('table_prefix');
+            $stmt = $modx->prepare("SELECT internalKey FROM {$prefix}user_attributes WHERE email = ?");
+            $stmt->execute([$email]);
+            $userId = $stmt->fetchColumn();
+
+            if ($userId) {
+                $user = $modx->getObject('modUser', $userId);
+                if ($user) {
+                    // Генерируем токен
+                    $token = bin2hex(random_bytes(32));
+                    $expiry = date('Y-m-d H:i:s', strtotime('+1 hour'));
+
+                    // Сохраняем токен в extended поле профиля
+                    $profile = $user->getOne('Profile');
+                    if ($profile) {
+                        $extended = $profile->get('extended') ?: [];
+                        $extended['reset_token'] = $token;
+                        $extended['reset_expiry'] = $expiry;
+                        $profile->set('extended', $extended);
+                        $profile->save();
+
+                        // Формируем ссылку для сброса
+                        $resetUrl = $modx->makeUrl($modx->resource->id, '', [
+                            'mode' => 'reset',
+                            'token' => $token
+                        ], 'full');
+
+                        // Отправляем email
+                        $modx->getService('mail', 'mail.modPHPMailer');
+                        $modx->mail->set(modMail::MAIL_FROM, $modx->getOption('emailsender'));
+                        $modx->mail->set(modMail::MAIL_FROM_NAME, $modx->getOption('site_name'));
+                        $modx->mail->set(modMail::MAIL_SUBJECT, 'Восстановление пароля');
+                        $modx->mail->set(modMail::MAIL_BODY, "
+                            <h3>Восстановление пароля</h3>
+                            <p>Вы запросили восстановление пароля на сайте {$modx->getOption('site_name')}.</p>
+                            <p><a href='{$resetUrl}'>Нажмите здесь для установки нового пароля</a></p>
+                            <p>Ссылка действительна 1 час.</p>
+                            <p>Если вы не запрашивали восстановление пароля, проигнорируйте это письмо.</p>
+                        ");
+                        $modx->mail->address('to', $email);
+                        $modx->mail->setHTML(true);
+
+                        if ($modx->mail->send()) {
+                            $success[] = "Ссылка для восстановления пароля отправлена на ваш email";
+                        } else {
+                            $errors[] = "Ошибка отправки email. Обратитесь к администратору.";
+                            $modx->log(modX::LOG_LEVEL_ERROR, "[authHandler] Failed to send reset email: " . $modx->mail->mailer->ErrorInfo);
+                        }
+                        $modx->mail->reset();
+                    }
+                }
+            } else {
+                // Не сообщаем что email не найден (безопасность)
+                $success[] = "Если email зарегистрирован, ссылка для восстановления будет отправлена";
+            }
+        }
+    }
+}
+
+// ВОССТАНОВЛЕНИЕ ПАРОЛЯ - установка нового пароля
+if ($mode === "reset") {
+    $token = $_GET["token"] ?? "";
+
+    if ($_POST && isset($_POST["new_password"])) {
+        if (!CsrfProtection::validateRequest($_POST)) {
+            $errors[] = "Ошибка безопасности. Обновите страницу и попробуйте снова.";
+        } else {
+            $newPassword = trim($_POST["new_password"] ?? "");
+            $confirmPassword = trim($_POST["confirm_password"] ?? "");
+
+            if (empty($newPassword)) {
+                $errors[] = "Введите новый пароль";
+            } elseif (strlen($newPassword) < 6) {
+                $errors[] = "Пароль должен быть минимум 6 символов";
+            } elseif ($newPassword !== $confirmPassword) {
+                $errors[] = "Пароли не совпадают";
+            } else {
+                // Ищем пользователя по токену
+                $prefix = $modx->getOption('table_prefix');
+                $profiles = $modx->getCollection('modUserProfile');
+                $foundUser = null;
+
+                foreach ($profiles as $profile) {
+                    $extended = $profile->get('extended') ?: [];
+                    if (isset($extended['reset_token']) && $extended['reset_token'] === $token) {
+                        if (isset($extended['reset_expiry']) && strtotime($extended['reset_expiry']) > time()) {
+                            $foundUser = $modx->getObject('modUser', $profile->get('internalKey'));
+                            // Очищаем токен
+                            unset($extended['reset_token']);
+                            unset($extended['reset_expiry']);
+                            $profile->set('extended', $extended);
+                            $profile->save();
+                            break;
+                        }
+                    }
+                }
+
+                if ($foundUser) {
+                    $foundUser->set('password', $newPassword);
+                    if ($foundUser->save()) {
+                        $success[] = "Пароль успешно изменён! Теперь можете войти.";
+                        $mode = "login";
+                    } else {
+                        $errors[] = "Ошибка сохранения пароля";
+                    }
+                } else {
+                    $errors[] = "Недействительная или просроченная ссылка";
+                }
+            }
+        }
+    }
+}
+
 $output = "";
+
+if (!empty($success)) {
+    $output .= "<div class=\"alert alert-success\"><ul class=\"mb-0\">";
+    foreach ($success as $msg) {
+        $output .= "<li>" . htmlspecialchars($msg) . "</li>";
+    }
+    $output .= "</ul></div>";
+}
 
 if (!empty($errors)) {
     $output .= "<div class=\"alert alert-danger\"><ul class=\"mb-0\">";
@@ -187,6 +322,49 @@ if (!empty($errors)) {
         $output .= "<li>" . htmlspecialchars($error) . "</li>";
     }
     $output .= "</ul></div>";
+}
+
+// Форма сброса пароля (по токену)
+if ($mode === "reset" && empty($success)) {
+    $token = htmlspecialchars($_GET["token"] ?? "");
+    $output .= "<h4 class=\"mb-4\">Установка нового пароля</h4>";
+    $output .= "<form method=\"POST\">";
+    $output .= CsrfProtection::getTokenField();
+    $output .= "<input type=\"hidden\" name=\"mode\" value=\"reset\">";
+
+    $output .= "<div class=\"mb-3\">";
+    $output .= "<label class=\"form-label\">Новый пароль *</label>";
+    $output .= "<input type=\"password\" name=\"new_password\" class=\"form-control\" required minlength=\"6\">";
+    $output .= "</div>";
+
+    $output .= "<div class=\"mb-3\">";
+    $output .= "<label class=\"form-label\">Подтверждение пароля *</label>";
+    $output .= "<input type=\"password\" name=\"confirm_password\" class=\"form-control\" required minlength=\"6\">";
+    $output .= "</div>";
+
+    $output .= "<button type=\"submit\" class=\"btn btn-primary\">Сохранить пароль</button>";
+    $output .= "</form>";
+    return $output;
+}
+
+// Форма запроса восстановления пароля
+if ($mode === "forgot" && empty($success)) {
+    $loginUrl = $modx->makeUrl($modx->resource->id);
+    $output .= "<h4 class=\"mb-4\">Восстановление пароля</h4>";
+    $output .= "<p class=\"text-muted\">Введите email, указанный при регистрации</p>";
+    $output .= "<form method=\"POST\">";
+    $output .= CsrfProtection::getTokenField();
+    $output .= "<input type=\"hidden\" name=\"mode\" value=\"forgot\">";
+
+    $output .= "<div class=\"mb-3\">";
+    $output .= "<label class=\"form-label\">Email</label>";
+    $output .= "<input type=\"email\" name=\"email\" class=\"form-control\" required>";
+    $output .= "</div>";
+
+    $output .= "<button type=\"submit\" class=\"btn btn-primary\">Отправить ссылку</button>";
+    $output .= " <a href=\"" . $loginUrl . "\" class=\"btn btn-link\">Вернуться к входу</a>";
+    $output .= "</form>";
+    return $output;
 }
 
 $activeTab = $mode === "register" ? "register" : "login";
@@ -222,7 +400,11 @@ $output .= "<input class=\"form-check-input\" type=\"checkbox\" name=\"rememberm
 $output .= "<label class=\"form-check-label\" for=\"rememberme\">Запомнить меня</label>";
 $output .= "</div>";
 
+$output .= "<div class=\"d-flex justify-content-between align-items-center\">";
 $output .= "<button type=\"submit\" class=\"btn btn-primary\">Войти</button>";
+$forgotUrl = $modx->makeUrl($modx->resource->id, '', ['mode' => 'forgot']);
+$output .= "<a href=\"" . $forgotUrl . "\" class=\"text-muted small\">Забыли пароль?</a>";
+$output .= "</div>";
 $output .= "</form>";
 $output .= "</div>";
 

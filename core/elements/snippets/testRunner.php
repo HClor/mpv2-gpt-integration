@@ -668,7 +668,10 @@ $output .= '</div>';
 $output .= '<div class="card mb-3">';
 $output .= '<div class="card-header d-flex justify-content-between align-items-center">';
 $output .= '<span id="question-progress">Вопрос <span id="current-q">1</span> из <span id="total-q">' . (int)$questionsPerSession . '</span></span>';
+$output .= '<div class="d-flex align-items-center gap-2">';
+$output .= '<span id="exam-timer" class="badge bg-warning text-dark" style="display:none;"><i class="fas fa-clock me-1"></i><span id="timer-display">00:00</span></span>';
 $output .= '<span id="mode-badge" class="badge"></span>';
+$output .= '</div>';
 $output .= '</div>';
 $output .= '<div class="card-body">';
 $output .= '<h4 id="question-text"></h4>';
@@ -711,10 +714,11 @@ $output .= '<p id="result-message" class="lead"></p>';
 $output .= '<div id="result-details" class="mt-3"></div>';
 
 $retryUrl = $modx->makeUrl($modx->resource->get('id'), 'web', '', 'full');
-$output .= '<a href="' . htmlspecialchars($retryUrl, ENT_QUOTES, 'UTF-8') . '" class="btn btn-primary mt-3">Пройти еще раз</a>';
+$output .= '<a href="' . htmlspecialchars($retryUrl, ENT_QUOTES, 'UTF-8') . '" class="btn btn-primary mt-3 me-2">Пройти еще раз</a>';
 
-$testPageId = (int)$modx->getOption('lms.test_page', null, 0);
-$testPageUrl = $testPageId > 0 ? $modx->makeUrl($testPageId, 'web', '', 'full') : $retryUrl;
+// ID страницы со списком тестов (по умолчанию 35)
+$testPageId = (int)$modx->getOption('lms.test_page', null, 35);
+$testPageUrl = $modx->makeUrl($testPageId, 'web', '', 'full');
 $output .= '<a href="' . htmlspecialchars($testPageUrl, ENT_QUOTES, 'UTF-8') . '" class="btn btn-secondary mt-3">К списку тестов</a>';
 
 $output .= '</div></div></div>';

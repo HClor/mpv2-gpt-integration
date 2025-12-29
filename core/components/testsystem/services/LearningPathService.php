@@ -485,14 +485,26 @@ class LearningPathService
         $params = [$userId];
 
         if ($status) {
-            $where[] = 'p.status = ?';
+            $where[] = 'lp.status = ?';
             $params[] = $status;
         }
 
-        $sql = "SELECT lp.*, lpp.status as user_status, lpp.completion_pct,
-                       lpp.current_step, lpp.started_at, lpp.completed_at,
-                       e.enrolled_at, e.expires_at, e.deadline, e.enrolled_by,
-                       enroller.username as enrolled_by_name
+        $sql = "SELECT lp.*,
+                       e.path_id as path_id,
+                       lpp.status as user_status,
+                       lpp.completion_pct,
+                       lpp.current_step,
+                       lpp.started_at as progress_started_at,
+                       lpp.completed_at as progress_completed_at,
+                       e.enrolled_at,
+                       e.expires_at,
+                       e.deadline,
+                       e.enrolled_by,
+                       enroller.username as enrolled_by_name,
+                       (SELECT COUNT(*) FROM {$prefix}test_learning_path_steps WHERE path_id = lp.id) as total_steps,
+                       (SELECT COUNT(*) FROM {$prefix}test_learning_path_step_completion sc
+                        JOIN {$prefix}test_learning_path_progress p ON p.id = sc.progress_id
+                        WHERE p.enrollment_id = e.id AND sc.status = 'completed') as completed_steps
                 FROM {$prefix}test_learning_path_enrollments e
                 JOIN {$prefix}test_learning_paths lp ON lp.id = e.path_id
                 LEFT JOIN {$prefix}test_learning_path_progress lpp
@@ -1487,7 +1499,7 @@ class LearningPathService
                     SUM(CASE WHEN p.certificate_issued = 1 THEN 1 ELSE 0 END) as certificates_earned
                 FROM {$prefix}test_learning_path_enrollments e
                 LEFT JOIN {$prefix}test_learning_path_progress p ON p.enrollment_id = e.id
-                WHERE e.user_id = ? AND e.status = 'active'";
+                WHERE e.user_id = ? AND e.is_active = 1";
 
         $stmt = $modx->prepare($sql);
         $stmt->execute([$userId]);
@@ -1528,7 +1540,7 @@ class LearningPathService
                 FROM {$prefix}test_learning_path_enrollments e
                 JOIN {$prefix}test_learning_paths lp ON lp.id = e.path_id
                 LEFT JOIN {$prefix}test_learning_path_progress p ON p.enrollment_id = e.id
-                WHERE e.user_id = ? AND e.status = 'active'
+                WHERE e.user_id = ? AND e.is_active = 1
                 ORDER BY e.enrolled_at DESC";
 
         $stmt = $modx->prepare($sql);
