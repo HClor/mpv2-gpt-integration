@@ -7,6 +7,9 @@
  * @package TestSystem
  */
 
+// ДИАГНОСТИКА: логируем каждый вызов сниппета
+$modx->log(modX::LOG_LEVEL_INFO, '[logoutHandler] Snippet called. Method: ' . $_SERVER['REQUEST_METHOD'] . ', POST keys: ' . implode(',', array_keys($_POST ?: [])));
+
 // Обработка выхода пользователя
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login_logout'])) {
     // CSRF Protection
