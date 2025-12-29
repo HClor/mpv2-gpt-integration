@@ -1,3 +1,7 @@
+{* Чанк: form.contact_form - HTML форма контакта
+   Вызывается из: contact_form.tpl через AjaxForm
+   Содержит: поля имя, телефон, сообщение, согласие
+*}
 <br><h2>Задать вопрос</h2><br>
 <form action="{$_modx->resource.id | url}" method="post" class="ajax_form form-horizontal well" style="max-width: 530px;">
 

@@ -1,7 +1,11 @@
 <?php
 /**
- * getLearningResourceIds v2.0 - С поддержкой избранного
- * &parentId - ID контейнера с тестами (по умолчанию 35)
+ * @deprecated НЕ ИСПОЛЬЗУЕТСЯ - Можно удалить
+ * Сниппет: getLearningResourceIds - ID ресурсов для обучения
+ * Назначение: Заменён на learningMaterials
+ *
+ * @package TestSystem
+ * @version 2.0
  */
 
 $parentId = (int)$modx->getOption('parentId', $scriptProperties, 35);

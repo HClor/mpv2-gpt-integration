@@ -1,6 +1,11 @@
 <?php
 /**
- * Categories and Tests v2.0 - Unified UI Style
+ * Сниппет: categoriesAndTests - Категории и тесты
+ * Вызывается из: MODX ресурсов (главная страница тестов)
+ * Назначение: Отображает дерево категорий и доступные тесты
+ *
+ * @package TestSystem
+ * @version 2.0
  */
 
 // Подключаем bootstrap

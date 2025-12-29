@@ -1,5 +1,12 @@
 <?php
-/* TS MANAGE CATEGORIES v1.1 AUTO FOLDER */
+/**
+ * Сниппет: manageCategories - Управление категориями
+ * Вызывается из: MODX ресурсов (админ-панель)
+ * Назначение: CRUD операции с категориями тестов (только для админов)
+ *
+ * @package TestSystem
+ * @version 1.1
+ */
 
 // Подключаем bootstrap для CSRF защиты
 require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';

@@ -1,3 +1,7 @@
+{* Чанк: child_list - Список дочерних ресурсов с пагинацией
+   Вызывается из: content_default.tpl (через checkShowOnPage)
+   Использует сниппеты: pdoPage
+*}
 <br>
 <div id="child_list">
   <div class="rows">

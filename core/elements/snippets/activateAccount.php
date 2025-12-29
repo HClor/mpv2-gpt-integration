@@ -1,5 +1,12 @@
 <?php
-/* TS ACTIVATE ACCOUNT v1.0 */
+/**
+ * Сниппет: activateAccount - Активация аккаунта
+ * Вызывается из: MODX ресурсов (страница активации)
+ * Назначение: Активирует аккаунт пользователя по токену из email
+ *
+ * @package TestSystem
+ * @version 1.0
+ */
 
 $token = $_GET['token'] ?? '';
 

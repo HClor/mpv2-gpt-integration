@@ -1,6 +1,11 @@
 <?php
 /**
- * TS USER MENU v1.4 - Config Integration
+ * Сниппет: userMenu - Меню пользователя в навбаре
+ * Вызывается из: LMS_Bootstrap_5.tpl
+ * Назначение: Отображает кнопки входа/выхода, профиля пользователя
+ *
+ * @package TestSystem
+ * @version 1.4
  */
 
 // Подключаем bootstrap для доступа к Config

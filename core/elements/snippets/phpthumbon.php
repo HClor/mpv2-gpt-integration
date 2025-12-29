@@ -1,12 +1,13 @@
 <?php
 /**
- * phpThumbOn
- * Создание превьюх картинок
+ * Сниппет/Модификатор: phpthumbon - Генератор превью изображений
+ * Вызывается из: Чанки siteExtra как модификатор Fenom (| phpthumbon)
+ * Назначение: Создание миниатюр изображений с указанными размерами
  *
  * Copyright 2013 by Agel_Nash <Agel_Nash@xaker.ru>
  *
  * @category images
- * @license GNU General Public License (GPL), http://www.gnu.org/copyleft/gpl.html
+ * @license GNU General Public License (GPL)
  * @author Agel_Nash <Agel_Nash@xaker.ru>
  */
 

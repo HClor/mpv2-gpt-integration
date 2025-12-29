@@ -1,3 +1,7 @@
+{* Чанк: tsScripts - JavaScript для системы тестирования
+   Вызывается из: TestSystem.tpl, learning-materials-template*.html
+   Содержит: jQuery, Bootstrap JS, все JS модули системы тестирования
+*}
 <!-- jQuery (если нужен) -->
 <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
 

@@ -1,7 +1,10 @@
 <?php
 /**
- * getTestInfoBatch - получает информацию о тестах одним запросом
- * Поддерживает pdoPage для пагинации
+ * @deprecated НЕ ИСПОЛЬЗУЕТСЯ - Можно удалить
+ * Сниппет: getTestInfoBatch - Batch загрузка информации о тестах
+ * Назначение: Заменён на categoriesAndTests
+ *
+ * @package TestSystem
  */
 if (!$modx instanceof modX) {
     return '';

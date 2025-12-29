@@ -1,6 +1,10 @@
 <?php
 /**
- * getUserStats - статистика текущего пользователя
+ * @deprecated НЕ ИСПОЛЬЗУЕТСЯ - Можно удалить
+ * Сниппет: getUserStats - Статистика текущего пользователя
+ * Назначение: Раньше использовался в tsHeader, сейчас заменён на getUserRights
+ *
+ * @package TestSystem
  */
 
 if (!$modx instanceof modX) {

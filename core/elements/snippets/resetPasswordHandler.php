@@ -1,5 +1,12 @@
 <?php
-/* TS RESET PASSWORD v1.1 - Added CSRF Protection */
+/**
+ * Сниппет: resetPasswordHandler - Сброс пароля
+ * Вызывается из: MODX ресурсов (страница сброса пароля)
+ * Назначение: Устанавливает новый пароль по токену из email
+ *
+ * @package TestSystem
+ * @version 1.1
+ */
 
 require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
 

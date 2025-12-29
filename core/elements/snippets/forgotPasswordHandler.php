@@ -1,5 +1,12 @@
 <?php
-/* TS FORGOT PASSWORD v1.1 - Added CSRF Protection */
+/**
+ * Сниппет: forgotPasswordHandler - Восстановление пароля
+ * Вызывается из: MODX ресурсов (страница восстановления)
+ * Назначение: Отправляет email со ссылкой для сброса пароля
+ *
+ * @package TestSystem
+ * @version 1.1
+ */
 
 require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
 

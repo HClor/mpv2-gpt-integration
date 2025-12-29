@@ -1,7 +1,10 @@
 <?php
 /**
- * CSRF Token Debug Snippet
- * Временный диагностический сниппет для отладки
+ * @deprecated НЕ ИСПОЛЬЗУЕТСЯ - Можно удалить
+ * Сниппет: csrfTokenDebug - Диагностика CSRF токена (временный)
+ * Назначение: Отладка CSRF защиты (не вызывается из кода)
+ *
+ * @package TestSystem
  */
 
 $logFile = MODX_CORE_PATH . 'cache/logs/csrf_debug.log';

@@ -1,3 +1,7 @@
+{* Чанк: header - Шапка страницы для siteExtra
+   Вызывается из: siteExtra.tpl
+   Содержит: логотип, адрес, телефон
+*}
 <header class="page-header row">
   <div class="col-sm-4">
     <h2>

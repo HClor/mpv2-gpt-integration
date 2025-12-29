@@ -1,5 +1,12 @@
 <?php
-/* TS ADD TEST FORM v4.9 - FIXED FOR RESOURCE HIERARCHY + EXCEL SUPPORT */
+/**
+ * Сниппет: addTestForm - Форма создания теста
+ * Вызывается из: MODX ресурсов (страница добавления теста)
+ * Назначение: Форма создания/редактирования теста с импортом из Excel
+ *
+ * @package TestSystem
+ * @version 4.9
+ */
 
 // Подключаем bootstrap для CSRF защиты
 require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';

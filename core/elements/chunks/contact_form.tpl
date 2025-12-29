@@ -1,3 +1,8 @@
+{* Чанк: contact_form - Контактная форма обратной связи
+   Вызывается из: MODX ресурсов через [[contact_form]]
+   Использует сниппеты: AjaxForm, FormIt
+   Включает: form.contact_form, tpl.contact_form
+*}
 {var $form     = $form     ?: 'form.contact_form'}
 {var $tpl      = $tpl      ?: 'tpl.contact_form'}
 {var $subject  = $subject  ?: 'Сообщение с сайта ' ~ $_modx->config.http_host}

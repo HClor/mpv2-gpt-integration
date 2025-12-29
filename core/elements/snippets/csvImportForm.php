@@ -1,5 +1,12 @@
 <?php
-/* TS CSV/EXCEL IMPORT v5.2 - REFACTORED */
+/**
+ * Сниппет: csvImportForm - Импорт вопросов из CSV/Excel
+ * Вызывается из: MODX ресурсов (страница импорта)
+ * Назначение: Импорт вопросов теста из CSV или Excel файлов
+ *
+ * @package TestSystem
+ * @version 5.2
+ */
 
 // Подключаем bootstrap для CSRF защиты
 require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';

@@ -1,3 +1,7 @@
+{* Чанк: menu - Навигационное меню для siteExtra
+   Вызывается из: siteExtra.tpl
+   Использует сниппеты: pdoMenu
+*}
 <nav class="navbar navbar-default container row">
   {'pdoMenu' | snippet : [
     'startId' => 0,

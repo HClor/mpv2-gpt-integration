@@ -1,8 +1,8 @@
 <?php
 /**
- * CSRF Token Snippet
- *
- * Генерирует meta тег с CSRF токеном для использования в чанках и шаблонах
+ * Сниппет: csrfToken - Генератор CSRF токена
+ * Вызывается из: tsHead.tpl, tsHeader.tpl
+ * Назначение: Генерирует meta тег с CSRF токеном для защиты форм от CSRF атак
  *
  * @package TestSystem
  * @version 1.0

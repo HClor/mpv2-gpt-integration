@@ -1,6 +1,11 @@
 <?php
-// Snippet: myTests
-// Описание: Управление личными тестами пользователя
+/**
+ * Сниппет: myTests - Личные тесты пользователя
+ * Вызывается из: MODX ресурсов (страница "Мои тесты")
+ * Назначение: Управление личными тестами пользователя (создание, редактирование)
+ *
+ * @package TestSystem
+ */
 
 // Подключаем bootstrap для CSRF защиты
 require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';

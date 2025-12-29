@@ -1,5 +1,12 @@
 <?php
-/* TS LEADERBOARD v3.0 - Gamification */
+/**
+ * Сниппет: leaderboard - Таблица лидеров
+ * Вызывается из: MODX ресурсов (страница рейтинга)
+ * Назначение: Отображает рейтинг пользователей с геймификацией
+ *
+ * @package TestSystem
+ * @version 3.0
+ */
 
 $userId = $modx->user->id;
 $prefix = $modx->getOption('table_prefix');

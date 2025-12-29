@@ -1,11 +1,8 @@
-<!-- Screenshot reference: /mnt/data/dd4c610d-0c94-4afe-87f2-1ae6c0587a1a.png -->
-<!-- Fixed Bootstrap 5 navbar for MODX Revo (variant 2). Improvements:
-     - Valid UL/LI structure
-     - Grouped user controls into proper nav items
-     - Kept getUserStats snippet inline-friendly
-     - Removed inline positioning from dropdown-menu
-     - Added responsive helpers and aria attributes
--->
+{* Чанк: tsHeader - Навигационная панель для системы тестирования
+   Вызывается из: TestSystem.tpl, learning-materials-template*.html
+   Содержит: логотип, меню pdoMenu, меню пользователя (вход/профиль), уведомления
+   Использует сниппеты: pdoMenu, getUserRights, csrfToken, getNotifications
+*}
 <!--<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm py-2">-->
 <nav class="navbar navbar-expand-lg shadow-sm py-2">
   <div class="container">

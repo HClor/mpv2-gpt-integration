@@ -1,3 +1,7 @@
+{* Чанк: tpl.contact_form - Email шаблон для контактной формы
+   Вызывается из: contact_form.tpl через FormIt email hook
+   Содержит: данные заявки для отправки на email
+*}
 <p>Пользователь оставил заявку на сайте {'http_host' | config}</p>
 <br>
 <p><strong>Контакты</strong></p>

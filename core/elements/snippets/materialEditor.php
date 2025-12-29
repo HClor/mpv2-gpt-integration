@@ -1,10 +1,11 @@
 <?php
 /**
- * materialEditor - Snippet for editing learning materials with Quill
- * Использование: [[!materialEditor]]
- *
- * На странице учебного материала показывает Quill редактор для редактирования
+ * Сниппет: materialEditor - Редактор учебных материалов
+ * Вызывается из: learning-materials-template.html
+ * Назначение: Quill редактор для редактирования учебных материалов
  * Права: LMS Experts, LMS Admins или владелец материала
+ *
+ * @package TestSystem
  */
 
 // Проверка авторизации

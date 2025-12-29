@@ -1,3 +1,8 @@
+{* Чанк: head - Заголовок HTML для siteExtra
+   Вызывается из: siteExtra.tpl
+   Содержит: meta-теги, SEO, Open Graph, Bootstrap 5, MinifyX
+   Использует сниппеты: cleanDescription, MinifyX
+*}
 <title>{$_modx->resource.longtitle ?: $_modx->resource.pagetitle}</title>
 <base href="{$_modx->config.site_url}">
 <meta charset="utf-8">
