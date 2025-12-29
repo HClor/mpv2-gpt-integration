@@ -295,10 +295,15 @@
     // ==================== ADD PERMISSION ====================
 
     function showAddPermissionModal() {
-        document.getElementById('permission-category')?.value = '';
-        document.getElementById('permission-user-search')?.value = '';
-        document.getElementById('permission-role')?.value = 'viewer';
-        document.getElementById('user-search-results').innerHTML = '';
+        const categoryEl = document.getElementById('permission-category');
+        const userSearchEl = document.getElementById('permission-user-search');
+        const roleEl = document.getElementById('permission-role');
+        const resultsEl = document.getElementById('user-search-results');
+
+        if (categoryEl) categoryEl.value = '';
+        if (userSearchEl) userSearchEl.value = '';
+        if (roleEl) roleEl.value = 'viewer';
+        if (resultsEl) resultsEl.innerHTML = '';
 
         const modal = new bootstrap.Modal(document.getElementById('addPermissionModal'));
         modal.show();
