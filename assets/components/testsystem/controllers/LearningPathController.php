@@ -578,7 +578,7 @@ class LearningPathController extends BaseController
     }
 
     /**
-     * Получение моих траекторий (на которые я записан)
+     * Получение моих траекторий (на которые я записан + созданные мной)
      */
     private function getMyPaths($data)
     {
@@ -587,9 +587,30 @@ class LearningPathController extends BaseController
         $currentUserId = $this->getCurrentUserId();
         $status = ValidationHelper::optionalString($data, 'status');
 
-        $paths = LearningPathService::getEnrolledPaths($this->modx, $currentUserId, $status);
+        // Получаем траектории, на которые записан пользователь
+        $enrolledPaths = LearningPathService::getEnrolledPaths($this->modx, $currentUserId, $status);
 
-        return $this->success($paths);
+        // Получаем траектории, созданные пользователем
+        $createdPaths = LearningPathService::getCreatedPaths($this->modx, $currentUserId, $status);
+
+        // Объединяем, избегая дубликатов (по path_id или id)
+        $enrolledIds = array_column($enrolledPaths, 'path_id');
+        $enrolledIds = array_filter($enrolledIds); // убираем пустые
+
+        foreach ($createdPaths as $path) {
+            $pathId = $path['id'] ?? $path['path_id'] ?? 0;
+            if (!in_array($pathId, $enrolledIds)) {
+                // Добавляем поля для совместимости с форматом enrolled paths
+                $path['path_id'] = $pathId;
+                $path['user_status'] = 'created'; // Помечаем как созданную
+                $path['completion_pct'] = 0;
+                $path['total_steps'] = $path['steps_count'] ?? 0;
+                $path['completed_steps'] = 0;
+                $enrolledPaths[] = $path;
+            }
+        }
+
+        return $this->success($enrolledPaths);
     }
 
     /**

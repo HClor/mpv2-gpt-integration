@@ -76,8 +76,8 @@
               ])}
               <li><hr class="dropdown-divider"></li>
               <li class="dropdown-header"><i class="fas fa-chart-bar me-2"></i>Статистика</li>
-              <li><a class="dropdown-item{if $_modx->resource.id == 195} active{/if}" href="{$_modx->makeUrl(195)}"><i class="fas fa-route me-2"></i>Статистика траекторий</a></li>
-              <li><a class="dropdown-item{if $_modx->resource.id == 196} active{/if}" href="{$_modx->makeUrl(196)}"><i class="fas fa-users me-2"></i>Статистика пользователей</a></li>
+              <li><a class="dropdown-item{if $_modx->resource.id == 201} active{/if}" href="{$_modx->makeUrl(201)}"><i class="fas fa-users me-2"></i>Статистика пользователей</a></li>
+              <li><a class="dropdown-item{if $_modx->resource.id == 200} active{/if}" href="{$_modx->makeUrl(200)}"><i class="fas fa-route me-2"></i>Статистика траекторий обучения</a></li>
             </ul>
           </li>
           {/if}
@@ -91,13 +91,14 @@
               <li><a class="dropdown-item" href="{$_modx->makeUrl(28)}"><i class="fas fa-user me-2"></i> Мой профиль</a></li>
               <li><a class="dropdown-item" href="{$_modx->makeUrl(186)}"><i class="fas fa-edit me-2"></i> Мои тесты</a></li>
               <li><a class="dropdown-item" href="{$_modx->makeUrl(194)}"><i class="fas fa-map-signs me-2"></i> Мои траектории</a></li>
+              <li><a class="dropdown-item" href="{$_modx->makeUrl(202)}"><i class="fas fa-trophy me-2"></i> Мои достижения</a></li>
               <li><a class="dropdown-item" href="{$_modx->makeUrl(169)}"><i class="fas fa-star me-2"></i> Избранное</a></li>
               <li><a class="dropdown-item" href="{$_modx->makeUrl(157)}"><i class="fas fa-history me-2"></i> История тестов</a></li>
               <li><a class="dropdown-item" href="{$_modx->makeUrl(180)}"><i class="fas fa-certificate me-2"></i> Сертификаты</a></li>
               <li><hr class="dropdown-divider"></li>
               <li>
-                <form method="post" action="">
-                  {$_modx->runSnippet('csrfToken')}
+                <form method="post" action="" id="logout-form">
+                  {$_modx->runSnippet('csrfTokenField')}
                   <input type="hidden" name="login_logout" value="1">
                   <button type="submit" class="dropdown-item text-danger">
                     <i class="fas fa-sign-out-alt me-2"></i> Выход

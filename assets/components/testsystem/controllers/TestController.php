@@ -142,16 +142,32 @@ class TestController extends BaseController
         $description = ValidationHelper::optionalString($data, 'description');
         $isActive = ValidationHelper::optionalInt($data, 'is_active', 1);
         $isLearningMaterial = ValidationHelper::optionalInt($data, 'is_learning_material', 0);
+        $mode = ValidationHelper::optionalString($data, 'mode', 'training');
+        $passScore = ValidationHelper::optionalInt($data, 'pass_score', 70);
+        $timeLimit = ValidationHelper::optionalInt($data, 'time_limit', 0);
+        $questionsPerSession = ValidationHelper::optionalInt($data, 'questions_per_session', 0);
+        $randomizeQuestions = ValidationHelper::optionalInt($data, 'randomize_questions', 1);
+        $randomizeAnswers = ValidationHelper::optionalInt($data, 'randomize_answers', 1);
 
         $stmt = $this->modx->prepare("
             UPDATE {$this->prefix}test_tests
             SET title = ?,
                 description = ?,
                 is_active = ?,
-                is_learning_material = ?
+                is_learning_material = ?,
+                mode = ?,
+                pass_score = ?,
+                time_limit = ?,
+                questions_per_session = ?,
+                randomize_questions = ?,
+                randomize_answers = ?
             WHERE id = ?
         ");
-        $stmt->execute([$title, $description, $isActive, $isLearningMaterial, $testId]);
+        $stmt->execute([
+            $title, $description, $isActive, $isLearningMaterial,
+            $mode, $passScore, $timeLimit, $questionsPerSession,
+            $randomizeQuestions, $randomizeAnswers, $testId
+        ]);
 
         return $this->success(null, 'Test settings updated');
     }
