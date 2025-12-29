@@ -1,5 +1,5 @@
-{* Обработка выхода из системы (до любого вывода) *}
-{$_modx->runSnippet('logoutHandler')}
+{* Обработка выхода из системы (некэшируемый вызов для обработки POST) *}
+[[!logoutHandler]]
 <!DOCTYPE html>
 <html lang="ru">
 {include 'tsHead'}
