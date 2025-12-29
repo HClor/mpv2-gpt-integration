@@ -571,11 +571,11 @@ try {
             $passed = $score >= (int)$session['pass_score'];
             
             $stmt = $modx->prepare("
-                UPDATE modx_test_sessions 
-                SET status = 'completed', 
-                    score = ?, 
+                UPDATE modx_test_sessions
+                SET status = 'completed',
+                    score = ?,
                     passed = ?,
-                    completed_at = NOW()
+                    finished_at = NOW()
                 WHERE id = ?
             ");
             $stmt->execute([$score, $passed ? 1 : 0, $sessionId]);
@@ -617,13 +617,30 @@ try {
                 }
             }
 
+            // Автоматическая выдача сертификата при успешном прохождении теста
+            $certificateId = null;
+            if ($passed && $modx->user->id > 0) {
+                require_once MODX_CORE_PATH . 'components/testsystem/services/CertificateService.php';
+                $certificateId = CertificateService::autoIssueCertificate(
+                    $modx,
+                    $modx->user->id,
+                    'test',
+                    $session['test_id'],
+                    ['score' => $score]
+                );
+                if ($certificateId) {
+                    $modx->log(modX::LOG_LEVEL_INFO, "[finishTest] Certificate issued: ID=$certificateId for test {$session['test_id']}");
+                }
+            }
+
             $response = ResponseHelper::success([
                 'score' => $score,
                 'passed' => $passed,
                 'correct_count' => $correct,
                 'incorrect_count' => $total - $correct,
                 'total_count' => $total,
-                'pass_score' => (int)$session['pass_score']
+                'pass_score' => (int)$session['pass_score'],
+                'certificate_id' => $certificateId
             ]);
             break;
 
