@@ -1,3 +1,8 @@
+{* Чанк: aside - Боковая панель для siteExtra
+   Вызывается из: siteExtra.tpl
+   Содержит: новости, специалисты
+   Использует сниппеты: pdoResources
+*}
 <br><hr>
 {'pdoResources' | snippet : [
     'parents' => 15,

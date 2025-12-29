@@ -1,5 +1,12 @@
 <?php
-/* TS CATEGORIES LIST v1.0 */
+/**
+ * @deprecated НЕ ИСПОЛЬЗУЕТСЯ - Можно удалить
+ * Сниппет: categoriesList - Список категорий (старая версия)
+ * Назначение: Заменён на categoriesAndTests
+ *
+ * @package TestSystem
+ * @version 1.0
+ */
 
 // Получаем категории
 $stmt = $modx->query("

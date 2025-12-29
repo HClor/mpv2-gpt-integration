@@ -1,5 +1,12 @@
 <?php
-/* TS USER RIGHTS HELPER v1.0 */
+/**
+ * Сниппет: getUserRights - Проверка прав пользователя
+ * Вызывается из: tsHeader.tpl, learningPaths.php, learningMaterialsTemplate.php
+ * Назначение: Возвращает массив с флагами ролей пользователя (isAdmin, isExpert, isStudent)
+ *
+ * @package TestSystem
+ * @version 1.0
+ */
 
 $userId = $modx->user->id;
 

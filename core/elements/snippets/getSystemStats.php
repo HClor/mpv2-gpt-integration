@@ -1,6 +1,10 @@
 <?php
 /**
- * getSystemStats - выводит общую статистику системы
+ * Сниппет: getSystemStats - Статистика системы
+ * Вызывается из: tsFooter.tpl
+ * Назначение: Выводит общую статистику системы (пользователи, тесты, прохождения)
+ *
+ * @package TestSystem
  */
 
 if (!$modx instanceof modX) {

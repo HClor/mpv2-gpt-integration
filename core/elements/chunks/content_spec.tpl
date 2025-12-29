@@ -1,3 +1,8 @@
+{* Чанк: content_spec - Контент страницы специалиста для siteExtra
+   Вызывается из: content.tpl (для parent = 4)
+   Расширяет: content_default
+   Содержит: фото, должность специалиста
+*}
 {extends 'content_default'}
 {block 'before_content'}
   {if $_modx->resource.img}

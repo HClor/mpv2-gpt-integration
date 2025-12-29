@@ -1,12 +1,17 @@
 <?php
 /**
- * getResourceIcon - возвращает иконку FontAwesome для ресурса
+ * @deprecated НЕ ИСПОЛЬЗУЕТСЯ - Можно удалить
+ * Сниппет: getResourceIcon - Иконка ресурса FontAwesome
+ * Назначение: Вспомогательный сниппет, не вызывается из кода
  *
  * Параметры:
  * - id: ID ресурса
  * - title: название ресурса (опционально)
  * - default: иконка по умолчанию (default: 'cog')
  *
+ * @package TestSystem
+ */
+/**
  * Использование:
  * [[getResourceIcon? &id=`[[+id]]` &title=`[[+pagetitle]]`]]
  */

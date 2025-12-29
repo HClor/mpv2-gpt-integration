@@ -1,3 +1,7 @@
+{* Чанк: footer - Подвал страницы для siteExtra
+   Вызывается из: siteExtra.tpl
+   Содержит: копирайт, ссылка на разработчика
+*}
 <footer>
     <hr>
 	<div class="row">

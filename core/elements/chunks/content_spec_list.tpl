@@ -1,3 +1,8 @@
+{* Чанк: content_spec_list - Список специалистов для siteExtra
+   Вызывается из: content.tpl (для resource.id = 4)
+   Расширяет: content_default
+   Использует сниппеты: pdoPage
+*}
 {extends 'content_default'}
 {block 'after_content'}
   <br>

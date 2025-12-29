@@ -1,3 +1,8 @@
+{* Чанк: content - Роутер контента для siteExtra
+   Вызывается из: siteExtra.tpl
+   Определяет какой чанк контента использовать на основе ID ресурса
+   Включает: content_main, content_spec_list, content_spec, content_default
+*}
 {var $default = true}
 {switch $_modx->resource.id}
     {case 1}

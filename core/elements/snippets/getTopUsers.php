@@ -1,6 +1,10 @@
 <?php
 /**
- * getTopUsers - выводит топ пользователей по баллам
+ * Сниппет: getTopUsers - Топ пользователей
+ * Вызывается из: AnalyticsController (API)
+ * Назначение: Выводит топ пользователей по баллам для виджетов
+ *
+ * @package TestSystem
  */
 
 if (!$modx instanceof modX) {

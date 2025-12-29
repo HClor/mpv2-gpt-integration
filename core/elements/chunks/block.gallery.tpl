@@ -1,3 +1,7 @@
+{* Чанк: block.gallery - Галерея с ресурса 14 для главной страницы
+   Вызывается из: content_main.tpl
+   Использует TV: elements из ресурса 14
+*}
 {var $gallery = 14 | resource : 'elements' | fromJSON}
 <div class="row">
   {foreach $gallery as $idx => $galItem}

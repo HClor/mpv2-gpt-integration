@@ -1,3 +1,9 @@
+{* Чанк: content_default - Базовый шаблон контента для siteExtra
+   Вызывается из: content.tpl (как fallback)
+   Расширяется: content_main, content_spec, content_spec_list
+   Использует сниппеты: checkShowOnPage
+   Включает: gallery, child_list
+*}
 {block 'wrapper'}
   <h1 class="mb-4">{$_modx->resource.longtitle ?: $_modx->resource.pagetitle}</h1>
   {block 'before_content'}{/block}

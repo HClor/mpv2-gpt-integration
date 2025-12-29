@@ -1,5 +1,12 @@
 <?php
-/* TS AUTH HANDLER v2.2 FINAL + CSRF PROTECTION */
+/**
+ * Сниппет: authHandler - Обработчик авторизации
+ * Вызывается из: MODX ресурсов (страница входа/регистрации)
+ * Назначение: Обрабатывает вход, регистрацию, выход пользователя
+ *
+ * @package TestSystem
+ * @version 2.2
+ */
 
 // Подключаем bootstrap для CSRF защиты
 require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';

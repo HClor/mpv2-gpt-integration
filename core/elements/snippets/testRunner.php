@@ -1,7 +1,11 @@
 <?php
 /**
- * TS TEST RUNNER v4.2 - WITH CSV IMPORT BUTTON + CSRF PROTECTION
- * Теперь тест определяется автоматически по resource_id текущей страницы
+ * Сниппет: testRunner - Запуск и прохождение теста
+ * Вызывается из: MODX ресурсов (страницы тестов)
+ * Назначение: Отображает интерфейс прохождения теста, обрабатывает ответы
+ *
+ * @package TestSystem
+ * @version 4.2
  */
 
 // Подключаем bootstrap для CSRF защиты

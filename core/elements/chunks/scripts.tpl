@@ -1,3 +1,7 @@
+{* Чанк: scripts - JavaScript для siteExtra
+   Вызывается из: siteExtra.tpl
+   Содержит: MinifyX JS, обработка AjaxForm
+*}
 {'MinifyX.javascript' | placeholder}
 <script>
     $(document).ready(function() {

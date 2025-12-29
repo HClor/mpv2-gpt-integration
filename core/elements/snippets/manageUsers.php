@@ -1,6 +1,11 @@
 <?php
 /**
- * TS MANAGE USERS v2.7 - FIXED isMember LOGIC
+ * Сниппет: manageUsers - Управление пользователями
+ * Вызывается из: MODX ресурсов (админ-панель)
+ * Назначение: Управление пользователями, ролями, группами (только для админов)
+ *
+ * @package TestSystem
+ * @version 2.7
  */
 require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
 

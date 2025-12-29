@@ -1,3 +1,8 @@
+{* Чанк: tsFooter - Подвал страницы для системы тестирования
+   Вызывается из: TestSystem.tpl, learning-materials-template*.html
+   Содержит: ссылки, статистику системы, копирайт
+   Использует сниппеты: getSystemStats, Year
+*}
 <footer class="bg-dark text-light py-5 mt-5">
     <div class="container">
         <div class="row">

@@ -1,6 +1,10 @@
 <?php
 /**
- * leaderboardCompact - компактная версия рейтинга для главной
+ * @deprecated НЕ ИСПОЛЬЗУЕТСЯ - Можно удалить
+ * Сниппет: leaderboardCompact - Компактный рейтинг для главной
+ * Назначение: Заменён на leaderboard с параметрами
+ *
+ * @package TestSystem
  */
 
 if (!$modx instanceof modX) {

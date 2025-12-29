@@ -1,5 +1,12 @@
 <?php
-/* Leaderboard by Categories v1.0 */
+/**
+ * @deprecated НЕ ИСПОЛЬЗУЕТСЯ - Можно удалить
+ * Сниппет: leaderboardCategories - Рейтинг по категориям
+ * Назначение: Заменён на leaderboard
+ *
+ * @package TestSystem
+ * @version 1.0
+ */
 
 $prefix = $modx->getOption('table_prefix');
 $categoryId = (int)($_GET['cat'] ?? 0);

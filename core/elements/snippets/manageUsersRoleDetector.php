@@ -1,6 +1,10 @@
 <?php
 /**
- * Возвращает роль пользователя LMS (admin/expert/student) по userId.
+ * @deprecated НЕ ИСПОЛЬЗУЕТСЯ - Можно удалить
+ * Сниппет: manageUsersRoleDetector - Определение роли пользователя
+ * Назначение: Заменён на getUserRights
+ *
+ * @package TestSystem
  */
 if (!$modx instanceof modX) {
     return '';

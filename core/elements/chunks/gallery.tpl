@@ -1,3 +1,7 @@
+{* Чанк: gallery - Галерея изображений ресурса
+   Вызывается из: content_default.tpl (через checkShowOnPage)
+   Использует TV: elements (JSON с картинками)
+*}
 {var $gallery = $_modx->resource.elements | fromJSON}
 <div class="row">
   {foreach $gallery as $galItem}

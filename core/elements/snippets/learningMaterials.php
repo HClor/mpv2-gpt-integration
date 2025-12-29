@@ -1,6 +1,11 @@
 <?php
 /**
- * learningMaterials v3.1 - Only learning questions
+ * Сниппет: learningMaterials - Список учебных материалов
+ * Вызывается из: learning-materials-template*.html
+ * Назначение: Отображает список учебных материалов с вопросами для изучения
+ *
+ * @package TestSystem
+ * @version 3.1
  */
 
 $parentId = (int)$modx->getOption('parent', $scriptProperties, 35);

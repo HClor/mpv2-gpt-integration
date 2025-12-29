@@ -1,5 +1,12 @@
 <?php
-/* My Favorites v2.2 - Modal view + responsive */
+/**
+ * Сниппет: myFavorites - Избранные вопросы
+ * Вызывается из: MODX ресурсов (страница "Избранное")
+ * Назначение: Управление избранными вопросами пользователя
+ *
+ * @package TestSystem
+ * @version 2.2
+ */
 
 require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
 

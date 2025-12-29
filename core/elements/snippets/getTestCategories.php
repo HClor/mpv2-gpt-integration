@@ -1,6 +1,10 @@
 <?php
 /**
- * getTestCategories - выводит категории-контейнеры с количеством тестов
+ * @deprecated НЕ ИСПОЛЬЗУЕТСЯ - Можно удалить
+ * Сниппет: getTestCategories - Категории с количеством тестов
+ * Назначение: Заменён на categoriesAndTests
+ *
+ * @package TestSystem
  */
 
 if (!$modx instanceof modX) {

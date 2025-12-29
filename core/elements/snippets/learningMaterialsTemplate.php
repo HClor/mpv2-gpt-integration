@@ -1,7 +1,10 @@
 <?php
 /**
- * Learning Materials Template Handler
- * Обрабатывает отображение учебных материалов в зависимости от режима
+ * Сниппет: learningMaterialsTemplate - Шаблон учебных материалов
+ * Вызывается из: learning-materials-template-v3.html
+ * Назначение: Обрабатывает отображение/редактирование учебных материалов
+ *
+ * @package TestSystem
  */
 
 // Определяем режим работы

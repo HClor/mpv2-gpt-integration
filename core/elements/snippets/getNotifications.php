@@ -1,8 +1,8 @@
 <?php
 /**
- * getNotifications v1.0
- *
- * Получает и отображает уведомления пользователя
+ * Сниппет: getNotifications - Уведомления пользователя
+ * Вызывается из: tsHeader.tpl
+ * Назначение: Получает и отображает уведомления пользователя (алерты)
  *
  * @var modX $modx
  * @var array $scriptProperties

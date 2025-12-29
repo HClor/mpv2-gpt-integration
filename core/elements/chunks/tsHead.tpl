@@ -1,3 +1,7 @@
+{* Чанк: tsHead - Заголовок HTML для системы тестирования
+   Вызывается из: TestSystem.tpl, learning-materials-template*.html
+   Содержит: meta-теги, CSS (Bootstrap 5, Font Awesome, кастомные стили), CSRF токен
+*}
 <head>
     <base href="{$_modx->config.site_url}">
     <meta charset="utf-8">
