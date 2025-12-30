@@ -34,6 +34,7 @@ class CertificateService
     public static function issueCertificate($modx, $templateId, $userId, $entityType = null, $entityId = null, $certificateData = [], $issuedBy = null)
     {
         $prefix = $modx->getOption('table_prefix');
+        $modx->log(modX::LOG_LEVEL_INFO, "[CertificateService] issueCertificate: templateId=$templateId, userId=$userId, entityType=$entityType, entityId=$entityId");
 
         try {
             // Проверяем, не выдан ли уже сертификат
@@ -45,7 +46,7 @@ class CertificateService
                 ");
                 $stmt->execute([$userId, $entityType, $entityId]);
                 if ($stmt->fetch()) {
-                    // Сертификат уже выдан
+                    $modx->log(modX::LOG_LEVEL_WARN, "[CertificateService] Certificate already exists for this entity");
                     return false;
                 }
             }
@@ -59,8 +60,11 @@ class CertificateService
             $template = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$template) {
+                $modx->log(modX::LOG_LEVEL_WARN, "[CertificateService] Template not found or inactive: $templateId");
                 return false;
             }
+
+            $modx->log(modX::LOG_LEVEL_INFO, "[CertificateService] Template found: " . $template['name']);
 
             // Добавляем базовые данные
             $certificateData['certificate_number'] = ''; // Будет сгенерирован триггером
@@ -521,6 +525,7 @@ class CertificateService
     public static function autoIssueCertificate($modx, $userId, $entityType, $entityId, $certificateData = [])
     {
         $prefix = $modx->getOption('table_prefix');
+        $modx->log(modX::LOG_LEVEL_INFO, "[CertificateService] autoIssueCertificate: userId=$userId, entityType=$entityType, entityId=$entityId");
 
         // Находим подходящий шаблон
         $stmt = $modx->prepare("
@@ -532,20 +537,28 @@ class CertificateService
         $template = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$template) {
+            $modx->log(modX::LOG_LEVEL_WARN, "[CertificateService] No active template found for type: $entityType");
             return false;
         }
 
         $templateId = $template['id'];
+        $modx->log(modX::LOG_LEVEL_INFO, "[CertificateService] Found template ID: $templateId");
 
         // Проверяем возможность выдачи
         $eligibility = self::checkEligibility($modx, $templateId, $userId, $entityType, $entityId);
 
         if (!$eligibility['eligible']) {
+            $modx->log(modX::LOG_LEVEL_WARN, "[CertificateService] Not eligible: " . ($eligibility['reason'] ?? 'unknown'));
             return false;
         }
 
+        $modx->log(modX::LOG_LEVEL_INFO, "[CertificateService] Eligible, issuing certificate...");
+
         // Выдаем сертификат
-        return self::issueCertificate($modx, $templateId, $userId, $entityType, $entityId, $certificateData);
+        $certId = self::issueCertificate($modx, $templateId, $userId, $entityType, $entityId, $certificateData);
+        $modx->log(modX::LOG_LEVEL_INFO, "[CertificateService] issueCertificate returned: " . ($certId ?: 'false'));
+
+        return $certId;
     }
 
     /**
