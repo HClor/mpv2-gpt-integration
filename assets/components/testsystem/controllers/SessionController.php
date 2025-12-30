@@ -279,6 +279,9 @@ class SessionController extends BaseController
         // Обновляем статистику по категориям
         $this->updateCategoryStats($session['test_id'], $session['user_id'], $score, $passed);
 
+        // Начисляем XP (раньше это делал триггер)
+        $this->awardXpForCompletion($session['user_id'], $sessionId, $score);
+
         return $this->success([
             'score' => $score,
             'passed' => $passed,
@@ -331,5 +334,103 @@ class SessionController extends BaseController
             $passed ? 1 : 0,
             $score
         ]);
+    }
+
+    /**
+     * Начисление XP за завершение теста
+     * (Заменяет функционал триггера trg_session_complete_award_xp)
+     */
+    private function awardXpForCompletion($userId, $sessionId, $score)
+    {
+        // Рассчитываем XP по той же логике, что была в триггере
+        $baseXp = 10;
+        if ($score >= 90) {
+            $baseXp = 50;
+        } elseif ($score >= 70) {
+            $baseXp = 30;
+        } elseif ($score >= 50) {
+            $baseXp = 20;
+        }
+
+        $bonusXp = ($score == 100) ? 25 : 0;
+        $totalXp = $baseXp + $bonusXp;
+
+        // Записываем в историю XP
+        $stmt = $this->modx->prepare("
+            INSERT INTO {$this->prefix}test_xp_history
+            (user_id, xp_amount, reason, reference_type, reference_id)
+            VALUES (?, ?, ?, 'test', ?)
+        ");
+        $stmt->execute([
+            $userId,
+            $totalXp,
+            "Test completed: {$score}%",
+            $sessionId
+        ]);
+
+        // Обновляем общий XP пользователя
+        $stmt = $this->modx->prepare("
+            INSERT INTO {$this->prefix}test_user_experience (user_id, total_xp)
+            VALUES (?, ?)
+            ON DUPLICATE KEY UPDATE total_xp = total_xp + ?
+        ");
+        $stmt->execute([$userId, $totalXp, $totalXp]);
+
+        // Обновляем streak
+        $this->updateUserStreak($userId);
+    }
+
+    /**
+     * Обновление streak пользователя
+     * (Заменяет функционал процедуры update_user_streak)
+     */
+    private function updateUserStreak($userId)
+    {
+        $today = date('Y-m-d');
+
+        // Получаем текущий streak
+        $stmt = $this->modx->prepare("
+            SELECT last_activity_date, current_streak, longest_streak
+            FROM {$this->prefix}test_user_streaks
+            WHERE user_id = ?
+        ");
+        $stmt->execute([$userId]);
+        $streak = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$streak) {
+            // Первая активность
+            $stmt = $this->modx->prepare("
+                INSERT INTO {$this->prefix}test_user_streaks
+                (user_id, current_streak, longest_streak, last_activity_date)
+                VALUES (?, 1, 1, ?)
+            ");
+            $stmt->execute([$userId, $today]);
+        } else {
+            $lastDate = $streak['last_activity_date'];
+            $currentStreak = (int)$streak['current_streak'];
+            $longestStreak = (int)$streak['longest_streak'];
+
+            if ($lastDate != $today) {
+                $daysDiff = (strtotime($today) - strtotime($lastDate)) / 86400;
+
+                if ($daysDiff == 1) {
+                    // Продолжаем streak
+                    $currentStreak++;
+                    $longestStreak = max($longestStreak, $currentStreak);
+                } else {
+                    // Streak прервался
+                    $currentStreak = 1;
+                }
+
+                $stmt = $this->modx->prepare("
+                    UPDATE {$this->prefix}test_user_streaks
+                    SET current_streak = ?,
+                        longest_streak = ?,
+                        last_activity_date = ?
+                    WHERE user_id = ?
+                ");
+                $stmt->execute([$currentStreak, $longestStreak, $today, $userId]);
+            }
+        }
     }
 }
