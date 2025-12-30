@@ -142,7 +142,7 @@ class ReportService
                 COALESCE(ue.total_xp, 0) as total_xp,
                 COALESCE(ue.current_level, 1) as current_level,
                 COUNT(DISTINCT ua.id) as achievements_count,
-                MAX(s.completed_at) as last_test_date
+                MAX(s.finished_at) as last_test_date
             FROM {$prefix}users u
             LEFT JOIN {$prefix}test_sessions s ON s.user_id = u.id
             LEFT JOIN {$prefix}test_user_experience ue ON ue.user_id = u.id

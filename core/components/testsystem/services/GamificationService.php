@@ -656,11 +656,11 @@ class GamificationService
     {
         switch ($period) {
             case self::PERIOD_YEARLY:
-                return "AND YEAR(s.completed_at) = YEAR(NOW())";
+                return "AND YEAR(s.finished_at) = YEAR(NOW())";
             case self::PERIOD_MONTHLY:
-                return "AND YEAR(s.completed_at) = YEAR(NOW()) AND MONTH(s.completed_at) = MONTH(NOW())";
+                return "AND YEAR(s.finished_at) = YEAR(NOW()) AND MONTH(s.finished_at) = MONTH(NOW())";
             case self::PERIOD_WEEKLY:
-                return "AND YEARWEEK(s.completed_at, 1) = YEARWEEK(NOW(), 1)";
+                return "AND YEARWEEK(s.finished_at, 1) = YEARWEEK(NOW(), 1)";
             case self::PERIOD_ALL_TIME:
             default:
                 return "";
