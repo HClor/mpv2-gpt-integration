@@ -34,12 +34,11 @@ class CertificateService
     public static function issueCertificate($modx, $templateId, $userId, $entityType = null, $entityId = null, $certificateData = [], $issuedBy = null)
     {
         $prefix = $modx->getOption('table_prefix');
-        $pdo = $modx->getPDO();
 
         try {
             // Проверяем, не выдан ли уже сертификат
             if ($entityType && $entityId) {
-                $stmt = $pdo->prepare("
+                $stmt = $modx->prepare("
                     SELECT id FROM {$prefix}test_certificates
                     WHERE user_id = ? AND entity_type = ? AND entity_id = ?
                     AND is_revoked = 0
@@ -52,7 +51,7 @@ class CertificateService
             }
 
             // Получаем данные шаблона
-            $stmt = $pdo->prepare("
+            $stmt = $modx->prepare("
                 SELECT * FROM {$prefix}test_certificate_templates
                 WHERE id = ? AND is_active = 1
             ");
@@ -76,7 +75,7 @@ class CertificateService
             }
 
             // Создаем запись сертификата
-            $stmt = $pdo->prepare("
+            $stmt = $modx->prepare("
                 INSERT INTO {$prefix}test_certificates
                 (template_id, user_id, entity_type, entity_id, certificate_data, score, issued_by)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -93,7 +92,7 @@ class CertificateService
                 $issuedBy
             ]);
 
-            $certificateId = $pdo->lastInsertId();
+            $certificateId = $modx->lastInsertId();
 
             // Генерируем HTML/PDF сертификат
             self::generateCertificateFile($modx, $certificateId);
@@ -115,10 +114,9 @@ class CertificateService
     private static function generateCertificateFile($modx, $certificateId)
     {
         $prefix = $modx->getOption('table_prefix');
-        $pdo = $modx->getPDO();
 
         // Получаем данные сертификата
-        $stmt = $pdo->prepare("
+        $stmt = $modx->prepare("
             SELECT c.*, t.template_html, t.orientation, t.paper_size
             FROM {$prefix}test_certificates c
             JOIN {$prefix}test_certificate_templates t ON t.id = c.template_id
@@ -132,15 +130,15 @@ class CertificateService
         }
 
         // Декодируем данные
-        $data = json_decode($cert['certificate_data'], true);
-        $data['certificate_number'] = $cert['certificate_number'];
-        $data['verification_code'] = $cert['verification_code'];
+        $data = json_decode($cert['certificate_data'], true) ?: [];
+        $data['certificate_number'] = $cert['certificate_number'] ?? '';
+        $data['verification_code'] = $cert['verification_code'] ?? '';
 
         // Заменяем плейсхолдеры в HTML
-        $html = self::replacePlaceholders($cert['template_html'], $data);
+        $html = self::replacePlaceholders($cert['template_html'] ?? '', $data);
 
         // Сохраняем HTML версию
-        $fileName = 'certificate_' . $cert['certificate_number'] . '.html';
+        $fileName = 'certificate_' . ($cert['certificate_number'] ?: $certificateId) . '.html';
         $filePath = MODX_ASSETS_PATH . 'components/testsystem/certificates/' . $fileName;
 
         // Создаем директорию если не существует
@@ -155,7 +153,7 @@ class CertificateService
         $fileHash = hash_file('sha256', $filePath);
 
         // Обновляем запись
-        $stmt = $pdo->prepare("
+        $stmt = $modx->prepare("
             UPDATE {$prefix}test_certificates
             SET file_path = ?, file_hash = ?
             WHERE id = ?
@@ -190,13 +188,12 @@ class CertificateService
     public static function verifyCertificate($modx, $verificationCode)
     {
         $prefix = $modx->getOption('table_prefix');
-        $pdo = $modx->getPDO();
 
         $ipAddress = $_SERVER['REMOTE_ADDR'] ?? null;
         $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? null;
 
         // Вызываем stored procedure
-        $stmt = $pdo->prepare("CALL verify_certificate(?, ?, ?)");
+        $stmt = $modx->prepare("CALL verify_certificate(?, ?, ?)");
         $stmt->execute([$verificationCode, $ipAddress, $userAgent]);
 
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -229,10 +226,9 @@ class CertificateService
     public static function revokeCertificate($modx, $certificateId, $revokedBy, $reason)
     {
         $prefix = $modx->getOption('table_prefix');
-        $pdo = $modx->getPDO();
 
         try {
-            $stmt = $pdo->prepare("
+            $stmt = $modx->prepare("
                 UPDATE {$prefix}test_certificates
                 SET is_revoked = 1,
                     revoked_at = NOW(),
@@ -259,7 +255,6 @@ class CertificateService
     public static function getUserCertificates($modx, $userId, $filters = [])
     {
         $prefix = $modx->getOption('table_prefix');
-        $pdo = $modx->getPDO();
 
         $conditions = ["c.user_id = ?"];
         $params = [$userId];
@@ -280,7 +275,7 @@ class CertificateService
 
         $whereClause = implode(' AND ', $conditions);
 
-        $stmt = $pdo->prepare("
+        $stmt = $modx->prepare("
             SELECT c.*, t.name as template_name, t.certificate_type
             FROM {$prefix}test_certificates c
             JOIN {$prefix}test_certificate_templates t ON t.id = c.template_id
@@ -336,9 +331,8 @@ class CertificateService
     public static function getCertificate($modx, $certificateId)
     {
         $prefix = $modx->getOption('table_prefix');
-        $pdo = $modx->getPDO();
 
-        $stmt = $pdo->prepare("
+        $stmt = $modx->prepare("
             SELECT c.*, t.name as template_name, t.certificate_type,
                    u.username
             FROM {$prefix}test_certificates c
@@ -376,10 +370,9 @@ class CertificateService
     public static function checkEligibility($modx, $templateId, $userId, $entityType, $entityId)
     {
         $prefix = $modx->getOption('table_prefix');
-        $pdo = $modx->getPDO();
 
         // Проверяем, не выдан ли уже сертификат
-        $stmt = $pdo->prepare("
+        $stmt = $modx->prepare("
             SELECT id FROM {$prefix}test_certificates
             WHERE user_id = ? AND entity_type = ? AND entity_id = ?
             AND is_revoked = 0
@@ -390,7 +383,7 @@ class CertificateService
         }
 
         // Получаем требования
-        $stmt = $pdo->prepare("
+        $stmt = $modx->prepare("
             SELECT * FROM {$prefix}test_certificate_requirements
             WHERE template_id = ?
             ORDER BY sort_order
@@ -430,14 +423,13 @@ class CertificateService
     private static function checkRequirement($modx, $requirementType, $requirementData, $userId, $entityType, $entityId)
     {
         $prefix = $modx->getOption('table_prefix');
-        $pdo = $modx->getPDO();
 
         switch ($requirementType) {
             case 'min_score':
                 $minScore = $requirementData['min_score'] ?? 70;
 
                 if ($entityType === 'test') {
-                    $stmt = $pdo->prepare("
+                    $stmt = $modx->prepare("
                         SELECT MAX(score) as max_score
                         FROM {$prefix}test_sessions
                         WHERE user_id = ? AND test_id = ? AND status = 'completed'
@@ -455,7 +447,7 @@ class CertificateService
                 // Все тесты в категории должны быть пройдены
                 $categoryId = $requirementData['category_id'] ?? null;
                 if ($categoryId) {
-                    $stmt = $pdo->prepare("
+                    $stmt = $modx->prepare("
                         SELECT COUNT(DISTINCT t.id) as total_tests
                         FROM {$prefix}test_tests t
                         WHERE t.category_id = ? AND t.published = 1
@@ -463,7 +455,7 @@ class CertificateService
                     $stmt->execute([$categoryId]);
                     $totalTests = $stmt->fetch(PDO::FETCH_ASSOC)['total_tests'];
 
-                    $stmt = $pdo->prepare("
+                    $stmt = $modx->prepare("
                         SELECT COUNT(DISTINCT s.test_id) as passed_tests
                         FROM {$prefix}test_sessions s
                         JOIN {$prefix}test_tests t ON t.id = s.test_id
@@ -481,7 +473,7 @@ class CertificateService
 
             case 'path_completed':
                 if ($entityType === 'path') {
-                    $stmt = $pdo->prepare("
+                    $stmt = $modx->prepare("
                         SELECT status
                         FROM {$prefix}test_learning_path_progress lpp
                         JOIN {$prefix}test_learning_path_enrollments lpe ON lpe.id = lpp.enrollment_id
@@ -499,7 +491,7 @@ class CertificateService
             case 'achievement_earned':
                 $achievementId = $requirementData['achievement_id'] ?? null;
                 if ($achievementId) {
-                    $stmt = $pdo->prepare("
+                    $stmt = $modx->prepare("
                         SELECT id FROM {$prefix}test_user_achievements
                         WHERE user_id = ? AND achievement_id = ?
                     ");
@@ -529,10 +521,9 @@ class CertificateService
     public static function autoIssueCertificate($modx, $userId, $entityType, $entityId, $certificateData = [])
     {
         $prefix = $modx->getOption('table_prefix');
-        $pdo = $modx->getPDO();
 
         // Находим подходящий шаблон
-        $stmt = $pdo->prepare("
+        $stmt = $modx->prepare("
             SELECT id FROM {$prefix}test_certificate_templates
             WHERE certificate_type = ? AND is_active = 1
             LIMIT 1
@@ -565,10 +556,10 @@ class CertificateService
      */
     public static function getStatistics($modx)
     {
-        $prefix = $modx->getOption('table_prefix');
-        $pdo = $modx->getPDO();
-
-        $stmt = $pdo->query("CALL get_certificate_statistics()");
+        $stmt = $modx->query("CALL get_certificate_statistics()");
+        if ($stmt === false) {
+            return [];
+        }
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
@@ -580,10 +571,10 @@ class CertificateService
      */
     public static function cleanupExpired($modx)
     {
-        $prefix = $modx->getOption('table_prefix');
-        $pdo = $modx->getPDO();
-
-        $stmt = $pdo->query("CALL cleanup_expired_certificates()");
+        $stmt = $modx->query("CALL cleanup_expired_certificates()");
+        if ($stmt === false) {
+            return 0;
+        }
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
         return $result ? (int)$result['expired_files_cleared'] : 0;
@@ -599,9 +590,8 @@ class CertificateService
     public static function getDownloadUrl($modx, $certificateId)
     {
         $prefix = $modx->getOption('table_prefix');
-        $pdo = $modx->getPDO();
 
-        $stmt = $pdo->prepare("
+        $stmt = $modx->prepare("
             SELECT certificate_number, file_path
             FROM {$prefix}test_certificates
             WHERE id = ? AND is_revoked = 0
