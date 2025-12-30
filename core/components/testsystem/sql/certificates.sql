@@ -40,9 +40,11 @@ CREATE TABLE IF NOT EXISTS `modx_test_certificates` (
     `user_id` INT(11) UNSIGNED NOT NULL COMMENT 'Кому выдан',
     `entity_type` VARCHAR(50) DEFAULT NULL COMMENT 'test, path, achievement',
     `entity_id` INT(11) UNSIGNED DEFAULT NULL COMMENT 'ID связанной сущности',
+    `path_id` INT(11) UNSIGNED DEFAULT NULL COMMENT 'ID траектории обучения',
     `certificate_data` JSON DEFAULT NULL COMMENT 'Данные для подстановки в шаблон',
     `score` DECIMAL(5,2) DEFAULT NULL COMMENT 'Балл (если применимо)',
     `grade` VARCHAR(50) DEFAULT NULL COMMENT 'Оценка (отлично, хорошо и т.д.)',
+    `status` ENUM('active', 'expired', 'revoked') DEFAULT 'active' COMMENT 'Статус сертификата',
     `issued_at` DATETIME DEFAULT CURRENT_TIMESTAMP,
     `expires_at` DATETIME DEFAULT NULL COMMENT 'Дата истечения',
     `issued_by` INT(11) UNSIGNED DEFAULT NULL COMMENT 'Кто выдал',
@@ -57,6 +59,8 @@ CREATE TABLE IF NOT EXISTS `modx_test_certificates` (
     INDEX `idx_user` (`user_id`),
     INDEX `idx_template` (`template_id`),
     INDEX `idx_entity` (`entity_type`, `entity_id`),
+    INDEX `idx_path` (`path_id`),
+    INDEX `idx_status` (`status`),
     INDEX `idx_number` (`certificate_number`),
     INDEX `idx_verification` (`verification_code`),
     INDEX `idx_issued` (`issued_at`),
@@ -77,6 +81,10 @@ CREATE TABLE IF NOT EXISTS `modx_test_certificates` (
     CONSTRAINT `fk_cert_revoker`
         FOREIGN KEY (`revoked_by`)
         REFERENCES `modx_users` (`id`)
+        ON DELETE SET NULL,
+    CONSTRAINT `fk_cert_path`
+        FOREIGN KEY (`path_id`)
+        REFERENCES `modx_test_learning_paths` (`id`)
         ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
 COMMENT='Выданные сертификаты';
