@@ -2166,27 +2166,40 @@ async function addFavoritesViewToggle(questionId) {
                 explanationBlock.style.display = "block";
             }
         }
-        
+
         // Управляем кнопками
         const submitBtn = document.getElementById("submit-answer-btn");
         const nextBtn = document.getElementById("next-question-btn");
-        
+
         if (submitBtn) submitBtn.style.display = "none";
-        
-        if (nextBtn) {
-            nextBtn.style.display = "inline-block";
-            nextBtn.disabled = false;
-            
-            // Клонируем кнопку для удаления старых обработчиков
-            const newNextBtn = nextBtn.cloneNode(true);
-            nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
-            
-            newNextBtn.onclick = function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                loadNextQuestion();
-                return false;
-            };
+
+        // ИСПРАВЛЕНИЕ: Проверяем, был ли это последний вопрос
+        if (currentQuestionNumber >= totalQuestions) {
+            // Последний вопрос - автоматически завершаем тест
+            console.log("Last question answered, auto-finishing test");
+            if (nextBtn) nextBtn.style.display = "none";
+
+            // Даем пользователю время посмотреть результат последнего вопроса
+            setTimeout(() => {
+                loadNextQuestion(); // Это вызовет finishTest() так как вопросов больше нет
+            }, 2000); // 2 секунды на просмотр feedback
+        } else {
+            // Не последний вопрос - показываем кнопку "Следующий"
+            if (nextBtn) {
+                nextBtn.style.display = "inline-block";
+                nextBtn.disabled = false;
+
+                // Клонируем кнопку для удаления старых обработчиков
+                const newNextBtn = nextBtn.cloneNode(true);
+                nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
+
+                newNextBtn.onclick = function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    loadNextQuestion();
+                    return false;
+                };
+            }
         }
     }
     
