@@ -619,18 +619,31 @@ try {
 
             // Автоматическая выдача сертификата при успешном прохождении теста
             $certificateId = null;
+            $modx->log(modX::LOG_LEVEL_INFO, "[finishTest] Checking certificate: passed=$passed, userId={$modx->user->id}, testId={$session['test_id']}");
+
             if ($passed && $modx->user->id > 0) {
-                require_once MODX_CORE_PATH . 'components/testsystem/services/CertificateService.php';
-                $certificateId = CertificateService::autoIssueCertificate(
-                    $modx,
-                    $modx->user->id,
-                    'test',
-                    $session['test_id'],
-                    ['score' => $score]
-                );
-                if ($certificateId) {
-                    $modx->log(modX::LOG_LEVEL_INFO, "[finishTest] Certificate issued: ID=$certificateId for test {$session['test_id']}");
+                try {
+                    require_once MODX_CORE_PATH . 'components/testsystem/services/CertificateService.php';
+                    $modx->log(modX::LOG_LEVEL_INFO, "[finishTest] CertificateService loaded, calling autoIssueCertificate");
+
+                    $certificateId = CertificateService::autoIssueCertificate(
+                        $modx,
+                        $modx->user->id,
+                        'test',
+                        $session['test_id'],
+                        ['score' => $score]
+                    );
+
+                    if ($certificateId) {
+                        $modx->log(modX::LOG_LEVEL_INFO, "[finishTest] Certificate issued: ID=$certificateId for test {$session['test_id']}");
+                    } else {
+                        $modx->log(modX::LOG_LEVEL_WARN, "[finishTest] Certificate NOT issued for test {$session['test_id']} - autoIssueCertificate returned false");
+                    }
+                } catch (Exception $e) {
+                    $modx->log(modX::LOG_LEVEL_ERROR, "[finishTest] Certificate error: " . $e->getMessage());
                 }
+            } else {
+                $modx->log(modX::LOG_LEVEL_INFO, "[finishTest] Skipping certificate: passed=" . ($passed ? 'true' : 'false') . ", userId={$modx->user->id}");
             }
 
             $response = ResponseHelper::success([
