@@ -282,6 +282,11 @@ class SessionController extends BaseController
         // Начисляем XP (раньше это делал триггер)
         $this->awardXpForCompletion($session['user_id'], $sessionId, $score);
 
+        // Выдаём сертификат если тест пройден
+        if ($passed) {
+            $this->issueCertificateForTest($session['user_id'], $session['test_id'], $sessionId, $score);
+        }
+
         return $this->success([
             'score' => $score,
             'passed' => $passed,
@@ -432,5 +437,69 @@ class SessionController extends BaseController
                 $stmt->execute([$currentStreak, $longestStreak, $today, $userId]);
             }
         }
+    }
+
+    /**
+     * Выдача сертификата за прохождение теста
+     */
+    private function issueCertificateForTest($userId, $testId, $sessionId, $score)
+    {
+        // Загружаем CertificateService
+        $servicePath = MODX_CORE_PATH . 'components/testsystem/services/CertificateService.php';
+        if (file_exists($servicePath)) {
+            require_once $servicePath;
+        } else {
+            error_log("CertificateService not found at: $servicePath");
+            return false;
+        }
+
+        // Получаем название теста
+        $stmt = $this->modx->prepare("
+            SELECT title FROM {$this->prefix}test_tests WHERE id = ?
+        ");
+        $stmt->execute([$testId]);
+        $test = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$test) {
+            error_log("Test not found: $testId");
+            return false;
+        }
+
+        // Данные для сертификата
+        $certificateData = [
+            'test_name' => $test['title'],
+            'score' => $score,
+            'grade' => $this->getGradeByScore($score)
+        ];
+
+        // Выдаём сертификат (templateId=1 для тестов)
+        $certificateId = CertificateService::issueCertificate(
+            $this->modx,
+            1, // Template ID для тестов
+            $userId,
+            'test',
+            $testId,
+            $certificateData,
+            null // issued_by (система)
+        );
+
+        if ($certificateId) {
+            error_log("Certificate issued: ID=$certificateId for user=$userId, test=$testId, score=$score");
+        } else {
+            error_log("Failed to issue certificate for user=$userId, test=$testId");
+        }
+
+        return $certificateId;
+    }
+
+    /**
+     * Определение оценки по баллу
+     */
+    private function getGradeByScore($score)
+    {
+        if ($score >= 90) return 'Отлично';
+        if ($score >= 80) return 'Хорошо';
+        if ($score >= 70) return 'Удовлетворительно';
+        return 'Зачтено';
     }
 }
