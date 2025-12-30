@@ -542,7 +542,7 @@ class AnalyticsService
                 t.title,
                 s.score,
                 s.status,
-                s.completed_at,
+                s.finished_at,
                 s.time_spent
             FROM {$prefix}test_sessions s
             JOIN {$prefix}test_tests t ON t.id = s.test_id
