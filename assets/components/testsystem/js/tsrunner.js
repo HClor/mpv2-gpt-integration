@@ -1467,11 +1467,14 @@ async function addFavoritesViewToggle(questionId) {
     
 
     async function loadNextQuestion() {
+        console.log("📞 loadNextQuestion() called");
         try {
             const result = await apiCall("getNextQuestion", {
                 session_id: currentSessionId
             });
-    
+
+            console.log("📥 getNextQuestion response:", result);
+
             if (!result.success) {
                 console.error("Ошибка загрузки вопроса:", result.message);
                 alert("Ошибка загрузки вопроса");
@@ -1479,6 +1482,7 @@ async function addFavoritesViewToggle(questionId) {
             }
 
             if (result.data && result.data.finished) {
+                console.log("🏁 Test finished! Calling finishTest()");
                 finishTest();
                 return;
             }
@@ -2176,11 +2180,13 @@ async function addFavoritesViewToggle(questionId) {
         // ИСПРАВЛЕНИЕ: Проверяем, был ли это последний вопрос
         if (currentQuestionNumber >= totalQuestions) {
             // Последний вопрос - автоматически завершаем тест
-            console.log("Last question answered, auto-finishing test");
+            console.log("✅ Last question answered, auto-finishing test");
+            console.log(`   currentQuestionNumber=${currentQuestionNumber}, totalQuestions=${totalQuestions}`);
             if (nextBtn) nextBtn.style.display = "none";
 
             // Даем пользователю время посмотреть результат последнего вопроса
             setTimeout(() => {
+                console.log("⏱️ Timeout triggered after 2s, calling loadNextQuestion()");
                 loadNextQuestion(); // Это вызовет finishTest() так как вопросов больше нет
             }, 2000); // 2 секунды на просмотр feedback
         } else {
