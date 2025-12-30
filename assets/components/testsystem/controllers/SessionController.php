@@ -228,6 +228,7 @@ class SessionController extends BaseController
     private function finishTest($data)
     {
         $sessionId = ValidationHelper::requireInt($data, 'session_id', 'Session ID required');
+        error_log("=== finishTest called for session $sessionId ===");
 
         // Получаем сессию
         $stmt = $this->modx->prepare("
@@ -238,6 +239,7 @@ class SessionController extends BaseController
         ");
         $stmt->execute([$sessionId]);
         $session = $stmt->fetch(PDO::FETCH_ASSOC);
+        error_log("Session found: " . ($session ? "YES" : "NO"));
 
         if (!$session) {
             throw new Exception('Session not found');
@@ -257,8 +259,11 @@ class SessionController extends BaseController
         $correct = (int)$stats['correct'];
         $score = $total > 0 ? round(($correct / $total) * 100) : 0;
         $passed = $score >= (int)$session['pass_score'];
+        error_log("Stats calculated: total=$total, correct=$correct, score=$score, passed=" . ($passed ? 1 : 0));
 
         // Обновляем сессию
+        $tableName = $this->prefix . 'test_sessions';
+        error_log("Updating table: $tableName, session_id: $sessionId");
         $stmt = $this->modx->prepare("
             UPDATE {$this->prefix}test_sessions
             SET status = 'completed',
@@ -267,7 +272,9 @@ class SessionController extends BaseController
                 finished_at = NOW()
             WHERE id = ?
         ");
-        $stmt->execute([$score, $passed ? 1 : 0, $sessionId]);
+        $result = $stmt->execute([$score, $passed ? 1 : 0, $sessionId]);
+        $rowCount = $stmt->rowCount();
+        error_log("UPDATE executed: " . ($result ? "SUCCESS" : "FAILED") . ", rows affected: $rowCount");
 
         // Обновляем статистику по категориям
         $this->updateCategoryStats($session['test_id'], $session['user_id'], $score, $passed);
