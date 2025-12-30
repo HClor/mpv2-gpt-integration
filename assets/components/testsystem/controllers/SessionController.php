@@ -264,7 +264,7 @@ class SessionController extends BaseController
             SET status = 'completed',
                 score = ?,
                 passed = ?,
-                completed_at = NOW()
+                finished_at = NOW()
             WHERE id = ?
         ");
         $stmt->execute([$score, $passed ? 1 : 0, $sessionId]);
