@@ -2211,27 +2211,32 @@ async function addFavoritesViewToggle(questionId) {
     
 
     async function finishTest() {
+        console.log("🎯 finishTest() called, session_id:", currentSessionId);
         // Stop timer if running
         stopTimer();
 
         try {
+            console.log("📞 Calling API: finishTest");
             const result = await apiCall("finishTest", {
                 session_id: currentSessionId
             });
-            
+
+            console.log("📥 finishTest API response:", result);
+
             if (result.success) {
+                console.log("✅ finishTest succeeded, showing results");
                 const data = result.data;
-                
+
                 document.getElementById("question-container").style.display = "none";
                 document.getElementById("results-container").style.display = "block";
-                
+
                 const scoreElement = document.getElementById("final-score");
                 const messageElement = document.getElementById("result-message");
-                
+
                 if (scoreElement) {
                     scoreElement.textContent = `Ваш результат: ${data.score}%`;
                 }
-                
+
                 if (messageElement) {
                     if (testMode === "exam") {
                         if (data.passed) {
@@ -2243,16 +2248,19 @@ async function addFavoritesViewToggle(questionId) {
                         messageElement.innerHTML = '<span class="text-info">📚 Режим обучения завершен</span>';
                     }
                 }
-                
+
                 const details = document.getElementById("result-details");
                 details.innerHTML = `
                     <p><strong>Правильных ответов:</strong> ${data.correct_count}</p>
                     <p><strong>Неправильных ответов:</strong> ${data.incorrect_count}</p>
                     <p><strong>Проходной балл:</strong> ${data.pass_score}%</p>
                 `;
+            } else {
+                console.error("❌ finishTest failed:", result.message);
             }
         } catch (error) {
-            console.error("Finish test error:", error);
+            console.error("💥 Finish test error:", error);
+            console.error("Error stack:", error.stack);
         }
     }
     
