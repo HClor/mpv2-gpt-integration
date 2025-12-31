@@ -1132,7 +1132,14 @@ try {
             $description = ValidationHelper::optionalString($data, 'description');
             $testIds = ValidationHelper::requireArray($data, 'test_ids', 1, 'At least one test must be selected');
             $questionsPerSession = ValidationHelper::optionalInt($data, 'questions_per_session', 20);
-            
+            $distributionMode = ValidationHelper::optionalString($data, 'question_distribution_mode', 'proportional');
+            $minQuestionsPerTest = ValidationHelper::optionalInt($data, 'min_questions_per_test', 3);
+
+            // Валидация режима распределения
+            if (!in_array($distributionMode, ['proportional', 'equal'], true)) {
+                $distributionMode = 'proportional';
+            }
+
             // Валидация: все тесты должны существовать и быть активными
             $placeholders = implode(',', array_fill(0, count($testIds), '?'));
             $stmt = $modx->prepare("
@@ -1162,16 +1169,18 @@ try {
             
             // Создаем область знаний
             $stmt = $modx->prepare("
-                INSERT INTO modx_test_knowledge_areas 
-                (user_id, name, description, test_ids, questions_per_session)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO modx_test_knowledge_areas
+                (user_id, name, description, test_ids, questions_per_session, question_distribution_mode, min_questions_per_test)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             ");
             $stmt->execute([
                 $userId,
                 $name,
                 $description,
                 json_encode(array_map('intval', $testIds)),
-                $questionsPerSession
+                $questionsPerSession,
+                $distributionMode,
+                $minQuestionsPerTest
             ]);
             
             $areaId = $modx->lastInsertId();
