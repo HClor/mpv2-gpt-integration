@@ -551,7 +551,99 @@ async function deleteMaterial(materialId, materialTitle) {
     }
 }
 
+// === ПРОСМОТР ЧЕРНОВИКОВ ===
+
+let currentDraftMaterialId = null;
+
+/**
+ * Просмотр черновика в модальном окне
+ */
+async function viewDraftMaterial(materialId) {
+    try {
+        currentDraftMaterialId = materialId;
+
+        // Загружаем данные материала через существующий API
+        const result = await apiCall('getMaterial', { material_id: materialId });
+
+        if (!result.success) {
+            throw new Error(result.message || 'Не удалось загрузить материал');
+        }
+
+        const material = result.data;
+
+        // Проверяем права доступа
+        if (!material.can_edit && material.published == 0) {
+            alert('У вас нет прав для просмотра этого черновика');
+            return;
+        }
+
+        // Заполняем модальное окно
+        const title = document.getElementById('draftViewerTitle');
+        const content = document.getElementById('draft-content');
+        const editButton = document.getElementById('editDraftButton');
+
+        if (title) {
+            title.textContent = material.pagetitle;
+        }
+
+        if (content) {
+            let html = '';
+
+            // Показываем краткое описание если есть
+            if (material.introtext) {
+                html += '<p class="lead text-muted">' + escapeHtml(material.introtext) + '</p>';
+                html += '<hr class="my-4">';
+            }
+
+            // Показываем содержимое (оно уже содержит HTML)
+            html += material.content;
+
+            content.innerHTML = html;
+        }
+
+        // Показываем/скрываем кнопку редактирования в зависимости от прав
+        if (editButton) {
+            editButton.style.display = material.can_edit ? 'inline-block' : 'none';
+        }
+
+        // Открываем модальное окно
+        const modalElement = document.getElementById('draftViewerModal');
+        if (modalElement) {
+            const modal = new bootstrap.Modal(modalElement);
+            modal.show();
+        }
+
+    } catch (error) {
+        console.error('View draft error:', error);
+        alert('Ошибка загрузки черновика: ' + error.message);
+    }
+}
+
+/**
+ * Переход от просмотра черновика к редактированию
+ */
+function editDraftFromViewer() {
+    if (!currentDraftMaterialId) {
+        alert('Ошибка: ID материала не определен');
+        return;
+    }
+
+    // Закрываем окно просмотра
+    const viewerModal = document.getElementById('draftViewerModal');
+    if (viewerModal) {
+        const modal = bootstrap.Modal.getInstance(viewerModal);
+        if (modal) {
+            modal.hide();
+        }
+    }
+
+    // Открываем окно редактирования
+    editMaterial(currentDraftMaterialId);
+}
+
 window.openCreateMaterialModal = openCreateMaterialModal;
 window.editMaterial = editMaterial;
 window.saveMaterialFromModal = saveMaterialFromModal;
 window.deleteMaterial = deleteMaterial;
+window.viewDraftMaterial = viewDraftMaterial;
+window.editDraftFromViewer = editDraftFromViewer;

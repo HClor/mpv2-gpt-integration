@@ -185,11 +185,18 @@ function renderArticleCard($article, $modx) {
     $html .= '</div>';
     $html .= '<div class="card-footer bg-light d-flex justify-content-between align-items-center">';
 
-    // Кнопка "Читать" для всех (черновики могут читать только авторы с правами)
-    // Авторы/админы/эксперты могут читать черновики через вкладку "Черновики"
-    $html .= '<a href="' . $article['url'] . '" class="btn btn-sm btn-outline-primary">';
-    $html .= '<i class="bi bi-book me-1"></i> Читать';
-    $html .= '</a>';
+    // Кнопка "Читать"
+    // Для черновиков открываем в модальном окне, для опубликованных - переход по ссылке
+    if ($isPublished) {
+        $html .= '<a href="' . $article['url'] . '" class="btn btn-sm btn-outline-primary">';
+        $html .= '<i class="bi bi-book me-1"></i> Читать';
+        $html .= '</a>';
+    } else {
+        // Черновик - открываем в модальном окне для просмотра
+        $html .= '<button onclick="viewDraftMaterial(' . $article['id'] . ')" class="btn btn-sm btn-outline-primary">';
+        $html .= '<i class="bi bi-eye me-1"></i> Просмотр';
+        $html .= '</button>';
+    }
 
     // Кнопки управления (если есть права)
     if (!empty($article['can_edit'])) {

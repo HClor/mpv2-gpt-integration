@@ -242,6 +242,25 @@ $output .= '</section>';
 
 $output .= '</div></div></div>';
 
+// МОДАЛЬНОЕ ОКНО для просмотра черновиков
+$output .= '<div class="modal fade" id="draftViewerModal" tabindex="-1">';
+$output .= '<div class="modal-dialog modal-xl">';
+$output .= '<div class="modal-content">';
+$output .= '<div class="modal-header">';
+$output .= '<h5 class="modal-title" id="draftViewerTitle">Просмотр черновика</h5>';
+$output .= '<button type="button" class="btn-close" data-bs-dismiss="modal"></button>';
+$output .= '</div>';
+$output .= '<div class="modal-body">';
+$output .= '<div id="draft-content" class="material-content"></div>';
+$output .= '</div>';
+$output .= '<div class="modal-footer">';
+$output .= '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>';
+$output .= '<button type="button" class="btn btn-primary" id="editDraftButton" onclick="editDraftFromViewer()">';
+$output .= '<i class="bi bi-pencil"></i> Редактировать';
+$output .= '</button>';
+$output .= '</div>';
+$output .= '</div></div></div>';
+
 // МОДАЛЬНОЕ ОКНО для создания/редактирования
 $output .= '<div class="modal fade" id="materialEditorModal" tabindex="-1">';
 $output .= '<div class="modal-dialog modal-xl">';
