@@ -10,6 +10,7 @@
 // Обработка ошибок
 try {
     $rootPageId = (int)$modx->getOption('rootPageId', $scriptProperties, 149);
+    $showDrafts = (bool)$modx->getOption('showDrafts', $scriptProperties, false);
 
     // ОТЛАДКА: Логируем начало работы
     $debugMode = false; // Отладка отключена
@@ -19,6 +20,7 @@ try {
         $debugOutput .= '<div class="alert alert-info">';
         $debugOutput .= '<strong>ОТЛАДКА learningArticles:</strong><br>';
         $debugOutput .= 'Root Page ID: ' . $rootPageId . '<br>';
+        $debugOutput .= 'Show Drafts: ' . ($showDrafts ? 'Yes' : 'No') . '<br>';
     }
 
     // Получаем все категории из test_categories
@@ -46,12 +48,22 @@ try {
 
     // Получаем все дочерние ресурсы (учебные статьи)
     $c = $modx->newQuery('modResource');
-    $c->where([
+    $whereConditions = [
         'parent' => $rootPageId,
-        'published' => 1,
         'deleted' => 0,
         'hidemenu' => 0
-    ]);
+    ];
+
+    // Фильтруем по published в зависимости от режима
+    if ($showDrafts) {
+        // Показываем только черновики (неопубликованные)
+        $whereConditions['published'] = 0;
+    } else {
+        // Показываем только опубликованные
+        $whereConditions['published'] = 1;
+    }
+
+    $c->where($whereConditions);
     $c->sortby('publishedon', 'DESC');
     $articles = $modx->getCollection('modResource', $c);
 
@@ -118,7 +130,8 @@ try {
         'introtext' => $article->get('introtext'),
         'publishedon' => $article->get('publishedon'),
         'url' => $modx->makeUrl($article->get('id')),
-        'can_edit' => $canEdit
+        'can_edit' => $canEdit,
+        'published' => $article->get('published')
     ];
 
     if ($categoryId > 0) {
@@ -146,6 +159,8 @@ function renderArticleCard($article, $modx) {
     $intro = $article['introtext'] ?: '';
     $introShort = mb_strlen($intro) > 150 ? mb_substr($intro, 0, 150) . '...' : $intro;
 
+    $isPublished = !empty($article['published']);
+
     $html = '<div class="col-lg-4 col-md-6 mb-4">';
     $html .= '<div class="card h-100 shadow-sm">';
     $html .= '<div class="card-body">';
@@ -154,12 +169,24 @@ function renderArticleCard($article, $modx) {
         $html .= '<p class="card-text text-muted small">' . htmlspecialchars($introShort) . '</p>';
     }
     $html .= '<div class="mb-2">';
-    $html .= '<span class="badge bg-success">';
-    $html .= '<i class="bi bi-journal-text me-1"></i>Статья';
-    $html .= '</span>';
+
+    // Показываем статус публикации
+    if ($isPublished) {
+        $html .= '<span class="badge bg-success me-1">';
+        $html .= '<i class="bi bi-check-circle me-1"></i>Опубликован';
+        $html .= '</span>';
+    } else {
+        $html .= '<span class="badge bg-secondary me-1">';
+        $html .= '<i class="bi bi-file-earmark-text me-1"></i>Черновик';
+        $html .= '</span>';
+    }
+
     $html .= '</div>';
     $html .= '</div>';
     $html .= '<div class="card-footer bg-light d-flex justify-content-between align-items-center">';
+
+    // Кнопка "Читать" для всех (черновики могут читать только авторы с правами)
+    // Авторы/админы/эксперты могут читать черновики через вкладку "Черновики"
     $html .= '<a href="' . $article['url'] . '" class="btn btn-sm btn-outline-primary">';
     $html .= '<i class="bi bi-book me-1"></i> Читать';
     $html .= '</a>';
@@ -241,7 +268,11 @@ if (!empty($articlesWithoutCategory)) {
     if (empty($articlesByCategory) && empty($articlesWithoutCategory)) {
         $output .= '<div class="alert alert-info">';
         $output .= '<i class="bi bi-info-circle me-2"></i>';
-        $output .= 'Учебных статей пока нет.';
+        if ($showDrafts) {
+            $output .= 'Черновиков пока нет. Создайте материал и не публикуйте его, чтобы он появился здесь.';
+        } else {
+            $output .= 'Опубликованных учебных статей пока нет.';
+        }
         $output .= '</div>';
     }
 
