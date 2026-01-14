@@ -13,12 +13,8 @@ try {
     $showDrafts = (bool)$modx->getOption('showDrafts', $scriptProperties, false);
 
     // ОТЛАДКА: Логируем начало работы
-    $debugMode = true; // Отладка ВКЛЮЧЕНА для диагностики
+    $debugMode = false; // Отладка отключена
     $debugOutput = '';
-
-    // Включаем вывод ошибок
-    error_reporting(E_ALL);
-    ini_set('display_errors', 1);
 
     if ($debugMode) {
         $debugOutput .= '<div class="alert alert-info">';
@@ -149,6 +145,7 @@ try {
 }
 
 // Функция для вывода карточки статьи
+if (!function_exists('renderArticleCard')) {
 function renderArticleCard($article, $modx) {
     // Исправляем: преобразуем publishedon в timestamp если это строка
     $publishedon = $article['publishedon'];
@@ -222,6 +219,7 @@ function renderArticleCard($article, $modx) {
 
     return $html;
 }
+} // end if (!function_exists('renderArticleCard'))
 
 // Выводим результаты
 $output = '';
