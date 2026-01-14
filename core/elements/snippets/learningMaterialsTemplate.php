@@ -204,11 +204,61 @@ if ($canCreate) {
 
 $output .= '</div>';
 
-// Используем новый сниппет с поддержкой категорий
-$output .= $modx->runSnippet('learningArticles', ['rootPageId' => $rootPageId]);
+// Вкладки для опубликованных и неопубликованных материалов
+if ($canCreate) {
+    // Показываем вкладки только авторам/админам/экспертам
+    $output .= '<ul class="nav nav-tabs mb-4" id="materialsTab" role="tablist">';
+    $output .= '<li class="nav-item" role="presentation">';
+    $output .= '<button class="nav-link active" id="published-tab" data-bs-toggle="tab" data-bs-target="#published-materials" type="button" role="tab">';
+    $output .= '<i class="bi bi-check-circle"></i> Опубликованные';
+    $output .= '</button>';
+    $output .= '</li>';
+    $output .= '<li class="nav-item" role="presentation">';
+    $output .= '<button class="nav-link" id="draft-tab" data-bs-toggle="tab" data-bs-target="#draft-materials" type="button" role="tab">';
+    $output .= '<i class="bi bi-file-earmark-text"></i> Черновики';
+    $output .= '</button>';
+    $output .= '</li>';
+    $output .= '</ul>';
+
+    $output .= '<div class="tab-content" id="materialsTabContent">';
+
+    // Вкладка опубликованных материалов
+    $output .= '<div class="tab-pane fade show active" id="published-materials" role="tabpanel">';
+    $output .= $modx->runSnippet('learningArticles', ['rootPageId' => $rootPageId, 'showDrafts' => false]);
+    $output .= '</div>';
+
+    // Вкладка черновиков
+    $output .= '<div class="tab-pane fade" id="draft-materials" role="tabpanel">';
+    $output .= $modx->runSnippet('learningArticles', ['rootPageId' => $rootPageId, 'showDrafts' => true]);
+    $output .= '</div>';
+
+    $output .= '</div>';
+} else {
+    // Обычным пользователям показываем только опубликованные материалы
+    $output .= $modx->runSnippet('learningArticles', ['rootPageId' => $rootPageId, 'showDrafts' => false]);
+}
 
 $output .= '</section>';
 
+$output .= '</div></div></div>';
+
+// МОДАЛЬНОЕ ОКНО для просмотра черновиков
+$output .= '<div class="modal fade" id="draftViewerModal" tabindex="-1">';
+$output .= '<div class="modal-dialog modal-xl">';
+$output .= '<div class="modal-content">';
+$output .= '<div class="modal-header">';
+$output .= '<h5 class="modal-title" id="draftViewerTitle">Просмотр черновика</h5>';
+$output .= '<button type="button" class="btn-close" data-bs-dismiss="modal"></button>';
+$output .= '</div>';
+$output .= '<div class="modal-body">';
+$output .= '<div id="draft-content" class="material-content"></div>';
+$output .= '</div>';
+$output .= '<div class="modal-footer">';
+$output .= '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>';
+$output .= '<button type="button" class="btn btn-primary" id="editDraftButton" onclick="editDraftFromViewer()">';
+$output .= '<i class="bi bi-pencil"></i> Редактировать';
+$output .= '</button>';
+$output .= '</div>';
 $output .= '</div></div></div>';
 
 // МОДАЛЬНОЕ ОКНО для создания/редактирования
