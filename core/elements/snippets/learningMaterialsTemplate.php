@@ -204,8 +204,39 @@ if ($canCreate) {
 
 $output .= '</div>';
 
-// Используем новый сниппет с поддержкой категорий
-$output .= $modx->runSnippet('learningArticles', array('rootPageId' => $rootPageId));
+// Вкладки для опубликованных и неопубликованных материалов
+if ($canCreate) {
+    // Показываем вкладки только авторам/админам/экспертам
+    $output .= '<ul class="nav nav-tabs mb-4" id="materialsTab" role="tablist">';
+    $output .= '<li class="nav-item" role="presentation">';
+    $output .= '<button class="nav-link active" id="published-tab" data-bs-toggle="tab" data-bs-target="#published-materials" type="button" role="tab">';
+    $output .= '<i class="bi bi-check-circle"></i> Опубликованные';
+    $output .= '</button>';
+    $output .= '</li>';
+    $output .= '<li class="nav-item" role="presentation">';
+    $output .= '<button class="nav-link" id="draft-tab" data-bs-toggle="tab" data-bs-target="#draft-materials" type="button" role="tab">';
+    $output .= '<i class="bi bi-file-earmark-text"></i> Черновики';
+    $output .= '</button>';
+    $output .= '</li>';
+    $output .= '</ul>';
+
+    $output .= '<div class="tab-content" id="materialsTabContent">';
+
+    // Вкладка опубликованных материалов
+    $output .= '<div class="tab-pane fade show active" id="published-materials" role="tabpanel">';
+    $output .= $modx->runSnippet('learningArticles', array('rootPageId' => $rootPageId, 'showDrafts' => 0));
+    $output .= '</div>';
+
+    // Вкладка черновиков
+    $output .= '<div class="tab-pane fade" id="draft-materials" role="tabpanel">';
+    $output .= $modx->runSnippet('learningArticles', array('rootPageId' => $rootPageId, 'showDrafts' => 1));
+    $output .= '</div>';
+
+    $output .= '</div>';
+} else {
+    // Обычным пользователям показываем только опубликованные материалы
+    $output .= $modx->runSnippet('learningArticles', array('rootPageId' => $rootPageId, 'showDrafts' => 0));
+}
 
 $output .= '</section>';
 
