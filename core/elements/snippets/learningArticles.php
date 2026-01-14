@@ -48,11 +48,11 @@ try {
 
     // Получаем все дочерние ресурсы (учебные статьи)
     $c = $modx->newQuery('modResource');
-    $whereConditions = [
+    $whereConditions = array(
         'parent' => $rootPageId,
         'deleted' => 0,
         'hidemenu' => 0
-    ];
+    );
 
     // Фильтруем по published в зависимости от режима
     if ($showDrafts) {
