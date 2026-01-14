@@ -13,8 +13,12 @@ try {
     $showDrafts = (bool)$modx->getOption('showDrafts', $scriptProperties, false);
 
     // ОТЛАДКА: Логируем начало работы
-    $debugMode = false; // Отладка отключена
+    $debugMode = true; // Отладка ВКЛЮЧЕНА для диагностики
     $debugOutput = '';
+
+    // Включаем вывод ошибок
+    error_reporting(E_ALL);
+    ini_set('display_errors', 1);
 
     if ($debugMode) {
         $debugOutput .= '<div class="alert alert-info">';
