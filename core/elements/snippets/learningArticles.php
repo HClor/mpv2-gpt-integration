@@ -81,8 +81,8 @@ try {
 
     // Группируем статьи по категориям
     // Используем TV поле category_id если есть, иначе показываем в "Без категории"
-    $articlesByCategory = [];
-    $articlesWithoutCategory = [];
+    $articlesByCategory = array();
+    $articlesWithoutCategory = array();
 
     // Определяем права пользователя для кнопок управления
     $userId = 0;
@@ -124,7 +124,7 @@ try {
         $createdBy = (int)$article->get('createdby');
         $canEdit = ($userId > 0) && ($createdBy === $userId || $isAdmin || $isExpert);
 
-    $articleData = [
+    $articleData = array(
         'id' => $article->get('id'),
         'pagetitle' => $article->get('pagetitle'),
         'introtext' => $article->get('introtext'),
@@ -132,11 +132,11 @@ try {
         'url' => $modx->makeUrl($article->get('id')),
         'can_edit' => $canEdit,
         'published' => $article->get('published')
-    ];
+    );
 
     if ($categoryId > 0) {
         if (!isset($articlesByCategory[$categoryId])) {
-            $articlesByCategory[$categoryId] = [];
+            $articlesByCategory[$categoryId] = array();
         }
         $articlesByCategory[$categoryId][] = $articleData;
     } else {
