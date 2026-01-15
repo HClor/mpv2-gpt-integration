@@ -3152,8 +3152,22 @@ if (empty($allQuestionIds)) {
                     'resource' => ['contexts' => ['web']],
                 ]);
 
-                // Генерируем правильный URL через makeUrl
-                $url = $modx->makeUrl($materialId, 'web', '', 'full');
+                // ИСПРАВЛЕНО: ручное построение URL вместо makeUrl()
+                // makeUrl() может не работать сразу после refresh() из-за кеша
+                $siteUrl = rtrim($modx->getOption('site_url'), '/');
+                $alias = $resource->get('alias');
+
+                if ($parentId > 0) {
+                    $parent = $modx->getObject('modResource', $parentId);
+                    if ($parent) {
+                        $parentUri = trim($parent->get('uri'), '/');
+                        $url = $siteUrl . '/' . $parentUri . '/' . $alias;
+                    } else {
+                        $url = $siteUrl . '/' . $alias;
+                    }
+                } else {
+                    $url = $siteUrl . '/' . $alias;
+                }
 
                 $response = ResponseHelper::success([
                     'material_id' => $materialId,
@@ -3193,8 +3207,7 @@ if (empty($allQuestionIds)) {
                     $resource->setTVValue('category_id', $categoryId);
                 }
 
-                // КРИТИЧЕСКИ ВАЖНО: Полная очистка кеша для нового ресурса
-                // Это гарантирует, что makeUrl сразу вернет правильный URL
+                // Очищаем кэш для нового ресурса
                 $modx->cacheManager->refresh([
                     'db' => [],
                     'auto_publish' => ['contexts' => ['web']],
@@ -3202,14 +3215,22 @@ if (empty($allQuestionIds)) {
                     'resource' => ['contexts' => ['web']],
                 ]);
 
-                // Дополнительно очищаем кеш контекста для обновления карты URI
-                $webContext = $modx->getContext('web');
-                if ($webContext) {
-                    $webContext->prepare();
-                }
+                // ИСПРАВЛЕНО: ручное построение URL вместо makeUrl()
+                // makeUrl() не работает для только что созданных ресурсов из-за кеша URI
+                $siteUrl = rtrim($modx->getOption('site_url'), '/');
+                $alias = $resource->get('alias');
 
-                // Генерируем правильный URL через makeUrl (работает после очистки кеша)
-                $url = $modx->makeUrl($materialId, 'web', '', 'full');
+                if ($parentId > 0) {
+                    $parent = $modx->getObject('modResource', $parentId);
+                    if ($parent) {
+                        $parentUri = trim($parent->get('uri'), '/');
+                        $url = $siteUrl . '/' . $parentUri . '/' . $alias;
+                    } else {
+                        $url = $siteUrl . '/' . $alias;
+                    }
+                } else {
+                    $url = $siteUrl . '/' . $alias;
+                }
 
                 $response = ResponseHelper::success([
                     'material_id' => $materialId,
