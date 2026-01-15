@@ -904,13 +904,16 @@
         const isCompleted = userProgress.completed_steps?.includes(step.id);
         const isLocked = step.is_locked && !isCompleted;
         const isCurrent = !isCompleted && !isLocked;
+        const isContentUnavailable = step.content_available === false;
 
         const statusIcon = isCompleted ? '<i class="bi bi-check-circle-fill text-success fs-4"></i>' :
                           isLocked ? '<i class="bi bi-lock-fill text-muted fs-4"></i>' :
+                          isContentUnavailable ? '<i class="bi bi-exclamation-triangle-fill text-danger fs-4"></i>' :
                           '<i class="bi bi-circle text-primary fs-4"></i>';
 
         const cardClass = isCompleted ? 'border-success' :
-                         isCurrent ? 'border-primary' :
+                         isCurrent && !isContentUnavailable ? 'border-primary' :
+                         isContentUnavailable ? 'border-danger' :
                          'border-secondary';
 
         const typeIcon = STEP_TYPE_ICONS[step.step_type] || 'bi-circle';
@@ -926,6 +929,18 @@
                     ${reqs.previous_step ? '✓ Завершите предыдущий шаг<br>' : ''}
                     ${reqs.min_score ? `✓ Минимальный балл: ${reqs.min_score}%<br>` : ''}
                     ${reqs.required_steps ? `✓ Завершите шаги: ${reqs.required_steps.join(', ')}<br>` : ''}
+                </div>
+            `;
+        }
+
+        // Предупреждение о недоступном контенте
+        let contentUnavailableWarning = '';
+        if (isContentUnavailable) {
+            contentUnavailableWarning = `
+                <div class="alert alert-danger small mb-0 mt-2">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    <strong>Контент недоступен:</strong><br>
+                    ${escapeHtml(step.content_error || 'Контент был удален или не опубликован. Обратитесь к администратору.')}
                 </div>
             `;
         }
@@ -963,8 +978,9 @@
                             </div>
 
                             ${unlockRequirements}
+                            ${contentUnavailableWarning}
 
-                            ${!isLocked && isEnrolled ? `
+                            ${!isLocked && isEnrolled && !isContentUnavailable ? `
                                 <div class="mt-3">
                                     <button class="btn ${isCompleted ? 'btn-outline-primary' : 'btn-primary'}"
                                             onclick="LearningPaths.startStep(${step.id})">
@@ -1161,13 +1177,25 @@
         let html = '<div class="steps-sortable">';
 
         pathSteps.forEach((step, index) => {
+            const isContentUnavailable = step.content_available === false;
+            const warningBadge = isContentUnavailable
+                ? '<span class="badge bg-danger ms-2"><i class="bi bi-exclamation-triangle-fill"></i> Контент недоступен</span>'
+                : '';
+            const warningMessage = isContentUnavailable
+                ? `<div class="alert alert-danger mb-2 mt-2 small">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                    ${escapeHtml(step.content_error || 'Контент был удален или не опубликован')}
+                   </div>`
+                : '';
+
             html += `
-                <div class="card mb-3 step-editor-card" data-step-id="${step.id}">
-                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                <div class="card mb-3 step-editor-card ${isContentUnavailable ? 'border-danger' : ''}" data-step-id="${step.id}">
+                    <div class="card-header ${isContentUnavailable ? 'bg-danger bg-opacity-10' : 'bg-light'} d-flex justify-content-between align-items-center">
                         <div>
                             <i class="bi bi-grip-vertical handle" style="cursor: move;"></i>
                             <strong>Шаг ${index + 1}: ${escapeHtml(step.name)}</strong>
                             <span class="badge bg-secondary ms-2">${STEP_TYPE_LABELS[step.step_type]}</span>
+                            ${warningBadge}
                         </div>
                         <div class="btn-group btn-group-sm">
                             <button class="btn btn-outline-primary"
@@ -1183,6 +1211,7 @@
                         </div>
                     </div>
                     <div class="card-body">
+                        ${warningMessage}
                         <p class="text-muted mb-0">${escapeHtml(step.description || 'Нет описания')}</p>
                     </div>
                 </div>
@@ -1192,8 +1221,96 @@
         html += '</div>';
         container.innerHTML = html;
 
-        // Инициализируем сортировку (если есть библиотека Sortable.js)
-        // const sortable = new Sortable(container.querySelector('.steps-sortable'), { ... });
+        // Инициализируем drag-and-drop для шагов
+        initStepsDragAndDrop();
+    }
+
+    /**
+     * Инициализация drag-and-drop для шагов траектории
+     * Использует нативный HTML5 Drag and Drop API
+     */
+    function initStepsDragAndDrop() {
+        const container = document.querySelector('.steps-sortable');
+        if (!container) return;
+
+        const cards = container.querySelectorAll('.step-editor-card');
+        let draggedElement = null;
+
+        cards.forEach(card => {
+            // Делаем карточку перетаскиваемой
+            card.setAttribute('draggable', 'true');
+
+            // Обработчик начала перетаскивания
+            card.addEventListener('dragstart', function(e) {
+                draggedElement = this;
+                this.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/html', this.innerHTML);
+            });
+
+            // Обработчик окончания перетаскивания
+            card.addEventListener('dragend', function(e) {
+                this.classList.remove('dragging');
+                // Удаляем все визуальные индикаторы
+                container.querySelectorAll('.step-editor-card').forEach(c => {
+                    c.classList.remove('drag-over');
+                });
+            });
+
+            // Обработчик входа элемента в зону
+            card.addEventListener('dragenter', function(e) {
+                if (this !== draggedElement) {
+                    this.classList.add('drag-over');
+                }
+            });
+
+            // Обработчик выхода элемента из зоны
+            card.addEventListener('dragleave', function(e) {
+                this.classList.remove('drag-over');
+            });
+
+            // Обработчик перемещения над элементом
+            card.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+
+                if (this === draggedElement) return;
+
+                // Определяем, куда вставить элемент (до или после текущего)
+                const afterElement = getDragAfterElement(container, e.clientY);
+                if (afterElement == null) {
+                    container.appendChild(draggedElement);
+                } else {
+                    container.insertBefore(draggedElement, afterElement);
+                }
+            });
+
+            // Обработчик отпускания элемента
+            card.addEventListener('drop', function(e) {
+                e.stopPropagation();
+                e.preventDefault();
+                this.classList.remove('drag-over');
+                return false;
+            });
+        });
+    }
+
+    /**
+     * Получить элемент, после которого нужно вставить перетаскиваемый элемент
+     */
+    function getDragAfterElement(container, y) {
+        const draggableElements = [...container.querySelectorAll('.step-editor-card:not(.dragging)')];
+
+        return draggableElements.reduce((closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+
+            if (offset < 0 && offset > closest.offset) {
+                return { offset: offset, element: child };
+            } else {
+                return closest;
+            }
+        }, { offset: Number.NEGATIVE_INFINITY }).element;
     }
 
     // Content selection state
@@ -1501,13 +1618,11 @@
 
     async function saveStepsOrder() {
         const stepElements = document.querySelectorAll('.step-editor-card');
-        const order = [];
+        const order = {};
 
         stepElements.forEach((el, index) => {
-            order.push({
-                step_id: parseInt(el.dataset.stepId),
-                order_position: index
-            });
+            const stepId = parseInt(el.dataset.stepId);
+            order[stepId] = index + 1; // step_number начинается с 1
         });
 
         try {
@@ -1518,6 +1633,8 @@
 
             if (result.success) {
                 showNotification('Порядок шагов сохранен', 'success');
+                // Перезагружаем шаги для обновления нумерации
+                await loadPathForEdit(currentPathId);
             } else {
                 throw new Error(result.message);
             }

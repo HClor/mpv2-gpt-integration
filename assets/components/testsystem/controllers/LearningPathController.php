@@ -402,6 +402,9 @@ class LearningPathController extends BaseController
             throw new ValidationException('Invalid step type');
         }
 
+        // Проверяем существование контента перед добавлением шага
+        $this->validateStepContent($stepType, $itemId);
+
         $stepData = [
             'step_type' => $stepType,
             'item_id' => $itemId,
@@ -449,6 +452,17 @@ class LearningPathController extends BaseController
         // Валидация step_type
         if (isset($data['step_type']) && !in_array($data['step_type'], ['material', 'test', 'quiz', 'assignment'])) {
             throw new ValidationException('Invalid step type');
+        }
+
+        // Если обновляются step_type или item_id, проверяем существование контента
+        if (isset($data['step_type']) && isset($data['item_id'])) {
+            $this->validateStepContent($data['step_type'], $data['item_id']);
+        } elseif (isset($data['item_id'])) {
+            // Если обновляется только item_id, получаем текущий step_type из шага
+            $currentStep = LearningPathService::getStepById($this->modx, $stepId);
+            if ($currentStep) {
+                $this->validateStepContent($currentStep['step_type'], $data['item_id']);
+            }
         }
 
         $success = LearningPathService::updateStep($this->modx, $stepId, $data);
@@ -1549,5 +1563,55 @@ class LearningPathController extends BaseController
         }
 
         return $this->success($debug);
+    }
+
+    /**
+     * Валидация существования контента шага
+     *
+     * @param string $stepType Тип шага (material, test, quiz, assignment)
+     * @param int $itemId ID контента
+     * @throws Exception если контент не найден
+     */
+    private function validateStepContent($stepType, $itemId)
+    {
+        $prefix = $this->modx->getOption('table_prefix', null, 'modx_');
+
+        switch ($stepType) {
+            case 'material':
+                // Проверяем существование ресурса MODX
+                $resource = $this->modx->getObject('modResource', $itemId);
+                if (!$resource) {
+                    throw new ValidationException('Материал не найден (ресурс ID=' . $itemId . ' не существует). Выберите другой материал.');
+                }
+                // Проверяем, что ресурс опубликован
+                if (!$resource->get('published')) {
+                    throw new ValidationException('Материал не опубликован (ресурс ID=' . $itemId . '). Опубликуйте материал или выберите другой.');
+                }
+                break;
+
+            case 'test':
+            case 'quiz':
+                // Проверяем существование теста
+                $stmt = $this->modx->prepare("SELECT id, published FROM {$prefix}test_tests WHERE id = ?");
+                $stmt->execute([$itemId]);
+                $test = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$test) {
+                    throw new ValidationException('Тест не найден (ID=' . $itemId . '). Возможно, тест был удален. Выберите другой тест.');
+                }
+
+                // Проверяем, что тест опубликован
+                if (!$test['published']) {
+                    throw new ValidationException('Тест не опубликован (ID=' . $itemId . '). Опубликуйте тест или выберите другой.');
+                }
+                break;
+
+            case 'assignment':
+                // Для заданий пока не требуем проверки
+                break;
+
+            default:
+                throw new ValidationException('Неизвестный тип шага: ' . $stepType);
+        }
     }
 }
