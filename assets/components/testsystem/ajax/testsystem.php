@@ -3151,13 +3151,7 @@ if (empty($allQuestionIds)) {
 
                 // === ПРАВИЛЬНАЯ ОЧИСТКА КЭША (рекомендация аудитора) ===
 
-                // 1. Очищаем кэш самого ресурса
-                $cacheKey = $resource->getCacheKey();
-                $modx->cacheManager->delete($cacheKey, [
-                    xPDO::OPT_CACHE_KEY => 'resource'
-                ]);
-
-                // 2. Очищаем кэш старого и нового родителя (там анонсы с кнопкой "Читать")
+                // 1. Очищаем кэш родителей (там списки с кнопкой "Читать")
                 if ($originalParent > 0) {
                     $oldParent = $modx->getObject('modResource', $originalParent);
                     if ($oldParent) {
@@ -3171,34 +3165,17 @@ if (empty($allQuestionIds)) {
                     }
                 }
 
-                // 3. Если меняется parent — обновляем карту ресурсов контекста
-                if ($parentId > 0 && $parentId != $originalParent) {
-                    $modx->cacheManager->refresh([
-                        'context_settings' => ['contexts' => [$resource->get('context_key')]],
-                        'resource' => ['contexts' => [$resource->get('context_key')]]
-                    ]);
-                } else {
-                    // Иначе просто обновляем кэш ресурсов
-                    $modx->cacheManager->refresh([
-                        'resource' => ['contexts' => [$resource->get('context_key')]]
-                    ]);
-                }
+                // 2. ОБЯЗАТЕЛЬНО: Обновляем кэш ресурсов контекста для URI-карты
+                $modx->cacheManager->refresh([
+                    'db' => [],
+                    'auto_publish' => ['contexts' => [$resource->get('context_key')]],
+                    'context_settings' => ['contexts' => [$resource->get('context_key')]],
+                    'resource' => ['contexts' => [$resource->get('context_key')]]
+                ]);
 
-                // Получаем правильный URL (ручное построение)
-                $siteUrl = rtrim($modx->getOption('site_url'), '/');
-                $alias = $resource->get('alias');
-
-                if ($parentId > 0) {
-                    $parent = $modx->getObject('modResource', $parentId);
-                    if ($parent) {
-                        $parentUri = trim($parent->get('uri'), '/');
-                        $url = $siteUrl . '/' . $parentUri . '/' . $alias;
-                    } else {
-                        $url = $siteUrl . '/' . $alias;
-                    }
-                } else {
-                    $url = $siteUrl . '/' . $alias;
-                }
+                // 3. ПРАВИЛЬНО: Получаем URI от MODX (он уже пересчитан после save)
+                $uri = $resource->get('uri');
+                $url = rtrim($modx->getOption('site_url'), '/') . '/' . ltrim($uri, '/');
 
                 $response = ResponseHelper::success([
                     'material_id' => $materialId,
@@ -3240,13 +3217,7 @@ if (empty($allQuestionIds)) {
 
                 // === ПРАВИЛЬНАЯ ОЧИСТКА КЭША (рекомендация аудитора) ===
 
-                // 1. Очищаем кэш самого ресурса
-                $cacheKey = $resource->getCacheKey();
-                $modx->cacheManager->delete($cacheKey, [
-                    xPDO::OPT_CACHE_KEY => 'resource'
-                ]);
-
-                // 2. КРИТИЧНО: Очищаем кэш родителя (там список с кнопкой "Читать")
+                // 1. Очищаем кэш родителя (там список с кнопкой "Читать")
                 if ($parentId > 0) {
                     $parent = $modx->getObject('modResource', $parentId);
                     if ($parent) {
@@ -3259,30 +3230,17 @@ if (empty($allQuestionIds)) {
                     }
                 }
 
-                // 3. ПОЛНАЯ очистка контекста (самый надежный вариант)
+                // 2. ОБЯЗАТЕЛЬНО: Обновляем кэш ресурсов контекста для URI-карты
                 $modx->cacheManager->refresh([
                     'db' => [],
                     'auto_publish' => ['contexts' => [$resource->get('context_key')]],
                     'context_settings' => ['contexts' => [$resource->get('context_key')]],
-                    'resource' => ['contexts' => [$resource->get('context_key')]],
-                    'scripts' => []
+                    'resource' => ['contexts' => [$resource->get('context_key')]]
                 ]);
 
-                // Получаем правильный URL (ручное построение)
-                $siteUrl = rtrim($modx->getOption('site_url'), '/');
-                $alias = $resource->get('alias');
-
-                if ($parentId > 0) {
-                    $parent = $modx->getObject('modResource', $parentId);
-                    if ($parent) {
-                        $parentUri = trim($parent->get('uri'), '/');
-                        $url = $siteUrl . '/' . $parentUri . '/' . $alias;
-                    } else {
-                        $url = $siteUrl . '/' . $alias;
-                    }
-                } else {
-                    $url = $siteUrl . '/' . $alias;
-                }
+                // 3. ПРАВИЛЬНО: Получаем URI от MODX (он уже пересчитан после save)
+                $uri = $resource->get('uri');
+                $url = rtrim($modx->getOption('site_url'), '/') . '/' . ltrim($uri, '/');
 
                 $response = ResponseHelper::success([
                     'material_id' => $materialId,
