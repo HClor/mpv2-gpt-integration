@@ -3149,6 +3149,13 @@ if (empty($allQuestionIds)) {
                     throw new Exception('Ошибка обновления материала');
                 }
 
+                // КРИТИЧНО: Перезагружаем ресурс из БД для получения актуального URI
+                // save() обновляет БД, но объект в памяти может не обновить вычисляемые поля (uri)
+                $resource = $modx->getObject('modResource', $materialId);
+                if (!$resource) {
+                    throw new Exception('Не удалось перезагрузить материал после сохранения');
+                }
+
                 // === ПРАВИЛЬНАЯ ОЧИСТКА КЭША (рекомендация аудитора) ===
 
                 // 1. Очищаем кэш родителей (там списки с кнопкой "Читать")
@@ -3173,7 +3180,7 @@ if (empty($allQuestionIds)) {
                     'resource' => ['contexts' => [$resource->get('context_key')]]
                 ]);
 
-                // 3. ПРАВИЛЬНО: Получаем URI от MODX (он уже пересчитан после save)
+                // 3. Получаем гарантированно актуальный URI из перезагруженного объекта
                 $uri = $resource->get('uri');
                 $url = rtrim($modx->getOption('site_url'), '/') . '/' . ltrim($uri, '/');
 
@@ -3215,17 +3222,19 @@ if (empty($allQuestionIds)) {
 
                 $materialId = $resource->get('id');
 
+                // КРИТИЧНО: Перезагружаем ресурс из БД для получения актуального URI
+                // save() обновляет БД, но объект в памяти может не обновить вычисляемые поля (uri)
+                $resource = $modx->getObject('modResource', $materialId);
+                if (!$resource) {
+                    throw new Exception('Не удалось перезагрузить материал после сохранения');
+                }
+
                 // === ПРАВИЛЬНАЯ ОЧИСТКА КЭША (рекомендация аудитора) ===
 
                 // 1. Очищаем кэш родителя (там список с кнопкой "Читать")
                 if ($parentId > 0) {
                     $parent = $modx->getObject('modResource', $parentId);
                     if ($parent) {
-                        // Удаляем кэш родителя напрямую
-                        $parentCacheKey = $parent->getCacheKey();
-                        $modx->cacheManager->delete($parentCacheKey, [
-                            xPDO::OPT_CACHE_KEY => 'resource'
-                        ]);
                         $parent->clearCache();
                     }
                 }
@@ -3238,7 +3247,7 @@ if (empty($allQuestionIds)) {
                     'resource' => ['contexts' => [$resource->get('context_key')]]
                 ]);
 
-                // 3. ПРАВИЛЬНО: Получаем URI от MODX (он уже пересчитан после save)
+                // 3. Получаем гарантированно актуальный URI из перезагруженного объекта
                 $uri = $resource->get('uri');
                 $url = rtrim($modx->getOption('site_url'), '/') . '/' . ltrim($uri, '/');
 
