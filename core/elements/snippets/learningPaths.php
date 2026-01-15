@@ -312,6 +312,13 @@ function renderPathView($modx, $prefix, $pathId, $userId, $isLoggedIn) {
         .step-card.in-progress::before { background: #0d6efd; border-color: #0d6efd; }
         .step-card.available::before { background: #fff; border-color: #0d6efd; }
         .step-card.locked::before { background: #adb5bd; border-color: #adb5bd; }
+
+        /* Стили для drag-and-drop */
+        .step-editor-card[draggable="true"] { cursor: move; }
+        .step-editor-card.dragging { opacity: 0.5; }
+        .step-editor-card.drag-over { border-top: 3px solid #0d6efd; }
+        .handle { cursor: grab; }
+        .handle:active { cursor: grabbing; }
     </style>
     ';
 

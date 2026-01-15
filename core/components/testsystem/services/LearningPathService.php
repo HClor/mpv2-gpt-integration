@@ -130,10 +130,18 @@ class LearningPathService
         $stmt->execute([$pathId]);
         $steps = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Декодируем JSON условия
+        // Декодируем JSON условия и проверяем доступность контента
         foreach ($steps as &$step) {
             if (!empty($step['unlock_condition'])) {
                 $step['unlock_condition'] = json_decode($step['unlock_condition'], true);
+            }
+
+            // Проверяем доступность контента
+            $step['content_available'] = self::checkStepContentAvailability($modx, $step['step_type'], $step['item_id']);
+            $step['content_error'] = null;
+
+            if (!$step['content_available']) {
+                $step['content_error'] = self::getContentErrorMessage($step['step_type'], $step['item_id']);
             }
         }
 
@@ -1747,5 +1755,65 @@ class LearningPathService
         $stats['activity'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         return $stats;
+    }
+
+    /**
+     * Проверка доступности контента шага
+     *
+     * @param modX $modx
+     * @param string $stepType Тип шага (material, test, quiz, assignment)
+     * @param int $itemId ID контента
+     * @return bool true если контент доступен, false если нет
+     */
+    private static function checkStepContentAvailability($modx, $stepType, $itemId)
+    {
+        $prefix = $modx->getOption('table_prefix', null, 'modx_');
+
+        switch ($stepType) {
+            case 'material':
+                // Проверяем существование ресурса MODX
+                $resource = $modx->getObject('modResource', $itemId);
+                return $resource && $resource->get('published');
+
+            case 'test':
+            case 'quiz':
+                // Проверяем существование теста
+                $stmt = $modx->prepare("SELECT id, published FROM {$prefix}test_tests WHERE id = ?");
+                $stmt->execute([$itemId]);
+                $test = $stmt->fetch(PDO::FETCH_ASSOC);
+                return $test && $test['published'];
+
+            case 'assignment':
+                // Для заданий пока считаем всегда доступным
+                return true;
+
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Получить сообщение об ошибке для недоступного контента
+     *
+     * @param string $stepType Тип шага
+     * @param int $itemId ID контента
+     * @return string Сообщение об ошибке
+     */
+    private static function getContentErrorMessage($stepType, $itemId)
+    {
+        switch ($stepType) {
+            case 'material':
+                return 'Материал не найден или не опубликован (ID=' . $itemId . ')';
+
+            case 'test':
+            case 'quiz':
+                return 'Тест не найден или не опубликован (ID=' . $itemId . ')';
+
+            case 'assignment':
+                return 'Задание не найдено (ID=' . $itemId . ')';
+
+            default:
+                return 'Неизвестный тип контента';
+        }
     }
 }
