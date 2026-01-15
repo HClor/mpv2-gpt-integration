@@ -3144,7 +3144,7 @@ if (empty($allQuestionIds)) {
                     $resource->setTVValue('category_id', $categoryId);
                 }
 
-                // Очищаем кэш
+                // Очищаем кэш (включая URI для корректной генерации ссылок)
                 $modx->cacheManager->refresh([
                     'db' => [],
                     'auto_publish' => ['contexts' => ['web']],
@@ -3152,9 +3152,8 @@ if (empty($allQuestionIds)) {
                     'resource' => ['contexts' => ['web']],
                 ]);
 
-                // Генерируем URL
-                $alias = $resource->get('alias');
-                $url = $modx->getOption('site_url') . ($alias ? $alias : 'index.php?id=' . $materialId);
+                // Генерируем правильный URL через makeUrl
+                $url = $modx->makeUrl($materialId, 'web', '', 'full');
 
                 $response = ResponseHelper::success([
                     'material_id' => $materialId,
@@ -3194,7 +3193,8 @@ if (empty($allQuestionIds)) {
                     $resource->setTVValue('category_id', $categoryId);
                 }
 
-                // Очищаем кэш для нового ресурса
+                // КРИТИЧЕСКИ ВАЖНО: Полная очистка кеша для нового ресурса
+                // Это гарантирует, что makeUrl сразу вернет правильный URL
                 $modx->cacheManager->refresh([
                     'db' => [],
                     'auto_publish' => ['contexts' => ['web']],
@@ -3202,9 +3202,14 @@ if (empty($allQuestionIds)) {
                     'resource' => ['contexts' => ['web']],
                 ]);
 
-                // Генерируем URL (для черновиков используем прямой URL)
-                $alias = $resource->get('alias');
-                $url = $modx->getOption('site_url') . ($alias ? $alias : 'index.php?id=' . $materialId);
+                // Дополнительно очищаем кеш контекста для обновления карты URI
+                $webContext = $modx->getContext('web');
+                if ($webContext) {
+                    $webContext->prepare();
+                }
+
+                // Генерируем правильный URL через makeUrl (работает после очистки кеша)
+                $url = $modx->makeUrl($materialId, 'web', '', 'full');
 
                 $response = ResponseHelper::success([
                     'material_id' => $materialId,
