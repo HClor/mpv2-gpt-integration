@@ -3149,16 +3149,23 @@ if (empty($allQuestionIds)) {
                     throw new Exception('Ошибка обновления материала');
                 }
 
-                // КРИТИЧНО: Перезагружаем ресурс из БД для получения актуального URI
-                // save() обновляет БД, но объект в памяти может не обновить вычисляемые поля (uri)
+                // === ПРАВИЛЬНЫЙ ПОРЯДОК (рекомендация аудитора) ===
+
+                // 1. СНАЧАЛА обновляем кэш - это заставит MODX пересчитать и записать uri в БД
+                $modx->cacheManager->refresh([
+                    'db' => [],
+                    'auto_publish' => ['contexts' => ['web']],
+                    'context_settings' => ['contexts' => ['web']],
+                    'resource' => ['contexts' => ['web']]
+                ]);
+
+                // 2. ТОЛЬКО ПОСЛЕ refresh перезагружаем ресурс - uri уже обновлён в БД
                 $resource = $modx->getObject('modResource', $materialId);
                 if (!$resource) {
                     throw new Exception('Не удалось перезагрузить материал после сохранения');
                 }
 
-                // === ПРАВИЛЬНАЯ ОЧИСТКА КЭША (рекомендация аудитора) ===
-
-                // 1. Очищаем кэш родителей (там списки с кнопкой "Читать")
+                // 3. Очищаем кэш родителей (можно после refresh)
                 if ($originalParent > 0) {
                     $oldParent = $modx->getObject('modResource', $originalParent);
                     if ($oldParent) {
@@ -3172,15 +3179,7 @@ if (empty($allQuestionIds)) {
                     }
                 }
 
-                // 2. ОБЯЗАТЕЛЬНО: Обновляем кэш ресурсов контекста для URI-карты
-                $modx->cacheManager->refresh([
-                    'db' => [],
-                    'auto_publish' => ['contexts' => [$resource->get('context_key')]],
-                    'context_settings' => ['contexts' => [$resource->get('context_key')]],
-                    'resource' => ['contexts' => [$resource->get('context_key')]]
-                ]);
-
-                // 3. Получаем гарантированно актуальный URI из перезагруженного объекта
+                // 4. Получаем гарантированно актуальный URI
                 $uri = $resource->get('uri');
                 $url = rtrim($modx->getOption('site_url'), '/') . '/' . ltrim($uri, '/');
 
@@ -3222,16 +3221,23 @@ if (empty($allQuestionIds)) {
 
                 $materialId = $resource->get('id');
 
-                // КРИТИЧНО: Перезагружаем ресурс из БД для получения актуального URI
-                // save() обновляет БД, но объект в памяти может не обновить вычисляемые поля (uri)
+                // === ПРАВИЛЬНЫЙ ПОРЯДОК (рекомендация аудитора) ===
+
+                // 1. СНАЧАЛА обновляем кэш - это заставит MODX пересчитать и записать uri в БД
+                $modx->cacheManager->refresh([
+                    'db' => [],
+                    'auto_publish' => ['contexts' => ['web']],
+                    'context_settings' => ['contexts' => ['web']],
+                    'resource' => ['contexts' => ['web']]
+                ]);
+
+                // 2. ТОЛЬКО ПОСЛЕ refresh перезагружаем ресурс - uri уже обновлён в БД
                 $resource = $modx->getObject('modResource', $materialId);
                 if (!$resource) {
                     throw new Exception('Не удалось перезагрузить материал после сохранения');
                 }
 
-                // === ПРАВИЛЬНАЯ ОЧИСТКА КЭША (рекомендация аудитора) ===
-
-                // 1. Очищаем кэш родителя (там список с кнопкой "Читать")
+                // 3. Очищаем кэш родителя (можно после refresh)
                 if ($parentId > 0) {
                     $parent = $modx->getObject('modResource', $parentId);
                     if ($parent) {
@@ -3239,15 +3245,7 @@ if (empty($allQuestionIds)) {
                     }
                 }
 
-                // 2. ОБЯЗАТЕЛЬНО: Обновляем кэш ресурсов контекста для URI-карты
-                $modx->cacheManager->refresh([
-                    'db' => [],
-                    'auto_publish' => ['contexts' => [$resource->get('context_key')]],
-                    'context_settings' => ['contexts' => [$resource->get('context_key')]],
-                    'resource' => ['contexts' => [$resource->get('context_key')]]
-                ]);
-
-                // 3. Получаем гарантированно актуальный URI из перезагруженного объекта
+                // 4. Получаем гарантированно актуальный URI
                 $uri = $resource->get('uri');
                 $url = rtrim($modx->getOption('site_url'), '/') . '/' . ltrim($uri, '/');
 
