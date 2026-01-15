@@ -3154,12 +3154,24 @@ if (empty($allQuestionIds)) {
                     }
                 }
 
-                // КРИТИЧНО: пересоздаем контекст для обновления resourceMap и aliasMap
-                // refresh() не обновляет карту ресурсов, нужен именно generateContext()
-                $modx->cacheManager->generateContext($resource->get('context_key'));
+                // Получаем правильный URL (ручное построение, так как карта ресурсов ещё не обновлена)
+                $siteUrl = rtrim($modx->getOption('site_url'), '/');
+                $alias = $resource->get('alias');
 
-                // Получаем правильный URL
-                $url = $modx->makeUrl($resource->get('id'), '', '', 'full');
+                if ($parentId > 0) {
+                    $parent = $modx->getObject('modResource', $parentId);
+                    if ($parent) {
+                        $parentUri = trim($parent->get('uri'), '/');
+                        $url = $siteUrl . '/' . $parentUri . '/' . $alias;
+                    } else {
+                        $url = $siteUrl . '/' . $alias;
+                    }
+                } else {
+                    $url = $siteUrl . '/' . $alias;
+                }
+
+                // Отмечаем, что нужно обновить контекст (делаем после отправки ответа)
+                $needsContextRefresh = $resource->get('context_key');
 
                 $response = ResponseHelper::success([
                     'material_id' => $materialId,
@@ -3622,6 +3634,22 @@ if ($jsonResponse === false) {
 error_log("[testsystem.php] JSON length: " . strlen($jsonResponse) . " bytes");
 echo $jsonResponse;
 error_log("[testsystem.php] Response sent successfully");
+
+// Обновляем контекст ПОСЛЕ отправки ответа (если требуется)
+if (isset($needsContextRefresh) && $needsContextRefresh) {
+    // Закрываем соединение с клиентом, если возможно
+    if (function_exists('fastcgi_finish_request')) {
+        fastcgi_finish_request();
+    }
+
+    // Теперь можно безопасно обновить контекст
+    try {
+        $modx->cacheManager->generateContext($needsContextRefresh);
+        error_log("[testsystem.php] Context '{$needsContextRefresh}' regenerated successfully");
+    } catch (Exception $e) {
+        error_log("[testsystem.php] Failed to regenerate context: " . $e->getMessage());
+    }
+}
 
 // ============================================
 // ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ТРАНСЛИТЕРАЦИИ
