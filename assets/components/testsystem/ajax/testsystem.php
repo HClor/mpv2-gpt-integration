@@ -3146,6 +3146,14 @@ if (empty($allQuestionIds)) {
                     throw new Exception('Ошибка обновления материала');
                 }
 
+                // КРИТИЧНО: очищаем кэш родителя (там анонс с кнопкой "Читать")
+                if ($parentId > 0) {
+                    $parent = $modx->getObject('modResource', $parentId);
+                    if ($parent) {
+                        $parent->clearCache();
+                    }
+                }
+
                 // Полная очистка кэша ресурсов (надёжно)
                 $modx->cacheManager->refresh([
                     'resource' => ['contexts' => [$resource->get('context_key')]],
@@ -3191,6 +3199,14 @@ if (empty($allQuestionIds)) {
                 }
 
                 $materialId = $resource->get('id');
+
+                // КРИТИЧНО: очищаем кэш родителя (там анонс с кнопкой "Читать")
+                if ($parentId > 0) {
+                    $parent = $modx->getObject('modResource', $parentId);
+                    if ($parent) {
+                        $parent->clearCache();
+                    }
+                }
 
                 // Полная очистка кэша ресурсов (надёжно)
                 $modx->cacheManager->refresh([
