@@ -124,12 +124,23 @@ try {
         $createdBy = (int)$article->get('createdby');
         $canEdit = ($userId > 0) && ($createdBy === $userId || $isAdmin || $isExpert);
 
+    // Получаем URI напрямую из ресурса (из БД), а не через makeUrl() который использует кэш resourceMap
+    // Это критично для только что созданных ресурсов, чей URI еще не попал в кэш
+    $uri = $article->get('uri');
+    if (!empty($uri)) {
+        // URI есть в БД - строим URL напрямую
+        $articleUrl = rtrim($modx->getOption('base_url', null, '/'), '/') . '/' . ltrim($uri, '/');
+    } else {
+        // Fallback на makeUrl() если URI по какой-то причине пустой
+        $articleUrl = $modx->makeUrl($article->get('id'));
+    }
+
     $articleData = array(
         'id' => $article->get('id'),
         'pagetitle' => $article->get('pagetitle'),
         'introtext' => $article->get('introtext'),
         'publishedon' => $article->get('publishedon'),
-        'url' => $modx->makeUrl($article->get('id')),
+        'url' => $articleUrl,
         'can_edit' => $canEdit,
         'published' => $article->get('published')
     );

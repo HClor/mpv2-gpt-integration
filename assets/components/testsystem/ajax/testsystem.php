@@ -3149,7 +3149,7 @@ if (empty($allQuestionIds)) {
                     throw new Exception('Ошибка обновления материала');
                 }
 
-                // === ПРАВИЛЬНЫЙ ПОРЯДОК (рекомендация аудитора) ===
+                // === ПРАВИЛЬНЫЙ ПОРЯДОК + УСИЛЕННАЯ ОЧИСТКА КЭША ===
 
                 // 1. СНАЧАЛА обновляем кэш - это заставит MODX пересчитать и записать uri в БД
                 $modx->cacheManager->refresh([
@@ -3159,13 +3159,19 @@ if (empty($allQuestionIds)) {
                     'resource' => ['contexts' => ['web']]
                 ]);
 
-                // 2. ТОЛЬКО ПОСЛЕ refresh перезагружаем ресурс - uri уже обновлён в БД
+                // 2. Удаляем файловый кэш контекста web (включая resourceMap)
+                $cachePath = $modx->getOption('cache_path');
+                if ($cachePath) {
+                    $modx->cacheManager->deleteTree($cachePath . 'resource/web/');
+                }
+
+                // 3. ТОЛЬКО ПОСЛЕ refresh перезагружаем ресурс - uri уже обновлён в БД
                 $resource = $modx->getObject('modResource', $materialId);
                 if (!$resource) {
                     throw new Exception('Не удалось перезагрузить материал после сохранения');
                 }
 
-                // 3. Очищаем кэш родителей (можно после refresh)
+                // 4. Очищаем кэш родителей
                 if ($originalParent > 0) {
                     $oldParent = $modx->getObject('modResource', $originalParent);
                     if ($oldParent) {
@@ -3179,7 +3185,7 @@ if (empty($allQuestionIds)) {
                     }
                 }
 
-                // 4. Получаем гарантированно актуальный URI
+                // 5. Получаем гарантированно актуальный URI
                 $uri = $resource->get('uri');
                 $url = rtrim($modx->getOption('site_url'), '/') . '/' . ltrim($uri, '/');
 
@@ -3221,7 +3227,7 @@ if (empty($allQuestionIds)) {
 
                 $materialId = $resource->get('id');
 
-                // === ПРАВИЛЬНЫЙ ПОРЯДОК (рекомендация аудитора) ===
+                // === ПРАВИЛЬНЫЙ ПОРЯДОК + УСИЛЕННАЯ ОЧИСТКА КЭША ===
 
                 // 1. СНАЧАЛА обновляем кэш - это заставит MODX пересчитать и записать uri в БД
                 $modx->cacheManager->refresh([
@@ -3231,13 +3237,20 @@ if (empty($allQuestionIds)) {
                     'resource' => ['contexts' => ['web']]
                 ]);
 
-                // 2. ТОЛЬКО ПОСЛЕ refresh перезагружаем ресурс - uri уже обновлён в БД
+                // 2. Удаляем файловый кэш контекста web (включая resourceMap)
+                // Это критично для того, чтобы makeUrl() на следующем запросе нашел новый ресурс
+                $cachePath = $modx->getOption('cache_path');
+                if ($cachePath) {
+                    $modx->cacheManager->deleteTree($cachePath . 'resource/web/');
+                }
+
+                // 3. ТОЛЬКО ПОСЛЕ refresh перезагружаем ресурс - uri уже обновлён в БД
                 $resource = $modx->getObject('modResource', $materialId);
                 if (!$resource) {
                     throw new Exception('Не удалось перезагрузить материал после сохранения');
                 }
 
-                // 3. Очищаем кэш родителя (можно после refresh)
+                // 4. Очищаем кэш родителя
                 if ($parentId > 0) {
                     $parent = $modx->getObject('modResource', $parentId);
                     if ($parent) {
@@ -3245,7 +3258,7 @@ if (empty($allQuestionIds)) {
                     }
                 }
 
-                // 4. Получаем гарантированно актуальный URI
+                // 5. Получаем гарантированно актуальный URI
                 $uri = $resource->get('uri');
                 $url = rtrim($modx->getOption('site_url'), '/') . '/' . ltrim($uri, '/');
 
