@@ -3109,16 +3109,14 @@ if (empty($allQuestionIds)) {
             $categoryId = ValidationHelper::optionalString($data, 'category_id', '');
 
             if ($materialId > 0) {
-                // Обновление существующего
+                // === ОБНОВЛЕНИЕ ===
                 $resource = $modx->getObject('modResource', $materialId);
 
                 if (!$resource) {
                     throw new Exception('Материал не найден');
                 }
 
-                // Проверка прав
                 $canEdit = ((int)$resource->get('createdby') === $userId) || $isAdmin;
-
                 if (!$canEdit) {
                     throw new Exception('Нет прав для редактирования');
                 }
@@ -3131,38 +3129,30 @@ if (empty($allQuestionIds)) {
                 $resource->set('editedon', time());
                 $resource->set('editedby', $userId);
 
-                if ($parentId > 0) {
+                if ($parentId > 0 && $parentId != $resource->get('parent')) {
                     $resource->set('parent', $parentId);
+
+                    // ВАЖНО: сбрасываем URI, чтобы MODX пересобрал путь
+                    $resource->set('uri', '');
+                    $resource->set('uri_override', 0);
+                }
+
+                // TV нужно ставить ДО save()
+                if ($categoryId !== '') {
+                    $resource->setTVValue('category_id', $categoryId);
                 }
 
                 if (!$resource->save()) {
                     throw new Exception('Ошибка обновления материала');
                 }
 
-                // Сохраняем категорию в TV
-                if ($categoryId !== '') {
-                    $resource->setTVValue('category_id', $categoryId);
-                }
+                // Полная очистка кэша ресурсов (надёжно)
+                $modx->cacheManager->refresh([
+                    'resource' => ['contexts' => [$resource->get('context_key')]],
+                ]);
 
-                // Очищаем кэш конкретного ресурса (рекомендуемый способ для MODX 2.3+)
-                $resource->clearCache();
-
-                // ИСПРАВЛЕНО: ручное построение URL вместо makeUrl()
-                // makeUrl() может не работать сразу после refresh() из-за кеша
-                $siteUrl = rtrim($modx->getOption('site_url'), '/');
-                $alias = $resource->get('alias');
-
-                if ($parentId > 0) {
-                    $parent = $modx->getObject('modResource', $parentId);
-                    if ($parent) {
-                        $parentUri = trim($parent->get('uri'), '/');
-                        $url = $siteUrl . '/' . $parentUri . '/' . $alias;
-                    } else {
-                        $url = $siteUrl . '/' . $alias;
-                    }
-                } else {
-                    $url = $siteUrl . '/' . $alias;
-                }
+                // Получаем правильный URL
+                $url = $modx->makeUrl($resource->get('id'), '', '', 'full');
 
                 $response = ResponseHelper::success([
                     'material_id' => $materialId,
@@ -3170,7 +3160,7 @@ if (empty($allQuestionIds)) {
                 ], 'Материал обновлен');
 
             } else {
-                // Создание нового
+                // === СОЗДАНИЕ ===
                 $resource = $modx->newObject('modResource');
                 $resource->set('pagetitle', $pagetitle);
                 $resource->set('longtitle', $pagetitle);
@@ -3191,36 +3181,24 @@ if (empty($allQuestionIds)) {
                 $resource->set('publishedon', $published ? time() : 0);
                 $resource->set('context_key', 'web');
 
+                // TV нужно ставить ДО save()
+                if ($categoryId !== '') {
+                    $resource->setTVValue('category_id', $categoryId);
+                }
+
                 if (!$resource->save()) {
                     throw new Exception('Ошибка создания материала');
                 }
 
                 $materialId = $resource->get('id');
 
-                // Сохраняем категорию в TV
-                if ($categoryId !== '') {
-                    $resource->setTVValue('category_id', $categoryId);
-                }
+                // Полная очистка кэша ресурсов (надёжно)
+                $modx->cacheManager->refresh([
+                    'resource' => ['contexts' => [$resource->get('context_key')]],
+                ]);
 
-                // Очищаем кэш конкретного ресурса (рекомендуемый способ для MODX 2.3+)
-                $resource->clearCache();
-
-                // ИСПРАВЛЕНО: ручное построение URL вместо makeUrl()
-                // makeUrl() не работает для только что созданных ресурсов из-за кеша URI
-                $siteUrl = rtrim($modx->getOption('site_url'), '/');
-                $alias = $resource->get('alias');
-
-                if ($parentId > 0) {
-                    $parent = $modx->getObject('modResource', $parentId);
-                    if ($parent) {
-                        $parentUri = trim($parent->get('uri'), '/');
-                        $url = $siteUrl . '/' . $parentUri . '/' . $alias;
-                    } else {
-                        $url = $siteUrl . '/' . $alias;
-                    }
-                } else {
-                    $url = $siteUrl . '/' . $alias;
-                }
+                // Получаем правильный URL
+                $url = $modx->makeUrl($resource->get('id'), '', '', 'full');
 
                 $response = ResponseHelper::success([
                     'material_id' => $materialId,
