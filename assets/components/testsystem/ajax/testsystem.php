@@ -3154,10 +3154,9 @@ if (empty($allQuestionIds)) {
                     }
                 }
 
-                // Полная очистка кэша ресурсов (надёжно)
-                $modx->cacheManager->refresh([
-                    'resource' => ['contexts' => [$resource->get('context_key')]],
-                ]);
+                // КРИТИЧНО: пересоздаем контекст для обновления resourceMap и aliasMap
+                // refresh() не обновляет карту ресурсов, нужен именно generateContext()
+                $modx->cacheManager->generateContext($resource->get('context_key'));
 
                 // Получаем правильный URL
                 $url = $modx->makeUrl($resource->get('id'), '', '', 'full');
@@ -3208,10 +3207,9 @@ if (empty($allQuestionIds)) {
                     }
                 }
 
-                // Полная очистка кэша ресурсов (надёжно)
-                $modx->cacheManager->refresh([
-                    'resource' => ['contexts' => [$resource->get('context_key')]],
-                ]);
+                // КРИТИЧНО: пересоздаем контекст для обновления resourceMap и aliasMap
+                // refresh() не обновляет карту ресурсов, нужен именно generateContext()
+                $modx->cacheManager->generateContext($resource->get('context_key'));
 
                 // Получаем правильный URL
                 $url = $modx->makeUrl($resource->get('id'), '', '', 'full');
