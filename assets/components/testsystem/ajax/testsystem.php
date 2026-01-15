@@ -3144,13 +3144,8 @@ if (empty($allQuestionIds)) {
                     $resource->setTVValue('category_id', $categoryId);
                 }
 
-                // Очищаем кэш (включая URI для корректной генерации ссылок)
-                $modx->cacheManager->refresh([
-                    'db' => [],
-                    'auto_publish' => ['contexts' => ['web']],
-                    'context_settings' => ['contexts' => ['web']],
-                    'resource' => ['contexts' => ['web']],
-                ]);
+                // Очищаем кэш (простой вариант, как в manageCategories.php)
+                $modx->cacheManager->refresh();
 
                 // ИСПРАВЛЕНО: ручное построение URL вместо makeUrl()
                 // makeUrl() может не работать сразу после refresh() из-за кеша
@@ -3207,13 +3202,8 @@ if (empty($allQuestionIds)) {
                     $resource->setTVValue('category_id', $categoryId);
                 }
 
-                // Очищаем кэш для нового ресурса
-                $modx->cacheManager->refresh([
-                    'db' => [],
-                    'auto_publish' => ['contexts' => ['web']],
-                    'context_settings' => ['contexts' => ['web']],
-                    'resource' => ['contexts' => ['web']],
-                ]);
+                // Очищаем кэш для нового ресурса (простой вариант, как в manageCategories.php)
+                $modx->cacheManager->refresh();
 
                 // ИСПРАВЛЕНО: ручное построение URL вместо makeUrl()
                 // makeUrl() не работает для только что созданных ресурсов из-за кеша URI
