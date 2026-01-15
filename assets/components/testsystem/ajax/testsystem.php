@@ -3246,18 +3246,26 @@ if (empty($allQuestionIds)) {
                     xPDO::OPT_CACHE_KEY => 'resource'
                 ]);
 
-                // 2. Очищаем кэш родителя (там анонс с кнопкой "Читать")
+                // 2. КРИТИЧНО: Очищаем кэш родителя (там список с кнопкой "Читать")
                 if ($parentId > 0) {
                     $parent = $modx->getObject('modResource', $parentId);
                     if ($parent) {
+                        // Удаляем кэш родителя напрямую
+                        $parentCacheKey = $parent->getCacheKey();
+                        $modx->cacheManager->delete($parentCacheKey, [
+                            xPDO::OPT_CACHE_KEY => 'resource'
+                        ]);
                         $parent->clearCache();
                     }
                 }
 
-                // 3. Обновляем карту ресурсов контекста (новый ресурс должен попасть в resourceMap)
+                // 3. ПОЛНАЯ очистка контекста (самый надежный вариант)
                 $modx->cacheManager->refresh([
+                    'db' => [],
+                    'auto_publish' => ['contexts' => [$resource->get('context_key')]],
                     'context_settings' => ['contexts' => [$resource->get('context_key')]],
-                    'resource' => ['contexts' => [$resource->get('context_key')]]
+                    'resource' => ['contexts' => [$resource->get('context_key')]],
+                    'scripts' => []
                 ]);
 
                 // Получаем правильный URL (ручное построение)
