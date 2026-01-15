@@ -3144,9 +3144,11 @@ if (empty($allQuestionIds)) {
                     $resource->setTVValue('category_id', $categoryId);
                 }
 
-                // Очищаем кэш и перезагружаем контекст (документация MODX API)
+                // Очищаем кэш и обновляем карту ресурсов
                 $modx->cacheManager->refresh();
-                $modx->reloadContext('web');
+
+                // Вызываем событие обновления сайта для перезагрузки контекста
+                $modx->invokeEvent('OnSiteRefresh');
 
                 // ИСПРАВЛЕНО: ручное построение URL вместо makeUrl()
                 // makeUrl() может не работать сразу после refresh() из-за кеша
@@ -3203,9 +3205,11 @@ if (empty($allQuestionIds)) {
                     $resource->setTVValue('category_id', $categoryId);
                 }
 
-                // Очищаем кэш и перезагружаем контекст (документация MODX API)
+                // Очищаем кэш и обновляем карту ресурсов
                 $modx->cacheManager->refresh();
-                $modx->reloadContext('web');
+
+                // Вызываем событие обновления сайта для перезагрузки контекста
+                $modx->invokeEvent('OnSiteRefresh');
 
                 // ИСПРАВЛЕНО: ручное построение URL вместо makeUrl()
                 // makeUrl() не работает для только что созданных ресурсов из-за кеша URI
