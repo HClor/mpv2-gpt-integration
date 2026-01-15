@@ -3121,6 +3121,9 @@ if (empty($allQuestionIds)) {
                     throw new Exception('Нет прав для редактирования');
                 }
 
+                // Запоминаем оригинального родителя для проверки изменения
+                $originalParent = $resource->get('parent');
+
                 $resource->set('pagetitle', $pagetitle);
                 $resource->set('longtitle', $pagetitle);
                 $resource->set('content', $content);
@@ -3129,7 +3132,7 @@ if (empty($allQuestionIds)) {
                 $resource->set('editedon', time());
                 $resource->set('editedby', $userId);
 
-                if ($parentId > 0 && $parentId != $resource->get('parent')) {
+                if ($parentId > 0 && $parentId != $originalParent) {
                     $resource->set('parent', $parentId);
 
                     // ВАЖНО: сбрасываем URI, чтобы MODX пересобрал путь
@@ -3146,15 +3149,42 @@ if (empty($allQuestionIds)) {
                     throw new Exception('Ошибка обновления материала');
                 }
 
-                // КРИТИЧНО: очищаем кэш родителя (там анонс с кнопкой "Читать")
-                if ($parentId > 0) {
-                    $parent = $modx->getObject('modResource', $parentId);
-                    if ($parent) {
-                        $parent->clearCache();
+                // === ПРАВИЛЬНАЯ ОЧИСТКА КЭША (рекомендация аудитора) ===
+
+                // 1. Очищаем кэш самого ресурса
+                $cacheKey = $resource->getCacheKey();
+                $modx->cacheManager->delete($cacheKey, [
+                    xPDO::OPT_CACHE_KEY => 'resource'
+                ]);
+
+                // 2. Очищаем кэш старого и нового родителя (там анонсы с кнопкой "Читать")
+                if ($originalParent > 0) {
+                    $oldParent = $modx->getObject('modResource', $originalParent);
+                    if ($oldParent) {
+                        $oldParent->clearCache();
+                    }
+                }
+                if ($parentId > 0 && $parentId != $originalParent) {
+                    $newParent = $modx->getObject('modResource', $parentId);
+                    if ($newParent) {
+                        $newParent->clearCache();
                     }
                 }
 
-                // Получаем правильный URL (ручное построение, так как карта ресурсов ещё не обновлена)
+                // 3. Если меняется parent — обновляем карту ресурсов контекста
+                if ($parentId > 0 && $parentId != $originalParent) {
+                    $modx->cacheManager->refresh([
+                        'context_settings' => ['contexts' => [$resource->get('context_key')]],
+                        'resource' => ['contexts' => [$resource->get('context_key')]]
+                    ]);
+                } else {
+                    // Иначе просто обновляем кэш ресурсов
+                    $modx->cacheManager->refresh([
+                        'resource' => ['contexts' => [$resource->get('context_key')]]
+                    ]);
+                }
+
+                // Получаем правильный URL (ручное построение)
                 $siteUrl = rtrim($modx->getOption('site_url'), '/');
                 $alias = $resource->get('alias');
 
@@ -3169,9 +3199,6 @@ if (empty($allQuestionIds)) {
                 } else {
                     $url = $siteUrl . '/' . $alias;
                 }
-
-                // Отмечаем, что нужно обновить контекст (делаем после отправки ответа)
-                $needsContextRefresh = $resource->get('context_key');
 
                 $response = ResponseHelper::success([
                     'material_id' => $materialId,
@@ -3211,7 +3238,15 @@ if (empty($allQuestionIds)) {
 
                 $materialId = $resource->get('id');
 
-                // КРИТИЧНО: очищаем кэш родителя (там анонс с кнопкой "Читать")
+                // === ПРАВИЛЬНАЯ ОЧИСТКА КЭША (рекомендация аудитора) ===
+
+                // 1. Очищаем кэш самого ресурса
+                $cacheKey = $resource->getCacheKey();
+                $modx->cacheManager->delete($cacheKey, [
+                    xPDO::OPT_CACHE_KEY => 'resource'
+                ]);
+
+                // 2. Очищаем кэш родителя (там анонс с кнопкой "Читать")
                 if ($parentId > 0) {
                     $parent = $modx->getObject('modResource', $parentId);
                     if ($parent) {
@@ -3219,12 +3254,27 @@ if (empty($allQuestionIds)) {
                     }
                 }
 
-                // КРИТИЧНО: пересоздаем контекст для обновления resourceMap и aliasMap
-                // refresh() не обновляет карту ресурсов, нужен именно generateContext()
-                $modx->cacheManager->generateContext($resource->get('context_key'));
+                // 3. Обновляем карту ресурсов контекста (новый ресурс должен попасть в resourceMap)
+                $modx->cacheManager->refresh([
+                    'context_settings' => ['contexts' => [$resource->get('context_key')]],
+                    'resource' => ['contexts' => [$resource->get('context_key')]]
+                ]);
 
-                // Получаем правильный URL
-                $url = $modx->makeUrl($resource->get('id'), '', '', 'full');
+                // Получаем правильный URL (ручное построение)
+                $siteUrl = rtrim($modx->getOption('site_url'), '/');
+                $alias = $resource->get('alias');
+
+                if ($parentId > 0) {
+                    $parent = $modx->getObject('modResource', $parentId);
+                    if ($parent) {
+                        $parentUri = trim($parent->get('uri'), '/');
+                        $url = $siteUrl . '/' . $parentUri . '/' . $alias;
+                    } else {
+                        $url = $siteUrl . '/' . $alias;
+                    }
+                } else {
+                    $url = $siteUrl . '/' . $alias;
+                }
 
                 $response = ResponseHelper::success([
                     'material_id' => $materialId,
@@ -3634,22 +3684,6 @@ if ($jsonResponse === false) {
 error_log("[testsystem.php] JSON length: " . strlen($jsonResponse) . " bytes");
 echo $jsonResponse;
 error_log("[testsystem.php] Response sent successfully");
-
-// Обновляем контекст ПОСЛЕ отправки ответа (если требуется)
-if (isset($needsContextRefresh) && $needsContextRefresh) {
-    // Закрываем соединение с клиентом, если возможно
-    if (function_exists('fastcgi_finish_request')) {
-        fastcgi_finish_request();
-    }
-
-    // Теперь можно безопасно обновить контекст
-    try {
-        $modx->cacheManager->generateContext($needsContextRefresh);
-        error_log("[testsystem.php] Context '{$needsContextRefresh}' regenerated successfully");
-    } catch (Exception $e) {
-        error_log("[testsystem.php] Failed to regenerate context: " . $e->getMessage());
-    }
-}
 
 // ============================================
 // ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ТРАНСЛИТЕРАЦИИ
