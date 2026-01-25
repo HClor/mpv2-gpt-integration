@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">LMS Тесты</string>
+
+    <!-- Categories -->
+    <string name="categories_title">Категории</string>
+    <string name="no_categories">Нет категорий</string>
+
+    <!-- Tests -->
+    <string name="tests_title">Тесты</string>
+    <string name="no_tests">Нет тестов в этой категории</string>
+    <string name="test_questions">%d вопросов</string>
+    <string name="test_time_limit">Время: %d мин</string>
+    <string name="test_pass_score">Проходной балл: %d%%</string>
+    <string name="start_test">Начать тест</string>
+    <string name="training_mode">Режим обучения</string>
+    <string name="exam_mode">Экзамен</string>
+
+    <!-- Quiz -->
+    <string name="question_number">Вопрос %d из %d</string>
+    <string name="time_remaining">Осталось: %s</string>
+    <string name="next_question">Далее</string>
+    <string name="previous_question">Назад</string>
+    <string name="finish_test">Завершить</string>
+    <string name="skip_question">Пропустить</string>
+    <string name="submit_answer">Ответить</string>
+
+    <!-- Question Types -->
+    <string name="type_single">Выберите один правильный ответ</string>
+    <string name="type_multiple">Выберите все правильные ответы</string>
+    <string name="type_matching">Сопоставьте элементы</string>
+    <string name="type_ordering">Расположите в правильном порядке</string>
+    <string name="type_fill_blank">Заполните пропуски</string>
+    <string name="type_essay">Напишите развернутый ответ</string>
+
+    <!-- Results -->
+    <string name="results_title">Результаты</string>
+    <string name="score">Ваш результат: %d%%</string>
+    <string name="correct_answers">Правильных ответов: %d из %d</string>
+    <string name="test_passed">Тест пройден!</string>
+    <string name="test_failed">Тест не пройден</string>
+    <string name="time_spent">Затраченное время: %s</string>
+    <string name="retry_test">Пройти заново</string>
+    <string name="back_to_tests">К списку тестов</string>
+    <string name="view_answers">Посмотреть ответы</string>
+
+    <!-- Dialogs -->
+    <string name="confirm_finish_title">Завершить тест?</string>
+    <string name="confirm_finish_message">Вы уверены, что хотите завершить тест? Незавершенные вопросы будут засчитаны как неправильные.</string>
+    <string name="confirm">Подтвердить</string>
+    <string name="cancel">Отмена</string>
+
+    <!-- History -->
+    <string name="history_title">История</string>
+    <string name="no_history">История пуста</string>
+
+    <!-- Matching -->
+    <string name="drag_to_match">Перетащите элементы для сопоставления</string>
+    <string name="tap_to_select">Нажмите для выбора</string>
+
+    <!-- Ordering -->
+    <string name="drag_to_reorder">Перетащите для изменения порядка</string>
+
+    <!-- Errors -->
+    <string name="error_loading">Ошибка загрузки данных</string>
+    <string name="no_answer_selected">Выберите ответ</string>
+</resources>
