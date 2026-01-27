@@ -54,12 +54,6 @@ function renderTestCard($test, $modx, $testPageId, $currentUserId, $isAdmin, $is
         $output .= '<i class="bi bi-question-circle"></i> Вопросы';
         $output .= '</a>';
 
-        // Управление - открывает модальное окно управления
-        $manageUrl = $modx->makeUrl($testPageId, '', array('testId' => $testId, 'view' => 'manage'));
-        $output .= '<a href="' . $manageUrl . '" class="menu-item">';
-        $output .= '<i class="bi bi-gear"></i> Управление';
-        $output .= '</a>';
-
         // Удалить - JavaScript API вызов
         if ($canDelete) {
             $output .= '<a href="#" class="menu-item menu-item-danger" data-action="delete" data-test-id="' . $testId . '">';

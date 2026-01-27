@@ -25,7 +25,6 @@
     const isLearningView = viewParam === 'learning';
     const isFavoritesView = viewParam === 'favorites';
     const isQuestionsView = viewParam === 'questions';
-    const isManageView = viewParam === 'manage';
 
     const container = document.getElementById("test-container");
     const testId = container ? container.dataset.testId : null;
@@ -39,7 +38,6 @@
     console.log("isLearningView:", isLearningView);
     console.log("isFavoritesView:", isFavoritesView);
     console.log("isQuestionsView:", isQuestionsView);
-    console.log("isManageView:", isManageView);
     console.log("testId:", testId);
     console.log("knowledgeAreaId:", knowledgeAreaId);
     console.log("isKnowledgeArea:", isKnowledgeArea);
@@ -67,20 +65,6 @@
         setTimeout(() => {
             if (typeof showAllQuestionsView === 'function') {
                 showAllQuestionsView();
-            }
-        }, 500);
-    } else if (isManageView) {
-        if (!testId) {
-            console.error("Test ID not found for manage view");
-            return;
-        }
-        console.log("Loading manage view...");
-        checkEditRights();
-        // Ждем загрузки прав, затем открываем модальное окно
-        setTimeout(() => {
-            const currentStatus = container ? container.dataset.testMode : 'both';
-            if (typeof openTestManagementModal === 'function') {
-                openTestManagementModal(testId, currentStatus);
             }
         }, 500);
     } else if (testId && testId !== 'favorites') {
