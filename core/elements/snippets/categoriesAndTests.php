@@ -39,28 +39,27 @@ function renderTestCard($test, $modx, $testPageId, $currentUserId, $isAdmin, $is
         $output .= '<div class="test-menu-toggle" data-test-id="' . $testId . '">⋮</div>';
         $output .= '<div class="test-menu-dropdown" id="menu-' . $testId . '" style="display: none;">';
 
-        $myTestsPageId = (int)$modx->getOption('lms.my_tests_page', null, 0);
-        $importPageId = (int)$modx->getOption('lms.import_csv_page', null, 0);
-
+        // Импорт CSV - используем Config
+        $importPageId = Config::getPageId('import_csv', 29);
         if ($importPageId > 0) {
-            $importUrl = htmlspecialchars($modx->makeUrl($importPageId, '', array('testId' => $testId)), ENT_QUOTES, 'UTF-8');
+            $importUrl = htmlspecialchars($modx->makeUrl($importPageId, '', array('test_id' => $testId)), ENT_QUOTES, 'UTF-8');
             $output .= '<a href="' . $importUrl . '" class="menu-item">';
             $output .= '<i class="bi bi-file-earmark-arrow-down"></i> Импорт вопросов';
             $output .= '</a>';
         }
 
-        if ($myTestsPageId > 0) {
-            $questionsUrl = htmlspecialchars($modx->makeUrl($myTestsPageId, '', array('action' => 'questions', 'testId' => $testId)), ENT_QUOTES, 'UTF-8');
-            $output .= '<a href="' . $questionsUrl . '" class="menu-item">';
-            $output .= '<i class="bi bi-question-circle"></i> Управление вопросами';
-            $output .= '</a>';
+        // Вопросы - ссылка на testRunner (там есть кнопка "Вопросы" в режиме редактирования)
+        $testUrl = htmlspecialchars($modx->makeUrl($testPageId, '', array('testId' => $testId)), ENT_QUOTES, 'UTF-8');
+        $output .= '<a href="' . $testUrl . '" class="menu-item">';
+        $output .= '<i class="bi bi-question-circle"></i> Вопросы';
+        $output .= '</a>';
 
-            $manageUrl = htmlspecialchars($modx->makeUrl($myTestsPageId, '', array('action' => 'edit', 'testId' => $testId)), ENT_QUOTES, 'UTF-8');
-            $output .= '<a href="' . $manageUrl . '" class="menu-item">';
-            $output .= '<i class="bi bi-gear"></i> Настройки теста';
-            $output .= '</a>';
-        }
+        // Редактировать тест - ссылка на testRunner
+        $output .= '<a href="' . $testUrl . '" class="menu-item">';
+        $output .= '<i class="bi bi-gear"></i> Редактировать';
+        $output .= '</a>';
 
+        // Удалить - JavaScript API вызов
         if ($canDelete) {
             $output .= '<a href="#" class="menu-item menu-item-danger" data-action="delete" data-test-id="' . $testId . '">';
             $output .= '<i class="bi bi-trash"></i> Удалить тест';
