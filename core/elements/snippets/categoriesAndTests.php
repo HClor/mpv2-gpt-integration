@@ -43,19 +43,19 @@ function renderTestCard($test, $modx, $testPageId, $currentUserId, $isAdmin, $is
         $importPageId = (int)$modx->getOption('lms.import_csv_page', null, 0);
 
         if ($importPageId > 0) {
-            $importUrl = htmlspecialchars($modx->makeUrl($importPageId, '', ['testId' => $testId]), ENT_QUOTES, 'UTF-8');
+            $importUrl = htmlspecialchars($modx->makeUrl($importPageId, '', array('testId' => $testId)), ENT_QUOTES, 'UTF-8');
             $output .= '<a href="' . $importUrl . '" class="menu-item">';
             $output .= '<i class="bi bi-file-earmark-arrow-down"></i> Импорт вопросов';
             $output .= '</a>';
         }
 
         if ($myTestsPageId > 0) {
-            $questionsUrl = htmlspecialchars($modx->makeUrl($myTestsPageId, '', ['action' => 'questions', 'testId' => $testId]), ENT_QUOTES, 'UTF-8');
+            $questionsUrl = htmlspecialchars($modx->makeUrl($myTestsPageId, '', array('action' => 'questions', 'testId' => $testId)), ENT_QUOTES, 'UTF-8');
             $output .= '<a href="' . $questionsUrl . '" class="menu-item">';
             $output .= '<i class="bi bi-question-circle"></i> Управление вопросами';
             $output .= '</a>';
 
-            $manageUrl = htmlspecialchars($modx->makeUrl($myTestsPageId, '', ['action' => 'edit', 'testId' => $testId]), ENT_QUOTES, 'UTF-8');
+            $manageUrl = htmlspecialchars($modx->makeUrl($myTestsPageId, '', array('action' => 'edit', 'testId' => $testId)), ENT_QUOTES, 'UTF-8');
             $output .= '<a href="' . $manageUrl . '" class="menu-item">';
             $output .= '<i class="bi bi-gear"></i> Настройки теста';
             $output .= '</a>';
@@ -73,7 +73,7 @@ function renderTestCard($test, $modx, $testPageId, $currentUserId, $isAdmin, $is
     $output .= '</div>';
 
     // Описание
-    $description = $test['description'] ?: 'Нет описания';
+    $description = !empty($test['description']) ? $test['description'] : 'Нет описания';
     $output .= '<p class="test-description">' . htmlspecialchars($description, ENT_QUOTES, 'UTF-8') . '</p>';
 
     // Метаинформация
@@ -128,7 +128,7 @@ function renderTestCard($test, $modx, $testPageId, $currentUserId, $isAdmin, $is
  * Функция формирования URL для пагинации
  */
 function buildPaginationUrl($modx, $categoryId, $searchQuery, $page) {
-    $params = [];
+    $params = array();
     if ($categoryId > 0) {
         $params['category'] = $categoryId;
     }
@@ -148,9 +148,9 @@ $Tcats = $prefix . 'test_categories';
 $Ttests = $prefix . 'test_tests';
 $Tquestions = $prefix . 'test_questions';
 
-$categoryId = (int)($modx->stripTags($_GET['category'] ?? 0));
-$searchQuery = trim($modx->stripTags($_GET['search'] ?? ''));
-$page = max(1, (int)($_GET['page'] ?? 1));
+$categoryId = (int)($modx->stripTags(isset($_GET['category']) ? $_GET['category'] : 0));
+$searchQuery = trim($modx->stripTags(isset($_GET['search']) ? $_GET['search'] : ''));
+$page = max(1, (int)(isset($_GET['page']) ? $_GET['page'] : 1));
 $perPage = 20;
 
 // Получаем ID страницы тестов из настроек
@@ -260,7 +260,7 @@ $output .= '</div>';
 
 // Формируем SQL запрос для получения тестов
 $where = "t.publication_status = 'public' AND t.is_active = 1";
-$params = [];
+$params = array();
 
 if ($categoryId > 0) {
     $where .= " AND t.category_id = ?";
@@ -321,11 +321,11 @@ if (!$tests) {
     // Группировка тестов по категориям (только если показываем все тесты)
     if ($categoryId == 0) {
         // Группируем тесты по категориям
-        $testsByCategory = [];
+        $testsByCategory = array();
         foreach ($tests as $test) {
-            $catName = $test['category_name'] ?: 'Без категории';
+            $catName = $test['category_name'] ? $test['category_name'] : 'Без категории';
             if (!isset($testsByCategory[$catName])) {
-                $testsByCategory[$catName] = [];
+                $testsByCategory[$catName] = array();
             }
             $testsByCategory[$catName][] = $test;
         }
