@@ -48,15 +48,16 @@ function renderTestCard($test, $modx, $testPageId, $currentUserId, $isAdmin, $is
             $output .= '</a>';
         }
 
-        // Вопросы - ссылка на testRunner (там есть кнопка "Вопросы" в режиме редактирования)
-        $testUrl = htmlspecialchars($modx->makeUrl($testPageId, '', array('testId' => $testId)), ENT_QUOTES, 'UTF-8');
-        $output .= '<a href="' . $testUrl . '" class="menu-item">';
+        // Вопросы - открывает список вопросов напрямую
+        $questionsUrl = htmlspecialchars($modx->makeUrl($testPageId, '', array('testId' => $testId, 'view' => 'questions')), ENT_QUOTES, 'UTF-8');
+        $output .= '<a href="' . $questionsUrl . '" class="menu-item">';
         $output .= '<i class="bi bi-question-circle"></i> Вопросы';
         $output .= '</a>';
 
-        // Редактировать тест - ссылка на testRunner
-        $output .= '<a href="' . $testUrl . '" class="menu-item">';
-        $output .= '<i class="bi bi-gear"></i> Редактировать';
+        // Управление - открывает модальное окно управления
+        $manageUrl = htmlspecialchars($modx->makeUrl($testPageId, '', array('testId' => $testId, 'view' => 'manage')), ENT_QUOTES, 'UTF-8');
+        $output .= '<a href="' . $manageUrl . '" class="menu-item">';
+        $output .= '<i class="bi bi-gear"></i> Управление';
         $output .= '</a>';
 
         // Удалить - JavaScript API вызов
