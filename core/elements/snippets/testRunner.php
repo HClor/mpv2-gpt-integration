@@ -15,17 +15,50 @@ if (!$modx instanceof modX) {
     return '<div class="alert alert-danger">MODX context required</div>';
 }
 
-// ИСПРАВЛЕНО: Получаем testId из GET-параметра или ID текущего ресурса
-$testIdFromUrl = isset($_GET['testId']) ? (int)$_GET['testId'] : 0;
+// НОВАЯ ЛОГИКА: Проверяем наличие sessionId
+$sessionId = isset($_GET['sessionId']) ? (int)$_GET['sessionId'] : 0;
+$skipModeSelection = false;
 
-// Если testId не передан, используем старый способ через resource_id
-$resourceId = 0;
-if ($modx->resource instanceof modResource) {
-    $resourceId = (int)$modx->resource->get('id');
-}
+// Если есть sessionId - загружаем сессию и пропускаем выбор режима
+if ($sessionId > 0) {
+    $sessionTable = '`' . $modx->getOption('table_prefix') . 'test_sessions`';
+    $stmt = $modx->prepare("SELECT * FROM {$sessionTable} WHERE id = ?");
+    $stmt->execute([$sessionId]);
+    $session = $stmt->fetch(PDO::FETCH_ASSOC);
 
-if ($testIdFromUrl <= 0 && $resourceId <= 0) {
-    return '<div class="alert alert-danger">Ошибка: тест не указан</div>';
+    if (!$session) {
+        return '<div class="alert alert-danger">Сессия не найдена</div>';
+    }
+
+    // Проверка прав доступа к сессии
+    $userId = $modx->user->get('id');
+    if ((int)$session['user_id'] != $userId) {
+        return '<div class="alert alert-danger">Нет доступа к этой сессии</div>';
+    }
+
+    // Устанавливаем testId из сессии
+    $testIdFromUrl = (int)$session['test_id'];
+    $skipModeSelection = true;
+
+    // Сохраняем данные сессии для использования в JS
+    $sessionData = [
+        'session_id' => $sessionId,
+        'mode' => $session['mode'],
+        'status' => $session['status']
+    ];
+} else {
+    // ИСПРАВЛЕНО: Получаем testId из GET-параметра или ID текущего ресурса
+    $testIdFromUrl = isset($_GET['testId']) ? (int)$_GET['testId'] : 0;
+
+    // Если testId не передан, используем старый способ через resource_id
+    $resourceId = 0;
+    if ($modx->resource instanceof modResource) {
+        $resourceId = (int)$modx->resource->get('id');
+    }
+
+    if ($testIdFromUrl <= 0 && $resourceId <= 0) {
+        return '<div class="alert alert-danger">Ошибка: тест не указан</div>';
+    }
 }
 
 $prefix = (string)$modx->getOption('table_prefix');
@@ -564,8 +597,8 @@ if ($timeLimit > 0) {
 }
 $output .= '</ul>';
 
-// Интерфейс выбора режима
-if ($testMode === 'both') {
+// Интерфейс выбора режима (пропускаем, если есть sessionId)
+if (!$skipModeSelection && $testMode === 'both') {
     $output .= '<hr>';
     $output .= '<div class="test-mode-selector">';
     $output .= '<h5 class="mb-3 text-center">Выберите режим прохождения:</h5>';
@@ -780,5 +813,37 @@ document.addEventListener("DOMContentLoaded", function() {
 //    console.log("RESTART HANDLER REGISTERED");
 //})();
 //</script>';
+
+// Автозапуск теста при наличии sessionId
+if ($skipModeSelection && isset($sessionData)) {
+    $output .= '<script>
+    // Данные существующей сессии
+    window.existingSession = ' . json_encode($sessionData) . ';
+
+    // Автоматический запуск теста после загрузки страницы
+    document.addEventListener("DOMContentLoaded", function() {
+        console.log("Auto-starting test with existing session:", window.existingSession);
+
+        // Скрываем информацию о тесте
+        const testInfo = document.getElementById("test-info");
+        if (testInfo) {
+            testInfo.style.display = "none";
+        }
+
+        // Показываем контейнер с вопросами
+        const questionContainer = document.getElementById("question-container");
+        if (questionContainer) {
+            questionContainer.style.display = "block";
+        }
+
+        // Запускаем тест через существующую функцию из tsrunner.js
+        if (typeof window.continueExistingSession === "function") {
+            window.continueExistingSession(window.existingSession.session_id, window.existingSession.mode);
+        } else {
+            console.error("continueExistingSession function not found in tsrunner.js");
+        }
+    });
+    </script>';
+}
 
 return $output;

@@ -100,6 +100,58 @@
         }
     }
 
+    /**
+     * Продолжить существующую сессию теста
+     * Вызывается когда пользователь переходит по прямой ссылке с sessionId
+     */
+    window.continueExistingSession = async function(sessionId, mode) {
+        console.log("=== continueExistingSession CALLED ===");
+        console.log("Session ID:", sessionId);
+        console.log("Mode:", mode);
+
+        currentSessionId = sessionId;
+        testMode = mode;
+
+        try {
+            // Получаем информацию о сессии
+            const result = await apiCall("getSessionInfo", { session_id: sessionId });
+
+            if (result.success) {
+                totalQuestions = result.data.total_questions || 0;
+                currentQuestionNumber = result.data.current_question_number || 0;
+
+                console.log("Session info loaded:", result.data);
+
+                // Обновляем UI
+                const totalQElement = document.getElementById("total-q");
+                if (totalQElement) {
+                    totalQElement.textContent = totalQuestions;
+                }
+
+                // Устанавливаем badge режима
+                const modeBadge = document.getElementById("mode-badge");
+                if (modeBadge) {
+                    if (mode === "training") {
+                        modeBadge.className = "badge bg-success";
+                        modeBadge.textContent = "Тренировка";
+                    } else {
+                        modeBadge.className = "badge bg-danger";
+                        modeBadge.textContent = "Экзамен";
+                    }
+                }
+
+                // Загружаем следующий вопрос
+                loadNextQuestion();
+            } else {
+                console.error("Failed to get session info:", result.message);
+                alert("Ошибка загрузки сессии: " + result.message);
+            }
+        } catch (error) {
+            console.error("Error continuing session:", error);
+            alert("Ошибка при продолжении теста");
+        }
+    };
+
     // ===== TIMER FUNCTIONS =====
     function startTimer(minutes) {
         if (minutes <= 0) return;
