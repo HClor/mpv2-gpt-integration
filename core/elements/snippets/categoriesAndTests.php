@@ -160,11 +160,11 @@ $testPageId = (int)$modx->getOption('lms.test_page', null, 155);
 $currentUserId = $modx->user->get('id');
 $userGroups = array_keys($modx->user->getUserGroups());
 
-// Проверяем роли
-use TestSystem\Helpers\Config as ConfigHelper;
-$configHelper = new ConfigHelper($modx);
-$isAdmin = in_array($configHelper->getUserGroupId('admins'), $userGroups);
-$isExpert = in_array($configHelper->getUserGroupId('experts'), $userGroups);
+// Проверяем роли - используем простые имена классов (см. bootstrap.php)
+$groupAdmins = Config::getGroup('admins');
+$groupExperts = Config::getGroup('experts');
+$isAdmin = $modx->user->isMember($groupAdmins);
+$isExpert = $modx->user->isMember($groupExperts);
 
 $output = '<div class="container-fluid categories-tests-container">';
 $output .= '<div class="row">';
