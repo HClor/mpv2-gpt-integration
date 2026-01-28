@@ -95,6 +95,59 @@ HTML;
 $modx->regClientScript('/path/to/script.js');
 ```
 
+### 5. CSRF Protection - ОБЯЗАТЕЛЬНО для AJAX запросов
+
+**ПРОБЛЕМА:** При POST запросах к API без CSRF токена получаем ошибку "CSRF token validation failed".
+
+**РЕШЕНИЕ:**
+
+1. **В PHP снипете:** Добавить CSRF meta тег
+```php
+// ✅ ПРАВИЛЬНО - добавить в начале $output
+$output = CsrfProtection::getTokenMeta();
+$output .= '<div class="container">...';
+```
+
+2. **В JavaScript:** Передавать токен при AJAX запросах
+```javascript
+// ✅ ПРАВИЛЬНО - получить токен из meta тега
+const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
+// Для JSON запросов - добавить в data
+const requestData = {
+    action: 'deleteTest',
+    data: {
+        test_id: testId,
+        csrf_token: csrfToken  // Добавить токен
+    }
+};
+
+fetch(API_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(requestData)
+});
+
+// Для FormData - добавить как поле
+const formData = new FormData();
+formData.append('test_id', testId);
+if (csrfToken) {
+    formData.append('csrf_token', csrfToken);
+}
+```
+
+**НЕЛЬЗЯ делать:**
+```javascript
+// ❌ НЕПРАВИЛЬНО - без CSRF токена
+fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+        action: 'deleteTest',
+        data: { test_id: testId }  // Нет csrf_token!
+    })
+});
+```
+
 ---
 
 ## 📋 ДИАГНОСТИКА И ДОСТУПЫ
@@ -236,6 +289,7 @@ $stmt->execute(array($id));
 - [ ] Используется `htmlspecialchars()` для вывода
 - [ ] SQL запросы через prepared statements
 - [ ] Внешние скрипты подключены через `regClientScript()`
+- [ ] CSRF токен добавлен в снипеты и AJAX запросы
 - [ ] Проверен синтаксис: `php -l file.php`
 - [ ] Очищен кеш MODX перед тестированием
 

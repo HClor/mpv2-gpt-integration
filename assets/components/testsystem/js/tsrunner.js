@@ -60,6 +60,13 @@
             return;
         }
         console.log("Loading questions view...");
+
+        // СРАЗУ скрываем промежуточный контент
+        const testInfo = document.getElementById('test-info');
+        const modeSelector = document.querySelector('.test-mode-selector');
+        if (testInfo) testInfo.style.display = 'none';
+        if (modeSelector) modeSelector.style.display = 'none';
+
         checkEditRights();
         // Ждем загрузки прав, затем показываем список вопросов
         setTimeout(() => {

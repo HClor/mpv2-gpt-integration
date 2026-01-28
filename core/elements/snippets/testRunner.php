@@ -15,9 +15,15 @@ if (!$modx instanceof modX) {
     return '<div class="alert alert-danger">MODX context required</div>';
 }
 
-// НОВАЯ ЛОГИКА: Проверяем наличие sessionId
+// НОВАЯ ЛОГИКА: Проверяем наличие sessionId и view параметра
 $sessionId = isset($_GET['sessionId']) ? (int)$_GET['sessionId'] : 0;
+$viewParam = isset($_GET['view']) ? $_GET['view'] : '';
 $skipModeSelection = false;
+
+// Если есть view=questions - пропускаем выбор режима (будет управление через JS)
+if ($viewParam === 'questions') {
+    $skipModeSelection = true;
+}
 
 // Если есть sessionId - загружаем сессию и пропускаем выбор режима
 if ($sessionId > 0) {
@@ -583,7 +589,8 @@ $passScore = (int)$test['pass_score'];
 $timeLimit = (int)$test['time_limit'];
 
 // Формирование HTML вывода
-$output = '<div id="test-container" data-test-id="' . (int)$testId . '" data-can-edit="' . ($canEditTest ? '1' : '0') . '" data-test-mode="' . htmlspecialchars($testMode, ENT_QUOTES, 'UTF-8') . '">';
+$viewDataAttr = $viewParam ? ' data-view="' . htmlspecialchars($viewParam, ENT_QUOTES, 'UTF-8') . '"' : '';
+$output = '<div id="test-container" data-test-id="' . (int)$testId . '" data-can-edit="' . ($canEditTest ? '1' : '0') . '" data-test-mode="' . htmlspecialchars($testMode, ENT_QUOTES, 'UTF-8') . '"' . $viewDataAttr . '>';
 $output .= '<div id="test-info" class="card mb-4">';
 $output .= '<div class="card-header"><h2>' . htmlspecialchars($test['title'], ENT_QUOTES, 'UTF-8') . '</h2></div>';
 $output .= '<div class="card-body">';

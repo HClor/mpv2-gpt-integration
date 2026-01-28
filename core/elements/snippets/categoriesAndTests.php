@@ -54,6 +54,12 @@ function renderTestCard($test, $modx, $testPageId, $currentUserId, $isAdmin, $is
         $output .= '<i class="bi bi-question-circle"></i> Вопросы';
         $output .= '</a>';
 
+        // Настройки - открывает страницу теста с кнопкой управления
+        $settingsUrl = $modx->makeUrl($testPageId, '', array('testId' => $testId));
+        $output .= '<a href="' . $settingsUrl . '" class="menu-item">';
+        $output .= '<i class="bi bi-gear"></i> Настройки теста';
+        $output .= '</a>';
+
         // Удалить - JavaScript API вызов
         if ($canDelete) {
             $output .= '<a href="#" class="menu-item menu-item-danger" data-action="delete" data-test-id="' . $testId . '">';
@@ -160,7 +166,9 @@ $groupExperts = Config::getGroup('experts');
 $isAdmin = $modx->user->isMember($groupAdmins);
 $isExpert = $modx->user->isMember($groupExperts);
 
-$output = '<div class="container-fluid categories-tests-container">';
+// CSRF Protection: добавляем meta тег с токеном для JavaScript
+$output = CsrfProtection::getTokenMeta();
+$output .= '<div class="container-fluid categories-tests-container">';
 $output .= '<div class="row">';
 
 // Left column: categories list
