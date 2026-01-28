@@ -3204,7 +3204,7 @@ async function addFavoritesViewToggle(questionId) {
 
             if (result.success) {
                 // Редирект на страницу теста с sessionId
-                window.location.href = '/test?sessionId=' + result.data.session_id;
+                window.location.href = '/test-run?sessionId=' + result.data.session_id;
             } else {
                 document.body.removeChild(overlay);
                 alert('Ошибка при запуске теста: ' + (result.message || 'Неизвестная ошибка'));

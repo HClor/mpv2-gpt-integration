@@ -267,6 +267,49 @@
     font-size: 1.2em;
 }
 
+/* ============================================
+   Редактор вопросов
+   ============================================ */
+
+#questions-editor-view .card-header {
+    padding: 1rem 1.25rem;
+}
+
+.questions-filters-container {
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid #dee2e6;
+}
+
+.question-list-item-minimal {
+    padding: 0.75rem 1rem;
+    transition: background 0.15s;
+}
+
+.question-list-item-minimal:hover {
+    background-color: #f8f9fa !important;
+}
+
+.question-text-clickable-list {
+    cursor: pointer;
+}
+
+.question-text-clickable-list:hover p {
+    color: #0d6efd !important;
+}
+
+.question-actions-minimal {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    padding-left: 44px;
+}
+
+.question-actions-minimal .btn {
+    padding: 2px 8px;
+    font-size: 0.85rem;
+}
+
 /* Адаптивность */
 @media (max-width: 768px) {
     .tests-grid {
@@ -279,5 +322,17 @@
 
     .test-meta {
         font-size: 0.9em;
+    }
+
+    .question-actions-minimal {
+        padding-left: 0;
+    }
+
+    #questions-editor-view .d-flex.flex-column.flex-sm-row {
+        width: 100%;
+    }
+
+    #questions-editor-view h3 {
+        font-size: 1.2rem;
     }
 }
