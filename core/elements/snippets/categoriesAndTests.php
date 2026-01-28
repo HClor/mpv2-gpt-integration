@@ -51,15 +51,13 @@ function renderTestCard($test, $modx, $testPageId, $currentUserId, $isAdmin, $is
             $output .= '</a>';
         }
 
-        // Вопросы - открывает список вопросов напрямую
-        $questionsUrl = $modx->makeUrl($testPageId, '', array('testId' => $testId, 'view' => 'questions'));
-        $output .= '<a href="' . $questionsUrl . '" class="menu-item">';
-        $output .= '<i class="bi bi-question-circle"></i> Вопросы';
+        // Вопросы - открывает редактор вопросов на текущей странице
+        $output .= '<a href="#" class="menu-item" onclick="event.preventDefault(); showQuestionsEditor(' . $testId . '); return false;">';
+        $output .= '<i class="bi bi-question-circle"></i> Редактировать вопросы';
         $output .= '</a>';
 
-        // Настройки - открывает модальное окно управления тестом
-        $settingsUrl = $modx->makeUrl($testPageId, '', array('testId' => $testId, 'view' => 'manage'));
-        $output .= '<a href="' . $settingsUrl . '" class="menu-item">';
+        // Настройки - открывает модальное окно на текущей странице
+        $output .= '<a href="#" class="menu-item" onclick="event.preventDefault(); openTestSettingsModal(' . $testId . '); return false;">';
         $output .= '<i class="bi bi-gear"></i> Настройки теста';
         $output .= '</a>';
 
@@ -171,6 +169,10 @@ $isExpert = $modx->user->isMember($groupExperts);
 
 // CSRF Protection: добавляем meta тег с токеном для JavaScript
 $output = CsrfProtection::getTokenMeta();
+$output .= '<div id="tests-page-container">';
+
+// Основной вид: Категории + Тесты
+$output .= '<div id="categories-tests-view">';
 $output .= '<div class="container-fluid categories-tests-container">';
 $output .= '<div class="row">';
 
@@ -232,7 +234,7 @@ foreach ($categories as $cat) {
 
 // Кнопка добавления теста (если есть права)
 $rightsRaw = $modx->runSnippet('getUserRights');
-$rights = is_array($rightsRaw) ? $rightsRaw : [];
+$rights = is_array($rightsRaw) ? $rightsRaw : array();
 
 if (!empty($rights['canCreate'])) {
     $createTestPageId = (int)$modx->getOption('lms.create_test_page', null, 0);
@@ -351,7 +353,7 @@ if (!$tests) {
     } else {
         // Показываем заголовок выбранной категории
         $stmt = $modx->prepare("SELECT name, description FROM `{$Tcats}` WHERE id = ?");
-        $stmt->execute([$categoryId]);
+        $stmt->execute(array($categoryId));
         $category = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($category) {
@@ -406,12 +408,64 @@ if (!$tests) {
     }
 }
 
+$output .= '</div>'; // col-md-8
+$output .= '</div>'; // row
+$output .= '</div>'; // container-fluid
+$output .= '</div>'; // #categories-tests-view
+
+// Вид редактирования вопросов (скрыт по умолчанию)
+$output .= '<div id="questions-editor-view" style="display: none;">';
+$output .= '<div class="container-fluid">';
+$output .= '<div class="card">';
+$output .= '<div class="card-header bg-light">';
+$output .= '<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-3">';
+$output .= '<h3 class="mb-0"><i class="bi bi-list-ul"></i> Список вопросов теста</h3>';
+$output .= '<div class="d-flex flex-column flex-sm-row gap-2 w-100 w-md-auto align-items-stretch align-items-sm-center">';
+$output .= '<button class="btn btn-outline-secondary btn-sm" onclick="backToTestsList()">';
+$output .= '<i class="bi bi-arrow-left"></i> Назад к списку тестов';
+$output .= '</button>';
+$output .= '<button class="btn btn-success btn-sm" onclick="openAddQuestionModalFromTests()">';
+$output .= '<i class="bi bi-plus-circle-fill"></i> Добавить вопрос';
+$output .= '</button>';
+// Контролы запуска теста
+$output .= '<div class="d-flex gap-1 align-items-center">';
+$output .= '<input type="number" id="editor-questions-count" class="form-control form-control-sm" style="width: 70px;" value="20" min="1" placeholder="20">';
+$output .= '<button class="btn btn-outline-secondary btn-sm" style="white-space: nowrap;" id="editor-all-questions-btn">Все</button>';
+$output .= '<button class="btn btn-primary btn-sm" style="white-space: nowrap;" onclick="startTestFromEditor(\'training\')"><i class="bi bi-play-circle"></i> Тренировка</button>';
+$output .= '<button class="btn btn-danger btn-sm" style="white-space: nowrap;" onclick="startTestFromEditor(\'exam\')"><i class="bi bi-clipboard-check"></i> Экзамен</button>';
 $output .= '</div>';
 $output .= '</div>';
 $output .= '</div>';
+// Фильтры
+$output .= '<div class="questions-filters-container">';
+$output .= '<div class="row g-2">';
+$output .= '<div class="col-6 col-md-3"><button type="button" class="btn btn-primary w-100 questions-filter-btn" data-filter="all">Все <span class="badge bg-light text-dark ms-1" id="filter-count-all">0</span></button></div>';
+$output .= '<div class="col-6 col-md-3"><button type="button" class="btn btn-outline-success w-100 questions-filter-btn" data-filter="published">Опубликовано <span class="badge bg-light text-dark ms-1" id="filter-count-published">0</span></button></div>';
+$output .= '<div class="col-6 col-md-3"><button type="button" class="btn btn-outline-secondary w-100 questions-filter-btn" data-filter="unpublished">Не опубликовано <span class="badge bg-light text-dark ms-1" id="filter-count-unpublished">0</span></button></div>';
+$output .= '<div class="col-6 col-md-3"><button type="button" class="btn btn-outline-info w-100 questions-filter-btn" data-filter="learning">В обучении <span class="badge bg-light text-dark ms-1" id="filter-count-learning">0</span></button></div>';
+$output .= '</div></div>';
+$output .= '</div>'; // card-header
+$output .= '<div class="card-body p-2 p-md-3">';
+$output .= '<div id="questions-list-content">'; // заполняется через JS
+$output .= '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Загрузка вопросов...</p></div>';
+$output .= '</div>';
+$output .= '</div>'; // card-body
+$output .= '</div>'; // card
+$output .= '</div>'; // container-fluid
+$output .= '</div>'; // #questions-editor-view
+
+$output .= '</div>'; // #tests-page-container
 
 // Подключение внешних ресурсов
 $modx->regClientCSS('/assets/components/testsystem/css/categories-and-tests.css');
+
+// DOMPurify для безопасности
+$output .= '<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>';
+
+// Quill для редактирования вопросов (нужен для модальных окон)
+$output .= '<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">';
+$output .= '<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>';
+
 $modx->regClientScript('/assets/components/testsystem/js/test-cards.js');
 $modx->regClientScript('/assets/components/testsystem/js/tests-search.js');
 
