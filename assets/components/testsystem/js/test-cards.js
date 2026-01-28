@@ -70,15 +70,24 @@
 
         showLoadingIndicator('Удаление теста...');
 
+        // Получаем CSRF токен
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+        const requestData = {
+            action: 'deleteTest',
+            data: { test_id: testId }
+        };
+
+        // Добавляем CSRF токен если он есть
+        if (csrfToken) {
+            requestData.data.csrf_token = csrfToken;
+        }
+
         fetch(API_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                action: 'deleteTest',
-                data: { test_id: testId }
-            })
+            body: JSON.stringify(requestData)
         })
         .then(response => response.json())
         .then(data => {
@@ -150,6 +159,9 @@
     async function startTestSession(testId, mode, questionsCount) {
         showLoadingIndicator('Запуск теста...');
 
+        // Получаем CSRF токен
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+
         const requestData = {
             action: 'startSession',
             data: {
@@ -160,6 +172,11 @@
 
         if (mode === 'training' && questionsCount) {
             requestData.data.questions_count = questionsCount;
+        }
+
+        // Добавляем CSRF токен если он есть
+        if (csrfToken) {
+            requestData.data.csrf_token = csrfToken;
         }
 
         try {
