@@ -49,15 +49,9 @@ function renderTestCard($test, $modx, $testPageId, $currentUserId, $isAdmin, $is
         }
 
         // Вопросы - открывает список вопросов напрямую
-        $questionsUrl = htmlspecialchars($modx->makeUrl($testPageId, '', array('testId' => $testId, 'view' => 'questions')), ENT_QUOTES, 'UTF-8');
+        $questionsUrl = $modx->makeUrl($testPageId, '', array('testId' => $testId, 'view' => 'questions'));
         $output .= '<a href="' . $questionsUrl . '" class="menu-item">';
         $output .= '<i class="bi bi-question-circle"></i> Вопросы';
-        $output .= '</a>';
-
-        // Управление - открывает модальное окно управления
-        $manageUrl = htmlspecialchars($modx->makeUrl($testPageId, '', array('testId' => $testId, 'view' => 'manage')), ENT_QUOTES, 'UTF-8');
-        $output .= '<a href="' . $manageUrl . '" class="menu-item">';
-        $output .= '<i class="bi bi-gear"></i> Управление';
         $output .= '</a>';
 
         // Удалить - JavaScript API вызов
