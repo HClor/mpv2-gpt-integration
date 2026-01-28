@@ -286,6 +286,27 @@ $stmt->execute(array($id));
 
 ---
 
+### 6. API Actions - ПРОВЕРЯТЬ СУЩЕСТВОВАНИЕ
+
+**ПРОБЛЕМА:** JavaScript вызывает `apiCall('someAction', ...)`, но обработчик `case 'someAction':` отсутствует в `testsystem.php`. Результат — "Internal server error" без понятной причины.
+
+**Реальный пример:** `tsrunner.js` вызывал `apiCall("getSessionInfo", ...)`, но в `testsystem.php` не было `case 'getSessionInfo':`. Тесты не запускались.
+
+**ОБЯЗАТЕЛЬНО проверять:**
+```bash
+# Найти все API actions, вызываемые из JavaScript
+grep -r "apiCall\(" assets/components/testsystem/js/ | grep -oP "apiCall\(['\"](\w+)" | sort -u
+
+# Найти все обработчики в PHP
+grep "case '" assets/components/testsystem/ajax/testsystem.php | grep -oP "case '(\w+)" | sort -u
+
+# Сравнить — все JS actions должны иметь соответствующий case в PHP
+```
+
+**При добавлении нового `apiCall()` в JS — ВСЕГДА проверить, что соответствующий `case` есть в `testsystem.php`.**
+
+---
+
 ## 📝 ЧЕКЛИСТ ПЕРЕД КОММИТОМ
 
 - [ ] Нет inline JavaScript с фигурными скобками
@@ -296,6 +317,7 @@ $stmt->execute(array($id));
 - [ ] Внешние скрипты подключены через `regClientScript()`
 - [ ] CSRF токен добавлен в снипеты и AJAX запросы
 - [ ] Проверен синтаксис: `php -l file.php`
+- [ ] Все `apiCall()` из JS имеют соответствующий `case` в `testsystem.php`
 - [ ] Очищен кеш MODX перед тестированием
 
 ---
