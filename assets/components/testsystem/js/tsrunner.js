@@ -25,6 +25,7 @@
     const isLearningView = viewParam === 'learning';
     const isFavoritesView = viewParam === 'favorites';
     const isQuestionsView = viewParam === 'questions';
+    const isManageView = viewParam === 'manage';
 
     const container = document.getElementById("test-container");
     const testId = container ? container.dataset.testId : null;
@@ -38,6 +39,7 @@
     console.log("isLearningView:", isLearningView);
     console.log("isFavoritesView:", isFavoritesView);
     console.log("isQuestionsView:", isQuestionsView);
+    console.log("isManageView:", isManageView);
     console.log("testId:", testId);
     console.log("knowledgeAreaId:", knowledgeAreaId);
     console.log("isKnowledgeArea:", isKnowledgeArea);
@@ -72,6 +74,27 @@
         setTimeout(() => {
             if (typeof showAllQuestionsView === 'function') {
                 showAllQuestionsView();
+            }
+        }, 500);
+    } else if (isManageView) {
+        if (!testId) {
+            console.error("Test ID not found for manage view");
+            return;
+        }
+        console.log("Loading manage view...");
+
+        // СРАЗУ скрываем промежуточный контент
+        const testInfo = document.getElementById('test-info');
+        const modeSelector = document.querySelector('.test-mode-selector');
+        if (testInfo) testInfo.style.display = 'none';
+        if (modeSelector) modeSelector.style.display = 'none';
+
+        checkEditRights();
+        // Ждем загрузки прав, затем открываем модальное окно управления
+        setTimeout(() => {
+            if (typeof openTestManagementModal === 'function') {
+                const currentStatus = container ? container.dataset.testMode : 'both';
+                openTestManagementModal(testId, currentStatus);
             }
         }, 500);
     } else if (testId && testId !== 'favorites') {
@@ -2765,13 +2788,18 @@ async function addFavoritesViewToggle(questionId) {
             // ШАПКА
             html += '<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-3">';
             html += '<h3 class="mb-0"><i class="bi bi-list-ul"></i> Список вопросов теста</h3>';
-            html += '<div class="d-flex flex-column flex-sm-row gap-2 w-100 w-md-auto">';
+            html += '<div class="d-flex flex-column flex-sm-row gap-2 w-100 w-md-auto align-items-stretch align-items-sm-center">';
             html += '<button class="btn btn-success btn-sm" onclick="openAddQuestionModal()">';
             html += '<i class="bi bi-plus-circle-fill"></i> Добавить вопрос';
             html += '</button>';
-            html += '<button class="btn btn-secondary btn-sm" onclick="hideAllQuestionsView()">';
-            html += '<i class="bi bi-arrow-left"></i> Вернуться к тесту';
-            html += '</button>';
+
+            // Контролы запуска теста
+            html += '<div class="d-flex gap-1 align-items-center">';
+            html += '<input type="number" id="questions-count-header" class="form-control form-control-sm" style="width: 70px;" value="20" min="1" placeholder="20">';
+            html += '<button class="btn btn-outline-secondary btn-sm" style="white-space: nowrap;" onclick="document.getElementById(\'questions-count-header\').value = ' + totalCount + '">Все</button>';
+            html += '<button class="btn btn-primary btn-sm" style="white-space: nowrap;" onclick="startTestFromQuestions(\'training\')"><i class="bi bi-play-circle"></i> Тренировка</button>';
+            html += '<button class="btn btn-danger btn-sm" style="white-space: nowrap;" onclick="startTestFromQuestions(\'exam\')"><i class="bi bi-clipboard-check"></i> Экзамен</button>';
+            html += '</div>';
             html += '</div>';
             html += '</div>';
             
@@ -3143,12 +3171,50 @@ async function addFavoritesViewToggle(questionId) {
     function hideAllQuestionsView() {
         const listContainer = document.getElementById("questions-list-container");
         const testInfo = document.getElementById("test-info");
-        
+
         if (listContainer) listContainer.style.display = "none";
         if (testInfo) testInfo.style.display = "block";
     }
-    
- 
+
+    // Запуск теста из списка вопросов
+    async function startTestFromQuestions(mode) {
+        console.log("Starting test from questions view, mode:", mode);
+
+        const questionsCountInput = document.getElementById('questions-count-header');
+        const questionsCount = questionsCountInput ? parseInt(questionsCountInput.value) || 20 : 20;
+
+        // Показываем индикатор загрузки
+        const overlay = document.createElement('div');
+        overlay.id = 'loading-overlay';
+        overlay.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center; z-index: 9999;';
+        overlay.innerHTML = '<div style="background: white; padding: 30px; border-radius: 8px; text-align: center;"><div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"></div><div style="margin-top: 15px; font-size: 1.1em;">Запуск теста...</div></div>';
+        document.body.appendChild(overlay);
+
+        try {
+            const requestData = {
+                test_id: parseInt(testId),
+                mode: mode
+            };
+
+            if (mode === 'training' && questionsCount) {
+                requestData.questions_count = questionsCount;
+            }
+
+            const result = await apiCall('startSession', requestData);
+
+            if (result.success) {
+                // Редирект на страницу теста с sessionId
+                window.location.href = '/test?sessionId=' + result.data.session_id;
+            } else {
+                document.body.removeChild(overlay);
+                alert('Ошибка при запуске теста: ' + (result.message || 'Неизвестная ошибка'));
+            }
+        } catch (error) {
+            document.body.removeChild(overlay);
+            alert('Ошибка сети: ' + error.message);
+        }
+    }
+    window.startTestFromQuestions = startTestFromQuestions;
 
     // Редактировать вопрос из списка
     async function editQuestionFromList(questionId) {
