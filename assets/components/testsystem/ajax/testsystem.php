@@ -392,7 +392,49 @@ try {
 
             $response = ResponseHelper::success();
             break;
-        
+
+        case 'getSessionInfo':
+            $sessionId = ValidationHelper::requireInt($data, 'session_id', 'Session ID required');
+
+            $stmt = $modx->prepare("
+                SELECT s.id, s.test_id, s.mode, s.status, s.question_order,
+                       s.started_at, t.title as test_title, t.time_limit
+                FROM {$prefix}test_sessions s
+                LEFT JOIN {$prefix}test_tests t ON t.id = s.test_id
+                WHERE s.id = ?
+            ");
+            $stmt->execute(array($sessionId));
+            $session = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$session) {
+                throw new Exception('Session not found');
+            }
+
+            $questionOrder = json_decode($session['question_order'], true);
+            $totalQuestions = is_array($questionOrder) ? count($questionOrder) : 0;
+
+            // Считаем уже отвеченные вопросы
+            $stmt = $modx->prepare("
+                SELECT COUNT(*) as answered
+                FROM {$prefix}test_user_answers
+                WHERE session_id = ?
+            ");
+            $stmt->execute(array($sessionId));
+            $answeredRow = $stmt->fetch(PDO::FETCH_ASSOC);
+            $answeredCount = (int)$answeredRow['answered'];
+
+            $response = ResponseHelper::success(array(
+                'session_id' => (int)$session['id'],
+                'test_id' => (int)$session['test_id'],
+                'test_title' => $session['test_title'],
+                'mode' => $session['mode'],
+                'status' => $session['status'],
+                'total_questions' => $totalQuestions,
+                'current_question_number' => $answeredCount,
+                'time_limit' => (int)$session['time_limit'],
+                'started_at' => $session['started_at']
+            ));
+            break;
 
         case 'getNextQuestion':
             // Валидация входных данных
