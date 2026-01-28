@@ -234,7 +234,7 @@ foreach ($categories as $cat) {
 
 // Кнопка добавления теста (если есть права)
 $rightsRaw = $modx->runSnippet('getUserRights');
-$rights = is_array($rightsRaw) ? $rightsRaw : [];
+$rights = is_array($rightsRaw) ? $rightsRaw : array();
 
 if (!empty($rights['canCreate'])) {
     $createTestPageId = (int)$modx->getOption('lms.create_test_page', null, 0);
@@ -353,7 +353,7 @@ if (!$tests) {
     } else {
         // Показываем заголовок выбранной категории
         $stmt = $modx->prepare("SELECT name, description FROM `{$Tcats}` WHERE id = ?");
-        $stmt->execute([$categoryId]);
+        $stmt->execute(array($categoryId));
         $category = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($category) {
