@@ -101,12 +101,17 @@ $modx->regClientScript('/path/to/script.js');
 
 **РЕШЕНИЕ:**
 
-1. **В PHP снипете:** Добавить CSRF meta тег
+1. **В PHP снипете:** Инициализировать сессию MODX и добавить CSRF meta тег
 ```php
-// ✅ ПРАВИЛЬНО - добавить в начале $output
+// ✅ ПРАВИЛЬНО - инициализировать сессию MODX
+$modx->getRequest();  // ВАЖНО! Запускает сессию
+
+// Затем добавить meta тег
 $output = CsrfProtection::getTokenMeta();
 $output .= '<div class="container">...';
 ```
+
+**ВАЖНО:** Без `$modx->getRequest()` сессия может быть неактивна и токен не сгенерируется!
 
 2. **В JavaScript:** Передавать токен при AJAX запросах
 ```javascript

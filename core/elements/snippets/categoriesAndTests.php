@@ -15,6 +15,9 @@ if (!$modx instanceof modX) {
     return '';
 }
 
+// Инициализируем запрос и сессию MODX (необходимо для CSRF токена)
+$modx->getRequest();
+
 /**
  * Функция отрисовки карточки теста
  */
@@ -54,8 +57,8 @@ function renderTestCard($test, $modx, $testPageId, $currentUserId, $isAdmin, $is
         $output .= '<i class="bi bi-question-circle"></i> Вопросы';
         $output .= '</a>';
 
-        // Настройки - открывает страницу теста с кнопкой управления
-        $settingsUrl = $modx->makeUrl($testPageId, '', array('testId' => $testId));
+        // Настройки - открывает модальное окно управления тестом
+        $settingsUrl = $modx->makeUrl($testPageId, '', array('testId' => $testId, 'view' => 'manage'));
         $output .= '<a href="' . $settingsUrl . '" class="menu-item">';
         $output .= '<i class="bi bi-gear"></i> Настройки теста';
         $output .= '</a>';

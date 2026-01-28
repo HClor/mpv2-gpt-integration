@@ -20,8 +20,8 @@ $sessionId = isset($_GET['sessionId']) ? (int)$_GET['sessionId'] : 0;
 $viewParam = isset($_GET['view']) ? $_GET['view'] : '';
 $skipModeSelection = false;
 
-// Если есть view=questions - пропускаем выбор режима (будет управление через JS)
-if ($viewParam === 'questions') {
+// Если есть view=questions или view=manage - пропускаем выбор режима (будет управление через JS)
+if ($viewParam === 'questions' || $viewParam === 'manage') {
     $skipModeSelection = true;
 }
 
@@ -591,7 +591,10 @@ $timeLimit = (int)$test['time_limit'];
 // Формирование HTML вывода
 $viewDataAttr = $viewParam ? ' data-view="' . htmlspecialchars($viewParam, ENT_QUOTES, 'UTF-8') . '"' : '';
 $output = '<div id="test-container" data-test-id="' . (int)$testId . '" data-can-edit="' . ($canEditTest ? '1' : '0') . '" data-test-mode="' . htmlspecialchars($testMode, ENT_QUOTES, 'UTF-8') . '"' . $viewDataAttr . '>';
-$output .= '<div id="test-info" class="card mb-4">';
+
+// Скрываем test-info если view=questions или view=manage (для быстрой загрузки)
+$testInfoStyle = ($viewParam === 'questions' || $viewParam === 'manage') ? ' style="display:none;"' : '';
+$output .= '<div id="test-info" class="card mb-4"' . $testInfoStyle . '>';
 $output .= '<div class="card-header"><h2>' . htmlspecialchars($test['title'], ENT_QUOTES, 'UTF-8') . '</h2></div>';
 $output .= '<div class="card-body">';
 $output .= '<p>' . nl2br(htmlspecialchars($test['description'], ENT_QUOTES, 'UTF-8')) . '</p>';
