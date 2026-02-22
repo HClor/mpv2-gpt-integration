@@ -24,51 +24,97 @@
 
 ```
 /
-├── assets/components/testsystem/     # Frontend
-│   ├── ajax/testsystem.php           # Единая точка входа API
-│   ├── js/                           # JS-модули (8 модулей, 5700+ строк)
-│   ├── css/                          # Стили
-│   └── templates/                    # HTML-шаблоны
+├── assets/components/testsystem/        # Frontend (публичная часть)
+│   ├── ajax/                            # HTTP-точки входа
+│   │   ├── testsystem.php               # Главный API-роутер (3729 строк)
+│   │   ├── upload-image.php             # Загрузка изображений
+│   │   └── upload-document.php          # Загрузка документов
+│   ├── controllers/                     # HTTP-контроллеры (15 шт, 6519 строк)
+│   │   ├── BaseController.php           # Абстрактный базовый
+│   │   ├── ControllerFactory.php        # Роутер action→controller
+│   │   ├── SessionController.php        # Сессии тестирования
+│   │   ├── TestController.php           # CRUD тестов
+│   │   ├── QuestionController.php       # CRUD вопросов
+│   │   ├── AdminController.php          # Администрирование
+│   │   ├── LearningPathController.php   # Траектории (1617 строк)
+│   │   ├── MaterialController.php       # Учебные материалы
+│   │   ├── CategoryController.php       # Категории
+│   │   ├── CertificateController.php    # Сертификаты
+│   │   ├── GamificationController.php   # Геймификация
+│   │   ├── NotificationController.php   # Уведомления
+│   │   ├── AnalyticsController.php      # Аналитика
+│   │   ├── FavoriteController.php       # Избранное
+│   │   └── SpecialQuestionController.php
+│   ├── js/                              # JS-модули (15 файлов, 12680 строк)
+│   │   ├── tsrunner.js                  # Тест-раннер (4003 строк)
+│   │   ├── learning-paths.js            # Траектории (1685 строк)
+│   │   ├── test-cards.js                # Карточки тестов (1357 строк)
+│   │   ├── mytests.js                   # Мои тесты
+│   │   ├── knowledge-areas.js           # Области знаний
+│   │   ├── gamification.js              # Геймификация
+│   │   ├── category-permissions.js      # Права категорий
+│   │   ├── learning-materials.js        # Учебные материалы
+│   │   ├── special-question-types.js    # Спец. вопросы
+│   │   ├── notifications.js             # Уведомления
+│   │   ├── category-experts.js          # Эксперты
+│   │   ├── test-permissions.js          # Права тестов
+│   │   ├── certificates.js              # Сертификаты
+│   │   ├── analytics.js                 # Аналитика
+│   │   └── tests-search.js             # Поиск (заглушка, 42 строки)
+│   ├── css/                             # Стили (3 файла, 3395 строк)
+│   │   ├── tsrunner.css                 # Стили тест-раннера
+│   │   ├── testsystem-extended.css      # Расширенные стили
+│   │   └── categories-and-tests.css     # Стили каталога
+│   └── images/                          # Загруженные изображения (user content)
 │
-├── core/components/testsystem/       # Backend
-│   ├── bootstrap.php                 # Автозагрузчик классов
-│   ├── services/                     # Бизнес-логика (14 сервисов)
-│   │   ├── TestService.php
-│   │   ├── SessionService.php
-│   │   ├── CertificateService.php
-│   │   ├── GamificationService.php
-│   │   └── ...
-│   ├── repositories/                 # SQL-запросы
-│   │   └── TestRepository.php
-│   ├── helpers/                      # Утилиты
-│   │   ├── ResponseHelper.php        # JSON-ответы
-│   │   ├── ValidationHelper.php      # Валидация
-│   │   ├── PermissionHelper.php      # Проверка прав
-│   │   └── UrlHelper.php
-│   ├── exceptions/                   # Иерархия исключений
-│   │   ├── TestSystemException.php   # Базовый (500)
-│   │   ├── NotFoundException.php     # 404
-│   │   ├── ValidationException.php   # 400
-│   │   ├── PermissionException.php   # 403
-│   │   └── AuthenticationException.php # 401
+├── core/components/testsystem/          # Backend (приватная часть)
+│   ├── bootstrap.php                    # Автозагрузчик классов (SPL)
+│   ├── services/                        # Бизнес-логика (14 сервисов)
+│   │   ├── TestService.php              # Тесты
+│   │   ├── SessionService.php           # Сессии
+│   │   ├── CertificateService.php       # Сертификаты
+│   │   ├── GamificationService.php      # Геймификация
+│   │   ├── LearningPathService.php      # Траектории (самый большой)
+│   │   ├── LearningMaterialService.php  # Учебные материалы
+│   │   ├── AnalyticsService.php         # Аналитика
+│   │   ├── NotificationService.php      # Уведомления
+│   │   ├── CategoryPermissionService.php
+│   │   ├── DataIntegrityService.php     # Целостность данных
+│   │   ├── ReportService.php            # Отчёты/экспорт
+│   │   ├── QuestionTypeService.php      # Типы вопросов
+│   │   ├── AccessService.php            # Контроль доступа
+│   │   └── AuthService.php              # Аутентификация
+│   ├── repositories/                    # Data Access Layer
+│   │   ├── BaseRepository.php
+│   │   └── TestRepository.php           # 16 методов
+│   ├── helpers/                         # Утилиты (6 шт)
+│   │   ├── ResponseHelper.php           # JSON-ответы
+│   │   ├── ValidationHelper.php         # Валидация
+│   │   ├── PermissionHelper.php         # Проверка прав
+│   │   ├── UrlHelper.php                # URL-генератор
+│   │   ├── Config.php                   # Конфигурация
+│   │   └── QuestionImportHelper.php     # Импорт вопросов
+│   ├── exceptions/                      # Иерархия исключений
+│   │   ├── TestSystemException.php      # Базовый (500)
+│   │   ├── NotFoundException.php        # 404
+│   │   ├── ValidationException.php      # 400
+│   │   ├── PermissionException.php      # 403
+│   │   └── AuthenticationException.php  # 401
 │   ├── security/
 │   │   └── CsrfProtection.php
-│   ├── controllers/                  # 13 контроллеров
-│   └── sql/                          # SQL-миграции
+│   ├── cron/                            # Cron-задачи
+│   ├── migrations/                      # Миграции БД
+│   ├── config/                          # Конфигурация
+│   └── sql/                             # SQL-схемы
 │       └── FULL_INSTALLATION_FIXED.sql  # Каноническая схема
 │
-├── core/elements/snippets/           # MODX-сниппеты (32+)
-│   ├── categoriesAndTests.php
-│   ├── testRunner.php
-│   ├── testHistory.php
-│   ├── addTestForm.php
-│   └── ...
+├── core/elements/snippets/              # MODX-сниппеты (32+)
 │
-├── docs/archive/                     # Архивная документация
+├── docs/archive/                        # Архивная документация
 │
-├── ARCHITECTURE.md                   # ← ВЫ ЗДЕСЬ
-├── DEVELOPMENT_RULES.md              # Правила разработки, ошибки и решения
-└── README.md                         # Точка входа
+├── ARCHITECTURE.md                      # ← ВЫ ЗДЕСЬ
+├── DEVELOPMENT_RULES.md                 # Правила разработки, ошибки и решения
+└── README.md                            # Точка входа
 ```
 
 ---
@@ -235,8 +281,23 @@ ORDER BY s.end_time DESC;
 
 ## 5. API
 
-### 5.1. Единая точка входа
-Все API-запросы идут через `assets/components/testsystem/ajax/testsystem.php`.
+### 5.1. Маршрутизация запросов
+
+Все API-запросы идут через `assets/components/testsystem/ajax/testsystem.php` (3729 строк).
+
+**Двухуровневый роутинг:**
+```
+Запрос → testsystem.php
+  → ControllerFactory.canHandle(action)?
+    → ДА: controller.handle(action, data)  // ~35 actions через контроллеры
+    → НЕТ: switch(action) { case... }      // ~40 actions inline (техдолг)
+```
+
+`ControllerFactory` содержит маппинг action → Controller. Actions, которых нет в маппинге, обрабатываются inline в switch — это незавершённый рефакторинг (см. раздел 10 "Техдолг").
+
+**Загрузка файлов** обрабатывается отдельно:
+- `upload-image.php` — загрузка изображений к вопросам
+- `upload-document.php` — загрузка документов
 
 Формат запроса:
 ```json
@@ -349,3 +410,37 @@ $modx->regClientScript('/assets/components/testsystem/js/module.js');
 - MySQL 5.7+ / MariaDB 10.3+
 - Composer (для PhpSpreadsheet)
 - SSL/HTTPS (обязательно для production)
+
+---
+
+## 10. Техдолг и план рефакторинга
+
+### 10.1. testsystem.php — незавершённый рефакторинг (приоритет: высокий)
+
+**Проблема:** Файл 3729 строк. ~35 actions делегируются в контроллеры через `ControllerFactory`, ~40 actions обрабатываются inline в switch с прямыми SQL-запросами и бизнес-логикой.
+
+**Inline actions, требующие миграции в контроллеры:**
+- `getKnowledgeAreas`, `createKnowledgeArea`, `updateKnowledgeArea`, `deleteKnowledgeArea` → KnowledgeAreaController (новый)
+- `getMaterialsList`, `getMaterial`, `saveMaterial`, `deleteMaterial` → MaterialController (дополнить)
+- `uploadImage`, `uploadDocument` → вынести в отдельные контроллеры или MaterialController
+- `createTestWithPage`, `createTest`, `createTestPage` → TestController (дополнить)
+- `getMyTests`, `getSharedWithMe`, `getPublicTests` → TestController (дополнить)
+- `searchUsers`, `grantAccess`, `revokeAccess` → PermissionController (новый)
+- `getNotifications`, `markNotificationRead`, `markAllNotificationsRead` → уже есть NotificationController
+- Диагностические: `diagnoseMaterialsAuth`, `cleanupResourceFiles`, `checkSiteSettings` → AdminController
+
+**Цель:** `testsystem.php` должен сократиться до ~200 строк (загрузка, роутинг через ControllerFactory, error handling).
+
+### 10.2. LearningPathController (1617 строк) — разбить
+
+Самый большой контроллер. Содержит логику CRUD траекторий, шагов, прогресса, рекомендаций. Разбить на:
+- `LearningPathController` — CRUD траекторий
+- `LearningPathStepController` — шаги и прогресс
+
+### 10.3. Дублирование actions
+
+В `testsystem.php` есть два `case 'getTestPermissions'` (строки ~1721 и ~2811) и два `case 'deleteTest'` (закомментированный + рабочий). Требуется чистка.
+
+### 10.4. `display_errors` в production
+
+`testsystem.php` строки 4-5 содержат `error_reporting(E_ALL)` и `display_errors = 1`. Необходимо убрать для production или сделать условно по окружению.

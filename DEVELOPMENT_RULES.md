@@ -305,10 +305,42 @@ foreach ($methods as $m) {
 ```
 
 ### 8.3. Логи
+
+**Размещение лог-файлов:**
+```
+ПРАВИЛЬНО:  core/cache/logs/testsystem.log   # За пределами webroot
+            /var/log/testsystem/error.log     # Системная директория
+
+НЕПРАВИЛЬНО: assets/.../ajax/testsystem_errors.log  # Публичная директория!
+```
+
+**Текущее состояние** (требует исправления):
+`testsystem.php` пишет логи в `assets/components/testsystem/ajax/testsystem_errors.log` — это публичная директория. При переносе изменить строку 7:
+```php
+// БЫЛО (небезопасно):
+ini_set('error_log', __DIR__ . '/testsystem_errors.log');
+
+// ДОЛЖНО БЫТЬ:
+ini_set('error_log', MODX_CORE_PATH . 'cache/logs/testsystem_errors.log');
+```
+
+**Также** необходимо отключить `display_errors` для production:
+```php
+// БЫЛО (утечка информации):
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+// ДОЛЖНО БЫТЬ:
+error_reporting(E_ALL);
+ini_set('display_errors', 0);  // ошибки только в лог
+ini_set('log_errors', 1);
+```
+
+**Просмотр логов:**
 ```bash
-tail -f /var/log/php-fpm/error.log    # PHP
-tail -f /var/log/apache2/error.log    # Apache
-# MODX: /core/cache/logs/
+tail -f /var/log/php-fpm/error.log         # PHP
+tail -f /var/log/apache2/error.log         # Apache
+tail -f core/cache/logs/testsystem*.log    # Приложение
 ```
 
 ### 8.4. Правила диагностического кода
@@ -320,4 +352,38 @@ error_log('[DIAG-2] Variable: ' . var_export($var, true));
 ```javascript
 console.log('[DIAG-1] Script loaded');
 console.log('[DIAG-2] Element:', element);
+```
+
+---
+
+## 9. Правила работы с файлами
+
+### 9.1. User-uploaded контент не должен попадать в git
+
+Загруженные пользователями файлы (изображения к вопросам, документы) не должны отслеживаться git. В `.gitignore`:
+```
+assets/components/testsystem/images/q_*
+```
+Директория `images/` защищена `.htaccess` (запрет выполнения PHP, разрешены только jpg/png/gif/webp).
+
+### 9.2. Где создавать новые контроллеры
+
+```
+assets/components/testsystem/controllers/  # HTTP-контроллеры (публичные)
+core/components/testsystem/services/       # Бизнес-логика (приватная)
+```
+
+Контроллер = тонкая обёртка (валидация входа → вызов сервиса → формат ответа).
+Сервис = вся логика и SQL.
+
+Новый контроллер нужно:
+1. Создать в `assets/.../controllers/NewController.php` (extends BaseController)
+2. Зарегистрировать actions в `ControllerFactory.php` в `$actionMap`
+3. НЕ добавлять case в switch `testsystem.php`
+
+### 9.3. Где создавать новые JS-модули
+
+Отдельный файл в `assets/components/testsystem/js/` для каждого функционального модуля. Подключать через сниппет:
+```php
+$modx->regClientScript($assetsUrl . 'js/new-module.js');
 ```

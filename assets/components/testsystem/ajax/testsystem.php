@@ -2,9 +2,14 @@
 /* TS API v3.4.2 - FIXED deleteMaterial with direct SQL - BUILD 20251203-2145 */
 
 error_reporting(E_ALL);
-ini_set('display_errors', 1);
+ini_set('display_errors', 0);
 ini_set('log_errors', 1);
-ini_set('error_log', __DIR__ . '/testsystem_errors.log');
+// Логи пишутся в core/cache/logs/ (за пределами webroot)
+$logDir = dirname(dirname(dirname(dirname(dirname(__FILE__))))) . '/core/cache/logs';
+if (!is_dir($logDir)) {
+    @mkdir($logDir, 0755, true);
+}
+ini_set('error_log', $logDir . '/testsystem_errors.log');
 
  
 $configPath = dirname(dirname(dirname(dirname(__FILE__)))) . '/config.core.php';

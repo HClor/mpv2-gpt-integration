@@ -31,6 +31,9 @@
 !/assets/uploads/test_imports/.htaccess
 
 
+# User-uploaded content (images uploaded via UI)
+/assets/components/testsystem/images/q_*
+
 # Временные файлы
 *.log
 *.tmp
