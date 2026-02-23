@@ -49,6 +49,23 @@ class ControllerFactory
         'updateTestSettings' => 'TestController',
         'updateTest' => 'TestController',
         'deleteTest' => 'TestController',
+        'publishTest' => 'TestController',
+        'getPublicTestBySlug' => 'TestController',
+        'checkResourcePermissions' => 'TestController',
+        'createTestWithPage' => 'TestController',
+        'createTest' => 'TestController',
+        'createTestPage' => 'TestController',
+        'getMyTests' => 'TestController',
+        'getSharedWithMe' => 'TestController',
+        'getPublicTests' => 'TestController',
+        'grantTestAccess' => 'TestController',
+        'revokeTestAccess' => 'TestController',
+        'getTestPermissions' => 'TestController',
+        'getAvailableUsersForTest' => 'TestController',
+        'checkTestAccess' => 'TestController',
+        'searchUsers' => 'TestController',
+        'grantAccess' => 'TestController',
+        'revokeAccess' => 'TestController',
 
         // Admin Controller
         'checkIntegrity' => 'AdminController',
@@ -88,6 +105,11 @@ class ControllerFactory
         'getPermissionHistory' => 'CategoryController',
         'bulkGrantPermissions' => 'CategoryController',
         'bulkRevokePermissions' => 'CategoryController',
+        'createCategory' => 'CategoryController',
+        'assignCategoryExpert' => 'CategoryController',
+        'removeCategoryExpert' => 'CategoryController',
+        'getCategoryExperts' => 'CategoryController',
+        'getAvailableExperts' => 'CategoryController',
 
         // Learning Path Controller
         'createPath' => 'LearningPathController',
@@ -151,6 +173,22 @@ class ControllerFactory
         'processQueue' => 'NotificationController',
         'cleanupOld' => 'NotificationController',
         'getStatistics' => 'NotificationController',
+        // Notification Controller — JS aliases (notifications.js uses different action names)
+        'getUnreadNotificationsCount' => 'NotificationController',
+        'getRecentNotifications' => 'NotificationController',
+        'markNotificationAsRead' => 'NotificationController',
+        'getAllNotifications' => 'NotificationController',
+        'getNotificationSettings' => 'NotificationController',
+        'saveNotificationSettings' => 'NotificationController',
+
+        // Knowledge Area Controller
+        'getKnowledgeAreas' => 'KnowledgeAreaController',
+        'createKnowledgeArea' => 'KnowledgeAreaController',
+        'updateKnowledgeArea' => 'KnowledgeAreaController',
+        'deleteKnowledgeArea' => 'KnowledgeAreaController',
+        'getKnowledgeAreaDetails' => 'KnowledgeAreaController',
+        'getAvailableTestsTree' => 'KnowledgeAreaController',
+        'startKnowledgeAreaSession' => 'KnowledgeAreaController',
 
         // Analytics Controller
         'getMyStatistics' => 'AnalyticsController',

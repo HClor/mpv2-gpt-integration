@@ -26,12 +26,16 @@ class NotificationController extends BaseController
         try {
             switch ($action) {
                 case 'getMyNotifications':
+                case 'getRecentNotifications':  // JS alias (notifications.js)
+                case 'getAllNotifications':      // JS alias (notifications.js)
                     return $this->getMyNotifications($data);
 
                 case 'getUnreadCount':
+                case 'getUnreadNotificationsCount':  // JS alias (notifications.js)
                     return $this->getUnreadCount($data);
 
                 case 'markAsRead':
+                case 'markNotificationAsRead':  // JS alias (notifications.js)
                     return $this->markAsRead($data);
 
                 case 'markAllAsRead':
@@ -47,9 +51,11 @@ class NotificationController extends BaseController
                     return $this->sendEmail($data);
 
                 case 'getMyPreferences':
+                case 'getNotificationSettings':  // JS alias (notifications.js)
                     return $this->getMyPreferences($data);
 
                 case 'updatePreference':
+                case 'saveNotificationSettings':  // JS alias (notifications.js)
                     return $this->updatePreference($data);
 
                 case 'processQueue':
