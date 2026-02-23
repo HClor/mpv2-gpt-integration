@@ -1,7 +1,7 @@
 # Правила разработки и решения проблем
 
 > MODX Revolution + Fenom: критические правила, типичные ошибки, решения и недокументированные особенности.
-> Консолидировано из опыта разработки 17 спринтов. Обновлено: 2026-02-22
+> Консолидировано из опыта разработки 17 спринтов. Обновлено: 2026-02-23
 
 ---
 
@@ -277,7 +277,7 @@ $corePath = MODX_CORE_PATH;                    // /path/to/core/
 - [ ] `$stmt === false` проверяется перед `fetch()`
 - [ ] Скрипты подключены через `regClientScript()`
 - [ ] CSRF-токен в сниппетах и AJAX-запросах
-- [ ] Все `apiCall()` из JS имеют `case` в `testsystem.php`
+- [ ] Все `apiCall()` из JS имеют маппинг в `ControllerFactory.php` (или inline case в `testsystem.php`)
 - [ ] `publication_status`, `c.name`, `t.resource_id` — актуальные поля
 - [ ] Очищен кеш MODX перед тестированием
 - [ ] `php -l file.php` — проверка синтаксиса
@@ -314,27 +314,9 @@ foreach ($methods as $m) {
 НЕПРАВИЛЬНО: assets/.../ajax/testsystem_errors.log  # Публичная директория!
 ```
 
-**Текущее состояние** (требует исправления):
-`testsystem.php` пишет логи в `assets/components/testsystem/ajax/testsystem_errors.log` — это публичная директория. При переносе изменить строку 7:
-```php
-// БЫЛО (небезопасно):
-ini_set('error_log', __DIR__ . '/testsystem_errors.log');
-
-// ДОЛЖНО БЫТЬ:
-ini_set('error_log', MODX_CORE_PATH . 'cache/logs/testsystem_errors.log');
-```
-
-**Также** необходимо отключить `display_errors` для production:
-```php
-// БЫЛО (утечка информации):
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-// ДОЛЖНО БЫТЬ:
-error_reporting(E_ALL);
-ini_set('display_errors', 0);  // ошибки только в лог
-ini_set('log_errors', 1);
-```
+**Текущее состояние** (ИСПРАВЛЕНО 2026-02-22):
+`testsystem.php` пишет логи в `core/cache/logs/testsystem_errors.log` — за пределами webroot.
+`display_errors = 0`, `log_errors = 1` — ошибки только в лог, не в ответ клиенту.
 
 **Просмотр логов:**
 ```bash
@@ -379,7 +361,9 @@ core/components/testsystem/services/       # Бизнес-логика (прив
 Новый контроллер нужно:
 1. Создать в `assets/.../controllers/NewController.php` (extends BaseController)
 2. Зарегистрировать actions в `ControllerFactory.php` в `$actionMap`
-3. НЕ добавлять case в switch `testsystem.php`
+3. **НЕ** добавлять case в switch `testsystem.php` — весь новый код только через контроллеры
+
+Существующие контроллеры (17 шт.): Admin, Analytics, Category, Certificate, Favorite, Gamification, KnowledgeArea, LearningPath, Material, Notification, Question, Session, SpecialQuestion, Test, Upload + BaseController + ControllerFactory.
 
 ### 9.3. Где создавать новые JS-модули
 

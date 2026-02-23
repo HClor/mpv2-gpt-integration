@@ -1,7 +1,7 @@
 # Архитектура LMS Test System
 
 > Консолидированная документация по архитектуре, схеме БД, API и принятым решениям.
-> Обновлено: 2026-02-22
+> Обновлено: 2026-02-23
 
 ---
 
@@ -16,7 +16,7 @@
 - **БД:** MySQL 5.7+ / MariaDB
 - **Безопасность:** CSRF-токены, RBAC (6 уровней), XSS-фильтрация
 
-**Статус:** 17 спринтов, 120 API-эндпоинтов, 13 контроллеров, 14+ сервисов, 51 таблица БД.
+**Статус:** 17 спринтов, ~155 API-эндпоинтов, 17 контроллеров, 14+ сервисов, 51 таблица БД.
 
 ---
 
@@ -26,12 +26,13 @@
 /
 ├── assets/components/testsystem/        # Frontend (публичная часть)
 │   ├── ajax/                            # HTTP-точки входа
-│   │   ├── testsystem.php               # Главный API-роутер (3729 строк)
-│   │   ├── upload-image.php             # Загрузка изображений
-│   │   └── upload-document.php          # Загрузка документов
-│   ├── controllers/                     # HTTP-контроллеры (15 шт, 6519 строк)
+│   │   ├── testsystem.php               # Главный API-роутер (540 строк, 5 inline cases)
+│   │   ├── .htaccess                    # Защита директории
+│   │   ├── upload-image.php             # Загрузка изображений (FormData)
+│   │   └── upload-document.php          # Загрузка документов (FormData)
+│   ├── controllers/                     # HTTP-контроллеры (17 шт, ~151 actions)
 │   │   ├── BaseController.php           # Абстрактный базовый
-│   │   ├── ControllerFactory.php        # Роутер action→controller
+│   │   ├── ControllerFactory.php        # Роутер action→controller (~151 маппингов)
 │   │   ├── SessionController.php        # Сессии тестирования
 │   │   ├── TestController.php           # CRUD тестов
 │   │   ├── QuestionController.php       # CRUD вопросов
@@ -41,10 +42,12 @@
 │   │   ├── CategoryController.php       # Категории
 │   │   ├── CertificateController.php    # Сертификаты
 │   │   ├── GamificationController.php   # Геймификация
+│   │   ├── KnowledgeAreaController.php  # Области знаний
 │   │   ├── NotificationController.php   # Уведомления
 │   │   ├── AnalyticsController.php      # Аналитика
 │   │   ├── FavoriteController.php       # Избранное
-│   │   └── SpecialQuestionController.php
+│   │   ├── SpecialQuestionController.php # Спец. вопросы
+│   │   └── UploadController.php         # Загрузка файлов
 │   ├── js/                              # JS-модули (15 файлов, 12680 строк)
 │   │   ├── tsrunner.js                  # Тест-раннер (4003 строк)
 │   │   ├── learning-paths.js            # Траектории (1685 строк)
@@ -283,17 +286,17 @@ ORDER BY s.end_time DESC;
 
 ### 5.1. Маршрутизация запросов
 
-Все API-запросы идут через `assets/components/testsystem/ajax/testsystem.php` (3729 строк).
+Все API-запросы идут через `assets/components/testsystem/ajax/testsystem.php` (540 строк).
 
 **Двухуровневый роутинг:**
 ```
 Запрос → testsystem.php
   → ControllerFactory.canHandle(action)?
-    → ДА: controller.handle(action, data)  // ~35 actions через контроллеры
-    → НЕТ: switch(action) { case... }      // ~40 actions inline (техдолг)
+    → ДА: controller.handle(action, data)  // ~151 actions через 17 контроллеров
+    → НЕТ: switch(action) { case... }      // 5 inline cases (утилиты + Materials)
 ```
 
-`ControllerFactory` содержит маппинг action → Controller. Actions, которых нет в маппинге, обрабатываются inline в switch — это незавершённый рефакторинг (см. раздел 10 "Техдолг").
+`ControllerFactory` содержит маппинг action → Controller для ~151 действий. Только 5 case-ов остаются inline: `getApiVersion`, `getParentUri` (утилиты) и `getMaterialsList`, `getMaterial`, `saveMaterial` (работают с MODX Resources напрямую — архитектурное решение).
 
 **Загрузка файлов** обрабатывается отдельно:
 - `upload-image.php` — загрузка изображений к вопросам
@@ -317,7 +320,7 @@ ORDER BY s.end_time DESC;
 }
 ```
 
-### 5.2. Контроллеры и эндпоинты (120 всего)
+### 5.2. Контроллеры и эндпоинты (~155 всего)
 
 | Контроллер | Примеры actions | Уровень доступа |
 |---|---|---|
@@ -415,32 +418,31 @@ $modx->regClientScript('/assets/components/testsystem/js/module.js');
 
 ## 10. Техдолг и план рефакторинга
 
-### 10.1. testsystem.php — незавершённый рефакторинг (приоритет: высокий)
+### 10.1. ~~testsystem.php — рефакторинг~~ ВЫПОЛНЕНО (2026-02-23)
 
-**Проблема:** Файл 3729 строк. ~35 actions делегируются в контроллеры через `ControllerFactory`, ~40 actions обрабатываются inline в switch с прямыми SQL-запросами и бизнес-логикой.
+**Было:** 3729 строк, 69 inline case-ов, 24 мёртвых case-а.
+**Стало:** 540 строк, 5 inline case-ов, 0 мёртвого кода.
 
-**Inline actions, требующие миграции в контроллеры:**
-- `getKnowledgeAreas`, `createKnowledgeArea`, `updateKnowledgeArea`, `deleteKnowledgeArea` → KnowledgeAreaController (новый)
-- `getMaterialsList`, `getMaterial`, `saveMaterial`, `deleteMaterial` → MaterialController (дополнить)
-- `uploadImage`, `uploadDocument` → вынести в отдельные контроллеры или MaterialController
-- `createTestWithPage`, `createTest`, `createTestPage` → TestController (дополнить)
-- `getMyTests`, `getSharedWithMe`, `getPublicTests` → TestController (дополнить)
-- `searchUsers`, `grantAccess`, `revokeAccess` → PermissionController (новый)
-- `getNotifications`, `markNotificationRead`, `markAllNotificationsRead` → уже есть NotificationController
-- Диагностические: `diagnoseMaterialsAuth`, `cleanupResourceFiles`, `checkSiteSettings` → AdminController
+Оставшиеся 5 inline case-ов — осознанное решение:
+- `getApiVersion`, `getParentUri` — утилиты, не стоит выносить в контроллеры
+- `getMaterialsList`, `getMaterial`, `saveMaterial` — работают с MODX Resources (site_content) напрямую
 
-**Цель:** `testsystem.php` должен сократиться до ~200 строк (загрузка, роутинг через ControllerFactory, error handling).
+### 10.2. LearningPathController (1617 строк) — потенциально разбить
 
-### 10.2. LearningPathController (1617 строк) — разбить
-
-Самый большой контроллер. Содержит логику CRUD траекторий, шагов, прогресса, рекомендаций. Разбить на:
+Самый большой контроллер. Содержит логику CRUD траекторий, шагов, прогресса, рекомендаций. Можно разбить на:
 - `LearningPathController` — CRUD траекторий
 - `LearningPathStepController` — шаги и прогресс
 
-### 10.3. Дублирование actions
+Приоритет: низкий (контроллер работает стабильно).
 
-В `testsystem.php` есть два `case 'getTestPermissions'` (строки ~1721 и ~2811) и два `case 'deleteTest'` (закомментированный + рабочий). Требуется чистка.
+### 10.3. ~~Дублирование actions~~ ВЫПОЛНЕНО
 
-### 10.4. `display_errors` в production
+Все дубликаты case-ов удалены. `getTestPermissions`, `deleteTest` — по одному экземпляру в TestController.
 
-`testsystem.php` строки 4-5 содержат `error_reporting(E_ALL)` и `display_errors = 1`. Необходимо убрать для production или сделать условно по окружению.
+### 10.4. ~~`display_errors` в production~~ ВЫПОЛНЕНО
+
+`display_errors = 0`, `log_errors = 1`, логи в `core/cache/logs/testsystem_errors.log`.
+
+### 10.5. CSS — консолидация стилей (приоритет: низкий)
+
+3 CSS-файла (3 395 строк) с дублированием стилей кнопок, карточек и анимаций. Рекомендуется вынести общие стили в CSS custom properties.

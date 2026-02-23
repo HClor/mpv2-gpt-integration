@@ -22,7 +22,10 @@ class AdminController extends BaseController
         'cleanOrphanedAnswers',
         'cleanOrphanedSessions',
         'cleanOldSessions',
-        'getSystemStats'
+        'getSystemStats',
+        'checkSiteSettings',
+        'cleanupResourceFiles',
+        'diagnoseMaterialsAuth'
     ];
 
     /**
@@ -63,6 +66,15 @@ class AdminController extends BaseController
 
                 case 'getSystemStats':
                     return $this->getSystemStats($data);
+
+                case 'checkSiteSettings':
+                    return $this->checkSiteSettings($data);
+
+                case 'cleanupResourceFiles':
+                    return $this->cleanupResourceFiles($data);
+
+                case 'diagnoseMaterialsAuth':
+                    return $this->diagnoseMaterialsAuth($data);
 
                 default:
                     return $this->error('Action not implemented', 501);
@@ -300,5 +312,100 @@ class AdminController extends BaseController
         $stats['database_size_mb'] = round($sizeBytes / 1024 / 1024, 2);
 
         return $this->success($stats);
+    }
+
+    /**
+     * Проверка настроек сайта MODX
+     */
+    private function checkSiteSettings($data)
+    {
+        $this->requireAdminRights();
+
+        return $this->success(array(
+            'site_url' => $this->modx->getOption('site_url'),
+            'base_url' => $this->modx->getOption('base_url'),
+            'friendly_urls' => $this->modx->getOption('friendly_urls'),
+            'use_alias_path' => $this->modx->getOption('use_alias_path'),
+            'site_start' => $this->modx->getOption('site_start')
+        ));
+    }
+
+    /**
+     * Очистка файлов для конкретного ресурса
+     */
+    private function cleanupResourceFiles($data)
+    {
+        $this->requireAdminRights();
+
+        $resourceId = ValidationHelper::requireInt($data, 'resource_id', 'Не указан ID ресурса');
+
+        $deletedFiles = 0;
+        $imagePath = MODX_BASE_PATH . 'assets/uploads/images/' . intval($resourceId) . '/';
+        $documentPath = MODX_BASE_PATH . 'assets/uploads/documents/' . intval($resourceId) . '/';
+
+        $deleteDirectory = function($dir) use (&$deleteDirectory, &$deletedFiles) {
+            if (!is_dir($dir)) return false;
+            $files = array_diff(scandir($dir), array('.', '..'));
+            foreach ($files as $file) {
+                $path = $dir . '/' . $file;
+                if (is_dir($path)) {
+                    $deleteDirectory($path);
+                } else {
+                    unlink($path);
+                    $deletedFiles++;
+                }
+            }
+            return rmdir($dir);
+        };
+
+        $imageDeleted = $deleteDirectory($imagePath);
+        $documentDeleted = $deleteDirectory($documentPath);
+
+        return $this->success(array(
+            'deleted_files' => $deletedFiles,
+            'images_folder_deleted' => $imageDeleted,
+            'documents_folder_deleted' => $documentDeleted
+        ), 'Файлы очищены');
+    }
+
+    /**
+     * Диагностика аутентификации для учебных материалов
+     */
+    private function diagnoseMaterialsAuth($data)
+    {
+        $this->requireAdminRights();
+
+        $diagnosis = array(
+            'user' => array(
+                'id' => $this->modx->user->get('id'),
+                'username' => $this->modx->user->get('username'),
+            ),
+            'authentication' => array(
+                'web' => $this->modx->user->isAuthenticated('web'),
+                'mgr' => $this->modx->user->isAuthenticated('mgr'),
+                'helper_isAuthenticated' => PermissionHelper::isAuthenticated($this->modx),
+                'helper_requireAuthentication_would_pass' => false,
+            ),
+            'permissions' => array(
+                'isAdmin' => PermissionHelper::isAdmin($this->modx),
+                'isExpert' => method_exists('PermissionHelper', 'isExpert') ? PermissionHelper::isExpert($this->modx) : 'method not exists',
+            ),
+            'methods_exist' => array(
+                'getCurrentUserIdWithMgr' => method_exists('PermissionHelper', 'getCurrentUserIdWithMgr'),
+            ),
+        );
+
+        try {
+            PermissionHelper::requireAuthentication($this->modx, 'Test');
+            $diagnosis['authentication']['helper_requireAuthentication_would_pass'] = true;
+        } catch (Exception $e) {
+            $diagnosis['authentication']['helper_requireAuthentication_error'] = $e->getMessage();
+        }
+
+        if (method_exists('PermissionHelper', 'getCurrentUserIdWithMgr')) {
+            $diagnosis['user']['id_with_mgr'] = PermissionHelper::getCurrentUserIdWithMgr($this->modx);
+        }
+
+        return $this->success($diagnosis, 'Диагностика завершена');
     }
 }

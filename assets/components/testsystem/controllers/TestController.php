@@ -39,7 +39,8 @@ class TestController extends BaseController
         'checkTestAccess',
         'searchUsers',
         'grantAccess',
-        'revokeAccess'
+        'revokeAccess',
+        'checkEditRights'
     );
 
     /**
@@ -122,6 +123,9 @@ class TestController extends BaseController
 
                 case 'revokeAccess':
                     return $this->revokeAccess($data);
+
+                case 'checkEditRights':
+                    return $this->checkEditRights($data);
 
                 default:
                     return $this->error('Action not implemented', 501);
@@ -1118,5 +1122,15 @@ class TestController extends BaseController
         $stmt->execute(array($testId, $targetUserId));
 
         return $this->success(null, 'Access revoked');
+    }
+
+    /**
+     * Проверка прав редактирования текущего пользователя
+     */
+    private function checkEditRights($data)
+    {
+        $rights = PermissionHelper::getUserRights($this->modx);
+
+        return $this->success($rights);
     }
 }
