@@ -24,7 +24,11 @@ class CategoryController extends BaseController
         'checkCategoryPermission',
         'getPermissionHistory',
         'bulkGrantPermissions',
-        'bulkRevokePermissions'
+        'bulkRevokePermissions',
+        'assignCategoryExpert',
+        'removeCategoryExpert',
+        'getCategoryExperts',
+        'getAvailableExperts'
     ];
 
     /**
@@ -71,6 +75,18 @@ class CategoryController extends BaseController
 
                 case 'bulkRevokePermissions':
                     return $this->bulkRevokePermissions($data);
+
+                case 'assignCategoryExpert':
+                    return $this->assignCategoryExpert($data);
+
+                case 'removeCategoryExpert':
+                    return $this->removeCategoryExpert($data);
+
+                case 'getCategoryExperts':
+                    return $this->getCategoryExperts($data);
+
+                case 'getAvailableExperts':
+                    return $this->getAvailableExperts($data);
 
                 default:
                     return $this->error('Action not implemented', 501);
@@ -437,5 +453,158 @@ class CategoryController extends BaseController
         $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         return $this->success($categories);
+    }
+
+    /**
+     * Назначить эксперта на категорию
+     */
+    private function assignCategoryExpert($data)
+    {
+        $this->requireAuth();
+
+        if (!PermissionHelper::isAdmin($this->modx)) {
+            throw new PermissionException('Access denied. Admin only.');
+        }
+
+        $userId = $this->getCurrentUserId();
+
+        $categoryId = ValidationHelper::requireInt($data, 'category_id', 'Category ID required');
+        $expertUserId = ValidationHelper::requireInt($data, 'expert_user_id', 'Expert user ID required');
+        $canManageTests = ValidationHelper::optionalBool($data, 'can_manage_tests', true);
+        $canManageQuestions = ValidationHelper::optionalBool($data, 'can_manage_questions', true);
+        $canApprove = ValidationHelper::optionalBool($data, 'can_approve', false);
+
+        // Проверяем что категория существует
+        $stmt = $this->modx->prepare("SELECT id FROM {$this->prefix}test_categories WHERE id = ?");
+        $stmt->execute(array($categoryId));
+        if (!$stmt->fetch()) {
+            throw new Exception('Category not found');
+        }
+
+        // Проверяем что пользователь существует и является экспертом
+        $stmt = $this->modx->prepare("
+            SELECT u.id, u.username
+            FROM {$this->prefix}users u
+            JOIN {$this->prefix}member_groups mg ON mg.member = u.id
+            JOIN {$this->prefix}membergroup_names mgn ON mgn.id = mg.user_group
+            WHERE u.id = ? AND mgn.name = 'LMS Experts'
+        ");
+        $stmt->execute(array($expertUserId));
+        $expert = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$expert) {
+            throw new Exception('User not found or not an expert');
+        }
+
+        // Назначаем эксперта (INSERT or UPDATE)
+        $stmt = $this->modx->prepare("
+            INSERT INTO {$this->prefix}test_category_experts
+            (category_id, user_id, assigned_by, can_manage_tests, can_manage_questions, can_approve)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                can_manage_tests = VALUES(can_manage_tests),
+                can_manage_questions = VALUES(can_manage_questions),
+                can_approve = VALUES(can_approve),
+                assigned_by = VALUES(assigned_by),
+                assigned_at = CURRENT_TIMESTAMP
+        ");
+
+        $stmt->execute(array(
+            $categoryId,
+            $expertUserId,
+            $userId,
+            $canManageTests ? 1 : 0,
+            $canManageQuestions ? 1 : 0,
+            $canApprove ? 1 : 0
+        ));
+
+        return $this->success(null, 'Expert assigned successfully');
+    }
+
+    /**
+     * Убрать эксперта из категории
+     */
+    private function removeCategoryExpert($data)
+    {
+        $this->requireAuth();
+
+        if (!PermissionHelper::isAdmin($this->modx)) {
+            throw new PermissionException('Access denied. Admin only.');
+        }
+
+        $categoryId = ValidationHelper::requireInt($data, 'category_id', 'Category ID required');
+        $expertUserId = ValidationHelper::requireInt($data, 'expert_user_id', 'Expert user ID required');
+
+        $stmt = $this->modx->prepare("
+            DELETE FROM {$this->prefix}test_category_experts
+            WHERE category_id = ? AND user_id = ?
+        ");
+        $stmt->execute(array($categoryId, $expertUserId));
+
+        return $this->success(null, 'Expert removed from category');
+    }
+
+    /**
+     * Получить список экспертов категории
+     */
+    private function getCategoryExperts($data)
+    {
+        $this->requireAuth();
+
+        $categoryId = ValidationHelper::requireInt($data, 'category_id', 'Category ID required');
+
+        $stmt = $this->modx->prepare("
+            SELECT
+                ce.id,
+                ce.user_id,
+                u.username,
+                up.email,
+                ce.can_manage_tests,
+                ce.can_manage_questions,
+                ce.can_approve,
+                ce.assigned_at,
+                au.username as assigned_by_username
+            FROM {$this->prefix}test_category_experts ce
+            JOIN {$this->prefix}users u ON u.id = ce.user_id
+            LEFT JOIN {$this->prefix}user_attributes up ON up.internalKey = u.id
+            LEFT JOIN {$this->prefix}users au ON au.id = ce.assigned_by
+            WHERE ce.category_id = ?
+            ORDER BY u.username
+        ");
+        $stmt->execute(array($categoryId));
+        $experts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return $this->success($experts);
+    }
+
+    /**
+     * Получить список доступных экспертов для назначения
+     */
+    private function getAvailableExperts($data)
+    {
+        $this->requireAuth();
+
+        if (!PermissionHelper::isAdmin($this->modx)) {
+            throw new PermissionException('Access denied. Admin only.');
+        }
+
+        $stmt = $this->modx->prepare("
+            SELECT DISTINCT
+                u.id,
+                u.username,
+                up.email,
+                up.fullname
+            FROM {$this->prefix}users u
+            JOIN {$this->prefix}user_attributes up ON up.internalKey = u.id
+            JOIN {$this->prefix}member_groups mg ON mg.member = u.id
+            JOIN {$this->prefix}membergroup_names mgn ON mgn.id = mg.user_group
+            WHERE mgn.name = 'LMS Experts'
+            AND up.blocked = 0
+            ORDER BY u.username
+        ");
+        $stmt->execute();
+        $experts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return $this->success($experts);
     }
 }
