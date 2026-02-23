@@ -1,19 +1,21 @@
 # Аудит компонента TestSystem — 2026-02-22
 
+> **Обновлено:** 2026-02-23 — зафиксированы результаты выполнения Фаз 1-6.
+
 ## Общее описание
 
 Компонент **TestSystem** — система тестирования на базе MODX Revolution. Состоит из двух частей:
 - `assets/components/testsystem/` — публичный слой (AJAX-обработчик, контроллеры, JS, CSS)
 - `core/components/testsystem/` — приватный слой (сервисы, хелперы, SQL, безопасность)
 
-**Итого файлов:** ~148 (91 в assets, 57 в core)
-**Главный AJAX-обработчик:** `assets/components/testsystem/ajax/testsystem.php` — **3 734 строки**, **69 case-операторов**
+**Итого файлов:** ~149 (92 в assets, 57 в core)
+**Главный AJAX-обработчик:** `assets/components/testsystem/ajax/testsystem.php` — **540 строк**, **5 inline case-операторов** (было 3 734 строк, 69 case-ов)
 
 ---
 
-## 1. КРИТИЧНЫЕ ПРОБЛЕМЫ
+## 1. КРИТИЧНЫЕ ПРОБЛЕМЫ — ВЫПОЛНЕНО
 
-### 1.1 Мёртвый код в testsystem.php (24 inline-case дублируют ControllerFactory)
+### 1.1 ~~Мёртвый код в testsystem.php (24 inline-case дублируют ControllerFactory)~~ ИСПРАВЛЕНО
 
 `ControllerFactory` перехватывает действие **до** switch-блока (строки 196-197). Все case-ы, дублирующие маппинг ControllerFactory, являются **мёртвым кодом** — они никогда не выполняются.
 
@@ -48,7 +50,7 @@
 
 **Действие:** Удалить все 24 мёртвых case-блока из switch. Это сразу уберёт ~1500 строк.
 
-### 1.2 BUG: Дубликат case 'getTestPermissions'
+### 1.2 ~~BUG: Дубликат case 'getTestPermissions'~~ ИСПРАВЛЕНО
 
 В switch два case с одинаковым именем `getTestPermissions`:
 - **Строка 1726** — работает (PHP матчит первый)
@@ -56,7 +58,7 @@
 
 Реализации **различаются** — вторая использует `getUserRights()`, первая нет. Нужно проверить, какая из них корректная, объединить логику и удалить дубликат.
 
-### 1.3 Отсутствует .htaccess в директории ajax/
+### 1.3 ~~Отсутствует .htaccess в директории ajax/~~ ИСПРАВЛЕНО
 
 `/assets/components/testsystem/ajax/` не имеет .htaccess. Хотя прямой доступ к PHP-файлам здесь — штатная работа (это AJAX endpoint), стоит добавить защиту от листинга директории и запрет доступа к .log файлам (если они случайно создадутся).
 
@@ -70,9 +72,9 @@ Options -Indexes
 
 ---
 
-## 2. АКТИВНЫЕ INLINE-CASE-Ы (45 шт. — требуют миграции в контроллеры)
+## 2. АКТИВНЫЕ INLINE-CASE-Ы — ВЫПОЛНЕНО (мигрированы в контроллеры)
 
-### 2.1 Группа: Knowledge Areas (7 case-ов) → НОВЫЙ KnowledgeAreaController
+### 2.1 ~~Knowledge Areas (7 case-ов) → KnowledgeAreaController~~ ВЫПОЛНЕНО
 
 | Case | Строка | Описание |
 |------|--------|----------|
@@ -84,7 +86,7 @@ Options -Indexes
 | `getAvailableTestsTree` | 1977 | Дерево доступных тестов |
 | `startKnowledgeAreaSession` | 2086 | Запуск сессии по области |
 
-### 2.2 Группа: Category Experts (5 case-ов) → расширить CategoryController
+### 2.2 ~~Category Experts (5 case-ов) → CategoryController~~ ВЫПОЛНЕНО
 
 | Case | Строка | Описание |
 |------|--------|----------|
@@ -94,7 +96,7 @@ Options -Indexes
 | `getCategoryExperts` | 1463 | Список экспертов |
 | `getAvailableExperts` | 1493 | Доступные эксперты |
 
-### 2.3 Группа: Test Access / Permissions (7 case-ов) → расширить TestController или НОВЫЙ TestPermissionController
+### 2.3 ~~Test Access / Permissions (7 case-ов) → TestController~~ ВЫПОЛНЕНО
 
 | Case | Строка | Описание |
 |------|--------|----------|
@@ -108,7 +110,7 @@ Options -Indexes
 
 **Внимание:** `grantAccess`/`revokeAccess` (строки 2737/2787) могут дублировать `grantTestAccess`/`revokeTestAccess` (строки 1618/1689). Требуется анализ — возможно, часть из них мёртвый код.
 
-### 2.4 Группа: Test CRUD & Discovery (9 case-ов) → расширить TestController
+### 2.4 ~~Test CRUD & Discovery (9 case-ов) → TestController~~ ВЫПОЛНЕНО
 
 | Case | Строка | Описание |
 |------|--------|----------|
@@ -122,7 +124,7 @@ Options -Indexes
 | `getSharedWithMe` | 2611 | Тесты, которыми поделились |
 | `getPublicTests` | 2642 | Публичные тесты |
 
-### 2.5 Группа: Notifications (3 case-а) → привязать к NotificationController
+### 2.5 ~~Notifications (3 case-а) → NotificationController~~ ВЫПОЛНЕНО
 
 | Case | Строка | Описание |
 |------|--------|----------|
@@ -132,7 +134,7 @@ Options -Indexes
 
 **Примечание:** В NotificationController уже есть `getMyNotifications`, `markAsRead`, `markAllAsRead`. Эти inline case-ы используют **другие имена действий** — нужно либо добавить алиасы, либо обновить вызовы в JS.
 
-### 2.6 Группа: Materials (MODX Resources) (3 case-а) → расширить MaterialController
+### 2.6 Materials (MODX Resources) (3 case-а) — ОСТАВЛЕНЫ INLINE (архитектурное решение 8.2)
 
 | Case | Строка | Описание |
 |------|--------|----------|
@@ -142,14 +144,14 @@ Options -Indexes
 
 **Контекст:** В MaterialController эти действия **отключены** комментарием, т.к. материалы мигрировали на MODX-ресурсы (site_content). Inline-код работает с site_content напрямую.
 
-### 2.7 Группа: Uploads (2 case-а) → НОВЫЙ UploadController или расширить MaterialController
+### 2.7 ~~Uploads (2 case-а) → UploadController~~ ВЫПОЛНЕНО
 
 | Case | Строка | Описание |
 |------|--------|----------|
 | `uploadImage` | 3385 | Загрузка изображения (70 строк) |
 | `uploadDocument` | 3455 | Загрузка документа (154 строки) |
 
-### 2.8 Группа: Utility / Misc (9 case-ов)
+### 2.8 ~~Utility / Misc (9 case-ов)~~ ВЫПОЛНЕНО
 
 | Case | Строка | Описание | Рекомендуемый контроллер |
 |------|--------|----------|-------------------------|
@@ -237,63 +239,55 @@ Options -Indexes
 | Загрузка изображений | OK | MIME-валидация, GD-ресайз, .htaccess |
 | Загрузка документов | OK | MIME-валидация, сканирование PHP-кода |
 | .htaccess images/ | OK | Запрещает исполнение PHP |
-| .htaccess ajax/ | НЕТ | Отсутствует (см. п.1.3) |
+| .htaccess ajax/ | OK | Создан (защита от листинга и доступа к .log) |
 | .gitignore uploads | OK | Паттерн `q_*` для user-uploaded images |
 
 ---
 
 ## 7. ПЛАН ИСПРАВЛЕНИЙ
 
-### Фаза 1 — Очистка мёртвого кода (приоритет: ВЫСОКИЙ)
+### Фаза 1 — Очистка мёртвого кода — ВЫПОЛНЕНО (2026-02-22)
 
-**Цель:** Убрать ~1 500 строк мёртвого кода, устранить баг с дубликатом case.
+1. ~~Удалить 24 мёртвых case-блока~~ — удалено, testsystem.php: 3734 → 924 строки
+2. ~~Удалить дубликат `case 'getTestPermissions'`~~ — удалён
+3. ~~Проверить `grantAccess` vs `grantTestAccess`~~ — проверено, оба нужны (разные API)
+4. ~~Создать .htaccess в ajax/~~ — создан
 
-1. **Удалить 24 мёртвых case-блока** из switch в testsystem.php (все, которые дублируют ControllerFactory)
-2. **Удалить дубликат** `case 'getTestPermissions'` на строке 2816 (после сверки логики с первым на строке 1726)
-3. **Проверить** `grantAccess` vs `grantTestAccess` и `revokeAccess` vs `revokeTestAccess` — возможно, ещё дубликаты
-4. **Создать .htaccess** в `assets/components/testsystem/ajax/`
+### Фаза 2 — Миграция Notifications — ВЫПОЛНЕНО (2026-02-22)
 
-**Ожидаемый результат:** testsystem.php уменьшится с 3 734 до ~2 200 строк.
+1. ~~Проверить JS action names~~ — JS использует `getUnreadNotificationsCount`, `getRecentNotifications`, `markNotificationAsRead`, `getAllNotifications`, `getNotificationSettings`, `saveNotificationSettings`
+2. ~~Добавить маппинг в ControllerFactory~~ — все алиасы зарегистрированы
+3. ~~Удалить inline case-ы~~ — удалены
 
-### Фаза 2 — Миграция Notifications (приоритет: ВЫСОКИЙ)
+### Фаза 3 — Knowledge Areas — ВЫПОЛНЕНО (2026-02-22)
 
-**Цель:** Устранить расхождение имён между inline case-ами и NotificationController.
+1. ~~Создать KnowledgeAreaController.php~~ — создан (7 actions)
+2. ~~Добавить маппинг в ControllerFactory~~ — добавлено
+3. ~~Удалить inline case-ы~~ — удалены
 
-1. **Проверить**, какие имена действий использует JS (`getNotifications` vs `getMyNotifications`, `markNotificationRead` vs `markAsRead`)
-2. **Добавить алиасы** в ControllerFactory или обновить JS
-3. **Удалить** 3 inline case-а после миграции
+### Фаза 4 — Test CRUD & Permissions — ВЫПОЛНЕНО (2026-02-22)
 
-### Фаза 3 — Knowledge Areas (приоритет: СРЕДНИЙ)
+1. ~~Расширить TestController~~ — добавлены publishTest, getPublicTestBySlug, checkResourcePermissions, createTestWithPage, createTest, createTestPage, getMyTests, getSharedWithMe, getPublicTests, grantTestAccess, revokeTestAccess, getTestPermissions, getAvailableUsersForTest, checkTestAccess, searchUsers, grantAccess, revokeAccess
+2. ~~Обновить маппинг в ControllerFactory~~ — добавлено
+3. ~~Удалить inline case-ы~~ — удалены
 
-**Цель:** Вынести 7 case-ов в новый KnowledgeAreaController.
+### Фаза 5 — Category Experts + Остальное — ВЫПОЛНЕНО (2026-02-22 / 2026-02-23)
 
-1. Создать `assets/components/testsystem/controllers/KnowledgeAreaController.php`
-2. Перенести логику из 7 inline case-ов
-3. Добавить маппинг в ControllerFactory
-4. Удалить inline case-ы
+1. ~~CategoryController: assignCategoryExpert, removeCategoryExpert, createCategory, getCategoryExperts, getAvailableExperts~~ — выполнено (2026-02-22)
+2. ~~SessionController: getSessionInfo~~ — зарегистрирован в ControllerFactory (2026-02-23)
+3. ~~TestController: checkEditRights~~ — добавлен (2026-02-23)
+4. ~~AdminController: checkSiteSettings, cleanupResourceFiles, diagnoseMaterialsAuth~~ — добавлены (2026-02-23)
+5. Materials (site_content): оставлены inline — архитектурное решение 8.2
 
-### Фаза 4 — Test CRUD & Permissions (приоритет: СРЕДНИЙ)
+### Фаза 6 — Uploads — ВЫПОЛНЕНО (2026-02-23)
 
-**Цель:** Расширить TestController оставшимися 16 case-ами.
+1. ~~Создать UploadController.php~~ — создан (uploadImage, uploadDocument)
+2. ~~Зарегистрировать в ControllerFactory~~ — добавлено
+3. ~~Удалить inline case-ы из testsystem.php~~ — удалены
+4. ~~Удалить debug error_log() из uploadDocument~~ — очищено
+5. `upload-image.php` и `upload-document.php` — остаются как альтернативные точки входа (для FormData uploads)
 
-1. Добавить в TestController: `publishTest`, `getPublicTestBySlug`, `checkResourcePermissions`, `createTestWithPage`, `createTest`, `createTestPage`, `getMyTests`, `getSharedWithMe`, `getPublicTests`
-2. Добавить в TestController или создать TestPermissionController: `grantTestAccess`, `revokeTestAccess`, `getTestPermissions`, `getAvailableUsersForTest`, `checkTestAccess`, `grantAccess`, `revokeAccess`
-3. Обновить маппинг в ControllerFactory
-4. Удалить inline case-ы
-
-### Фаза 5 — Category Experts + Остальное (приоритет: СРЕДНИЙ)
-
-1. Добавить в CategoryController: `assignCategoryExpert`, `removeCategoryExpert`, `createCategory`, `getCategoryExperts`, `getAvailableExperts`
-2. Добавить в AdminController или SessionController: `getSessionInfo`, `checkEditRights`, `searchUsers`, `checkSiteSettings`, `cleanupResourceFiles`, `diagnoseMaterialsAuth`
-3. Materials (site_content): решить — обновить MaterialController для работы с MODX-ресурсами или оставить inline
-4. Uploads: вынести `uploadImage`/`uploadDocument` case-ы в контроллер
-
-### Фаза 6 — Upload Service (приоритет: НИЗКИЙ)
-
-1. Создать `core/components/testsystem/services/UploadService.php`
-2. Рефакторить `upload-image.php` и `upload-document.php` для использования общего сервиса
-
-### Фаза 7 — CSS (приоритет: НИЗКИЙ)
+### Фаза 7 — CSS (приоритет: НИЗКИЙ) — НЕ ВЫПОЛНЕНО
 
 1. Вынести общие стили в CSS custom properties
 2. Консолидировать дублирующиеся стили кнопок и карточек
@@ -316,42 +310,45 @@ Options -Indexes
 
 ---
 
-## 9. МЕТРИКИ ДО/ПОСЛЕ (ожидаемые)
+## 9. МЕТРИКИ ДО/ПОСЛЕ (фактические)
 
-| Метрика | До аудита | После Фазы 1 | После всех фаз |
-|---------|-----------|--------------|----------------|
-| testsystem.php строк | 3 734 | ~2 200 | ~200 |
-| Inline case-ов | 69 | ~45 | 2-3 (утилиты) |
-| Мёртвый код (case-ов) | 24 | 0 | 0 |
-| Контроллеров | 15 | 15 | 17 |
-| Действий в ControllerFactory | 113 | 113 | ~155 |
+| Метрика | До аудита | После Фазы 1 | Факт (2026-02-23) |
+|---------|-----------|--------------|-------------------|
+| testsystem.php строк | 3 734 | 924 | **540** |
+| Inline case-ов | 69 | 12 | **5** (getApiVersion, getParentUri, getMaterialsList, getMaterial, saveMaterial) |
+| Мёртвый код (case-ов) | 24 | 0 | **0** |
+| Контроллеров (файлов) | 15 | 15 | **17** (+KnowledgeAreaController, +UploadController) |
+| Действий в ControllerFactory | 113 | 144 | **~151** |
 
 ---
 
-## 10. ФАЙЛОВАЯ СТРУКТУРА (справка)
+## 10. ФАЙЛОВАЯ СТРУКТУРА (справка, обновлено 2026-02-23)
 
 ```
 assets/components/testsystem/
 ├── ajax/
-│   ├── testsystem.php          ← Главный AJAX-обработчик (3 734 строки)
-│   ├── upload-image.php        ← Загрузка изображений (180 строк)
-│   └── upload-document.php     ← Загрузка документов (164 строки)
-├── controllers/
-│   ├── BaseController.php      ← Базовый класс (2.4K)
-│   ├── ControllerFactory.php   ← Фабрика маршрутизации (11K, 113 действий)
-│   ├── AdminController.php     ← Администрирование (10K)
-│   ├── AnalyticsController.php ← Аналитика (15K)
-│   ├── CategoryController.php  ← Категории (16K)
-│   ├── CertificateController.php ← Сертификаты (13K)
-│   ├── FavoriteController.php  ← Избранное (4.8K)
-│   ├── GamificationController.php ← Геймификация (12K)
-│   ├── LearningPathController.php ← Траектории (63K!)
-│   ├── MaterialController.php  ← Материалы (17K)
-│   ├── NotificationController.php ← Уведомления (14K)
-│   ├── QuestionController.php  ← Вопросы (19K)
-│   ├── SessionController.php   ← Сессии тестов (20K)
-│   ├── SpecialQuestionController.php ← Спец. вопросы (7.2K)
-│   └── TestController.php      ← Тесты (8.9K)
+│   ├── testsystem.php          ← Главный AJAX-обработчик (540 строк, 5 inline case-ов)
+│   ├── .htaccess               ← Защита от листинга и доступа к .log файлам
+│   ├── upload-image.php        ← Загрузка изображений (180 строк, альтернативная точка входа)
+│   └── upload-document.php     ← Загрузка документов (164 строки, альтернативная точка входа)
+├── controllers/                ← 17 файлов, ~151 действий через ControllerFactory
+│   ├── BaseController.php      ← Базовый класс
+│   ├── ControllerFactory.php   ← Фабрика маршрутизации (~151 действий)
+│   ├── AdminController.php     ← Администрирование (11 actions)
+│   ├── AnalyticsController.php ← Аналитика (16 actions)
+│   ├── CategoryController.php  ← Категории (13 actions)
+│   ├── CertificateController.php ← Сертификаты (9 actions)
+│   ├── FavoriteController.php  ← Избранное (3 actions)
+│   ├── GamificationController.php ← Геймификация (10 actions)
+│   ├── KnowledgeAreaController.php ← Области знаний (7 actions) [NEW]
+│   ├── LearningPathController.php ← Траектории (25 actions)
+│   ├── MaterialController.php  ← Материалы (14 actions)
+│   ├── NotificationController.php ← Уведомления (18 actions)
+│   ├── QuestionController.php  ← Вопросы (8 actions)
+│   ├── SessionController.php   ← Сессии тестов (6 actions)
+│   ├── SpecialQuestionController.php ← Спец. вопросы (4 actions)
+│   ├── TestController.php      ← Тесты (23 actions)
+│   └── UploadController.php    ← Загрузка файлов (2 actions) [NEW]
 ├── css/                        ← 3 файла, 3 395 строк
 ├── js/                         ← 15 файлов
 ├── images/                     ← User-uploaded, защищён .htaccess

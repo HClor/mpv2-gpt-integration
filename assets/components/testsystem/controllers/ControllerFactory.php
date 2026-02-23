@@ -27,6 +27,7 @@ class ControllerFactory
         'getNextQuestion' => 'SessionController',
         'submitAnswer' => 'SessionController',
         'finishTest' => 'SessionController',
+        'getSessionInfo' => 'SessionController',
 
         // Favorite Controller
         'toggleFavorite' => 'FavoriteController',
@@ -66,6 +67,7 @@ class ControllerFactory
         'searchUsers' => 'TestController',
         'grantAccess' => 'TestController',
         'revokeAccess' => 'TestController',
+        'checkEditRights' => 'TestController',
 
         // Admin Controller
         'checkIntegrity' => 'AdminController',
@@ -76,6 +78,9 @@ class ControllerFactory
         'cleanOrphanedSessions' => 'AdminController',
         'cleanOldSessions' => 'AdminController',
         'getSystemStats' => 'AdminController',
+        'checkSiteSettings' => 'AdminController',
+        'cleanupResourceFiles' => 'AdminController',
+        'diagnoseMaterialsAuth' => 'AdminController',
 
         // Material Controller (OLD - using test_learning_materials table)
         // DISABLED: getMaterial and getMaterialsList now use MODX resources (site_content)
@@ -218,6 +223,10 @@ class ControllerFactory
         'downloadCertificate' => 'CertificateController',
         'getCertificateStatistics' => 'CertificateController',
         'cleanupExpired' => 'CertificateController',
+
+        // Upload Controller
+        'uploadImage' => 'UploadController',
+        'uploadDocument' => 'UploadController',
     ];
 
     /**
