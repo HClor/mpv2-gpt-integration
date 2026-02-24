@@ -13,13 +13,13 @@
 
       'tpl' => '@INLINE <div class="col-xs-6 col-md-4">
           <div class="thumbnail">
-            <a href="{$uri}" title="{$longtitle}">
-                <img src="{$img | phpthumbon : "w=220&h=160&zc=1"}" alt="{$pagetitle}">
+            <a href="{$uri}" title="{$longtitle | escape}">
+                <img src="{$img | phpthumbon : "w=220&h=160&zc=1"}" alt="{$pagetitle | escape}">
             </a>
             <div class="caption">
               <h4 class="text-center">
-                  <a href="{$uri}" title="{$longtitle}">{$pagetitle}</a><br>
-                  {$subtitle}
+                  <a href="{$uri}" title="{$longtitle | escape}">{$pagetitle | escape}</a><br>
+                  {$subtitle | escape}
               </h4>
             </div>
           </div>

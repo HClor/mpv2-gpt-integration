@@ -15,8 +15,9 @@
     $(document).on('af_complete', function(event, response) {
         var form = response.form;
         if (response.success) {
+            var msgText = $('<span>').text(response.message).html();
             $.fancybox.close();
-            $.fancybox.open('<div class="popup" id="popup-call"><div class="popup-title">' + response.message + '</div></div>');
+            $.fancybox.open('<div class="popup" id="popup-call"><div class="popup-title">' + msgText + '</div></div>');
         }
     });
 </script>

@@ -24,16 +24,16 @@
 {/if}
 {* Keywords *}
 {if $_modx->resource.keywords}
-  <meta name="keywords" content="{$_modx->resource.keywords | strip_tags}" />
+  <meta name="keywords" content="{$_modx->resource.keywords | strip_tags | escape}" />
 {/if}
 {* Open Graph *}
-<meta property="og:title" content="{$_modx->resource.pagetitle}">
+<meta property="og:title" content="{$_modx->resource.pagetitle | escape}">
 <meta property="og:type" content="article">
 <meta property="og:url" content="{$_modx->config.site_url}{$_modx->resource.uri}">
 {if $_modx->resource.img}
   <meta property="og:image" content="{$_modx->config.site_url | rtrim : '/'}{$_modx->resource.img | phpthumbon : 'w=800&h=420&zc=1'}" />
 {/if}
-<meta property="og:site_name" content="{$_modx->config.site_name}">
+<meta property="og:site_name" content="{$_modx->config.site_name | escape}">
 
 <link rel="icon" href="/assets/components/siteextra/web/img/favicon.ico" type="image/x-icon">
 

@@ -86,6 +86,7 @@ document.addEventListener('DOMContentLoaded', function() {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'X-CSRF-Token': getCSRFToken()
             },
             body: JSON.stringify({
                 action: 'getUnreadNotifications',
@@ -345,7 +346,7 @@ function showLpNotification(message, type) {
     const notification = document.createElement('div');
     notification.className = 'alert alert-' + type + ' position-fixed top-0 start-50 translate-middle-x mt-3 shadow';
     notification.style.zIndex = '10000';
-    notification.innerHTML = message;
+    notification.textContent = message;
     document.body.appendChild(notification);
     setTimeout(function() { notification.remove(); }, 3000);
 }
