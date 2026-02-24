@@ -6,8 +6,8 @@
     <base href="{$_modx->config.site_url}">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="{$_modx->resource.description}">
-    <meta name="keywords" content="{$_modx->resource.keywords}">
+    <meta name="description" content="{$_modx->resource.description | escape}">
+    <meta name="keywords" content="{$_modx->resource.keywords | escape}">
 
     <title>{$_modx->resource.pagetitle ?: $_modx->resource.longtitle} - {$_modx->config.site_name}</title>
 
@@ -93,7 +93,7 @@
             box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
         }
 
-        /* Стили для уведомлений -->
+        /* Стили для уведомлений */
         .alert {
             border-radius: 0.5rem;
         }

@@ -85,7 +85,7 @@
           <!-- Меню пользователя -->
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" id="userMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <i class="fas fa-user-circle me-1"></i> {$_modx->user.username}
+              <i class="fas fa-user-circle me-1"></i> {$_modx->user.username | escape}
             </a>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
               <li><a class="dropdown-item" href="{$_modx->makeUrl(28)}"><i class="fas fa-user me-2"></i> Мой профиль</a></li>

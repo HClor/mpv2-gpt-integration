@@ -10,13 +10,13 @@
     'tpl' => '@INLINE <div class="media">
           {if $img}
           <div class="media-left">
-            <a href="{$uri}" title="{$longtitle}">
-              <img class="media-object" src="{$img | phpthumbon : "w=60&h=60&zc=1"}" alt="{$pagetitle}">
+            <a href="{$uri}" title="{$longtitle | escape}">
+              <img class="media-object" src="{$img | phpthumbon : "w=60&h=60&zc=1"}" alt="{$pagetitle | escape}">
             </a>
           </div>
           {/if}
           <div class="media-body">
-            <h4 class="media-heading"><a href="{$uri}" title="{$longtitle}">{$pagetitle}</a></h4>
+            <h4 class="media-heading"><a href="{$uri}" title="{$longtitle | escape}">{$pagetitle | escape}</a></h4>
             <p class="text-muted"><span class="glyphicon glyphicon-calendar"></span> {$publishedon | date_format : "%d.%m.%Y г."}</p>
             <small>{$content | striptags | ellipsis : "110"}</small>
           </div>
@@ -35,13 +35,13 @@
         'sortby' => '{"menuindex":"ASC"}',
         'tpl' => '@INLINE <div class="col-md-6">
             <div class="thumbnail">
-              <a href="{$uri}" title="{$longtitle}">
-                  <img src="{$img | phpthumbon : "w=155&h=155&zc=1"}" alt="{$pagetitle}">
+              <a href="{$uri}" title="{$longtitle | escape}">
+                  <img src="{$img | phpthumbon : "w=155&h=155&zc=1"}" alt="{$pagetitle | escape}">
               </a>
               <div class="caption">
                 <p class="text-center">
-                    <a href="{$uri}" title="{$longtitle}">{$pagetitle}</a><br>
-                    {$subtitle}
+                    <a href="{$uri}" title="{$longtitle | escape}">{$pagetitle | escape}</a><br>
+                    {$subtitle | escape}
                 </p>
               </div>
             </div>
@@ -58,13 +58,13 @@
             'sortby' => '{"menuindex":"ASC"}',
             'tpl' => '@INLINE <div class="col-md-6">
                 <div class="thumbnail">
-                  <a href="{$uri}" title="{$longtitle}">
-                      <img src="{$img | phpthumbon : "w=155&h=155&zc=1"}" alt="{$pagetitle}">
+                  <a href="{$uri}" title="{$longtitle | escape}">
+                      <img src="{$img | phpthumbon : "w=155&h=155&zc=1"}" alt="{$pagetitle | escape}">
                   </a>
                   <div class="caption">
                     <p class="text-center">
-                        <a href="{$uri}" title="{$longtitle}">{$pagetitle}</a><br>
-                        {$subtitle}
+                        <a href="{$uri}" title="{$longtitle | escape}">{$pagetitle | escape}</a><br>
+                        {$subtitle | escape}
                     </p>
                   </div>
                 </div>

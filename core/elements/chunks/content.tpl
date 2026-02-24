@@ -8,14 +8,17 @@
     {case 1}
         {var $default = false}
         {include 'content_main'}
+        {break}
     {case 4}
         {var $default = false}
         {include 'content_spec_list'}
+        {break}
 {/switch}
 {switch $_modx->resource.parent}
     {case 4}
         {var $default = false}
         {include 'content_spec'}
+        {break}
 {/switch}
 {if $default}
     {include 'content_default'}

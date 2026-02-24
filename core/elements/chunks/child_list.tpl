@@ -11,13 +11,13 @@
     'tpl' => '@INLINE <div class="media">
           {if $img}
           <div class="media-left">
-            <a href="{$uri}" title="{$longtitle}">
-              <img class="media-object" src="{$img | phpthumbon : "w=120&h=90&zc=1"}" alt="{$pagetitle}">
+            <a href="{$uri}" title="{$longtitle | escape}">
+              <img class="media-object" src="{$img | phpthumbon : "w=120&h=90&zc=1"}" alt="{$pagetitle | escape}">
             </a>
           </div>
           {/if}
           <div class="media-body">
-            <h4 class="media-heading"><a href="{$uri}" title="{$longtitle}">{$pagetitle}</a></h4>
+            <h4 class="media-heading"><a href="{$uri}" title="{$longtitle | escape}">{$pagetitle | escape}</a></h4>
             <p class="text-muted"><span class="glyphicon glyphicon-calendar"></span> {$publishedon | date_format : "%d.%m.%Y г."}</p>
             {$content | striptags | ellipsis : "250"}
           </div>
