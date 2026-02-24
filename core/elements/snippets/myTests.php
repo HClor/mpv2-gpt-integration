@@ -97,62 +97,6 @@ $output .= '<button type="button" class="btn btn-primary" onclick="createTest()"
 $output .= '</div>';
 $output .= '</div></div></div>';
 
-// Добавляем стили для кнопок (убираем градиенты, единый стиль)
-$output .= '<style>
-/* Убираем градиенты с кнопок, используем плоские цвета Bootstrap */
-#my-tests-container .btn {
-    background-image: none !important;
-    box-shadow: none !important;
-}
-
-#my-tests-container .btn-primary {
-    background-color: #0d6efd;
-    border-color: #0d6efd;
-}
-
-#my-tests-container .btn-primary:hover {
-    background-color: #0b5ed7;
-    border-color: #0a58ca;
-}
-
-#my-tests-container .btn-success {
-    background-color: #198754;
-    border-color: #198754;
-}
-
-#my-tests-container .btn-success:hover {
-    background-color: #157347;
-    border-color: #146c43;
-}
-
-#my-tests-container .btn-outline-primary,
-#my-tests-container .btn-outline-success,
-#my-tests-container .btn-outline-info,
-#my-tests-container .btn-outline-danger,
-#my-tests-container .btn-outline-secondary,
-#my-tests-container .btn-outline-warning {
-    background-image: none !important;
-    background-color: transparent;
-}
-
-/* Кнопки действий над тестами */
-.btn-test-action {
-    min-width: 40px;
-    min-height: 38px;
-    padding: 0.375rem 0.75rem;
-}
-
-.test-title-clickable {
-    cursor: pointer;
-    transition: color 0.2s ease;
-}
-
-.test-title-clickable:hover {
-    color: #0d6efd !important;
-    text-decoration: underline;
-}
-</style>';
-
 $output .= '<script src="' . htmlspecialchars($jsPath, ENT_QUOTES, 'UTF-8') . '"></script>';
 
 return $output;

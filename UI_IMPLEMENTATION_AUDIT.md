@@ -2,7 +2,7 @@
 
 > Файл для отслеживания прогресса внедрения `STYLE_GUIDE.md` в существующую инфраструктуру.
 > При старте новой сессии — ссылаться на этот файл для продолжения работы.
-> Обновлено: 2026-02-24
+> Обновлено: 2026-02-24 (Этап 4 завершён)
 
 ---
 
@@ -192,7 +192,7 @@ Grep по CSS-файлам на `#[0-9a-fA-F]{3,6}` возвращает 0 ре�
 
 #### Задачи
 
-- [ ] **4.1** `tsHead.tpl`: вынести блок `<style>` в `ts-layout.css`
+- [x] **4.1** `tsHead.tpl`: вынести блок `<style>` в `ts-layout.css`  ✓ 2026-02-24
   — `.navbar-brand` стили
   — `footer` стили
   — `.breadcrumb` стили
@@ -200,30 +200,43 @@ Grep по CSS-файлам на `#[0-9a-fA-F]{3,6}` возвращает 0 ре�
   — `.alert` стили
   — `.user-xp` стили
 
-- [ ] **4.2** `myTests.php`: вынести inline стили в `testsystem-extended.css` или новый файл
+- [x] **4.2** `myTests.php`: вынести inline стили в `testsystem-extended.css`  ✓ 2026-02-24
+  — Удалены избыточные переопределения Bootstrap-кнопок
+  — Функциональные стили `.btn-test-action`, `.test-title-clickable` → `testsystem-extended.css`
 
-- [ ] **4.3** `myFavorites.php`: вынести inline стили
+- [x] **4.3** `myFavorites.php`: вынести inline стили  ✓ 2026-02-24
+  — `.favorite-question-clickable`, `.removing-item`, стили модального изображения → `testsystem-extended.css`
 
-- [ ] **4.4** `learningPaths.php`: вынести inline стили
+- [x] **4.4** `learningPaths.php`: вынести inline стили  ✓ 2026-02-24
+  — `.step-timeline`, `.step-card`, drag-and-drop стили → `testsystem-extended.css`
 
-- [ ] **4.5** `knowledgeAreasManager.php`: вынести inline стили
+- [x] **4.5** `knowledgeAreasManager.php`: вынести inline стили  ✓ 2026-02-24
+  — Удалены избыточные переопределения Bootstrap-кнопок
+  — `.knowledge-areas-wrapper .card` hover → `testsystem-extended.css`
 
-- [ ] **4.6** `manageCategories.php`: вынести inline стили
+- [x] **4.6** `manageCategories.php`: вынести inline стили  ✓ 2026-02-24
+  — Удалены избыточные переопределения Bootstrap-кнопок
+  — `.table tbody tr:hover` → `testsystem-extended.css` (с уточнённым селектором)
 
-- [ ] **4.7** `adminDataIntegrity.php`: вынести inline стили
+- [x] **4.7** `adminDataIntegrity.php`: вынести inline стили  ✓ 2026-02-24
+  — `#data-integrity-admin .issue-card`, `.stat-card` → `testsystem-extended.css`
 
-- [ ] **4.8** `base.tpl`: вынести inline стили
+- [x] **4.8** `base.tpl`: вынести inline стили  ✓ 2026-02-24
+  — Создан `assets/templates/css/base-layout.css`; `[[++manager_url]]` заменён на `/manager/...`
 
-- [ ] **4.9** `LMS_Bootstrap_5.tpl`: вынести inline стили
+- [x] **4.9** `LMS_Bootstrap_5.tpl`: вынести inline стили  ✓ 2026-02-24
+  — Подключены `ts-variables.css` + `ts-layout.css`; inline `<style>` удалён
 
-- [ ] **4.10** Создать `assets/components/testsystem/css/ts-layout.css`
-  — Навбар, футер, breadcrumb, фон страницы
+- [x] **4.10** Создать `assets/components/testsystem/css/ts-layout.css`  ✓ 2026-02-24
+  — Навбар, футер, breadcrumb, фон страницы, `.card`, `.alert`, `.user-xp`
+  — Подключён в `tsHead.tpl` и `LMS_Bootstrap_5.tpl`
 
 #### Критерий завершения
 Grep по `<style>` в `core/elements/` возвращает 0 результатов.
+**Верификация:** `grep -rn "<style" core/elements/` → 0 результатов ✓
 
 #### Статус
-`[ ] НЕ НАЧАТ`
+`[x] ГОТОВ 2026-02-24`
 
 ---
 
@@ -410,8 +423,8 @@ Grep по `class="btn btn-` в PHP-сниппетах возвращает 0 р�
 |---|---|---|---|---|
 | 1 | CSS-фундамент: переменные | 2 | `[x] ГОТОВ 2026-02-24` | `claude/ui-stage-1-variables` |
 | 2 | Замена иконок FA → BI | 6 | `[x] ГОТОВ 2026-02-24` | `claude/ui-stage-2-icons` |
-| 3 | Hex-цвета → переменные в CSS | 3 | `[ ]` | `claude/ui-stage-3-css-vars` |
-| 4 | Вынос inline `<style>` | 9 | `[ ]` | `claude/ui-stage-4-no-inline-styles` |
+| 3 | Hex-цвета → переменные в CSS | 3 | `[x] ГОТОВ 2026-02-24` | `claude/ui-stage-3-css-vars` |
+| 4 | Вынос inline `<style>` | 9 | `[x] ГОТОВ 2026-02-24` | `claude/ui-implementation-stage-4-z3JKU` |
 | 5 | CSS-компоненты (`ts-components.css`) | 1 (новый) | `[ ]` | `claude/ui-stage-5-components` |
 | 6 | Миграция сниппетов PHP | 29 | `[ ]` | `claude/ui-stage-6-snippets` |
 | 7 | Финальный аудит и чистка | — | `[ ]` | `claude/ui-stage-7-cleanup` |

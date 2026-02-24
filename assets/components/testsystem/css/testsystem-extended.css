@@ -447,3 +447,164 @@
 @media (prefers-color-scheme: dark) {
     /* Можно добавить темную тему при необходимости */
 }
+
+/* ==================== MY TESTS (Sprint 17 / Stage 4) ==================== */
+
+.btn-test-action {
+    min-width: 40px;
+    min-height: 38px;
+    padding: 0.375rem 0.75rem;
+}
+
+.test-title-clickable {
+    cursor: pointer;
+    transition: color var(--transition-base);
+}
+
+.test-title-clickable:hover {
+    color: var(--color-primary) !important;
+    text-decoration: underline;
+}
+
+/* ==================== MY FAVORITES (Stage 4) ==================== */
+
+.favorite-question-clickable:hover {
+    background-color: var(--color-bg-hover);
+    border-radius: var(--radius-badge);
+    padding: 8px;
+    margin: -8px;
+}
+
+.favorite-question-clickable:active {
+    background-color: var(--color-border);
+}
+
+.removing-item {
+    transition: all var(--transition-slow);
+    opacity: 0.5;
+}
+
+#modal-question-text img,
+#modal-explanation img {
+    max-width: 100% !important;
+    height: auto !important;
+    display: block;
+    margin: 10px auto;
+    border-radius: var(--radius-btn);
+    box-shadow: var(--shadow-card);
+}
+
+#modal-question-text,
+#modal-explanation {
+    overflow-x: hidden;
+}
+
+/* ==================== LEARNING PATHS — STEP TIMELINE (Stage 4) ==================== */
+
+.step-timeline {
+    position: relative;
+    padding-left: 40px;
+}
+
+.step-timeline::before {
+    content: "";
+    position: absolute;
+    left: 15px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--color-border);
+}
+
+.step-card {
+    position: relative;
+    margin-bottom: 1.5rem;
+}
+
+.step-card::before {
+    content: "";
+    position: absolute;
+    left: -33px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 16px;
+    height: 16px;
+    border-radius: var(--radius-pill);
+    background: var(--color-bg-card);
+    border: 2px solid var(--color-border);
+    z-index: 1;
+}
+
+.step-card.completed::before {
+    background: var(--color-success);
+    border-color: var(--color-success);
+}
+
+.step-card.in-progress::before {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+}
+
+.step-card.available::before {
+    background: var(--color-bg-card);
+    border-color: var(--color-primary);
+}
+
+.step-card.locked::before {
+    background: var(--color-text-muted);
+    border-color: var(--color-text-muted);
+}
+
+/* Drag-and-drop step editor */
+.step-editor-card[draggable="true"] {
+    cursor: move;
+}
+
+.step-editor-card.dragging {
+    opacity: 0.5;
+}
+
+.step-editor-card.drag-over {
+    border-top: 3px solid var(--color-primary);
+}
+
+/* ==================== KNOWLEDGE AREAS (Stage 4) ==================== */
+
+.knowledge-areas-wrapper .card {
+    transition: transform var(--transition-base), box-shadow var(--transition-base);
+}
+
+.knowledge-areas-wrapper .card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card-hover);
+}
+
+/* ==================== MANAGE CATEGORIES — TABLE (Stage 4) ==================== */
+
+.manage-categories-page .table tbody tr {
+    transition: background-color var(--transition-base);
+}
+
+.manage-categories-page .table tbody tr:hover {
+    background-color: var(--color-bg-page);
+}
+
+/* ==================== ADMIN DATA INTEGRITY (Stage 4) ==================== */
+
+#data-integrity-admin .issue-card {
+    margin-bottom: 1rem;
+}
+
+#data-integrity-admin .issue-card .card-body {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+#data-integrity-admin .stat-card {
+    transition: transform var(--transition-base);
+}
+
+#data-integrity-admin .stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-card-hover);
+}

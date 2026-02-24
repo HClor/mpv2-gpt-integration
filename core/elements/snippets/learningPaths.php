@@ -295,31 +295,6 @@ function renderPathView($modx, $prefix, $pathId, $userId, $isLoggedIn) {
         <h4><i class="bi bi-trophy"></i> Достижения траектории</h4>
         <div id="achievements-container" class="row g-3 mt-2"></div>
     </div>
-
-    <style>
-        .step-timeline { position: relative; padding-left: 40px; }
-        .step-timeline::before {
-            content: ""; position: absolute; left: 15px; top: 0; bottom: 0;
-            width: 2px; background: #dee2e6;
-        }
-        .step-card { position: relative; margin-bottom: 1.5rem; }
-        .step-card::before {
-            content: ""; position: absolute; left: -33px; top: 50%;
-            transform: translateY(-50%); width: 16px; height: 16px;
-            border-radius: 50%; background: #fff; border: 2px solid #dee2e6; z-index: 1;
-        }
-        .step-card.completed::before { background: #198754; border-color: #198754; }
-        .step-card.in-progress::before { background: #0d6efd; border-color: #0d6efd; }
-        .step-card.available::before { background: #fff; border-color: #0d6efd; }
-        .step-card.locked::before { background: #adb5bd; border-color: #adb5bd; }
-
-        /* Стили для drag-and-drop */
-        .step-editor-card[draggable="true"] { cursor: move; }
-        .step-editor-card.dragging { opacity: 0.5; }
-        .step-editor-card.drag-over { border-top: 3px solid #0d6efd; }
-        .handle { cursor: grab; }
-        .handle:active { cursor: grabbing; }
-    </style>
     ';
 
     return $html;
