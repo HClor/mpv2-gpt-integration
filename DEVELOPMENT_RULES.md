@@ -338,6 +338,140 @@ console.log('[DIAG-2] Element:', element);
 
 ---
 
+## 10. Правила оформления элементов интерфейса (UI)
+
+> Полная спецификация — в `STYLE_GUIDE.md`. Здесь — обязательные правила для разработчика.
+
+### 10.1. Иконки — только Bootstrap Icons
+
+**Единственная разрешённая библиотека иконок: Bootstrap Icons (`bi bi-*`).**
+
+Font Awesome (`fas fa-*`) запрещён в новом коде и подлежит замене в существующем.
+
+```html
+<!-- ЗАПРЕЩЕНО -->
+<i class="fas fa-graduation-cap"></i>
+<i class="fa fa-user"></i>
+
+<!-- ВЕРНО -->
+<i class="bi bi-mortarboard-fill"></i>
+<i class="bi bi-person-circle"></i>
+```
+
+Таблица замен — в `STYLE_GUIDE.md`, раздел 6.
+
+### 10.2. Цвета — только через CSS Custom Properties
+
+Запрещено использовать жёстко заданные цвета в HTML или CSS. Все цвета — через переменные из `ts-variables.css`.
+
+```css
+/* ЗАПРЕЩЕНО */
+color: #0d6efd;
+background: #28a745;
+
+/* ВЕРНО */
+color: var(--color-primary);
+background: var(--color-success);
+```
+
+Полная палитра переменных — в `STYLE_GUIDE.md`, раздел 2.
+
+### 10.3. Inline-стили запрещены
+
+```html
+<!-- ЗАПРЕЩЕНО — inline стиль -->
+<div style="color: red; margin-top: 10px;">...</div>
+
+<!-- ВЕРНО — класс -->
+<div class="ts-danger mt-2">...</div>
+```
+
+Исключение: динамически вычисляемые значения (например, `width: {{$percent}}%` у прогресс-баров).
+
+### 10.4. Inline `<style>` в сниппетах и чанках запрещены
+
+CSS-код в PHP-сниппетах и Fenom-чанках запрещён. Стили выносятся в CSS-файлы.
+
+```php
+// ЗАПРЕЩЕНО
+$output .= '<style>.my-class { color: red; }</style>';
+
+// ВЕРНО — стили в CSS-файле, подключение через сниппет
+$modx->regClientCSS($assetsUrl . 'css/ts-components.css');
+```
+
+### 10.5. Классы компонентов — пространство имён `ts-`
+
+Кастомные CSS-классы имеют префикс `ts-`. Bootstrap-классы используются как утилиты (сетка, margin, padding), но не перегружаются кастомными стилями через `.btn-primary`.
+
+```css
+/* ЗАПРЕЩЕНО — переопределять Bootstrap через его же классы */
+.btn-primary { background: #0095F6; }
+
+/* ВЕРНО — свои компоненты */
+.ts-btn-primary { background: var(--color-primary); }
+```
+
+### 10.6. Таблица допустимых border-radius
+
+| Элемент | Значение |
+|---|---|
+| Кнопки, поля ввода, бейджи | `8px` |
+| Карточки, dropdown | `12px` |
+| Модальные окна | `16px` |
+| Круглые кнопки (только иконка) | `50%` |
+
+Произвольные значения (`4px`, `6px`, `20px`, `2rem`) запрещены.
+
+### 10.7. Тени — только из палитры
+
+```css
+/* Карточка (стандарт) */
+box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+
+/* Карточка (hover) */
+box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+
+/* Dropdown */
+box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+```
+
+Крупные декоративные тени (`0 8px 30px`, `0 20px 60px`) запрещены.
+
+### 10.8. Hover-эффекты у кнопок — без подъёма
+
+```css
+/* ЗАПРЕЩЕНО — кнопка "прыгает" */
+.btn:hover { transform: translateY(-2px); }
+
+/* ВЕРНО — только изменение цвета */
+.ts-btn-primary:hover { background: var(--color-primary-dark); }
+```
+
+Эффект `translateY(-2px)` разрешён только для карточек (`.ts-card:hover`), но не для кнопок.
+
+### 10.9. Кнопки не должны иметь собственных градиентов
+
+```css
+/* ЗАПРЕЩЕНО */
+.btn-start { background: linear-gradient(135deg, #4caf50, #45a049); }
+
+/* ВЕРНО */
+.ts-btn-success { background: var(--color-success); }
+```
+
+### 10.10. Чеклист UI перед коммитом
+
+- [ ] Иконки только `bi bi-*`, без `fas fa-*`
+- [ ] Цвета только через `var(--color-*)`, без hex-литералов
+- [ ] Нет inline `style="..."` (кроме динамических значений)
+- [ ] Нет `<style>` в PHP-сниппетах и Fenom-чанках
+- [ ] CSS-классы кастомных компонентов с префиксом `ts-`
+- [ ] Border-radius из палитры: 8px / 12px / 16px / 50%
+- [ ] Кнопки без `transform` на hover
+
+---
+
 ## 9. Правила работы с файлами
 
 ### 9.1. User-uploaded контент не должен попадать в git
