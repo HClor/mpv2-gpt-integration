@@ -46,8 +46,8 @@
 }
 
 .material-block.block-completed {
-    background-color: #f8f9fa;
-    border-left: 4px solid #28a745;
+    background-color: var(--color-bg-page);
+    border-left: 4px solid var(--color-success);
 }
 
 .block-text {
@@ -58,7 +58,7 @@
 .block-image img,
 .block-video iframe,
 .block-video video {
-    border-radius: 8px;
+    border-radius: var(--radius-btn);
 }
 
 .rich-text-editor {
@@ -72,7 +72,7 @@
 }
 
 .permission-row:hover {
-    background-color: #f8f9fa;
+    background-color: var(--color-bg-page);
 }
 
 /* ==================== LEARNING PATHS (Sprint 11) ==================== */
@@ -110,7 +110,7 @@
 
 .matching-left-item:hover,
 .matching-right-item:hover {
-    background-color: #f0f0f0;
+    background-color: var(--color-bg-hover);
 }
 
 .ordering-list {
@@ -126,7 +126,7 @@
 }
 
 .fill-blank-input {
-    border-bottom: 2px solid #0d6efd;
+    border-bottom: 2px solid var(--color-primary);
     border-top: none;
     border-left: none;
     border-right: none;
@@ -135,7 +135,7 @@
 }
 
 .fill-blank-input:focus {
-    border-bottom-color: #0a58ca;
+    border-bottom-color: var(--color-primary-dark);
     box-shadow: none;
 }
 
@@ -172,7 +172,7 @@
 }
 
 .achievement-card.border-warning {
-    background: linear-gradient(135deg, #fff3cd 0%, #ffffff 100%);
+    background: linear-gradient(135deg, var(--color-warning-light) 0%, var(--color-bg-card) 100%);
 }
 
 .achievement-icon {
@@ -220,7 +220,7 @@
 }
 
 #notifications-dropdown .list-group-item.bg-light {
-    background-color: #e7f3ff !important;
+    background-color: var(--color-primary-light) !important;
 }
 
 #notifications-badge {
@@ -229,7 +229,7 @@
     right: -5px;
     min-width: 20px;
     height: 20px;
-    border-radius: 10px;
+    border-radius: var(--radius-btn);
     font-size: 0.7rem;
     display: flex;
     align-items: center;
@@ -268,9 +268,9 @@
 }
 
 .certificate-preview {
-    border: 2px solid #ffc107;
+    border: 2px solid var(--color-warning);
     padding: 20px;
-    background: linear-gradient(135deg, #fff8dc 0%, #ffffff 100%);
+    background: linear-gradient(135deg, var(--color-warning-light) 0%, var(--color-bg-card) 100%);
 }
 
 /* ==================== RESPONSIVE UTILITIES ==================== */
@@ -337,13 +337,13 @@
 /* ==================== CUSTOM BADGES ==================== */
 
 .badge.bg-purple {
-    background-color: #6f42c1 !important;
+    background-color: var(--color-xp) !important;
 }
 
 /* ==================== PROGRESS BARS ==================== */
 
 .progress {
-    border-radius: 10px;
+    border-radius: var(--radius-btn);
     overflow: hidden;
 }
 
@@ -368,14 +368,14 @@
 }
 
 .list-group-item-action:hover {
-    background-color: #f8f9fa;
+    background-color: var(--color-bg-page);
     transform: translateX(5px);
 }
 
 /* ==================== TABLES ==================== */
 
 .table-hover tbody tr:hover {
-    background-color: #f8f9fa;
+    background-color: var(--color-bg-page);
 }
 
 /* ==================== BUTTONS ==================== */
@@ -385,26 +385,25 @@
 }
 
 .btn:hover {
-    transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(0,0,0,0.15);
 }
 
 .btn:active {
-    transform: translateY(0);
+    box-shadow: none;
 }
 
 /* ==================== FORMS ==================== */
 
 .form-control:focus,
 .form-select:focus {
-    border-color: #0d6efd;
+    border-color: var(--color-primary);
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
 }
 
 /* ==================== ALERTS ==================== */
 
 .alert {
-    border-radius: 8px;
+    border-radius: var(--radius-btn);
 }
 
 /* ==================== TOOLTIPS & POPOVERS ==================== */
@@ -438,7 +437,7 @@
     }
 
     .card {
-        border: 1px solid #dee2e6;
+        border: 1px solid var(--color-border);
         page-break-inside: avoid;
     }
 }

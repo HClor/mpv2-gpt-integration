@@ -132,27 +132,41 @@
 
 #### Задачи
 
-- [ ] **3.1** Рефакторинг `tsrunner.css`: заменить все hex-цвета на переменные
+- [x] **3.0** Добавить недостающие переменные в `ts-variables.css`  ✓ 2026-02-24
+  — `--color-primary-text`, `--color-success-text`, `--color-danger-text`, `--color-warning-text`
+  — `--color-xp-dark` (для градиентов)
 
-- [ ] **3.2** Рефакторинг `testsystem-extended.css`: заменить все hex-цвета на переменные
+- [x] **3.1** Рефакторинг `tsrunner.css`: заменить все hex-цвета на переменные  ✓ 2026-02-24
+  — ~59 уникальных hex → `var(--color-*)`, ~40 border-radius → `var(--radius-*)`
 
-- [ ] **3.3** Рефакторинг `categories-and-tests.css`: заменить все hex-цвета на переменные
+- [x] **3.2** Рефакторинг `testsystem-extended.css`: заменить все hex-цвета на переменные  ✓ 2026-02-24
+  — 12 уникальных hex → `var(--color-*)`, border-radius → `var(--radius-*)`
 
-- [ ] **3.4** Унифицировать значения `border-radius`:
-  — `4px`, `6px` → `8px` (кнопки, поля, бейджи)
-  — `8px` для карточек → `12px`
-  — Все как переменные через `var(--radius-*)` или напрямую
+- [x] **3.3** Рефакторинг `categories-and-tests.css`: заменить все hex-цвета на переменные  ✓ 2026-02-24
+  — 21 уникальных hex → `var(--color-*)`, border-radius → `var(--radius-*)`
 
-- [ ] **3.5** Убрать `transform: translateY(-2px)` из всех hover-состояний кнопок
-  (оставить только у `.ts-card:hover`)
+- [x] **3.4** Унифицировать значения `border-radius` через `var(--radius-*)`  ✓ 2026-02-24
+  — `4px`, `6px` → `var(--radius-badge)` (6px)
+  — `8px`, `10px` → `var(--radius-btn)` (8px)
+  — `12px` → `var(--radius-card)` (12px)
+  — Pill-значения (28px, 32px, 34px, 50%) оставлены как есть (toggle-специфичные)
 
-- [ ] **3.6** Убрать градиентные фоны у кнопок (`.btn-start-training`, `.btn-start-exam`)
+- [x] **3.5** Убрать `transform: translateY(-2px)` из всех hover-состояний кнопок  ✓ 2026-02-24
+  — Удалено из: `.btn:hover`, `#start-test-unified:hover`, `.btn-group .btn:hover`,
+    `#submit-answer-btn:hover`, `#prev-card-btn:hover`, `.auth-required-alert .btn-primary:hover`,
+    `.start-test-btn-compact:hover`, `.test-actions-compact .btn-test-action:hover`,
+    `#my-tests-container .btn-primary:hover`, `.btn-start-training:hover`, `.btn-start-exam:hover`
+  — Оставлено на карточках: `.mode-card:hover`, `.knowledge-area-card:hover`, `.test-card:hover`
+
+- [x] **3.6** Убрать градиентные фоны у кнопок (`.btn-start-training`, `.btn-start-exam`)  ✓ 2026-02-24
+  — Теперь используют `var(--color-success)` / `var(--color-primary)` вместо Material Design hex
 
 #### Критерий завершения
-Grep по CSS-файлам на `#[0-9a-fA-F]{3,6}` возвращает 0 результатов.
+Grep по CSS-файлам на `#[0-9a-fA-F]{3,6}` возвращает 0 результатов (кроме `ts-variables.css` — определения токенов).
+**Верификация:** hex-коды остались только в `ts-variables.css` (определения переменных) и 1 комментарий в `tsrunner.css` ✓
 
 #### Статус
-`[ ] НЕ НАЧАТ`
+`[x] ГОТОВ 2026-02-24`
 
 ---
 
