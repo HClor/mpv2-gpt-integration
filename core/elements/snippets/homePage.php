@@ -27,11 +27,11 @@ $output = [];
 // ===== HERO SECTION =====
 $output[] = '<div class="bg-primary text-white py-5 mb-4 rounded-3">';
 $output[] = '<div class="container text-center">';
-$output[] = '<h1 class="display-5 fw-bold mb-3"><i class="fas fa-graduation-cap me-2"></i>Система тестирования</h1>';
+$output[] = '<h1 class="display-5 fw-bold mb-3"><i class="bi bi-mortarboard-fill me-2"></i>Система тестирования</h1>';
 $output[] = '<p class="lead mb-4">Проверьте свои знания, изучайте материалы и получайте сертификаты</p>';
 $output[] = '<div class="d-flex justify-content-center gap-3 flex-wrap">';
-$output[] = '<a href="' . $testsUrl . '" class="btn btn-light btn-lg"><i class="fas fa-tasks me-2"></i>Пройти тест</a>';
-$output[] = '<a href="' . $materialsUrl . '" class="btn btn-outline-light btn-lg"><i class="fas fa-book me-2"></i>Учебные материалы</a>';
+$output[] = '<a href="' . $testsUrl . '" class="btn btn-light btn-lg"><i class="bi bi-card-checklist me-2"></i>Пройти тест</a>';
+$output[] = '<a href="' . $materialsUrl . '" class="btn btn-outline-light btn-lg"><i class="bi bi-book me-2"></i>Учебные материалы</a>';
 $output[] = '</div>';
 $output[] = '</div>';
 $output[] = '</div>';
@@ -72,17 +72,17 @@ if ($stats === null) {
 $output[] = '<div class="row g-3 mb-4">';
 
 $statsItems = [
-    ['icon' => 'fa-clipboard-list', 'value' => $stats['tests'], 'label' => 'Тестов', 'color' => 'primary'],
-    ['icon' => 'fa-users', 'value' => $stats['users'], 'label' => 'Участников', 'color' => 'success'],
-    ['icon' => 'fa-check-circle', 'value' => number_format($stats['completed'], 0, '', ' '), 'label' => 'Пройдено', 'color' => 'info'],
-    ['icon' => 'fa-route', 'value' => $stats['paths'], 'label' => 'Траекторий', 'color' => 'warning'],
+    ['icon' => 'bi-card-checklist', 'value' => $stats['tests'], 'label' => 'Тестов', 'color' => 'primary'],
+    ['icon' => 'bi-people', 'value' => $stats['users'], 'label' => 'Участников', 'color' => 'success'],
+    ['icon' => 'bi-check-circle-fill', 'value' => number_format($stats['completed'], 0, '', ' '), 'label' => 'Пройдено', 'color' => 'info'],
+    ['icon' => 'bi-signpost-split', 'value' => $stats['paths'], 'label' => 'Траекторий', 'color' => 'warning'],
 ];
 
 foreach ($statsItems as $item) {
     $output[] = '<div class="col-6 col-md-3">';
     $output[] = '<div class="card text-center h-100 border-0 shadow-sm">';
     $output[] = '<div class="card-body py-4">';
-    $output[] = '<i class="fas ' . $item['icon'] . ' fa-2x text-' . $item['color'] . ' mb-2"></i>';
+    $output[] = '<i class="bi ' . $item['icon'] . ' fs-3 text-' . $item['color'] . ' mb-2"></i>';
     $output[] = '<h3 class="fw-bold mb-0">' . $item['value'] . '</h3>';
     $output[] = '<p class="text-muted mb-0 small">' . $item['label'] . '</p>';
     $output[] = '</div>';
@@ -99,7 +99,7 @@ $output[] = '<div class="row g-4 mb-4">';
 $output[] = '<div class="col-md-4">';
 $output[] = '<div class="card h-100 shadow-sm">';
 $output[] = '<div class="card-header bg-white border-bottom">';
-$output[] = '<h5 class="mb-0"><i class="fas fa-fire text-danger me-2"></i>Популярные тесты</h5>';
+$output[] = '<h5 class="mb-0"><i class="bi bi-fire text-danger me-2"></i>Популярные тесты</h5>';
 $output[] = '</div>';
 $output[] = '<div class="list-group list-group-flush">';
 
@@ -131,7 +131,7 @@ if (empty($popularTests)) {
 
         $output[] = '<a href="' . $testUrl . '" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">';
         $output[] = '<div class="text-truncate me-2">';
-        $output[] = '<i class="fas fa-file-alt text-muted me-2"></i>';
+        $output[] = '<i class="bi bi-file-text text-muted me-2"></i>';
         $output[] = htmlspecialchars($test['title']);
         $output[] = '</div>';
         if ($test['attempts'] > 0) {
@@ -143,7 +143,7 @@ if (empty($popularTests)) {
 
 $output[] = '</div>';
 $output[] = '<div class="card-footer bg-white">';
-$output[] = '<a href="' . $testsUrl . '" class="btn btn-outline-primary btn-sm w-100">Все тесты <i class="fas fa-arrow-right ms-1"></i></a>';
+$output[] = '<a href="' . $testsUrl . '" class="btn btn-outline-primary btn-sm w-100">Все тесты <i class="bi bi-arrow-right ms-1"></i></a>';
 $output[] = '</div>';
 $output[] = '</div>';
 $output[] = '</div>';
@@ -152,7 +152,7 @@ $output[] = '</div>';
 $output[] = '<div class="col-md-4">';
 $output[] = '<div class="card h-100 shadow-sm">';
 $output[] = '<div class="card-header bg-white border-bottom">';
-$output[] = '<h5 class="mb-0"><i class="fas fa-book-open text-primary me-2"></i>Учебные материалы</h5>';
+$output[] = '<h5 class="mb-0"><i class="bi bi-book text-primary me-2"></i>Учебные материалы</h5>';
 $output[] = '</div>';
 $output[] = '<div class="list-group list-group-flush">';
 
@@ -173,7 +173,7 @@ if (empty($materials)) {
 } else {
     foreach ($materials as $material) {
         $output[] = '<a href="' . $modx->makeUrl($material['id']) . '" class="list-group-item list-group-item-action">';
-        $output[] = '<i class="fas fa-file-alt text-muted me-2"></i>';
+        $output[] = '<i class="bi bi-file-text text-muted me-2"></i>';
         $output[] = htmlspecialchars($material['pagetitle']);
         $output[] = '</a>';
     }
@@ -181,7 +181,7 @@ if (empty($materials)) {
 
 $output[] = '</div>';
 $output[] = '<div class="card-footer bg-white">';
-$output[] = '<a href="' . $materialsUrl . '" class="btn btn-outline-primary btn-sm w-100">Все материалы <i class="fas fa-arrow-right ms-1"></i></a>';
+$output[] = '<a href="' . $materialsUrl . '" class="btn btn-outline-primary btn-sm w-100">Все материалы <i class="bi bi-arrow-right ms-1"></i></a>';
 $output[] = '</div>';
 $output[] = '</div>';
 $output[] = '</div>';
@@ -190,7 +190,7 @@ $output[] = '</div>';
 $output[] = '<div class="col-md-4">';
 $output[] = '<div class="card h-100 shadow-sm">';
 $output[] = '<div class="card-header bg-white border-bottom">';
-$output[] = '<h5 class="mb-0"><i class="fas fa-trophy text-warning me-2"></i>Лидеры</h5>';
+$output[] = '<h5 class="mb-0"><i class="bi bi-trophy text-warning me-2"></i>Лидеры</h5>';
 $output[] = '</div>';
 $output[] = '<div class="list-group list-group-flush">';
 
@@ -233,7 +233,7 @@ if (empty($leaders)) {
 
 $output[] = '</div>';
 $output[] = '<div class="card-footer bg-white">';
-$output[] = '<a href="' . $leaderboardUrl . '" class="btn btn-outline-warning btn-sm w-100">Весь рейтинг <i class="fas fa-arrow-right ms-1"></i></a>';
+$output[] = '<a href="' . $leaderboardUrl . '" class="btn btn-outline-warning btn-sm w-100">Весь рейтинг <i class="bi bi-arrow-right ms-1"></i></a>';
 $output[] = '</div>';
 $output[] = '</div>';
 $output[] = '</div>';
@@ -268,7 +268,7 @@ if (!empty($paths)) {
 
     $output[] = '<div class="card shadow-sm mb-4">';
     $output[] = '<div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">';
-    $output[] = '<h5 class="mb-0"><i class="fas fa-route text-info me-2"></i>Траектории обучения</h5>';
+    $output[] = '<h5 class="mb-0"><i class="bi bi-signpost-split text-info me-2"></i>Траектории обучения</h5>';
     $output[] = '<a href="' . $pathsUrl . '" class="btn btn-outline-info btn-sm">Все траектории</a>';
     $output[] = '</div>';
     $output[] = '<div class="card-body">';
@@ -285,7 +285,7 @@ if (!empty($paths)) {
         $output[] = '<p class="card-text small text-muted text-truncate">' . htmlspecialchars($path['description'] ?: 'Описание отсутствует') . '</p>';
         $output[] = '<div class="d-flex justify-content-between align-items-center">';
         $output[] = '<span class="badge bg-' . $diff['class'] . '">' . $diff['label'] . '</span>';
-        $output[] = '<small class="text-muted"><i class="fas fa-list-ol me-1"></i>' . $path['steps_count'] . ' шагов</small>';
+        $output[] = '<small class="text-muted"><i class="bi bi-list-ol me-1"></i>' . $path['steps_count'] . ' шагов</small>';
         $output[] = '</div>';
         $output[] = '</div>';
         $output[] = '<div class="card-footer bg-white">';
@@ -305,7 +305,7 @@ if (!$isLoggedIn) {
     $output[] = '<div class="bg-light rounded-3 p-4 text-center">';
     $output[] = '<h4 class="mb-3">Присоединяйтесь к обучению!</h4>';
     $output[] = '<p class="text-muted mb-3">Зарегистрируйтесь, чтобы отслеживать прогресс и получать сертификаты</p>';
-    $output[] = '<a href="' . $loginUrl . '" class="btn btn-primary"><i class="fas fa-user-plus me-2"></i>Войти / Регистрация</a>';
+    $output[] = '<a href="' . $loginUrl . '" class="btn btn-primary"><i class="bi bi-person-plus me-2"></i>Войти / Регистрация</a>';
     $output[] = '</div>';
 }
 

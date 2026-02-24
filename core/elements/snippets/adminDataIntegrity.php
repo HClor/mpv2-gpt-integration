@@ -39,16 +39,16 @@ $output = '
     <!-- Кнопки действий -->
     <div class="mb-4">
         <button class="btn btn-primary" id="btn-check-integrity">
-            <i class="fas fa-search"></i> Проверить целостность
+            <i class="bi bi-search"></i> Проверить целостность
         </button>
         <button class="btn btn-warning" id="btn-clean-all" disabled>
-            <i class="fas fa-broom"></i> Очистить все проблемы
+            <i class="bi bi-brush"></i> Очистить все проблемы
         </button>
         <button class="btn btn-info" id="btn-system-stats">
-            <i class="fas fa-chart-bar"></i> Статистика системы
+            <i class="bi bi-bar-chart"></i> Статистика системы
         </button>
         <button class="btn btn-secondary" id="btn-clean-old-sessions">
-            <i class="fas fa-trash"></i> Очистить старые сессии (90+ дней)
+            <i class="bi bi-trash"></i> Очистить старые сессии (90+ дней)
         </button>
     </div>
 
@@ -180,7 +180,7 @@ document.addEventListener(\'DOMContentLoaded\', function() {
         let html = \'\';
 
         if (report.total_issues === 0) {
-            html = \'<div class="alert alert-success"><i class="fas fa-check-circle"></i> Проблем не обнаружено! База данных в порядке.</div>\';
+            html = \'<div class="alert alert-success"><i class="bi bi-check-circle-fill"></i> Проблем не обнаружено! База данных в порядке.</div>\';
         } else {
             html = \'<div class="alert alert-warning"><strong>Обнаружено проблем: \' + report.total_issues + \'</strong></div>\';
 

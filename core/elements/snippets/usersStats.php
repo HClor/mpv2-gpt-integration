@@ -126,7 +126,7 @@ if ($viewUserId) {
 
     <div class="card mb-4">
       <div class="card-header">
-        <h5 class="mb-0"><i class="fas fa-user me-2"></i>'.$h($user['fullname'] ?: $user['username']).'</h5>
+        <h5 class="mb-0"><i class="bi bi-person-circle me-2"></i>'.$h($user['fullname'] ?: $user['username']).'</h5>
         <small class="text-muted">
           @'.$h($user['username']).' |
           '.$h($user['email']).' |
