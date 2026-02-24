@@ -51,8 +51,15 @@
     --color-footer-bg:      #262626;
     --color-footer-text:    #A8A8A8;
 
+    /* Alert contextual text (on -light backgrounds) */
+    --color-primary-text:   #004085;
+    --color-success-text:   #155724;
+    --color-danger-text:    #721c24;
+    --color-warning-text:   #664d03;
+
     /* Gamification */
     --color-xp:             #8B5CF6;
+    --color-xp-dark:        #764ba2;
     --color-xp-light:       #EDE9FE;
     --color-gold:           #F59E0B;
     --color-gold-light:     #FEF3C7;
