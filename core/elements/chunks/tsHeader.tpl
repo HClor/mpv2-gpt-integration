@@ -12,7 +12,7 @@
   <div class="container">
     <!-- Логотип -->
     <a class="navbar-brand" href="{$_modx->config.site_start | url}">
-      <i class="fas fa-graduation-cap"></i>
+      <i class="bi bi-mortarboard-fill"></i>
       {$_modx->config.site_name}
     </a>
 
@@ -26,27 +26,27 @@
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
         <li class="nav-item">
           <a class="nav-link{if $_modx->resource.id == 149} active{/if}" href="{$_modx->makeUrl(149)}">
-            <i class="fas fa-book me-1"></i> Учебные материалы
+            <i class="bi bi-book me-1"></i> Учебные материалы
           </a>
         </li>
         <li class="nav-item">
           <a class="nav-link{if $_modx->resource.id == 35} active{/if}" href="{$_modx->makeUrl(35)}">
-            <i class="fas fa-tasks me-1"></i> Тесты
+            <i class="bi bi-card-checklist me-1"></i> Тесты
           </a>
         </li>
         <li class="nav-item">
           <a class="nav-link{if $_modx->resource.id == 193 || $_modx->resource.parent == 193} active{/if}" href="{$_modx->makeUrl(193)}">
-            <i class="fas fa-route me-1"></i> Траектории
+            <i class="bi bi-signpost-split me-1"></i> Траектории
           </a>
         </li>
         <li class="nav-item">
           <a class="nav-link{if $_modx->resource.id == 159} active{/if}" href="{$_modx->makeUrl(159)}">
-            <i class="fas fa-trophy me-1"></i> Лидеры
+            <i class="bi bi-trophy me-1"></i> Лидеры
           </a>
         </li>
         <li class="nav-item">
           <a class="nav-link{if $_modx->resource.id == 185} active{/if}" href="{$_modx->makeUrl(185)}">
-            <i class="fas fa-brain me-1"></i> Области знаний
+            <i class="bi bi-lightbulb me-1"></i> Области знаний
           </a>
         </li>
       </ul>
@@ -61,7 +61,7 @@
           {if $isAdminOrExpert}
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" id="adminMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <i class="fas fa-cogs me-1"></i> Управление
+              <i class="bi bi-gear me-1"></i> Управление
             </a>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="adminMenu">
               {$_modx->runSnippet('pdoMenu', [
@@ -71,13 +71,13 @@
                 'sortby' => 'menuindex',
                 'sortdir' => 'ASC',
                 'tplOuter' => '@INLINE [[+wrapper]]',
-                'tpl' => '@INLINE <li><a class="dropdown-item" href="[[+link]]"><i class="fas fa-wrench me-2"></i>[[+menutitle]]</a></li>',
-                'tplHere' => '@INLINE <li><a class="dropdown-item active" href="[[+link]]"><i class="fas fa-wrench me-2"></i>[[+menutitle]]</a></li>'
+                'tpl' => '@INLINE <li><a class="dropdown-item" href="[[+link]]"><i class="bi bi-gear me-2"></i>[[+menutitle]]</a></li>',
+                'tplHere' => '@INLINE <li><a class="dropdown-item active" href="[[+link]]"><i class="bi bi-gear me-2"></i>[[+menutitle]]</a></li>'
               ])}
               <li><hr class="dropdown-divider"></li>
-              <li class="dropdown-header"><i class="fas fa-chart-bar me-2"></i>Статистика</li>
-              <li><a class="dropdown-item{if $_modx->resource.id == 201} active{/if}" href="{$_modx->makeUrl(201)}"><i class="fas fa-users me-2"></i>Статистика пользователей</a></li>
-              <li><a class="dropdown-item{if $_modx->resource.id == 200} active{/if}" href="{$_modx->makeUrl(200)}"><i class="fas fa-route me-2"></i>Статистика траекторий обучения</a></li>
+              <li class="dropdown-header"><i class="bi bi-graph-up me-2"></i>Статистика</li>
+              <li><a class="dropdown-item{if $_modx->resource.id == 201} active{/if}" href="{$_modx->makeUrl(201)}"><i class="bi bi-people me-2"></i>Статистика пользователей</a></li>
+              <li><a class="dropdown-item{if $_modx->resource.id == 200} active{/if}" href="{$_modx->makeUrl(200)}"><i class="bi bi-signpost-split me-2"></i>Статистика траекторий обучения</a></li>
             </ul>
           </li>
           {/if}
@@ -85,23 +85,23 @@
           <!-- Меню пользователя -->
           <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle" href="#" id="userMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <i class="fas fa-user-circle me-1"></i> {$_modx->user.username | escape}
+              <i class="bi bi-person-circle me-1"></i> {$_modx->user.username | escape}
             </a>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
-              <li><a class="dropdown-item" href="{$_modx->makeUrl(28)}"><i class="fas fa-user me-2"></i> Мой профиль</a></li>
-              <li><a class="dropdown-item" href="{$_modx->makeUrl(186)}"><i class="fas fa-edit me-2"></i> Мои тесты</a></li>
-              <li><a class="dropdown-item" href="{$_modx->makeUrl(194)}"><i class="fas fa-map-signs me-2"></i> Мои траектории</a></li>
-              <li><a class="dropdown-item" href="{$_modx->makeUrl(202)}"><i class="fas fa-trophy me-2"></i> Мои достижения</a></li>
-              <li><a class="dropdown-item" href="{$_modx->makeUrl(169)}"><i class="fas fa-star me-2"></i> Избранное</a></li>
-              <li><a class="dropdown-item" href="{$_modx->makeUrl(157)}"><i class="fas fa-history me-2"></i> История тестов</a></li>
-              <li><a class="dropdown-item" href="{$_modx->makeUrl(180)}"><i class="fas fa-certificate me-2"></i> Сертификаты</a></li>
+              <li><a class="dropdown-item" href="{$_modx->makeUrl(28)}"><i class="bi bi-person-circle me-2"></i> Мой профиль</a></li>
+              <li><a class="dropdown-item" href="{$_modx->makeUrl(186)}"><i class="bi bi-journal-text me-2"></i> Мои тесты</a></li>
+              <li><a class="dropdown-item" href="{$_modx->makeUrl(194)}"><i class="bi bi-map me-2"></i> Мои траектории</a></li>
+              <li><a class="dropdown-item" href="{$_modx->makeUrl(202)}"><i class="bi bi-award me-2"></i> Мои достижения</a></li>
+              <li><a class="dropdown-item" href="{$_modx->makeUrl(169)}"><i class="bi bi-bookmark me-2"></i> Избранное</a></li>
+              <li><a class="dropdown-item" href="{$_modx->makeUrl(157)}"><i class="bi bi-clock-history me-2"></i> История тестов</a></li>
+              <li><a class="dropdown-item" href="{$_modx->makeUrl(180)}"><i class="bi bi-patch-check me-2"></i> Сертификаты</a></li>
               <li><hr class="dropdown-divider"></li>
               <li>
                 <form method="post" action="" id="logout-form">
                   {$_modx->runSnippet('csrfTokenField')}
                   <input type="hidden" name="login_logout" value="1">
                   <button type="submit" class="dropdown-item text-danger" id="logout-btn">
-                    <i class="fas fa-sign-out-alt me-2"></i> Выход
+                    <i class="bi bi-box-arrow-right me-2"></i> Выход
                   </button>
                 </form>
               </li>
@@ -121,7 +121,7 @@
           <!-- Гость: кнопка входа -->
           <li class="nav-item">
             <a class="btn btn-primary ms-2" href="{$_modx->makeUrl(24)}">
-              <i class="fas fa-sign-in-alt me-1"></i> Вход
+              <i class="bi bi-box-arrow-in-right me-1"></i> Вход
             </a>
           </li>
         {/if}
@@ -136,7 +136,7 @@
   {$_modx->runSnippet('getNotifications', [
     'limit' => 5,
     'unreadOnly' => 1,
-    'tpl' => '@INLINE <div class="alert alert-[[+priority:eq=`high`:then=`warning`:else=`info`]] alert-dismissible fade show"><i class="fas fa-bell me-2"></i> <strong>[[+title]]</strong> [[+message]]<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>'
+    'tpl' => '@INLINE <div class="alert alert-[[+priority:eq=`high`:then=`warning`:else=`info`]] alert-dismissible fade show"><i class="bi bi-bell me-2"></i> <strong>[[+title]]</strong> [[+message]]<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>'
   ])}
 </div>
 {/if}

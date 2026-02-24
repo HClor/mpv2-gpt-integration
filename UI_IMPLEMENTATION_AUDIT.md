@@ -68,53 +68,26 @@
 
 #### Задачи
 
-- [ ] **2.1** Заменить все `fas fa-*` в `tsHeader.tpl` по таблице из `STYLE_GUIDE.md` (раздел 6)
-  ```
-  fas fa-graduation-cap  →  bi bi-mortarboard-fill
-  fas fa-book            →  bi bi-book
-  fas fa-tasks           →  bi bi-card-checklist
-  fas fa-route           →  bi bi-signpost-split
-  fas fa-trophy          →  bi bi-trophy
-  fas fa-brain           →  bi bi-lightbulb
-  fas fa-cogs            →  bi bi-gear
-  fas fa-user-circle     →  bi bi-person-circle
-  fas fa-user            →  bi bi-person
-  fas fa-edit            →  bi bi-journal-text
-  fas fa-map-signs       →  bi bi-map
-  fas fa-star            →  bi bi-bookmark
-  fas fa-history         →  bi bi-clock-history
-  fas fa-certificate     →  bi bi-patch-check
-  fas fa-sign-out-alt    →  bi bi-box-arrow-right
-  fas fa-sign-in-alt     →  bi bi-box-arrow-in-right
-  fas fa-bell            →  bi bi-bell
-  fas fa-chart-bar       →  bi bi-graph-up
-  fas fa-users           →  bi bi-people
-  fas fa-wrench          →  bi bi-tools
-  fas fa-award           →  bi bi-award
-  ```
+- [x] **2.1** Заменить все `fas fa-*` в `tsHeader.tpl` по таблице из `STYLE_GUIDE.md` (раздел 6)  ✓ 2026-02-24
 
-- [ ] **2.2** Заменить все `fas fa-*` в `tsFooter.tpl`
+- [x] **2.2** Заменить все `fas fa-*` / `fab fa-*` в `tsFooter.tpl`  ✓ 2026-02-24
 
-- [ ] **2.3** Заменить все `fas fa-*` в `homePage.php`
+- [x] **2.3** Заменить все `fas fa-*` в `homePage.php`  ✓ 2026-02-24
 
-- [ ] **2.4** Заменить все `fas fa-*` в `adminDataIntegrity.php`
+- [x] **2.4** Заменить все `fas fa-*` в `adminDataIntegrity.php`  ✓ 2026-02-24
 
-- [ ] **2.5** Заменить все `fas fa-*` в `testRunner.php`
+- [x] **2.5** Заменить все `fas fa-*` в `testRunner.php`  ✓ 2026-02-24
 
-- [ ] **2.6** Заменить все `fas fa-*` в `usersStats.php`
+- [x] **2.6** Заменить все `fas fa-*` в `usersStats.php`  ✓ 2026-02-24
 
-- [ ] **2.7** Удалить строку подключения Font Awesome из `tsHead.tpl`:
-  ```html
-  <!-- УДАЛИТЬ эту строку -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  ```
-  Убедиться, что Bootstrap Icons подключены: `bootstrap-icons@1.11+`
+- [x] **2.7** Удалить Font Awesome CDN из `tsHead.tpl`, обновить Bootstrap Icons до `1.11.3`  ✓ 2026-02-24
 
 #### Критерий завершения
 Все страницы отображают иконки. Нет сломанных/отсутствующих иконок. В `tsHead.tpl` нет ссылки на Font Awesome CDN.
+**Верификация:** `grep -r "fas fa-\|far fa-\|fab fa-" core/elements/` → 0 результатов ✓
 
 #### Статус
-`[ ] НЕ НАЧАТ`
+`[x] ГОТОВ 2026-02-24`
 
 ---
 
@@ -422,7 +395,7 @@ Grep по `class="btn btn-` в PHP-сниппетах возвращает 0 р�
 | Этап | Название | Файлов | Статус | Ветка |
 |---|---|---|---|---|
 | 1 | CSS-фундамент: переменные | 2 | `[x] ГОТОВ 2026-02-24` | `claude/ui-stage-1-variables` |
-| 2 | Замена иконок FA → BI | 6 | `[ ]` | `claude/ui-stage-2-icons` |
+| 2 | Замена иконок FA → BI | 6 | `[x] ГОТОВ 2026-02-24` | `claude/ui-stage-2-icons` |
 | 3 | Hex-цвета → переменные в CSS | 3 | `[ ]` | `claude/ui-stage-3-css-vars` |
 | 4 | Вынос inline `<style>` | 9 | `[ ]` | `claude/ui-stage-4-no-inline-styles` |
 | 5 | CSS-компоненты (`ts-components.css`) | 1 (новый) | `[ ]` | `claude/ui-stage-5-components` |

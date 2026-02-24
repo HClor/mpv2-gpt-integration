@@ -712,7 +712,7 @@ $output .= '<div class="card mb-3">';
 $output .= '<div class="card-header d-flex justify-content-between align-items-center">';
 $output .= '<span id="question-progress">Вопрос <span id="current-q">1</span> из <span id="total-q">' . (int)$questionsPerSession . '</span></span>';
 $output .= '<div class="d-flex align-items-center gap-2">';
-$output .= '<span id="exam-timer" class="badge bg-warning text-dark" style="display:none;"><i class="fas fa-clock me-1"></i><span id="timer-display">00:00</span></span>';
+$output .= '<span id="exam-timer" class="badge bg-warning text-dark" style="display:none;"><i class="bi bi-alarm me-1"></i><span id="timer-display">00:00</span></span>';
 $output .= '<span id="mode-badge" class="badge"></span>';
 $output .= '</div>';
 $output .= '</div>';

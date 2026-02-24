@@ -9,16 +9,16 @@
             <!-- Информация о сайте -->
             <div class="col-md-4 mb-3">
                 <h5>
-                    <i class="fas fa-graduation-cap"></i>
+                    <i class="bi bi-mortarboard-fill"></i>
                     {$_modx->config.site_name}
                 </h5>
                 <p class="text-white-50">
                     Современная система тестирования и обучения с геймификацией, аналитикой и сертификацией.
                 </p>
                 <div class="mt-3">
-                    <a href="#" class="text-white me-3"><i class="fab fa-vk fa-lg"></i></a>
-                    <a href="#" class="text-white me-3"><i class="fab fa-telegram fa-lg"></i></a>
-                    <a href="#" class="text-white me-3"><i class="fab fa-youtube fa-lg"></i></a>
+                    <a href="#" class="text-white me-3"><i class="bi bi-link-45deg fs-5"></i></a>
+                    <a href="#" class="text-white me-3"><i class="bi bi-telegram fs-5"></i></a>
+                    <a href="#" class="text-white me-3"><i class="bi bi-youtube fs-5"></i></a>
                 </div>
             </div>
 
@@ -28,28 +28,28 @@
                 <ul class="list-unstyled">
                     <li class="mb-2">
                         <a href="{$_modx->makeUrl(35)}" class="text-light text-decoration-none">
-                            <i class="fas fa-clipboard-list"></i> Все тесты
+                            <i class="bi bi-card-checklist"></i> Все тесты
                         </a>
                     </li>
                     <li class="mb-2">
                         <a href="{$_modx->makeUrl(149)}" class="text-light text-decoration-none">
-                            <i class="fas fa-book"></i> Учебные материалы
+                            <i class="bi bi-book"></i> Учебные материалы
                         </a>
                     </li>
                     <li class="mb-2">
                         <a href="{$_modx->makeUrl(159)}" class="text-light text-decoration-none">
-                            <i class="fas fa-trophy"></i> Таблица лидеров
+                            <i class="bi bi-trophy"></i> Таблица лидеров
                         </a>
                     </li>
                     {if $_modx->user.id > 0}
                     <li class="mb-2">
                         <a href="{$_modx->makeUrl(28)}" class="text-light text-decoration-none">
-                            <i class="fas fa-user"></i> Мой профиль
+                            <i class="bi bi-person-circle"></i> Мой профиль
                         </a>
                     </li>
                     <li class="mb-2">
                         <a href="{$_modx->makeUrl(169)}" class="text-light text-decoration-none">
-                            <i class="fas fa-heart"></i> Избранное
+                            <i class="bi bi-bookmark"></i> Избранное
                         </a>
                     </li>
                     {/if}
@@ -62,19 +62,19 @@
                 [[!getSystemStats?
                     &tpl=`@INLINE
                     <div class="mb-2">
-                        <i class="fas fa-users text-primary"></i>
+                        <i class="bi bi-people text-primary"></i>
                         <strong>[[+total_users]]</strong> пользователей
                     </div>
                     <div class="mb-2">
-                        <i class="fas fa-clipboard-list text-success"></i>
+                        <i class="bi bi-card-checklist text-success"></i>
                         <strong>[[+total_tests]]</strong> тестов
                     </div>
                     <div class="mb-2">
-                        <i class="fas fa-check-circle text-info"></i>
+                        <i class="bi bi-check-circle-fill text-info"></i>
                         <strong>[[+total_sessions]]</strong> прохождений
                     </div>
                     <div class="mb-2">
-                        <i class="fas fa-star text-warning"></i>
+                        <i class="bi bi-star-fill text-warning"></i>
                         Средний балл: <strong>[[+avg_score]]%</strong>
                     </div>`
                 ]]
