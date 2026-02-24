@@ -1,0 +1,90 @@
+/*
+ * ts-layout.css
+ * Global page layout styles for the LMS Test System
+ *
+ * Connected in: tsHead.tpl, LMS_Bootstrap_5.tpl
+ * Requires: ts-variables.css loaded before this file
+ *
+ * Covers: body, main, navbar-brand, footer, breadcrumb, card, alert, user-xp
+ */
+
+/* ==================== PAGE LAYOUT ==================== */
+
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--color-bg-page);
+    font-family: var(--font-family-base);
+}
+
+main {
+    flex: 1;
+}
+
+/* ==================== NAVBAR ==================== */
+
+.navbar-brand {
+    font-weight: var(--font-weight-bold);
+    font-size: 1.5rem;
+}
+
+.navbar-brand i {
+    color: var(--color-primary);
+}
+
+/* ==================== FOOTER ==================== */
+
+footer {
+    background: var(--color-footer-bg);
+    color: var(--color-bg-card);
+    padding: 2rem 0;
+    margin-top: 3rem;
+}
+
+footer a {
+    color: var(--color-footer-text);
+    text-decoration: none;
+}
+
+footer a:hover {
+    color: var(--color-bg-card);
+}
+
+/* ==================== BREADCRUMB ==================== */
+
+.breadcrumb {
+    background: var(--color-bg-card);
+    padding: 1rem;
+    border-radius: var(--radius-btn);
+    margin-bottom: 1.5rem;
+}
+
+/* ==================== CARDS ==================== */
+
+.card {
+    border: none;
+    box-shadow: var(--shadow-card);
+    transition: transform var(--transition-base);
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card-hover);
+}
+
+/* ==================== ALERTS ==================== */
+
+.alert {
+    border-radius: var(--radius-alert);
+}
+
+/* ==================== USER XP BADGE ==================== */
+
+.user-xp {
+    background: linear-gradient(135deg, var(--color-xp) 0%, var(--color-xp-dark) 100%);
+    color: var(--color-bg-card);
+    padding: 0.5rem 1rem;
+    border-radius: 2rem;
+    font-weight: var(--font-weight-bold);
+}

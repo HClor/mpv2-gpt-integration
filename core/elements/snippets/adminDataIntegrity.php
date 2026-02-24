@@ -67,22 +67,6 @@ $output = '
     <div id="system-stats" class="mt-4"></div>
 </div>
 
-<style>
-#data-integrity-admin .issue-card {
-    margin-bottom: 1rem;
-}
-#data-integrity-admin .issue-card .card-body {
-    max-height: 300px;
-    overflow-y: auto;
-}
-#data-integrity-admin .stat-card {
-    transition: transform 0.2s;
-}
-#data-integrity-admin .stat-card:hover {
-    transform: translateY(-5px);
-}
-</style>
-
 <script>
 document.addEventListener(\'DOMContentLoaded\', function() {
     const apiUrl = \'' . $modx->getOption('site_url') . 'assets/components/testsystem/ajax/testsystem.php\';

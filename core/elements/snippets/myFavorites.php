@@ -186,43 +186,6 @@ $output .= '
 </div>
 ';
 
-// Специфичные CSS для модального окна myFavorites
-$output .= '<style>
-/* Hover для кликабельного вопроса */
-.favorite-question-clickable:hover {
-    background-color: #f8f9fa;
-    border-radius: 4px;
-    padding: 8px;
-    margin: -8px;
-}
-
-.favorite-question-clickable:active {
-    background-color: #e9ecef;
-}
-
-/* Анимация удаления */
-.removing-item {
-    transition: all 0.3s ease;
-    opacity: 0.5;
-}
-
-/* Изображения в модальном окне */
-#modal-question-text img,
-#modal-explanation img {
-    max-width: 100% !important;
-    height: auto !important;
-    display: block;
-    margin: 10px auto;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-#modal-question-text,
-#modal-explanation {
-    overflow-x: hidden;
-}
-</style>';
-
 // УЛУЧШЕННЫЙ JavaScript
 $output .= '<script>
 document.addEventListener("DOMContentLoaded", function() {

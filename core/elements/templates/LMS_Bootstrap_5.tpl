@@ -7,24 +7,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{$_modx->resource.pagetitle} - {$_modx->config.site_name}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-        }
-        main {
-            flex: 1;
-        }
-        .navbar-brand {
-            font-weight: bold;
-        }
-        footer {
-            background: #f8f9fa;
-            padding: 2rem 0;
-            margin-top: 3rem;
-        }
-    </style>
+
+    <!-- Design Tokens — MUST be before ts-layout.css -->
+    <link rel="stylesheet" href="/assets/components/testsystem/css/ts-variables.css">
+
+    <!-- Global layout: body, navbar, footer, card, alert -->
+    <link rel="stylesheet" href="/assets/components/testsystem/css/ts-layout.css">
+
     {$_modx->resource.cssTV}
 </head>
 <body>

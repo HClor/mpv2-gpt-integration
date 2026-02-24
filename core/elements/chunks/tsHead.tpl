@@ -26,87 +26,17 @@
     <!-- Bootstrap Icons (единственная библиотека иконок) -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
 
+    <!-- Global layout: body, navbar, footer, breadcrumb, card, alert, user-xp -->
+    <link rel="stylesheet" href="/assets/components/testsystem/css/ts-layout.css">
+
     <!-- Test System CSS -->
     <link rel="stylesheet" href="/assets/components/testsystem/css/tsrunner.css">
 
     <!-- Расширенные стили для спринтов 9-17 -->
     <link href="/assets/components/testsystem/css/testsystem-extended.css" rel="stylesheet">
-    
+
     <!-- CSRF токен для безопасности -->
     [[!csrfToken]]
-
-    
-
-    <style>
-        body {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            background: #f8f9fa;
-        }
-
-        main {
-            flex: 1;
-        }
-
-        .navbar-brand {
-            font-weight: bold;
-            font-size: 1.5rem;
-        }
-
-        .navbar-brand i {
-            color: #0d6efd;
-        }
-
-        footer {
-            background: #343a40;
-            color: white;
-            padding: 2rem 0;
-            margin-top: 3rem;
-        }
-
-        footer a {
-            color: #adb5bd;
-            text-decoration: none;
-        }
-
-        footer a:hover {
-            color: white;
-        }
-
-        .breadcrumb {
-            background: white;
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        /* Стили для карточек */
-        .card {
-            border: none;
-            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
-            transition: transform 0.2s;
-        }
-
-        .card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15);
-        }
-
-        /* Стили для уведомлений */
-        .alert {
-            border-radius: 0.5rem;
-        }
-
-        /* XP и уровень */
-        .user-xp {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 2rem;
-            font-weight: bold;
-        }
-    </style>
 
     <!-- Дополнительный CSS из TV поля -->
     {$_modx->resource.cssTV}
