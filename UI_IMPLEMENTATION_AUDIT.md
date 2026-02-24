@@ -31,21 +31,21 @@
 
 #### Задачи
 
-- [ ] **1.1** Создать файл `assets/components/testsystem/css/ts-variables.css`
+- [x] **1.1** Создать файл `assets/components/testsystem/css/ts-variables.css`  ✓ 2026-02-24
   — Перенести все CSS Custom Properties из `STYLE_GUIDE.md` (раздел 2)
   — Добавить переменные для типографики, spacing, border-radius, shadow
 
-- [ ] **1.2** Подключить `ts-variables.css` первым в `core/elements/chunks/tsHead.tpl`
+- [x] **1.2** Подключить `ts-variables.css` первым в `core/elements/chunks/tsHead.tpl`  ✓ 2026-02-24
   — Добавить `<link>` до всех остальных CSS-файлов системы
 
-- [ ] **1.3** Убедиться, что переменные доступны во всех существующих CSS
+- [x] **1.3** Убедиться, что переменные доступны во всех существующих CSS  ✓ 2026-02-24
   — Проверить каскад: `ts-variables.css` → Bootstrap → `tsrunner.css` → `testsystem-extended.css` → `categories-and-tests.css`
 
 #### Критерий завершения
 В браузере: `getComputedStyle(document.documentElement).getPropertyValue('--color-primary')` возвращает `#0095F6`.
 
 #### Статус
-`[ ] НЕ НАЧАТ`
+`[x] ГОТОВ 2026-02-24`
 
 ---
 
@@ -421,7 +421,7 @@ Grep по `class="btn btn-` в PHP-сниппетах возвращает 0 р�
 
 | Этап | Название | Файлов | Статус | Ветка |
 |---|---|---|---|---|
-| 1 | CSS-фундамент: переменные | 2 | `[ ]` | `claude/ui-stage-1-variables` |
+| 1 | CSS-фундамент: переменные | 2 | `[x] ГОТОВ 2026-02-24` | `claude/ui-stage-1-variables` |
 | 2 | Замена иконок FA → BI | 6 | `[ ]` | `claude/ui-stage-2-icons` |
 | 3 | Hex-цвета → переменные в CSS | 3 | `[ ]` | `claude/ui-stage-3-css-vars` |
 | 4 | Вынос inline `<style>` | 9 | `[ ]` | `claude/ui-stage-4-no-inline-styles` |
