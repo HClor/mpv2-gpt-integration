@@ -2,7 +2,7 @@
 
 > Файл для отслеживания прогресса внедрения `STYLE_GUIDE.md` в существующую инфраструктуру.
 > При старте новой сессии — ссылаться на этот файл для продолжения работы.
-> Обновлено: 2026-02-24 (Этап 4 завершён)
+> Обновлено: 2026-02-25 (Этап 5 завершён)
 
 ---
 
@@ -248,38 +248,38 @@ Grep по `<style>` в `core/elements/` возвращает 0 результа�
 
 #### Задачи
 
-- [ ] **5.1** Создать `assets/components/testsystem/css/ts-components.css`
+- [x] **5.1** Создать `assets/components/testsystem/css/ts-components.css`  ✓ 2026-02-25
 
-- [ ] **5.2** Реализовать `.ts-btn` и все варианты:
+- [x] **5.2** Реализовать `.ts-btn` и все варианты:  ✓ 2026-02-25
   — `.ts-btn-primary`, `.ts-btn-secondary`, `.ts-btn-success`, `.ts-btn-danger`, `.ts-btn-ghost`
   — Размеры: `.ts-btn-sm`, `.ts-btn-lg`
   — `.ts-btn-icon-only` (круглая кнопка с иконкой)
   — Состояния: default, hover, active, disabled, loading
 
-- [ ] **5.3** Реализовать `.ts-card`, `.ts-card-header`, `.ts-card-body`, `.ts-card-footer`
+- [x] **5.3** Реализовать `.ts-card`, `.ts-card-header`, `.ts-card-body`, `.ts-card-footer`  ✓ 2026-02-25
 
-- [ ] **5.4** Реализовать `.ts-badge` и варианты:
+- [x] **5.4** Реализовать `.ts-badge` и варианты:  ✓ 2026-02-25
   — `.ts-badge-primary`, `.ts-badge-success`, `.ts-badge-danger`, `.ts-badge-warning`
   — `.ts-badge-neutral`, `.ts-badge-xp`, `.ts-badge-gold`
 
-- [ ] **5.5** Реализовать `.ts-field`, `.ts-label`, `.ts-input`, `.ts-select`, `.ts-textarea`
+- [x] **5.5** Реализовать `.ts-field`, `.ts-label`, `.ts-input`, `.ts-select`, `.ts-textarea`  ✓ 2026-02-25
   — Состояния: default, focus, error, disabled
 
-- [ ] **5.6** Реализовать `.ts-alert` и варианты:
+- [x] **5.6** Реализовать `.ts-alert` и варианты:  ✓ 2026-02-25
   — `.ts-alert-success`, `.ts-alert-danger`, `.ts-alert-warning`, `.ts-alert-info`
   — С левой цветной полосой (border-left: 3px)
 
-- [ ] **5.7** Реализовать `.ts-meta`, `.ts-meta-item` для метаинформации карточек
+- [x] **5.7** Реализовать `.ts-meta`, `.ts-meta-item` для метаинформации карточек  ✓ 2026-02-25
 
-- [ ] **5.8** Реализовать `.ts-dropdown-menu` (контекстное меню карточек)
+- [x] **5.8** Реализовать `.ts-dropdown-menu` (контекстное меню карточек)  ✓ 2026-02-25
 
-- [ ] **5.9** Подключить `ts-components.css` в `tsHead.tpl`
+- [x] **5.9** Подключить `ts-components.css` в `tsHead.tpl`  ✓ 2026-02-25
 
 #### Критерий завершения
 Все описанные компоненты существуют в CSS, задокументированы в `STYLE_GUIDE.md` и визуально корректны.
 
 #### Статус
-`[ ] НЕ НАЧАТ`
+`[x] ГОТОВ 2026-02-25`
 
 ---
 
@@ -425,7 +425,7 @@ Grep по `class="btn btn-` в PHP-сниппетах возвращает 0 р�
 | 2 | Замена иконок FA → BI | 6 | `[x] ГОТОВ 2026-02-24` | `claude/ui-stage-2-icons` |
 | 3 | Hex-цвета → переменные в CSS | 3 | `[x] ГОТОВ 2026-02-24` | `claude/ui-stage-3-css-vars` |
 | 4 | Вынос inline `<style>` | 9 | `[x] ГОТОВ 2026-02-24` | `claude/ui-implementation-stage-4-z3JKU` |
-| 5 | CSS-компоненты (`ts-components.css`) | 1 (новый) | `[ ]` | `claude/ui-stage-5-components` |
+| 5 | CSS-компоненты (`ts-components.css`) | 1 (новый) | `[x] ГОТОВ 2026-02-25` | `claude/ui-implementation-stage-4-z3JKU` |
 | 6 | Миграция сниппетов PHP | 29 | `[ ]` | `claude/ui-stage-6-snippets` |
 | 7 | Финальный аудит и чистка | — | `[ ]` | `claude/ui-stage-7-cleanup` |
 
