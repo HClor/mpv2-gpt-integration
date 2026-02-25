@@ -29,6 +29,9 @@
     <!-- Global layout: body, navbar, footer, breadcrumb, card, alert, user-xp -->
     <link rel="stylesheet" href="/assets/components/testsystem/css/ts-layout.css">
 
+    <!-- Component library: ts-btn, ts-card, ts-badge, ts-field, ts-alert, ts-meta, ts-dropdown -->
+    <link rel="stylesheet" href="/assets/components/testsystem/css/ts-components.css">
+
     <!-- Test System CSS -->
     <link rel="stylesheet" href="/assets/components/testsystem/css/tsrunner.css">
 
