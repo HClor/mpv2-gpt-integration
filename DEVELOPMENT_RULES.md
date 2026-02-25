@@ -269,6 +269,8 @@ $corePath = MODX_CORE_PATH;                    // /path/to/core/
 
 ## 7. Чеклист перед коммитом
 
+### 7.1 PHP/MODX
+
 - [ ] Нет inline JavaScript с фигурными скобками в PHP-сниппетах
 - [ ] Используется `array()` вместо `[]`
 - [ ] Переменные проверяются через `isset()`
@@ -281,6 +283,37 @@ $corePath = MODX_CORE_PATH;                    // /path/to/core/
 - [ ] `publication_status`, `c.name`, `t.resource_id` — актуальные поля
 - [ ] Очищен кеш MODX перед тестированием
 - [ ] `php -l file.php` — проверка синтаксиса
+
+### 7.2 UI / Стиль — автоматические grep-проверки
+
+Запустить перед коммитом. Все команды должны возвращать **0 результатов**.
+
+```bash
+# Не должно быть Font Awesome иконок (fas/far/fab)
+grep -r "fas fa-\|far fa-\|fab fa-" core/elements/ assets/components/testsystem/
+
+# Не должно быть hex-цветов в CSS (кроме ts-variables.css — определения токенов)
+grep -rE "#[0-9a-fA-F]{6}\b" assets/components/testsystem/css/ | grep -v "ts-variables.css"
+
+# Не должно быть inline <style> в шаблонах, чанках и сниппетах
+grep -rn "<style" core/elements/
+
+# Не должно быть Bootstrap-классов кнопок в PHP-сниппетах
+grep -r 'class="btn btn-' core/elements/snippets/
+```
+
+**Быстрая проверка всех 4 правил одной командой:**
+```bash
+echo "--- FA иконки ---" && \
+grep -rc "fas fa-\|far fa-\|fab fa-" core/elements/ assets/components/testsystem/ | grep -v ":0" && \
+echo "--- Hex в CSS ---" && \
+grep -rEn "#[0-9a-fA-F]{6}\b" assets/components/testsystem/css/ | grep -v "ts-variables.css" && \
+echo "--- Inline style ---" && \
+grep -rn "<style" core/elements/ && \
+echo "--- Bootstrap btn ---" && \
+grep -rn 'class="btn btn-' core/elements/snippets/ && \
+echo "=== Все проверки пройдены ==="
+```
 
 ---
 

@@ -82,6 +82,9 @@ footer a:hover {
 /* ==================== USER XP BADGE ==================== */
 
 .user-xp {
+    display: inline-block;
+    align-self: center;
+    margin-right: 1rem;
     background: linear-gradient(135deg, var(--color-xp) 0%, var(--color-xp-dark) 100%);
     color: var(--color-bg-card);
     padding: 0.5rem 1rem;
