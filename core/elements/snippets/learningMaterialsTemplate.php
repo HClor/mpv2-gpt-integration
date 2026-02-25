@@ -75,7 +75,7 @@ if ($parentId > 0) {
 
     if ($canEdit) {
         // Редактирование открывается на текущей странице материала
-        $output .= '<button class="btn btn-primary" onclick="editMaterial(' . $materialId . ')">';
+        $output .= '<button class="ts-btn ts-btn-primary" onclick="editMaterial(' . $materialId . ')">';
         $output .= '<i class="bi bi-pencil"></i> Редактировать материал';
         $output .= '</button>';
     }
@@ -154,11 +154,11 @@ if ($parentId > 0) {
         $output .= '</div>';
         $output .= '</div>';
         $output .= '<div class="modal-footer">';
-        $output .= '<button type="button" class="btn btn-danger me-auto" onclick="deleteMaterial(' . $materialId . ', \'' . htmlspecialchars($modx->resource->get('pagetitle'), ENT_QUOTES) . '\')">';
+        $output .= '<button type="button" class="ts-btn ts-btn-danger me-auto" onclick="deleteMaterial(' . $materialId . ', \'' . htmlspecialchars($modx->resource->get('pagetitle'), ENT_QUOTES) . '\')">';
         $output .= '<i class="bi bi-trash"></i> Удалить материал';
         $output .= '</button>';
-        $output .= '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>';
-        $output .= '<button type="button" class="btn btn-primary" onclick="saveMaterialFromModal()">';
+        $output .= '<button type="button" class="ts-btn ts-btn-secondary" data-bs-dismiss="modal">Отмена</button>';
+        $output .= '<button type="button" class="ts-btn ts-btn-primary" onclick="saveMaterialFromModal()">';
         $output .= '<i class="bi bi-check-circle"></i> Сохранить';
         $output .= '</button>';
         $output .= '</div>';
@@ -197,7 +197,7 @@ $output .= '<p class="text-muted mb-0">Статьи и материалы, со�
 $output .= '</div>';
 
 if ($canCreate) {
-    $output .= '<button class="btn btn-success" onclick="openCreateMaterialModal()">';
+    $output .= '<button class="ts-btn ts-btn-success" onclick="openCreateMaterialModal()">';
     $output .= '<i class="bi bi-plus-circle"></i> Создать материал';
     $output .= '</button>';
 }
@@ -254,8 +254,8 @@ $output .= '<div class="modal-body">';
 $output .= '<div id="draft-content" class="material-content"></div>';
 $output .= '</div>';
 $output .= '<div class="modal-footer">';
-$output .= '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>';
-$output .= '<button type="button" class="btn btn-primary" id="editDraftButton" onclick="editDraftFromViewer()">';
+$output .= '<button type="button" class="ts-btn ts-btn-secondary" data-bs-dismiss="modal">Закрыть</button>';
+$output .= '<button type="button" class="ts-btn ts-btn-primary" id="editDraftButton" onclick="editDraftFromViewer()">';
 $output .= '<i class="bi bi-pencil"></i> Редактировать';
 $output .= '</button>';
 $output .= '</div>';
@@ -319,8 +319,8 @@ $output .= '</div>';
 $output .= '</div>'; // modal-body
 
 $output .= '<div class="modal-footer">';
-$output .= '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>';
-$output .= '<button type="button" class="btn btn-primary" onclick="saveMaterialFromModal()">';
+$output .= '<button type="button" class="ts-btn ts-btn-secondary" data-bs-dismiss="modal">Отмена</button>';
+$output .= '<button type="button" class="ts-btn ts-btn-primary" onclick="saveMaterialFromModal()">';
 $output .= '<i class="bi bi-check-circle"></i> Сохранить';
 $output .= '</button>';
 $output .= '</div>';

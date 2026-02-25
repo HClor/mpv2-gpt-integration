@@ -23,7 +23,7 @@ require_once MODX_CORE_PATH . 'components/testsystem/services/CategoryPermission
 
 // Проверка авторизации
 if (!$modx->user || !$modx->user->hasSessionContext('web')) {
-    return '<div class="alert alert-warning">Войдите для просмотра статистики</div>';
+    return '<div class="ts-alert ts-alert-warning">Войдите для просмотра статистики</div>';
 }
 
 $currentUserId = (int)$modx->user->get('id');
@@ -31,7 +31,7 @@ $isAdmin = CategoryPermissionService::isGlobalAdmin($modx, $currentUserId);
 $isExpert = CategoryPermissionService::isGlobalExpert($modx, $currentUserId);
 
 if (!$isAdmin && !$isExpert) {
-    return '<div class="alert alert-danger">Доступ запрещён. Требуются права эксперта или администратора.</div>';
+    return '<div class="ts-alert ts-alert-danger">Доступ запрещён. Требуются права эксперта или администратора.</div>';
 }
 
 $h = function($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); };
@@ -60,7 +60,7 @@ if ($viewUserId) {
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$user) {
-        return '<div class="alert alert-warning">Пользователь не найден</div>';
+        return '<div class="ts-alert ts-alert-warning">Пользователь не найден</div>';
     }
 
     // Статистика тестов
@@ -349,7 +349,7 @@ if ($viewUserId) {
                   <td class="text-end"><strong>'.(int)$user['total_score'].'</strong></td>
                   <td class="small text-muted">'.($user['last_activity'] ? date('d.m.Y', strtotime($user['last_activity'])) : '-').'</td>
                   <td>
-                    <a href="'.$h($pageUrl).'?user_id='.(int)$user['id'].'" class="btn btn-sm btn-outline-primary" title="Подробнее">
+                    <a href="'.$h($pageUrl).'?user_id='.(int)$user['id'].'" class="ts-btn ts-btn-sm ts-btn-ghost" title="Подробнее">
                       <i class="bi bi-person"></i>
                     </a>
                   </td>

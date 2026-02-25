@@ -15,10 +15,10 @@ $userId = $modx->user->id;
 
 if (!$userId) {
     $authUrl = $modx->makeUrl(24, '', '', 'abs');
-    return '<div class="alert alert-warning">
+    return '<div class="ts-alert ts-alert-warning">
         <i class="bi bi-exclamation-triangle me-2"></i>
         Войдите, чтобы видеть свои сертификаты.
-        <br><a class="btn btn-primary mt-2" href="' . htmlspecialchars($authUrl, ENT_QUOTES, 'UTF-8') . '">Войти</a>
+        <br><a class="ts-btn ts-btn-primary mt-2" href="' . htmlspecialchars($authUrl, ENT_QUOTES, 'UTF-8') . '">Войти</a>
     </div>';
 }
 
@@ -47,7 +47,7 @@ $sql = "
 
 $stmt = $modx->prepare($sql);
 if ($stmt === false) {
-    return '<div class="alert alert-danger">Ошибка при получении сертификатов</div>';
+    return '<div class="ts-alert ts-alert-danger">Ошибка при получении сертификатов</div>';
 }
 $stmt->execute([$userId]);
 $certificates = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -112,11 +112,11 @@ $html[] = '</div>';
 if (empty($certificates) && empty($pathCertificates)) {
     $pathsUrl = $modx->makeUrl(125, '', '', 'abs');
     $html[] = '
-        <div class="alert alert-info text-center py-5">
+        <div class="ts-alert ts-alert-info text-center py-5">
             <i class="bi bi-award fs-1 d-block mb-3"></i>
             <h5>У вас пока нет сертификатов</h5>
             <p class="mb-3">Завершите траекторию обучения, чтобы получить сертификат</p>
-            <a href="' . $h($pathsUrl) . '" class="btn btn-primary">
+            <a href="' . $h($pathsUrl) . '" class="ts-btn ts-btn-primary">
                 <i class="bi bi-mortarboard me-1"></i>Перейти к траекториям
             </a>
         </div>
@@ -181,8 +181,8 @@ if (empty($certificates) && empty($pathCertificates)) {
                     </p>
                 </div>
                 <div class="card-footer bg-white d-flex justify-content-between align-items-center">
-                    <span class="badge bg-success">Активен</span>
-                    <a href="' . $h($pathsUrl) . '?mode=view&id=' . (int)$cert['path_id'] . '" class="btn btn-sm btn-outline-primary">
+                    <span class="ts-badge ts-badge-success">Активен</span>
+                    <a href="' . $h($pathsUrl) . '?mode=view&id=' . (int)$cert['path_id'] . '" class="ts-btn ts-btn-sm ts-btn-ghost">
                         <i class="bi bi-eye"></i> Посмотреть
                     </a>
                 </div>

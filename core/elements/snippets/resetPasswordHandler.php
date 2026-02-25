@@ -15,7 +15,7 @@ $errors = [];
 $success = false;
 
 if (empty($token)) {
-    return '<div class="alert alert-danger">Неверная ссылка для восстановления пароля</div>';
+    return '<div class="ts-alert ts-alert-danger">Неверная ссылка для восстановления пароля</div>';
 }
 
 // Безопасный поиск токена в JSON поле с использованием prepared statement
@@ -37,7 +37,7 @@ if ($profileId) {
 
 if (!$profile) {
     $forgotId = $modx->getOption('lms.forgot_page', null, 0);
-    return '<div class="alert alert-danger">Неверный или устаревший токен. <a href="' . $modx->makeUrl($forgotId ?: $modx->getOption('site_start')) . '">Запросить новую ссылку</a></div>';
+    return '<div class="ts-alert ts-alert-danger">Неверный или устаревший токен. <a href="' . $modx->makeUrl($forgotId ?: $modx->getOption('site_start')) . '">Запросить новую ссылку</a></div>';
 }
 
 $extended = $profile->get('extended') ?: [];
@@ -45,12 +45,12 @@ $resetExpiry = $extended['reset_expiry'] ?? 0;
 
 if (time() > $resetExpiry) {
     $forgotId = $modx->getOption('lms.forgot_page', null, 0);
-    return '<div class="alert alert-danger">Ссылка устарела. <a href="' . $modx->makeUrl($forgotId ?: $modx->getOption('site_start')) . '">Запросить новую ссылку</a></div>';
+    return '<div class="ts-alert ts-alert-danger">Ссылка устарела. <a href="' . $modx->makeUrl($forgotId ?: $modx->getOption('site_start')) . '">Запросить новую ссылку</a></div>';
 }
 
 $user = $profile->getOne('User');
 if (!$user) {
-    return '<div class="alert alert-danger">Ошибка: пользователь не найден</div>';
+    return '<div class="ts-alert ts-alert-danger">Ошибка: пользователь не найден</div>';
 }
 
 if ($_POST && isset($_POST['reset_password'])) {
@@ -85,7 +85,7 @@ if ($_POST && isset($_POST['reset_password'])) {
 if ($success) {
     $authId = $modx->getOption('lms.auth_page', null, 0);
     $authUrl = $modx->makeUrl($authId ?: $modx->getOption('site_start'));
-    return '<div class="alert alert-success">
+    return '<div class="ts-alert ts-alert-success">
         <h4>✅ Пароль успешно изменён!</h4>
         <p>Теперь вы можете <a href="' . $authUrl . '">войти в систему</a> с новым паролем.</p>
         <script>setTimeout(function(){ window.location.href="' . $authUrl . '"; }, 3000);</script>
@@ -94,7 +94,7 @@ if ($success) {
 
 $errorMsg = '';
 if (!empty($errors)) {
-    $errorMsg = '<div class="alert alert-danger"><ul class="mb-0">';
+    $errorMsg = '<div class="ts-alert ts-alert-danger"><ul class="mb-0">';
     foreach ($errors as $error) {
         $errorMsg .= '<li>' . htmlspecialchars($error) . '</li>';
     }
@@ -122,7 +122,7 @@ return $errorMsg . '<div class="container">
                             <label class="form-label">Подтвердите новый пароль</label>
                             <input type="password" name="password_confirm" class="form-control" required>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100">Установить новый пароль</button>
+                        <button type="submit" class="ts-btn ts-btn-primary w-100">Установить новый пароль</button>
                     </form>
                 </div>
             </div>

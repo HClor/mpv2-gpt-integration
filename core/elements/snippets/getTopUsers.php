@@ -55,7 +55,7 @@ if ($debug) {
 }
 
 if (empty($users)) {
-    return '<div class="alert alert-info">Пока нет результатов. Завершите хотя бы один тест!</div>';
+    return '<div class="ts-alert ts-alert-info">Пока нет результатов. Завершите хотя бы один тест!</div>';
 }
 
 $output = [];

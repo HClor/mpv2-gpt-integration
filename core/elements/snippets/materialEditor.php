@@ -10,7 +10,7 @@
 
 // Проверка авторизации
 if (!$modx->user->hasSessionContext('web')) {
-    return '<div class="alert alert-warning">Требуется авторизация для редактирования</div>';
+    return '<div class="ts-alert ts-alert-warning">Требуется авторизация для редактирования</div>';
 }
 
 $userId = (int)$modx->user->get('id');
@@ -24,7 +24,7 @@ $canEdit = $createdBy === $userId
     || in_array('LMS Experts', $userGroups, true);
 
 if (!$canEdit) {
-    return '<div class="alert alert-danger">Нет прав для редактирования</div>';
+    return '<div class="ts-alert ts-alert-danger">Нет прав для редактирования</div>';
 }
 
 // Получаем текущий контент
@@ -59,10 +59,10 @@ $output = <<<HTML
 
             <div class="mb-3">
                 <div class="d-flex gap-2">
-                    <button class="btn btn-secondary" id="insert-image-btn">
+                    <button class="ts-btn ts-btn-secondary" id="insert-image-btn">
                         <i class="bi bi-image"></i> Вставить изображение
                     </button>
-                    <button class="btn btn-secondary" id="insert-document-btn">
+                    <button class="ts-btn ts-btn-secondary" id="insert-document-btn">
                         <i class="bi bi-file-earmark-pdf"></i> Вставить документ
                     </button>
                 </div>
@@ -81,10 +81,10 @@ $output = <<<HTML
             </div>
 
             <div class="d-flex gap-2">
-                <button class="btn btn-primary" id="save-material-btn">
+                <button class="ts-btn ts-btn-primary" id="save-material-btn">
                     <i class="bi bi-check-circle"></i> Сохранить
                 </button>
-                <a href="{$modx->makeUrl($resourceId)}" class="btn btn-outline-secondary">
+                <a href="{$modx->makeUrl($resourceId)}" class="ts-btn ts-btn-secondary">
                     <i class="bi bi-x-circle"></i> Отмена
                 </a>
             </div>
@@ -225,7 +225,7 @@ $output = <<<HTML
 
                 if (result.success) {
                     // Вставляем ссылку на документ с иконкой
-                    const linkHtml = `<p><a href="${result.url}" target="_blank" class="btn btn-outline-primary btn-sm"><i class="bi ${result.icon} me-2"></i>${result.filename} (${result.sizeFormatted})</a></p>`;
+                    const linkHtml = `<p><a href="${result.url}" target="_blank" class="ts-btn ts-btn-ghost ts-btn-sm"><i class="bi ${result.icon} me-2"></i>${result.filename} (${result.sizeFormatted})</a></p>`;
                     quill.clipboard.dangerouslyPasteHTML(range.index, linkHtml);
                     quill.setSelection(range.index + linkHtml.length);
                 } else {

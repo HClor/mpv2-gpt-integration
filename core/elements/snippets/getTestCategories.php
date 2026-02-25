@@ -58,7 +58,7 @@ $stmt->execute();
 $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 if (empty($categories)) {
-    return '<div class="col-12"><div class="alert alert-info">Категории не найдены</div></div>';
+    return '<div class="col-12"><div class="ts-alert ts-alert-info">Категории не найдены</div></div>';
 }
 
 $output = [];

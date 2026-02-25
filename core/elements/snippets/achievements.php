@@ -48,7 +48,7 @@ $sql = "
 $stmt = $modx->query($sql);
 
 if ($stmt === false) {
-    return '<p class="alert alert-danger">Ошибка при получении данных</p>';
+    return '<p class="ts-alert ts-alert-danger">Ошибка при получении данных</p>';
 }
 
 $stats = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -56,7 +56,7 @@ $stats = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$stats || $stats['total_tests'] == 0) {
     return '
         <p class="text-muted mb-3">У вас еще нет достижений. Начните решать тесты!</p>
-        <a href="' . $modx->makeUrl(35) . '" class="btn btn-primary btn-sm">
+        <a href="' . $modx->makeUrl(35) . '" class="ts-btn ts-btn-primary ts-btn-sm">
             <i class="bi bi-play-circle"></i> Начать тестирование
         </a>
     ';
@@ -202,9 +202,9 @@ foreach ($badges as $key => $badge) {
     $html[] = '<p class="card-text small text-muted">' . htmlspecialchars($badge['description']) . '</p>';
 
     if ($isEarned) {
-        $html[] = '<span class="badge bg-success mt-2">✓ Получено</span>';
+        $html[] = '<span class="ts-badge ts-badge-success mt-2">✓ Получено</span>';
     } else {
-        $html[] = '<span class="badge bg-secondary mt-2">Заблокировано</span>';
+        $html[] = '<span class="ts-badge ts-badge-neutral mt-2">Заблокировано</span>';
     }
 
     $html[] = '</div>';

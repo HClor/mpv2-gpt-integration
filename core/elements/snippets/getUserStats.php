@@ -40,7 +40,7 @@ $stats = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$stats || $stats['total_sessions'] == 0) {
     return '
         <p class="text-muted mb-3">Вы еще не прошли ни одного теста.</p>
-        <a href="' . $modx->makeUrl(35) . '" class="btn btn-primary btn-sm">
+        <a href="' . $modx->makeUrl(35) . '" class="ts-btn ts-btn-primary ts-btn-sm">
             <i class="bi bi-play-circle"></i> Начать тестирование
         </a>
     ';

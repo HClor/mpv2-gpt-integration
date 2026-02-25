@@ -29,7 +29,7 @@ $stmt->execute();
 $learningTests = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 if (empty($learningTests)) {
-    return '<div class="alert alert-info">
+    return '<div class="ts-alert ts-alert-info">
         <h5>Нет обучающих материалов</h5>
         <p>Добавьте вопросы в режим обучения, чтобы они отобразились здесь.</p>
     </div>';
@@ -83,7 +83,7 @@ foreach ($byParent as $catName => $data) {
     $output .= '<h3 class="h4 mb-3 pb-2 border-bottom">';
     $output .= '<i class="bi bi-folder me-2 text-info"></i>';
     $output .= htmlspecialchars($catName);
-    $output .= ' <span class="badge bg-secondary">' . count($data['resources']) . '</span>';
+    $output .= ' <span class="ts-badge ts-badge-neutral">' . count($data['resources']) . '</span>';
     $output .= '</h3>';
     $output .= '<div class="row">';
 
@@ -111,11 +111,11 @@ foreach ($byParent as $catName => $data) {
         $output .= '<div class="card h-100 shadow-sm">';
         $output .= '<div class="card-body">';
         $output .= '<h5 class="card-title">' . htmlspecialchars($material['title']) . '</h5>';
-        $output .= '<div class="mb-2"><span class="badge bg-info"><i class="bi bi-collection me-1"></i>Вопросы из теста</span></div>';
+        $output .= '<div class="mb-2"><span class="ts-badge ts-badge-primary"><i class="bi bi-collection me-1"></i>Вопросы из теста</span></div>';
         $output .= '<p class="card-text text-muted small">' . htmlspecialchars($descShort) . '</p>';
         $output .= '</div>';
         $output .= '<div class="card-footer bg-light d-flex justify-content-between align-items-center">';
-        $output .= '<a href="' . $viewUrl . '" class="btn btn-sm btn-outline-primary">';
+        $output .= '<a href="' . $viewUrl . '" class="ts-btn ts-btn-sm ts-btn-ghost">';
         $output .= '<i class="bi bi-play-circle me-1"></i> Начать изучение';
         $output .= '</a>';
         $output .= '<small class="text-muted"><i class="bi bi-card-list me-1"></i>' . $material['questions_count'] . ' карточек</small>';

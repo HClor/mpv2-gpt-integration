@@ -27,7 +27,7 @@ $stmt = $modx->query("
 $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 if (empty($categories)) {
-    return '<div class="alert alert-info">Статистика по категориям пока пуста</div>';
+    return '<div class="ts-alert ts-alert-info">Статистика по категориям пока пуста</div>';
 }
 
 $output = '<div class="card shadow">';
@@ -43,7 +43,7 @@ foreach ($categories as $idx => $cat) {
     $output .= '<li class="nav-item">';
     $output .= '<a class="nav-link ' . $isActive . '" href="?cat=' . $cat['id'] . '">';
     $output .= htmlspecialchars($cat['pagetitle']);
-    $output .= ' <span class="badge bg-secondary">' . (int)$cat['users_count'] . '</span>';
+    $output .= ' <span class="ts-badge ts-badge-neutral">' . (int)$cat['users_count'] . '</span>';
     $output .= '</a>';
     $output .= '</li>';
 }
@@ -106,7 +106,7 @@ foreach ($leaders as $leader) {
     $output .= '<td>';
     $output .= '<strong>' . htmlspecialchars($leader["username"]) . '</strong>';
     if ($isCurrentUser) {
-        $output .= ' <span class="badge bg-primary">Вы</span>';
+        $output .= ' <span class="ts-badge ts-badge-primary">Вы</span>';
     }
     $output .= '</td>';
     

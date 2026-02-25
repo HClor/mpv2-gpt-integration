@@ -15,7 +15,7 @@ require_once MODX_CORE_PATH . 'components/testsystem/services/LearningPathServic
 // 0) Auth
 if (!$modx->user || !$modx->user->hasSessionContext('web')) {
     $authUrl = $modx->makeUrl(24, '', '', 'abs');
-    return '<div class="alert alert-warning">Войдите, чтобы просмотреть профиль.<br><a class="btn btn-primary mt-2" href="'.htmlspecialchars($authUrl,ENT_QUOTES,'UTF-8').'">Войти</a></div>';
+    return '<div class="ts-alert ts-alert-warning">Войдите, чтобы просмотреть профиль.<br><a class="ts-btn ts-btn-primary mt-2" href="'.htmlspecialchars($authUrl,ENT_QUOTES,'UTF-8').'">Войти</a></div>';
 }
 
 // 1) Init
@@ -147,9 +147,9 @@ $difficultyLabels = [
 
 // 7) UI (tabs)
 $out = [];
-if ($success) $out[] = '<div class="alert alert-success">'.$h($success).'</div>';
+if ($success) $out[] = '<div class="ts-alert ts-alert-success">'.$h($success).'</div>';
 if ($errors) {
-  $out[] = '<div class="alert alert-danger"><ul class="mb-0">';
+  $out[] = '<div class="ts-alert ts-alert-danger"><ul class="mb-0">';
   foreach ($errors as $e) $out[] = '<li>'.$h($e).'</li>';
   $out[] = '</ul></div>';
 }
@@ -162,7 +162,7 @@ $out[] = '
   <li class="nav-item" role="presentation">
     <button class="nav-link" id="tab-paths" data-bs-toggle="tab" data-bs-target="#pane-paths" type="button" role="tab">
       Траектории
-      '.($learningStats['summary']['enrolled_paths'] > 0 ? '<span class="badge bg-primary ms-1">'.(int)$learningStats['summary']['enrolled_paths'].'</span>' : '').'
+      '.($learningStats['summary']['enrolled_paths'] > 0 ? '<span class="ts-badge ts-badge-primary ms-1">'.(int)$learningStats['summary']['enrolled_paths'].'</span>' : '').'
     </button>
   </li>
   <li class="nav-item" role="presentation">
@@ -212,7 +212,7 @@ if (!$lastAttempts) {
   foreach($lastAttempts as $a){
     $title = $h($a['title'] ?? ('Тест #'.$a['test_id']));
     $score = (int)$a['score'].'%';
-    $status= ((int)$a['passed']===1) ? '<span class="badge bg-success">пройден</span>' : '<span class="badge bg-secondary">нет</span>';
+    $status= ((int)$a['passed']===1) ? '<span class="ts-badge ts-badge-success">пройден</span>' : '<span class="ts-badge ts-badge-neutral">нет</span>';
     $date  = $h($a['started_at'] ?? '');
     $link  = !empty($a['rid']) ? $h($modx->makeUrl((int)$a['rid'],'','', 'abs')) : '#';
     $cellTitle = $link!=='#' ? '<a href="'.$link.'">'.$title.'</a>' : $title;
@@ -249,7 +249,7 @@ $out[] .= '</div></div>
 
 if (empty($learningStats['paths'])) {
     $out[] .= '
-    <div class="alert alert-info">
+    <div class="ts-alert ts-alert-info">
       <i class="bi bi-info-circle me-2"></i>
       Вы ещё не записаны ни на одну траекторию обучения.
       <a href="'.$h($pathsUrl).'" class="alert-link">Посмотреть доступные траектории</a>
@@ -260,6 +260,8 @@ if (empty($learningStats['paths'])) {
         $pct = (int)$path['completion_pct'];
         $statusClass = $path['status'] === 'completed' ? 'success' : ($path['status'] === 'in_progress' ? 'primary' : 'secondary');
         $statusLabel = $path['status'] === 'completed' ? 'Завершено' : ($path['status'] === 'in_progress' ? 'В процессе' : 'Не начато');
+        $tsBadgeClass = $path['status'] === 'completed' ? 'ts-badge-success' : ($path['status'] === 'in_progress' ? 'ts-badge-primary' : 'ts-badge-neutral');
+        $tsBtnVariant = $path['status'] === 'completed' ? 'ts-btn-ghost-success' : ($path['status'] === 'in_progress' ? 'ts-btn-ghost' : 'ts-btn-secondary');
         $diffLabel = $difficultyLabels[$path['difficulty_level']] ?? $path['difficulty_level'];
         $pathUrl = $pathsUrl . '?mode=view&id=' . (int)$path['id'];
 
@@ -271,7 +273,7 @@ if (empty($learningStats['paths'])) {
                 <h6 class="card-title mb-0">
                   <a href="'.$h($pathUrl).'" class="text-decoration-none">'.$h($path['name']).'</a>
                 </h6>
-                <span class="badge bg-'.$statusClass.'">'.$statusLabel.'</span>
+                <span class="ts-badge '.$tsBadgeClass.'">'.$statusLabel.'</span>
               </div>
               <p class="text-muted small mb-2">
                 <i class="bi bi-bar-chart me-1"></i>'.$diffLabel.'
@@ -284,10 +286,10 @@ if (empty($learningStats['paths'])) {
                 <span>'.(int)$path['completed_steps'].' / '.(int)$path['total_steps'].' шагов</span>
                 <span>'.$pct.'%</span>
               </div>
-              '.($path['certificate_issued'] ? '<div class="mt-2"><span class="badge bg-warning text-dark"><i class="bi bi-award me-1"></i>Сертификат получен</span></div>' : '').'
+              '.($path['certificate_issued'] ? '<div class="mt-2"><span class="ts-badge ts-badge-warning"><i class="bi bi-award me-1"></i>Сертификат получен</span></div>' : '').'
             </div>
             <div class="card-footer bg-transparent">
-              <a href="'.$h($pathUrl).'" class="btn btn-sm btn-outline-'.$statusClass.'">
+              <a href="'.$h($pathUrl).'" class="ts-btn ts-btn-sm '.$tsBtnVariant.'">
                 '.($path['status'] === 'completed' ? '<i class="bi bi-eye me-1"></i>Просмотреть' : '<i class="bi bi-play-fill me-1"></i>Продолжить').'
               </a>
             </div>
@@ -299,7 +301,7 @@ if (empty($learningStats['paths'])) {
 
 $out[] .= '
     <div class="mt-3">
-      <a href="'.$h($pathsUrl).'" class="btn btn-primary">
+      <a href="'.$h($pathsUrl).'" class="ts-btn ts-btn-primary">
         <i class="bi bi-mortarboard me-1"></i>Все траектории обучения
       </a>
     </div>
@@ -319,7 +321,7 @@ $out[] .= '
           <label class="form-label">Email</label>
           <input class="form-control" name="email" value="'.$h($email).'" required>
         </div>
-        <button class="btn btn-primary" type="submit" name="update_profile" value="1">Сохранить</button>
+        <button class="ts-btn ts-btn-primary" type="submit" name="update_profile" value="1">Сохранить</button>
       </form>
     </div></div>
 
@@ -339,7 +341,7 @@ $out[] .= '
           <label class="form-label">Повторите новый пароль</label>
           <input type="password" class="form-control" name="password_new2" required>
         </div>
-        <button class="btn btn-warning" type="submit" name="change_password" value="1">Обновить пароль</button>
+        <button class="ts-btn ts-btn-warning" type="submit" name="change_password" value="1">Обновить пароль</button>
       </form>
     </div></div>
   </div>

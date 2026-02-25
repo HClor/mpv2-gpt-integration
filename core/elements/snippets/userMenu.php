@@ -65,7 +65,7 @@ if ($modx->user->hasSessionContext('web') && $modx->user->id > 0) {
     $output .= '<li class="px-3 py-2">';
     $output .= '<form method="post" action="">';
     $output .= '<input type="hidden" name="login_logout" value="1">';
-    $output .= '<button type="submit" class="btn btn-sm btn-danger w-100">Выйти</button>';
+    $output .= '<button type="submit" class="ts-btn ts-btn-sm ts-btn-danger w-100">Выйти</button>';
     $output .= '</form>';
     $output .= '</li>';
     
@@ -75,7 +75,7 @@ if ($modx->user->hasSessionContext('web') && $modx->user->id > 0) {
 } else {
     $authUrl = $modx->makeUrl(Config::getPageId('auth', 24));
     $output .= '<li class="nav-item">';
-    $output .= '<a class="nav-link btn btn-outline-primary" href="' . $authUrl . '">Войти</a>';
+    $output .= '<a class="nav-link ts-btn ts-btn-ghost" href="' . $authUrl . '">Войти</a>';
     $output .= '</li>';
 }
 

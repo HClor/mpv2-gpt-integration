@@ -132,7 +132,27 @@
     filter: brightness(0.9);
 }
 
-/* --- Ghost --- */
+/* --- Warning --- */
+
+.ts-btn-warning {
+    background-color: var(--color-warning);
+    color: var(--color-warning-dark);
+    border-color: var(--color-warning);
+}
+
+.ts-btn-warning:hover,
+.ts-btn-warning:focus {
+    background-color: var(--color-warning-dark);
+    border-color: var(--color-warning-dark);
+    color: var(--color-bg-card);
+    text-decoration: none;
+}
+
+.ts-btn-warning:active {
+    filter: brightness(0.9);
+}
+
+/* --- Ghost (outline primary) --- */
 
 .ts-btn-ghost {
     background-color: transparent;
@@ -150,6 +170,69 @@
 
 .ts-btn-ghost:active {
     background-color: var(--color-primary-light);
+    filter: brightness(0.95);
+}
+
+/* --- Ghost Danger (outline danger) --- */
+
+.ts-btn-ghost-danger {
+    background-color: transparent;
+    color: var(--color-danger);
+    border-color: var(--color-danger);
+}
+
+.ts-btn-ghost-danger:hover,
+.ts-btn-ghost-danger:focus {
+    background-color: var(--color-danger-light);
+    color: var(--color-danger-dark);
+    border-color: var(--color-danger-dark);
+    text-decoration: none;
+}
+
+.ts-btn-ghost-danger:active {
+    background-color: var(--color-danger-light);
+    filter: brightness(0.95);
+}
+
+/* --- Ghost Success (outline success) --- */
+
+.ts-btn-ghost-success {
+    background-color: transparent;
+    color: var(--color-success);
+    border-color: var(--color-success);
+}
+
+.ts-btn-ghost-success:hover,
+.ts-btn-ghost-success:focus {
+    background-color: var(--color-success-light);
+    color: var(--color-success-dark);
+    border-color: var(--color-success-dark);
+    text-decoration: none;
+}
+
+.ts-btn-ghost-success:active {
+    background-color: var(--color-success-light);
+    filter: brightness(0.95);
+}
+
+/* --- Ghost Warning (outline warning) --- */
+
+.ts-btn-ghost-warning {
+    background-color: transparent;
+    color: var(--color-warning-dark);
+    border-color: var(--color-warning);
+}
+
+.ts-btn-ghost-warning:hover,
+.ts-btn-ghost-warning:focus {
+    background-color: var(--color-warning-light);
+    color: var(--color-warning-dark);
+    border-color: var(--color-warning-dark);
+    text-decoration: none;
+}
+
+.ts-btn-ghost-warning:active {
+    background-color: var(--color-warning-light);
     filter: brightness(0.95);
 }
 

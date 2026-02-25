@@ -32,7 +32,7 @@ $stmt = $modx->query("
 $leaders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 if (empty($leaders)) {
-    return '<div class="alert alert-info">Пока нет результатов</div>';
+    return '<div class="ts-alert ts-alert-info">Пока нет результатов</div>';
 }
 
 $output = [];
