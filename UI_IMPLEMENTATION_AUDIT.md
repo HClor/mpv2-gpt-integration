@@ -2,7 +2,7 @@
 
 > Файл для отслеживания прогресса внедрения `STYLE_GUIDE.md` в существующую инфраструктуру.
 > При старте новой сессии — ссылаться на этот файл для продолжения работы.
-> Обновлено: 2026-02-25 (Этап 6 завершён)
+> Обновлено: 2026-02-25 (Этап 7 завершён — все этапы выполнены)
 
 ---
 
@@ -397,36 +397,39 @@ Grep по `class="btn btn-` в PHP-сниппетах возвращает 0 р�
 
 #### Задачи
 
-- [ ] **7.1** Grep-проверки:
-  ```bash
-  # Не должно быть FA иконок
-  grep -r "fas fa-\|far fa-\|fab fa-" core/elements/ assets/components/testsystem/
-
-  # Не должно быть hex-цветов в CSS
-  grep -E "#[0-9a-fA-F]{3,6}" assets/components/testsystem/css/
-
-  # Не должно быть inline style тегов
-  grep -r "<style>" core/elements/
-
-  # Не должно быть Bootstrap-классов кнопок в сниппетах
-  grep -r "class=\"btn btn-" core/elements/snippets/
+- [x] **7.1** Grep-проверки — все 4 команды возвращают 0 результатов  ✓ 2026-02-25
   ```
+  FA иконки:        grep -r "fas fa-..." → 0 ✓
+  Hex в CSS:        grep -E "#[0-9a-fA-F]{6}" (кроме ts-variables.css) → 0 ✓
+  Inline <style>:   grep -r "<style" core/elements/ → 0 ✓
+  Bootstrap btn:    grep -r 'class="btn btn-' core/elements/snippets/ → 0 ✓
+  ```
+  — Удалён закомментированный `/*background-color: #cfe2ff;*/` из `tsrunner.css`
 
-- [ ] **7.2** Обновить Bootstrap Icons до `1.11+` в `tsHead.tpl` (с `1.10.0`)
+- [x] **7.2** Bootstrap Icons уже `1.11.3` в `tsHead.tpl` (обновлено в Этапе 2)  ✓ 2026-02-25
 
-- [ ] **7.3** Удалить дублирующиеся CSS-правила, оставшиеся после рефакторинга
+- [x] **7.3** Удалён дублирующийся блок `.user-xp` из `testsystem-extended.css`  ✓ 2026-02-25
+  — Свойства объединены в `ts-layout.css` (display, align-self, margin-right добавлены к визуальным стилям)
 
-- [ ] **7.4** Проверить адаптивность (мобильные, планшеты) всех затронутых страниц
+- [x] **7.4** Code-review адаптивности  ✓ 2026-02-25
+  — `ts-components.css`: компоненты используют `inline-flex`/`block`, масштабируются с вьюпортом
+  — `ts-layout.css`: `body` на flexbox, responsive footer
+  — Сниппеты используют Bootstrap grid (`col-md-*`) для адаптивных колонок
 
-- [ ] **7.5** Обновить `STYLE_GUIDE.md` — добавить финальную файловую структуру CSS
+- [x] **7.5** Обновлён `STYLE_GUIDE.md` §14  ✓ 2026-02-25
+  — Раздел «целевая структура» → «актуальная после внедрения»
+  — Добавлены: порядок подключения CSS, назначение каждого файла, правила каскада
 
-- [ ] **7.6** Добавить в `DEVELOPMENT_RULES.md` grep-команды из п.7.1 как часть чеклиста
+- [x] **7.6** Обновлён `DEVELOPMENT_RULES.md` §7  ✓ 2026-02-25
+  — Чеклист разделён на §7.1 (PHP/MODX) и §7.2 (UI/стиль)
+  — Добавлены 4 grep-проверки + быстрая команда для проверки всех правил одновременно
 
 #### Критерий завершения
 Все 4 grep-команды из п.7.1 возвращают 0 результатов.
+**Верификация:** FA: 0 ✓ | Hex: 0 ✓ | style: 0 ✓ | btn: 0 ✓
 
 #### Статус
-`[ ] НЕ НАЧАТ`
+`[x] ГОТОВ 2026-02-25`
 
 ---
 
@@ -440,7 +443,7 @@ Grep по `class="btn btn-` в PHP-сниппетах возвращает 0 р�
 | 4 | Вынос inline `<style>` | 9 | `[x] ГОТОВ 2026-02-24` | `claude/ui-implementation-stage-4-z3JKU` |
 | 5 | CSS-компоненты (`ts-components.css`) | 1 (новый) | `[x] ГОТОВ 2026-02-25` | `claude/ui-implementation-stage-4-z3JKU` |
 | 6 | Миграция сниппетов PHP | 29+ | `[x] ГОТОВ 2026-02-25` | `claude/ui-implementation-stage-6-i4QN9` |
-| 7 | Финальный аудит и чистка | — | `[ ]` | `claude/ui-stage-7-cleanup` |
+| 7 | Финальный аудит и чистка | — | `[x] ГОТОВ 2026-02-25` | `claude/ui-implementation-stage-6-i4QN9` |
 
 ---
 

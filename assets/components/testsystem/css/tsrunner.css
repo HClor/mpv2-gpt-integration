@@ -47,7 +47,6 @@
 }
 
 #question-type-hint.alert-primary {
-    /*background-color: #cfe2ff;*/
     background-color: rgba(33, 37, 41, 0.03);
     border-color: var(--color-primary);
     color: var(--color-primary-text);

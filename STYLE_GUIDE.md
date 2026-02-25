@@ -416,16 +416,58 @@ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
 
 ---
 
-## 14. Файловая структура стилей (целевая)
+## 14. Файловая структура стилей (актуальная — после внедрения)
+
+> Обновлено 2026-02-25. Все файлы переведены на CSS Custom Properties.
+
+### Порядок подключения (tsHead.tpl)
+
+```html
+<!-- 1. Токены дизайна — должен быть первым -->
+<link rel="stylesheet" href="/assets/components/testsystem/css/ts-variables.css">
+<!-- 2. Bootstrap 5.3 -->
+<link rel="stylesheet" href="...bootstrap.min.css">
+<!-- 3. Bootstrap Icons 1.11.3 -->
+<link rel="stylesheet" href="...bootstrap-icons.css">
+<!-- 4. Компоненты ts- -->
+<link rel="stylesheet" href="/assets/components/testsystem/css/ts-components.css">
+<!-- 5. Глобальный layout -->
+<link rel="stylesheet" href="/assets/components/testsystem/css/ts-layout.css">
+<!-- 6. Специфические стили модулей -->
+<link rel="stylesheet" href="/assets/components/testsystem/css/tsrunner.css">
+<link rel="stylesheet" href="/assets/components/testsystem/css/testsystem-extended.css">
+<link rel="stylesheet" href="/assets/components/testsystem/css/categories-and-tests.css">
+```
+
+### Назначение файлов
 
 ```
 assets/components/testsystem/css/
-├── ts-variables.css      # CSS Custom Properties (палитра, размеры)
-├── ts-base.css           # Типографика, body, базовые сбросы
-├── ts-components.css     # Кнопки, поля, карточки, бейджи, алерты
-├── ts-layout.css         # Навбар, футер, сетка страниц
-├── ts-runner.css         # Специфика тест-раннера
-└── ts-modules.css        # Специфика отдельных модулей (пути, материалы...)
+├── ts-variables.css           # CSS Custom Properties: цвета, размеры, отступы, шрифты
+│                              # Единственный файл с hex-значениями (определения токенов)
+├── ts-components.css          # Компонентная библиотека:
+│   ├── .ts-btn, .ts-btn-*     #   Кнопки (primary, secondary, success, danger, warning,
+│   │                          #   ghost, ghost-danger, ghost-success, ghost-warning)
+│   ├── .ts-card, .ts-card-*   #   Карточки (header, body, footer, title, description)
+│   ├── .ts-badge, .ts-badge-* #   Бейджи (primary, success, danger, warning, neutral, xp, gold)
+│   ├── .ts-field, .ts-input   #   Формы (field, label, input, select, textarea)
+│   ├── .ts-alert, .ts-alert-* #   Алерты (success, danger, warning, info)
+│   ├── .ts-meta, .ts-meta-item#   Мета-информация карточек
+│   └── .ts-dropdown-*         #   Выпадающие меню
+├── ts-layout.css              # Глобальный layout:
+│                              #   body, main, .navbar-brand, footer, .breadcrumb,
+│                              #   .card (Bootstrap override), .alert (Bootstrap override),
+│                              #   .user-xp (XP-бейдж в навбаре)
+├── tsrunner.css               # Тест-раннер (2600+ строк, переведён на var(--color-*))
+├── testsystem-extended.css    # Расширенные стили всех модулей (переведены на переменные)
+└── categories-and-tests.css   # Страница категорий и тестов (переведена на переменные)
+
+assets/templates/css/
+└── base-layout.css            # Стили базового шаблона MODX (body padding, manager link)
 ```
 
-Все три текущих файла (`tsrunner.css`, `testsystem-extended.css`, `categories-and-tests.css`) будут рефакторизованы в эту структуру на этапе внедрения.
+### Правила каскада
+
+- `ts-variables.css` → `ts-components.css` → `ts-layout.css` — строгий порядок
+- Hex-значения разрешены **только** в `ts-variables.css`
+- `tsrunner.css`, `testsystem-extended.css`, `categories-and-tests.css` должны использовать исключительно `var(--color-*)`, `var(--radius-*)` и `var(--shadow-*)`
