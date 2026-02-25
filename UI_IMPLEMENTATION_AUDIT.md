@@ -2,7 +2,7 @@
 
 > Файл для отслеживания прогресса внедрения `STYLE_GUIDE.md` в существующую инфраструктуру.
 > При старте новой сессии — ссылаться на этот файл для продолжения работы.
-> Обновлено: 2026-02-25 (Этап 5 завершён)
+> Обновлено: 2026-02-25 (Этап 6 завершён)
 
 ---
 
@@ -299,11 +299,11 @@ Grep по `<style>` в `core/elements/` возвращает 0 результа�
 | `testResults.php` | Результаты, кнопки навигации |
 | `leaderboard.php` | Таблица лидеров, бейджи |
 
-- [ ] **6.A.1** Мигрировать `homePage.php`
-- [ ] **6.A.2** Мигрировать `categoriesAndTests.php`
-- [ ] **6.A.3** Мигрировать `testRunner.php`
-- [ ] **6.A.4** Мигрировать `testResults.php`
-- [ ] **6.A.5** Мигрировать `leaderboard.php`
+- [x] **6.A.1** Мигрировать `homePage.php`  ✓ 2026-02-25
+- [x] **6.A.2** Мигрировать `categoriesAndTests.php`  ✓ 2026-02-25
+- [x] **6.A.3** Мигрировать `testRunner.php`  ✓ 2026-02-25
+- [x] **6.A.4** Мигрировать `testResults.php`  ✓ 2026-02-25
+- [x] **6.A.5** Мигрировать `leaderboard.php`  ✓ 2026-02-25
 
 #### Группа B — Профиль и личный кабинет
 
@@ -317,12 +317,13 @@ Grep по `<style>` в `core/elements/` возвращает 0 результа�
 | `myAchievements.php` | Карточки достижений, бейджи |
 | `achievements.php` | Публичная страница достижений |
 
-- [ ] **6.B.1** Мигрировать `userProfile.php`
-- [ ] **6.B.2** Мигрировать `myTests.php`
-- [ ] **6.B.3** Мигрировать `myFavorites.php`
-- [ ] **6.B.4** Мигрировать `testHistory.php`
-- [ ] **6.B.5** Мигрировать `myCertificates.php`
-- [ ] **6.B.6** Мигрировать `myAchievements.php` + `achievements.php`
+- [x] **6.B.1** Мигрировать `userProfile.php`  ✓ 2026-02-25
+  — Добавлен `$tsBadgeClass` и `$tsBtnVariant` для динамических классов статуса траектории
+- [x] **6.B.2** Мигрировать `myTests.php`  ✓ 2026-02-25
+- [x] **6.B.3** Мигрировать `myFavorites.php`  ✓ 2026-02-25
+- [x] **6.B.4** Мигрировать `testHistory.php`  ✓ 2026-02-25
+- [x] **6.B.5** Мигрировать `myCertificates.php`  ✓ 2026-02-25
+- [x] **6.B.6** Мигрировать `myAchievements.php` + `achievements.php`  ✓ 2026-02-25
 
 #### Группа C — Учебный контент
 
@@ -336,11 +337,12 @@ Grep по `<style>` в `core/elements/` возвращает 0 результа�
 | `addTestForm.php` | Форма создания теста |
 | `csvImportForm.php` | Форма импорта |
 
-- [ ] **6.C.1** Мигрировать `learningMaterialsTemplate.php`
-- [ ] **6.C.2** Мигрировать `learningPaths.php`
-- [ ] **6.C.3** Мигрировать `categoriesList.php` + `testsList.php`
-- [ ] **6.C.4** Мигрировать `addTestForm.php` + `csvImportForm.php`
-- [ ] **6.C.5** Мигрировать `getUserStats.php`
+- [x] **6.C.1** Мигрировать `learningMaterialsTemplate.php`  ✓ 2026-02-25
+- [x] **6.C.2** Мигрировать `learningPaths.php`  ✓ 2026-02-25
+- [x] **6.C.3** Мигрировать `categoriesList.php` + `testsList.php`  ✓ 2026-02-25
+  — Файлы не содержали Bootstrap btn-классов (были уже чистыми)
+- [x] **6.C.4** Мигрировать `addTestForm.php` + `csvImportForm.php`  ✓ 2026-02-25
+- [x] **6.C.5** Мигрировать `getUserStats.php`  ✓ 2026-02-25
 
 #### Группа D — Авторизация
 
@@ -351,8 +353,9 @@ Grep по `<style>` в `core/elements/` возвращает 0 результа�
 | `resetPasswordHandler.php` | Форма сброса пароля |
 | `activateAccount.php` | Страница активации |
 
-- [ ] **6.D.1** Мигрировать `authHandler.php`
-- [ ] **6.D.2** Мигрировать `forgotPasswordHandler.php` + `resetPasswordHandler.php` + `activateAccount.php`
+- [x] **6.D.1** Мигрировать `authHandler.php`  ✓ 2026-02-25
+  — Файл не содержал Bootstrap btn-классов (был уже чистым)
+- [x] **6.D.2** Мигрировать `forgotPasswordHandler.php` + `resetPasswordHandler.php` + `activateAccount.php`  ✓ 2026-02-25
 
 #### Группа E — Управление (только для админов/экспертов)
 
@@ -363,16 +366,26 @@ Grep по `<style>` в `core/elements/` возвращает 0 результа�
 | `knowledgeAreasManager.php` | Управление областями знаний |
 | `adminDataIntegrity.php` | Проверка целостности данных |
 
-- [ ] **6.E.1** Мигрировать `manageCategories.php`
-- [ ] **6.E.2** Мигрировать `manageUsers.php`
-- [ ] **6.E.3** Мигрировать `knowledgeAreasManager.php`
-- [ ] **6.E.4** Мигрировать `adminDataIntegrity.php`
+- [x] **6.E.1** Мигрировать `manageCategories.php`  ✓ 2026-02-25
+  — Файл не содержал Bootstrap btn-классов (был уже чистым)
+- [x] **6.E.2** Мигрировать `manageUsers.php`  ✓ 2026-02-25
+- [x] **6.E.3** Мигрировать `knowledgeAreasManager.php`  ✓ 2026-02-25
+- [x] **6.E.4** Мигрировать `adminDataIntegrity.php`  ✓ 2026-02-25
+
+#### Дополнительно (вне списка аудита)
+— Мигрированы также: `learningArticles.php`, `learningMaterials.php`, `learningPathsStats.php`,
+  `materialEditor.php`, `userMenu.php`, `usersStats.php`, `getTestCategories.php`,
+  `getTestInfoBatch.php`, `getTopUsers.php`, `leaderboardCategories.php`, `leaderboardCompact.php`
+— Добавлены варианты кнопок в `ts-components.css`: `ts-btn-warning`, `ts-btn-ghost`,
+  `ts-btn-ghost-danger`, `ts-btn-ghost-success`, `ts-btn-ghost-warning`
+— `badge bg-*` → `ts-badge ts-badge-*`, `alert alert-*` → `ts-alert ts-alert-*` (статические паттерны)
 
 #### Критерий завершения
 Grep по `class="btn btn-` в PHP-сниппетах возвращает 0 результатов.
+**Верификация:** `grep -r 'class="btn btn-' core/elements/snippets/` → 0 результатов ✓
 
 #### Статус
-`[ ] НЕ НАЧАТ`
+`[x] ГОТОВ 2026-02-25`
 
 ---
 
@@ -426,7 +439,7 @@ Grep по `class="btn btn-` в PHP-сниппетах возвращает 0 р�
 | 3 | Hex-цвета → переменные в CSS | 3 | `[x] ГОТОВ 2026-02-24` | `claude/ui-stage-3-css-vars` |
 | 4 | Вынос inline `<style>` | 9 | `[x] ГОТОВ 2026-02-24` | `claude/ui-implementation-stage-4-z3JKU` |
 | 5 | CSS-компоненты (`ts-components.css`) | 1 (новый) | `[x] ГОТОВ 2026-02-25` | `claude/ui-implementation-stage-4-z3JKU` |
-| 6 | Миграция сниппетов PHP | 29 | `[ ]` | `claude/ui-stage-6-snippets` |
+| 6 | Миграция сниппетов PHP | 29+ | `[x] ГОТОВ 2026-02-25` | `claude/ui-implementation-stage-6-i4QN9` |
 | 7 | Финальный аудит и чистка | — | `[ ]` | `claude/ui-stage-7-cleanup` |
 
 ---

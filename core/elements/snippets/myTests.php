@@ -44,10 +44,10 @@ $output .= '<div id="my-tests-container">';
 $output .= '<div class="d-flex justify-content-between align-items-center mb-4">';
 $output .= '<h2>Мои тесты</h2>';
 if ($createTestPageId > 0) {
-    $output .= '<a href="' . htmlspecialchars($createTestUrl, ENT_QUOTES, 'UTF-8') . '" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Создать тест</a>';
+    $output .= '<a href="' . htmlspecialchars($createTestUrl, ENT_QUOTES, 'UTF-8') . '" class="ts-btn ts-btn-primary"><i class="bi bi-plus-circle"></i> Создать тест</a>';
 } else {
     // Если страница не настроена, используем модальное окно
-    $output .= '<button class="btn btn-primary" onclick="showCreateTestModal()"><i class="bi bi-plus-circle"></i> Создать тест</button>';
+    $output .= '<button class="ts-btn ts-btn-primary" onclick="showCreateTestModal()"><i class="bi bi-plus-circle"></i> Создать тест</button>';
 }
 $output .= '</div>';
 
@@ -92,8 +92,8 @@ $output .= '<small class="form-text text-muted">Вы сможете измени
 $output .= '</div>';
 $output .= '</div>';
 $output .= '<div class="modal-footer">';
-$output .= '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>';
-$output .= '<button type="button" class="btn btn-primary" onclick="createTest()">Создать</button>';
+$output .= '<button type="button" class="ts-btn ts-btn-secondary" data-bs-dismiss="modal">Отмена</button>';
+$output .= '<button type="button" class="ts-btn ts-btn-primary" onclick="createTest()">Создать</button>';
 $output .= '</div>';
 $output .= '</div></div></div>';
 

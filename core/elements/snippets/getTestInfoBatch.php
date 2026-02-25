@@ -103,7 +103,7 @@ $stmt->execute();
 $tests = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 if (empty($tests)) {
-    return '<div class="alert alert-info">Тесты не найдены</div>';
+    return '<div class="ts-alert ts-alert-info">Тесты не найдены</div>';
 }
 
 $output = [];

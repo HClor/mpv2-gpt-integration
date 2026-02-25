@@ -380,7 +380,7 @@ $output .= '<div class="col-lg-10 offset-lg-1">';
 $output .= '<div class="d-flex justify-content-between align-items-center mb-4">';
 $output .= '<h2><i class="bi bi-file-earmark-spreadsheet"></i> Импорт вопросов</h2>';
 $backLink = $testUrl !== '#' ? $testUrl : 'javascript:history.back()';
-$output .= '<a href="' . htmlspecialchars($backLink, ENT_QUOTES, 'UTF-8') . '" class="btn btn-secondary">← Вернуться к тесту</a>';
+$output .= '<a href="' . htmlspecialchars($backLink, ENT_QUOTES, 'UTF-8') . '" class="ts-btn ts-btn-secondary">← Вернуться к тесту</a>';
 $output .= '</div>';
 
 $output .= '<div class="card mb-4">';
@@ -391,7 +391,7 @@ $output .= '</div>';
 $output .= '</div>';
 
 if (!empty($errors)) {
-    $output .= '<div class="alert alert-danger">';
+    $output .= '<div class="ts-alert ts-alert-danger">';
     $output .= '<h5><i class="bi bi-exclamation-triangle"></i> Ошибки импорта:</h5>';
     $output .= '<ul class="mb-0">';
     foreach ($errors as $error) {
@@ -402,7 +402,7 @@ if (!empty($errors)) {
 }
 
 if (!empty($success)) {
-    $output .= '<div class="alert alert-success">';
+    $output .= '<div class="ts-alert ts-alert-success">';
     $output .= '<h5><i class="bi bi-check-circle"></i> Успешно импортировано: ' . $importedCount . ' вопросов</h5>';
     if (count($success) <= 10) {
         $output .= '<ul class="mb-0">';
@@ -421,7 +421,7 @@ if (!empty($success)) {
     }
     
     $output .= '<hr>';
-    $output .= '<a href="' . htmlspecialchars($testUrl, ENT_QUOTES, 'UTF-8') . '" class="btn btn-primary btn-lg">Перейти к тесту →</a>';
+    $output .= '<a href="' . htmlspecialchars($testUrl, ENT_QUOTES, 'UTF-8') . '" class="ts-btn ts-btn-primary ts-btn-lg">Перейти к тесту →</a>';
     $output .= '</div>';
 }
 
@@ -441,7 +441,7 @@ $output .= '<input type="file" name="csv_file" class="form-control" accept=".csv
 $output .= '<small class="form-text text-muted">Поддерживаемые форматы: CSV, XLSX, XLS</small>';
 $output .= '</div>';
 
-$output .= '<div class="alert alert-info">';
+$output .= '<div class="ts-alert ts-alert-info">';
 $output .= '<h6><i class="bi bi-info-circle"></i> Формат файла:</h6>';
 $output .= '<table class="table table-sm table-bordered mb-0 bg-white">';
 $output .= '<thead><tr>';
@@ -461,13 +461,13 @@ $output .= '</table>';
 $output .= '</div>';
 
 if (!$hasPhpSpreadsheet) {
-    $output .= '<div class="alert alert-warning">';
+    $output .= '<div class="ts-alert ts-alert-warning">';
     $output .= '<strong>Внимание:</strong> PhpSpreadsheet не установлен. Excel файлы не поддерживаются.<br>';
     $output .= 'Используйте CSV формат.';
     $output .= '</div>';
 }
 
-$output .= '<button type="submit" class="btn btn-primary btn-lg w-100">';
+$output .= '<button type="submit" class="ts-btn ts-btn-primary ts-btn-lg w-100">';
 $output .= '<i class="bi bi-upload"></i> Загрузить и импортировать';
 $output .= '</button>';
 

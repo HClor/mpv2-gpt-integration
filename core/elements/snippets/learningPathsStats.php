@@ -24,7 +24,7 @@ require_once MODX_CORE_PATH . 'components/testsystem/services/CategoryPermission
 
 // Проверка авторизации
 if (!$modx->user || !$modx->user->hasSessionContext('web')) {
-    return '<div class="alert alert-warning">Войдите для просмотра статистики</div>';
+    return '<div class="ts-alert ts-alert-warning">Войдите для просмотра статистики</div>';
 }
 
 $userId = (int)$modx->user->get('id');
@@ -32,7 +32,7 @@ $isAdmin = CategoryPermissionService::isGlobalAdmin($modx, $userId);
 $isExpert = CategoryPermissionService::isGlobalExpert($modx, $userId);
 
 if (!$isAdmin && !$isExpert) {
-    return '<div class="alert alert-danger">Доступ запрещён. Требуются права эксперта или администратора.</div>';
+    return '<div class="ts-alert ts-alert-danger">Доступ запрещён. Требуются права эксперта или администратора.</div>';
 }
 
 $h = function($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); };
@@ -53,7 +53,7 @@ if ($pathId) {
     $stats = LearningPathService::getPathStatistics($modx, $pathId);
 
     if (!$stats) {
-        return '<div class="alert alert-warning">Траектория не найдена</div>';
+        return '<div class="ts-alert ts-alert-warning">Траектория не найдена</div>';
     }
 
     $path = $stats['path'];
@@ -143,7 +143,7 @@ if ($pathId) {
                 <tr>
                   <td>'.(int)$step['step_number'].'</td>
                   <td>'.$h($step['name']).'</td>
-                  <td><span class="badge bg-secondary">'.($stepTypes[$step['step_type']] ?? $step['step_type']).'</span></td>
+                  <td><span class="ts-badge ts-badge-neutral">'.($stepTypes[$step['step_type']] ?? $step['step_type']).'</span></td>
                   <td class="text-center">'.($step['is_required'] ? '<i class="bi bi-check-circle text-success"></i>' : '<i class="bi bi-dash text-muted"></i>').'</td>
                   <td class="text-end">'.(int)$step['total_attempts'].'</td>
                   <td class="text-end">'.(int)$step['completed_count'].'</td>
@@ -296,7 +296,7 @@ if ($pathId) {
                     </div>
                   </td>
                   <td>
-                    <a href="'.$h($pathsUrl).'?path_id='.(int)$path['id'].'" class="btn btn-sm btn-outline-primary">
+                    <a href="'.$h($pathsUrl).'?path_id='.(int)$path['id'].'" class="ts-btn ts-btn-sm ts-btn-ghost">
                       <i class="bi bi-bar-chart"></i>
                     </a>
                   </td>
@@ -327,8 +327,8 @@ if ($pathId) {
             $out[] .= '
                 <tr>
                   <td>'.date('d.m.Y', strtotime($day['date'])).'</td>
-                  <td class="text-end"><span class="badge bg-primary">'.(int)$day['new_enrollments'].'</span></td>
-                  <td class="text-end"><span class="badge bg-success">'.(int)$day['completions'].'</span></td>
+                  <td class="text-end"><span class="ts-badge ts-badge-primary">'.(int)$day['new_enrollments'].'</span></td>
+                  <td class="text-end"><span class="ts-badge ts-badge-success">'.(int)$day['completions'].'</span></td>
                 </tr>';
         }
 

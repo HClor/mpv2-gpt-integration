@@ -70,7 +70,7 @@ switch ($mode) {
     case 'my':
         // Мои траектории (на которые записан)
         if (!$isLoggedIn) {
-            $output = '<div class="alert alert-warning">Войдите для просмотра своих траекторий</div>';
+            $output = '<div class="ts-alert ts-alert-warning">Войдите для просмотра своих траекторий</div>';
         } else {
             $output = renderMyPaths($modx, $prefix, $userId);
         }
@@ -81,23 +81,23 @@ switch ($mode) {
         if ($pathId > 0) {
             $output = renderPathView($modx, $prefix, $pathId, $userId, $isLoggedIn);
         } else {
-            $output = '<div class="alert alert-warning">Траектория не найдена</div>';
+            $output = '<div class="ts-alert ts-alert-warning">Траектория не найдена</div>';
         }
         break;
 
     case 'edit':
         // Редактирование траектории
         if (!$canCreate) {
-            $output = '<div class="alert alert-danger">Нет прав для редактирования</div>';
+            $output = '<div class="ts-alert ts-alert-danger">Нет прав для редактирования</div>';
         } elseif ($pathId > 0) {
             $output = renderPathEditor($modx, $prefix, $pathId, $userId);
         } else {
-            $output = '<div class="alert alert-warning">Траектория не найдена</div>';
+            $output = '<div class="ts-alert ts-alert-warning">Траектория не найдена</div>';
         }
         break;
 
     default:
-        $output = '<div class="alert alert-warning">Неизвестный режим</div>';
+        $output = '<div class="ts-alert ts-alert-warning">Неизвестный режим</div>';
 }
 
 return $output;
@@ -114,7 +114,7 @@ function renderPathsList($modx, $prefix, $userId, $canCreate) {
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2><i class="bi bi-signpost"></i> Траектории обучения</h2>
         ' . ($canCreate ? '
-        <button class="btn btn-primary" id="create-path-btn">
+        <button class="ts-btn ts-btn-primary" id="create-path-btn">
             <i class="bi bi-plus-circle"></i> Создать траекторию
         </button>' : '') . '
     </div>
@@ -318,15 +318,15 @@ function renderPathEditor($modx, $prefix, $pathId, $userId) {
                 <h4 id="editor-path-title" class="text-muted">Загрузка...</h4>
             </div>
             <div class="btn-group">
-                <button class="btn btn-outline-primary" id="edit-path-info-btn"
+                <button class="ts-btn ts-btn-ghost" id="edit-path-info-btn"
                         onclick="LearningPaths.showEditPathSettings()">
                     <i class="bi bi-gear"></i> Настройки
                 </button>
-                <button class="btn btn-outline-success" id="manage-students-btn"
+                <button class="ts-btn ts-btn-ghost-success" id="manage-students-btn"
                         onclick="LearningPaths.showManageStudents()">
                     <i class="bi bi-people"></i> Студенты
                 </button>
-                <a href="' . $currentUrl . '?mode=view&id=' . $pathId . '" class="btn btn-outline-info">
+                <a href="' . $currentUrl . '?mode=view&id=' . $pathId . '" class="ts-btn ts-btn-ghost">
                     <i class="bi bi-eye"></i> Просмотр
                 </a>
             </div>
@@ -340,8 +340,8 @@ function renderPathEditor($modx, $prefix, $pathId, $userId) {
                         <p id="editor-path-description" class="text-muted mb-0">Загрузка описания...</p>
                     </div>
                     <div class="col-md-4 text-end">
-                        <span id="editor-path-status" class="badge bg-secondary">Загрузка...</span>
-                        <span id="editor-path-difficulty" class="badge bg-info ms-1">Загрузка...</span>
+                        <span id="editor-path-status" class="ts-badge ts-badge-neutral">Загрузка...</span>
+                        <span id="editor-path-difficulty" class="ts-badge ts-badge-primary ms-1">Загрузка...</span>
                     </div>
                 </div>
             </div>
@@ -352,10 +352,10 @@ function renderPathEditor($modx, $prefix, $pathId, $userId) {
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="mb-0"><i class="bi bi-list-ol"></i> Шаги траектории</h5>
                 <div>
-                    <button class="btn btn-outline-secondary btn-sm me-2" id="save-steps-order-btn">
+                    <button class="ts-btn ts-btn-secondary ts-btn-sm me-2" id="save-steps-order-btn">
                         <i class="bi bi-arrows-move"></i> Сохранить порядок
                     </button>
-                    <button class="btn btn-primary btn-sm" id="add-step-btn">
+                    <button class="ts-btn ts-btn-primary ts-btn-sm" id="add-step-btn">
                         <i class="bi bi-plus-circle"></i> Добавить шаг
                     </button>
                 </div>
@@ -433,8 +433,8 @@ function renderPathModal() {
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                    <button type="button" class="btn btn-primary" id="save-path-info-btn">
+                    <button type="button" class="ts-btn ts-btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="ts-btn ts-btn-primary" id="save-path-info-btn">
                         <i class="bi bi-check-circle"></i> Сохранить
                     </button>
                 </div>
@@ -479,7 +479,7 @@ function renderStepModal() {
                         <div class="input-group mb-2">
                             <input type="text" class="form-control" id="step-content-search"
                                    placeholder="Поиск по названию...">
-                            <button class="btn btn-outline-secondary" type="button" id="step-content-search-btn">
+                            <button class="ts-btn ts-btn-secondary" type="button" id="step-content-search-btn">
                                 <i class="bi bi-search"></i>
                             </button>
                         </div>
@@ -489,7 +489,7 @@ function renderStepModal() {
                             </div>
                         </div>
                         <input type="hidden" id="step-content-id">
-                        <div id="step-content-selected" class="alert alert-success mt-2 d-none">
+                        <div id="step-content-selected" class="ts-alert ts-alert-success mt-2 d-none">
                             Выбрано: <strong id="step-content-selected-name"></strong>
                         </div>
                     </div>
@@ -509,8 +509,8 @@ function renderStepModal() {
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                    <button type="button" class="btn btn-primary" id="save-step-btn">
+                    <button type="button" class="ts-btn ts-btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                    <button type="button" class="ts-btn ts-btn-primary" id="save-step-btn">
                         <i class="bi bi-check-circle"></i> Добавить
                     </button>
                 </div>

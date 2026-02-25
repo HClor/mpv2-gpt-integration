@@ -51,7 +51,7 @@ $sql = "
 $stmt = $modx->query($sql);
 
 if ($stmt === false) {
-    return '<p class="alert alert-danger">Ошибка при получении истории тестов</p>';
+    return '<p class="ts-alert ts-alert-danger">Ошибка при получении истории тестов</p>';
 }
 
 $sessions = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -59,7 +59,7 @@ $sessions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 if (empty($sessions)) {
     return '
         <p class="text-muted mb-3">История тестов пуста.</p>
-        <a href="' . $modx->makeUrl(35) . '" class="btn btn-primary btn-sm">
+        <a href="' . $modx->makeUrl(35) . '" class="ts-btn ts-btn-primary ts-btn-sm">
             <i class="bi bi-play-circle"></i> Пройти первый тест
         </a>
     ';
@@ -105,8 +105,8 @@ $html[] = '<tbody>';
 
 foreach ($sessions as $session) {
     $statusBadge = $session['passed'] ?
-        '<span class="badge bg-success">Пройден</span>' :
-        '<span class="badge bg-danger">Не пройден</span>';
+        '<span class="ts-badge ts-badge-success">Пройден</span>' :
+        '<span class="ts-badge ts-badge-danger">Не пройден</span>';
 
     $timeSpent = $session['time_spent'] ?
         gmdate('i:s', $session['time_spent']) :
@@ -122,7 +122,7 @@ foreach ($sessions as $session) {
     $finishedAt = $session['finished_at'] ?: $session['started_at'];
     $html[] = '<td><small>' . date('d.m.Y H:i', strtotime($finishedAt)) . '</small></td>';
     $html[] = '<td><small>' . $timeSpent . '</small></td>';
-    $html[] = '<td><a href="' . $modx->makeUrl(156, '', ['session_id' => $session['session_id']]) . '" class="btn btn-sm btn-outline-primary">Подробно</a></td>';
+    $html[] = '<td><a href="' . $modx->makeUrl(156, '', ['session_id' => $session['session_id']]) . '" class="ts-btn ts-btn-sm ts-btn-ghost">Подробно</a></td>';
     $html[] = '</tr>';
 }
 

@@ -15,10 +15,10 @@ $userId = $modx->user->id;
 
 if (!$userId) {
     $authUrl = $modx->makeUrl(24, '', '', 'abs');
-    return '<div class="alert alert-warning">
+    return '<div class="ts-alert ts-alert-warning">
         <i class="bi bi-exclamation-triangle me-2"></i>
         Войдите, чтобы видеть свои достижения.
-        <br><a class="btn btn-primary mt-2" href="' . htmlspecialchars($authUrl, ENT_QUOTES, 'UTF-8') . '">Войти</a>
+        <br><a class="ts-btn ts-btn-primary mt-2" href="' . htmlspecialchars($authUrl, ENT_QUOTES, 'UTF-8') . '">Войти</a>
     </div>';
 }
 
@@ -52,11 +52,11 @@ $html[] = '</div>';
 if (empty($achievements)) {
     $pathsUrl = $modx->makeUrl(125, '', '', 'abs');
     $html[] = '
-        <div class="alert alert-info text-center py-5">
+        <div class="ts-alert ts-alert-info text-center py-5">
             <i class="bi bi-trophy fs-1 d-block mb-3"></i>
             <h5>У вас пока нет достижений</h5>
             <p class="mb-3">Проходите траектории обучения, чтобы получить достижения</p>
-            <a href="' . $h($pathsUrl) . '" class="btn btn-primary">
+            <a href="' . $h($pathsUrl) . '" class="ts-btn ts-btn-primary">
                 <i class="bi bi-mortarboard me-1"></i>Перейти к траекториям
             </a>
         </div>
@@ -129,7 +129,7 @@ if ($stmtAvailable) {
 }
 
 if (empty($availableAchievements)) {
-    $html[] = '<div class="alert alert-secondary">
+    $html[] = '<div class="ts-alert ts-alert-info">
         <i class="bi bi-info-circle me-2"></i>
         Нет доступных достижений для получения. Запишитесь на новые траектории!
     </div>';

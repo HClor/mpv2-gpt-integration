@@ -184,7 +184,7 @@ if ($_POST && isset($_POST["add_test"])) {
                     if ($importResult['success'] && $importResult['imported'] > 0) {
                         // УСПЕХ: Показываем сообщение об успешном создании и импорте
                         $output = '<div class="container my-4">';
-                        $output .= '<div class="alert alert-success alert-dismissible fade show">';
+                        $output .= '<div class="ts-alert ts-alert-success">';
                         $output .= '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
                         $output .= '<h4 class="alert-heading"><i class="bi bi-check-circle"></i> Тест успешно создан!</h4>';
                         $output .= '<p class="mb-3"><strong>ID теста:</strong> ' . $newTestId . '</p>';
@@ -211,7 +211,7 @@ if ($_POST && isset($_POST["add_test"])) {
 
                         // Показываем ошибки, если были (частичный успех)
                         if (!empty($importResult['errors'])) {
-                            $output .= '<div class="alert alert-warning mt-3">';
+                            $output .= '<div class="ts-alert ts-alert-warning mt-3">';
                             $output .= '<h6><i class="bi bi-exclamation-triangle"></i> Предупреждения при импорте:</h6>';
                             $output .= '<ul class="mb-0">';
                             foreach (array_slice($importResult['errors'], 0, 10) as $error) {
@@ -226,10 +226,10 @@ if ($_POST && isset($_POST["add_test"])) {
 
                         $output .= '<hr>';
                         $output .= '<div class="d-flex gap-2">';
-                        $output .= '<a href="' . htmlspecialchars($testUrl, ENT_QUOTES, 'UTF-8') . '" class="btn btn-primary btn-lg">';
+                        $output .= '<a href="' . htmlspecialchars($testUrl, ENT_QUOTES, 'UTF-8') . '" class="ts-btn ts-btn-primary ts-btn-lg">';
                         $output .= '<i class="bi bi-play-circle"></i> Перейти к тесту';
                         $output .= '</a>';
-                        $output .= '<a href="' . $modx->makeUrl($modx->resource->id) . '" class="btn btn-secondary btn-lg">';
+                        $output .= '<a href="' . $modx->makeUrl($modx->resource->id) . '" class="ts-btn ts-btn-secondary ts-btn-lg">';
                         $output .= '<i class="bi bi-plus-circle"></i> Создать ещё один тест';
                         $output .= '</a>';
                         $output .= '</div>';
@@ -473,8 +473,8 @@ $output .= '
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                <button type="button" class="btn btn-success" onclick="createCategory()">
+                <button type="button" class="ts-btn ts-btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="ts-btn ts-btn-success" onclick="createCategory()">
                     <i class="bi bi-check-circle"></i> Создать
                 </button>
             </div>

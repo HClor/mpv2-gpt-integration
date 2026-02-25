@@ -10,7 +10,7 @@
 require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
 
 if (!$modx instanceof modX) {
-    return '<div class="alert alert-danger">MODX context required</div>';
+    return '<div class="ts-alert ts-alert-danger">MODX context required</div>';
 }
 
 try {
@@ -157,13 +157,13 @@ try {
     $output .= '<h2 class="mb-4">Управление пользователями</h2>';
 
     foreach ($errors as $err) {
-        $output .= '<div class="alert alert-danger">' . htmlspecialchars($err, ENT_QUOTES, 'UTF-8') . '</div>';
+        $output .= '<div class="ts-alert ts-alert-danger">' . htmlspecialchars($err, ENT_QUOTES, 'UTF-8') . '</div>';
     }
     if ($success !== '') {
-        $output .= '<div class="alert alert-success">' . $success . '</div>';
+        $output .= '<div class="ts-alert ts-alert-success">' . $success . '</div>';
     }
 
-    $output .= '<button class="btn btn-success mb-3" data-bs-toggle="modal" data-bs-target="#createUserModal">+ Создать пользователя</button>';
+    $output .= '<button class="ts-btn ts-btn-success mb-3" data-bs-toggle="modal" data-bs-target="#createUserModal">+ Создать пользователя</button>';
 
     $users = $modx->getCollection('modUser');
 
@@ -178,18 +178,18 @@ try {
         $blocked = $profile ? (bool)$profile->get('blocked') : false;
 
         $role = $getUserRole($modx, $uid);
-        $roleBadge = '<span class="badge bg-secondary">Нет роли</span>';
+        $roleBadge = '<span class="ts-badge ts-badge-neutral">Нет роли</span>';
         if ($role) {
             $roleBadge = [
-                'student' => '<span class="badge bg-info">Студент</span>',
-                'expert'  => '<span class="badge bg-primary">Эксперт</span>',
-                'admin'   => '<span class="badge bg-danger">Админ</span>',
+                'student' => '<span class="ts-badge ts-badge-primary">Студент</span>',
+                'expert'  => '<span class="ts-badge ts-badge-primary">Эксперт</span>',
+                'admin'   => '<span class="ts-badge ts-badge-danger">Админ</span>',
             ][$role];
         }
 
         $statusBadge = $blocked
-            ? '<span class="badge bg-danger">Заблокирован</span>'
-            : '<span class="badge bg-success">Активен</span>';
+            ? '<span class="ts-badge ts-badge-danger">Заблокирован</span>'
+            : '<span class="ts-badge ts-badge-success">Активен</span>';
 
         $output .= '<tr>';
         $output .= '<td>' . $uid . '</td>';
@@ -199,13 +199,13 @@ try {
         $output .= '<td>' . $statusBadge . '</td>';
         $output .= '<td>';
 
-        $output .= '<button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#roleModal' . $uid . '">Роль</button> ';
+        $output .= '<button class="ts-btn ts-btn-sm ts-btn-primary" data-bs-toggle="modal" data-bs-target="#roleModal' . $uid . '">Роль</button> ';
 
         if ($uid !== 1) {
             $output .= '<form method="POST" class="d-inline">';
             $output .= '<input type="hidden" name="toggle_block" value="1">';
             $output .= '<input type="hidden" name="user_id" value="' . $uid . '">';
-            $output .= '<button type="submit" class="btn btn-sm btn-warning" onclick="return confirm(\'Уверены?\')">' . ($blocked ? 'Разблок.' : 'Блок.') . '</button>';
+            $output .= '<button type="submit" class="ts-btn ts-btn-sm ts-btn-warning" onclick="return confirm(\'Уверены?\')">' . ($blocked ? 'Разблок.' : 'Блок.') . '</button>';
             $output .= '</form>';
         }
 
@@ -232,8 +232,8 @@ try {
         }
         $output .= '</select></div>';
         $output .= '<div class="modal-footer">';
-        $output .= '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>';
-        $output .= '<button type="submit" class="btn btn-primary">Сохранить</button>';
+        $output .= '<button type="button" class="ts-btn ts-btn-secondary" data-bs-dismiss="modal">Отмена</button>';
+        $output .= '<button type="submit" class="ts-btn ts-btn-primary">Сохранить</button>';
         $output .= '</div></form></div></div></div>';
     }
 
@@ -258,13 +258,13 @@ try {
     $output .= '<option value="admin">Админ</option>';
     $output .= '</select></div></div>';
     $output .= '<div class="modal-footer">';
-    $output .= '<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>';
-    $output .= '<button type="submit" class="btn btn-success">Создать</button>';
+    $output .= '<button type="button" class="ts-btn ts-btn-secondary" data-bs-dismiss="modal">Отмена</button>';
+    $output .= '<button type="submit" class="ts-btn ts-btn-success">Создать</button>';
     $output .= '</div></form></div></div></div>';
 
     $output .= '</div>';
 
     return $output;
 } catch (Throwable $e) {
-    return '<div class="alert alert-danger">Ошибка: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') . '</div>';
+    return '<div class="ts-alert ts-alert-danger">Ошибка: ' . htmlspecialchars($e->getMessage(), ENT_QUOTES, 'UTF-8') . '</div>';
 }

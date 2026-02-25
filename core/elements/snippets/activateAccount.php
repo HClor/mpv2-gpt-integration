@@ -11,7 +11,7 @@
 $token = $_GET['token'] ?? '';
 
 if (empty($token)) {
-    return '<div class="alert alert-danger">Неверная ссылка активации</div>';
+    return '<div class="ts-alert ts-alert-danger">Неверная ссылка активации</div>';
 }
 
 // Безопасный поиск токена в JSON поле с использованием prepared statement
@@ -32,7 +32,7 @@ if ($profileId) {
 }
 
 if (!$profile) {
-    return '<div class="alert alert-danger">Неверный токен активации или аккаунт уже активирован</div>';
+    return '<div class="ts-alert ts-alert-danger">Неверный токен активации или аккаунт уже активирован</div>';
 }
 
 $user = $profile->getOne('User');
@@ -59,20 +59,20 @@ if ($user) {
             $profileId = $modx->getOption('lms.profile_page', null, 0);
             $profileUrl = $modx->makeUrl($profileId ?: $modx->getOption('site_start'));
             
-            return '<div class="alert alert-success">
+            return '<div class="ts-alert ts-alert-success">
                 <h4>✅ Аккаунт успешно активирован и вы авторизованы!</h4>
-                <p><a href="' . $profileUrl . '" class="btn btn-primary">Перейти в профиль</a></p>
+                <p><a href="' . $profileUrl . '" class="ts-btn ts-btn-primary">Перейти в профиль</a></p>
                 <script>setTimeout(function(){ window.location.href="' . $profileUrl . '"; }, 2000);</script>
             </div>';
         }
     } else {
         if ($modx->user->id == $user->id) {
             $profileId = $modx->getOption('lms.profile_page', null, 0);
-            return '<div class="alert alert-info">Вы уже авторизованы. <a href="' . $modx->makeUrl($profileId ?: $modx->getOption('site_start')) . '">Перейти в профиль</a></div>';
+            return '<div class="ts-alert ts-alert-info">Вы уже авторизованы. <a href="' . $modx->makeUrl($profileId ?: $modx->getOption('site_start')) . '">Перейти в профиль</a></div>';
         }
         $authId = $modx->getOption('lms.auth_page', null, 0);
-        return '<div class="alert alert-warning">Аккаунт уже активирован. <a href="' . $modx->makeUrl($authId ?: $modx->getOption('site_start')) . '">Войти</a></div>';
+        return '<div class="ts-alert ts-alert-warning">Аккаунт уже активирован. <a href="' . $modx->makeUrl($authId ?: $modx->getOption('site_start')) . '">Войти</a></div>';
     }
 }
 
-return '<div class="alert alert-danger">Ошибка активации</div>';
+return '<div class="ts-alert ts-alert-danger">Ошибка активации</div>';

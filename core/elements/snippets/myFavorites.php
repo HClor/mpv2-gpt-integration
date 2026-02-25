@@ -52,10 +52,10 @@ $output .= '<div class="favorites-page">';
 
 if (empty($favorites)) {
     $testsUrl = $modx->makeUrl(Config::getPageId('tests_root', 35));
-    $output .= '<div class="alert alert-info">';
+    $output .= '<div class="ts-alert ts-alert-info">';
     $output .= '<h4>У вас пока нет избранных вопросов</h4>';
     $output .= '<p>Добавляйте интересные вопросы в избранное, чтобы легко находить их позже.</p>';
-    $output .= '<a href="' . $testsUrl . '" class="btn btn-primary mt-2">Перейти к тестам</a>';
+    $output .= '<a href="' . $testsUrl . '" class="ts-btn ts-btn-primary mt-2">Перейти к тестам</a>';
     $output .= '</div>';
     $output .= '</div>';
     return $output;
@@ -63,7 +63,7 @@ if (empty($favorites)) {
 
 $output .= '<div class="d-flex justify-content-between align-items-center mb-4">';
 $output .= '<h1><i class="bi bi-star-fill text-warning"></i> Мои избранные вопросы</h1>';
-$output .= '<span class="badge bg-warning text-dark fs-5">' . count($favorites) . '</span>';
+$output .= '<span class="ts-badge ts-badge-warning fs-5">' . count($favorites) . '</span>';
 $output .= '</div>';
 
 // Группируем по категориям
@@ -105,7 +105,7 @@ foreach ($byCategory as $categoryName => $categoryData) {
         $output .= '<div class="card-header bg-light">';
         $output .= '<div class="d-flex justify-content-between align-items-center">';
         $output .= '<h5 class="mb-0">' . htmlspecialchars($testTitle) . '</h5>';
-        $output .= '<a href="' . $testUrl . '" class="btn btn-sm btn-primary">Пройти тест</a>';
+        $output .= '<a href="' . $testUrl . '" class="ts-btn ts-btn-sm ts-btn-primary">Пройти тест</a>';
         $output .= '</div>';
         $output .= '</div>';
         $output .= '<div class="list-group list-group-flush">';
@@ -176,10 +176,10 @@ $output .= '
             </div>
             <div class="modal-body">
                 <div id="modal-question-text" class="mb-4"></div>
-                <div id="modal-explanation" class="alert alert-info"></div>
+                <div id="modal-explanation" class="ts-alert ts-alert-info"></div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                <button type="button" class="ts-btn ts-btn-secondary" data-bs-dismiss="modal">Закрыть</button>
             </div>
         </div>
     </div>

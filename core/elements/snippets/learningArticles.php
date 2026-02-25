@@ -17,7 +17,7 @@ try {
     $debugOutput = '';
 
     if ($debugMode) {
-        $debugOutput .= '<div class="alert alert-info">';
+        $debugOutput .= '<div class="ts-alert ts-alert-info">';
         $debugOutput .= '<strong>ОТЛАДКА learningArticles:</strong><br>';
         $debugOutput .= 'Root Page ID: ' . $rootPageId . '<br>';
         $debugOutput .= 'Show Drafts: ' . ($showDrafts ? 'Yes' : 'No') . '<br>';
@@ -184,11 +184,11 @@ function renderArticleCard($article, $modx) {
 
     // Показываем статус публикации
     if ($isPublished) {
-        $html .= '<span class="badge bg-success me-1">';
+        $html .= '<span class="ts-badge ts-badge-success me-1">';
         $html .= '<i class="bi bi-check-circle me-1"></i>Опубликован';
         $html .= '</span>';
     } else {
-        $html .= '<span class="badge bg-secondary me-1">';
+        $html .= '<span class="ts-badge ts-badge-neutral me-1">';
         $html .= '<i class="bi bi-file-earmark-text me-1"></i>Черновик';
         $html .= '</span>';
     }
@@ -200,12 +200,12 @@ function renderArticleCard($article, $modx) {
     // Кнопка "Читать"
     // Для черновиков открываем в модальном окне, для опубликованных - переход по ссылке
     if ($isPublished) {
-        $html .= '<a href="' . $article['url'] . '" class="btn btn-sm btn-outline-primary">';
+        $html .= '<a href="' . $article['url'] . '" class="ts-btn ts-btn-sm ts-btn-ghost">';
         $html .= '<i class="bi bi-book me-1"></i> Читать';
         $html .= '</a>';
     } else {
         // Черновик - открываем в модальном окне для просмотра
-        $html .= '<button onclick="viewDraftMaterial(' . $article['id'] . ')" class="btn btn-sm btn-outline-primary">';
+        $html .= '<button onclick="viewDraftMaterial(' . $article['id'] . ')" class="ts-btn ts-btn-sm ts-btn-ghost">';
         $html .= '<i class="bi bi-eye me-1"></i> Просмотр';
         $html .= '</button>';
     }
@@ -213,10 +213,10 @@ function renderArticleCard($article, $modx) {
     // Кнопки управления (если есть права)
     if (!empty($article['can_edit'])) {
         $html .= '<div class="btn-group">';
-        $html .= '<button class="btn btn-sm btn-outline-secondary" onclick="editMaterial(' . $article['id'] . ')" title="Редактировать">';
+        $html .= '<button class="ts-btn ts-btn-sm ts-btn-secondary" onclick="editMaterial(' . $article['id'] . ')" title="Редактировать">';
         $html .= '<i class="bi bi-pencil"></i>';
         $html .= '</button>';
-        $html .= '<button class="btn btn-sm btn-outline-danger" onclick="deleteMaterial(' . $article['id'] . ', \'' . htmlspecialchars($article['pagetitle'], ENT_QUOTES) . '\')" title="Удалить">';
+        $html .= '<button class="ts-btn ts-btn-sm ts-btn-ghost-danger" onclick="deleteMaterial(' . $article['id'] . ', \'' . htmlspecialchars($article['pagetitle'], ENT_QUOTES) . '\')" title="Удалить">';
         $html .= '<i class="bi bi-trash"></i>';
         $html .= '</button>';
         $html .= '</div>';
@@ -251,7 +251,7 @@ if (!empty($articlesByCategory)) {
             $output .= '<h3 class="h4 mb-3 pb-2 border-bottom">';
             $output .= '<i class="bi bi-folder me-2 text-success"></i>';
             $output .= htmlspecialchars($category['name']);
-            $output .= ' <span class="badge bg-secondary">' . $count . '</span>';
+            $output .= ' <span class="ts-badge ts-badge-neutral">' . $count . '</span>';
             $output .= '</h3>';
 
             if (!empty($category['description'])) {
@@ -274,7 +274,7 @@ if (!empty($articlesWithoutCategory)) {
     $output .= '<h3 class="h4 mb-3 pb-2 border-bottom">';
     $output .= '<i class="bi bi-folder-x me-2 text-muted"></i>';
     $output .= 'Без категории';
-    $output .= ' <span class="badge bg-secondary">' . count($articlesWithoutCategory) . '</span>';
+    $output .= ' <span class="ts-badge ts-badge-neutral">' . count($articlesWithoutCategory) . '</span>';
     $output .= '</h3>';
     $output .= '<div class="row">';
     foreach ($articlesWithoutCategory as $article) {
@@ -286,7 +286,7 @@ if (!empty($articlesWithoutCategory)) {
 
     // Если вообще нет статей
     if (empty($articlesByCategory) && empty($articlesWithoutCategory)) {
-        $output .= '<div class="alert alert-info">';
+        $output .= '<div class="ts-alert ts-alert-info">';
         $output .= '<i class="bi bi-info-circle me-2"></i>';
         if ($showDrafts) {
             $output .= 'Черновиков пока нет. Создайте материал и не публикуйте его, чтобы он появился здесь.';
@@ -300,7 +300,7 @@ if (!empty($articlesWithoutCategory)) {
 
 } catch (Exception $e) {
     // Ловим все ошибки и выводим красиво
-    $errorOutput = '<div class="alert alert-danger">';
+    $errorOutput = '<div class="ts-alert ts-alert-danger">';
     $errorOutput .= '<h5><i class="bi bi-exclamation-triangle me-2"></i>Ошибка в learningArticles</h5>';
     $errorOutput .= '<p><strong>Сообщение:</strong> ' . htmlspecialchars($e->getMessage()) . '</p>';
     $errorOutput .= '<p><strong>Файл:</strong> ' . htmlspecialchars($e->getFile()) . '</p>';

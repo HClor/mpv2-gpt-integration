@@ -12,7 +12,7 @@
 require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
 
 if (!$modx instanceof modX) {
-    return '<div class="alert alert-danger">MODX context required</div>';
+    return '<div class="ts-alert ts-alert-danger">MODX context required</div>';
 }
 
 // НОВАЯ ЛОГИКА: Проверяем наличие sessionId и view параметра
@@ -33,13 +33,13 @@ if ($sessionId > 0) {
     $session = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$session) {
-        return '<div class="alert alert-danger">Сессия не найдена</div>';
+        return '<div class="ts-alert ts-alert-danger">Сессия не найдена</div>';
     }
 
     // Проверка прав доступа к сессии
     $userId = $modx->user->get('id');
     if ((int)$session['user_id'] != $userId) {
-        return '<div class="alert alert-danger">Нет доступа к этой сессии</div>';
+        return '<div class="ts-alert ts-alert-danger">Нет доступа к этой сессии</div>';
     }
 
     // Устанавливаем testId из сессии
@@ -63,7 +63,7 @@ if ($sessionId > 0) {
     }
 
     if ($testIdFromUrl <= 0 && $resourceId <= 0) {
-        return '<div class="alert alert-danger">Ошибка: тест не указан</div>';
+        return '<div class="ts-alert ts-alert-danger">Ошибка: тест не указан</div>';
     }
 }
 
@@ -88,13 +88,13 @@ if ($knowledgeAreaId > 0) {
     if (!$modx->user->hasSessionContext('web')) {
         $authId = (int)$modx->getOption('lms.auth_page', null, 0);
         $authUrl = $authId > 0 ? rtrim($modx->makeUrl($authId, 'web', []), '/') : rtrim($modx->makeUrl($modx->resource->get('id'), 'web', []), '/');
-        return '<div class="alert alert-warning auth-required-alert">
+        return '<div class="ts-alert ts-alert-warning auth-required-alert">
             <div class="d-flex align-items-center mb-3">
                 <i class="bi bi-shield-lock me-2" style="font-size: 2rem;"></i>
                 <h4 class="mb-0">Требуется авторизация</h4>
             </div>
             <p class="mb-3">Для прохождения области знаний необходимо войти в систему.</p>
-            <a href="' . htmlspecialchars($authUrl, ENT_QUOTES, 'UTF-8') . '" class="btn btn-primary"><i class="bi bi-box-arrow-in-right me-2"></i>Войти в систему</a>
+            <a href="' . htmlspecialchars($authUrl, ENT_QUOTES, 'UTF-8') . '" class="ts-btn ts-btn-primary"><i class="bi bi-box-arrow-in-right me-2"></i>Войти в систему</a>
         </div>';
     }
 
@@ -109,31 +109,31 @@ if ($knowledgeAreaId > 0) {
     
     if (!$stmt) {
         $modx->log(modX::LOG_LEVEL_ERROR, '[testRunner] Failed to prepare knowledge area query');
-        return '<div class="alert alert-danger">Ошибка при загрузке области знаний</div>';
+        return '<div class="ts-alert ts-alert-danger">Ошибка при загрузке области знаний</div>';
     }
     
     if (!$stmt->execute([$knowledgeAreaId])) {
         $modx->log(modX::LOG_LEVEL_ERROR, '[testRunner] Failed to execute knowledge area query: ' . print_r($stmt->errorInfo(), true));
-        return '<div class="alert alert-danger">Область знаний не найдена</div>';
+        return '<div class="ts-alert ts-alert-danger">Область знаний не найдена</div>';
     }
     
     $knowledgeArea = $stmt->fetch(PDO::FETCH_ASSOC);
     
     if (!$knowledgeArea) {
-        return '<div class="alert alert-danger">Область знаний не найдена или неактивна</div>';
+        return '<div class="ts-alert ts-alert-danger">Область знаний не найдена или неактивна</div>';
     }
     
     // КРИТИЧНО: Проверяем владельца
     if ((int)$knowledgeArea['user_id'] !== $userId) {
         $modx->log(modX::LOG_LEVEL_WARN, "[testRunner] User {$userId} tried to access knowledge area {$knowledgeAreaId} owned by {$knowledgeArea['user_id']}");
-        return '<div class="alert alert-danger">Доступ запрещен. Это не ваша область знаний.</div>';
+        return '<div class="ts-alert ts-alert-danger">Доступ запрещен. Это не ваша область знаний.</div>';
     }
     
     // Парсим список тестов
     $testIds = json_decode($knowledgeArea['test_ids'], true);
     
     if (!is_array($testIds) || empty($testIds)) {
-        return '<div class="alert alert-warning">В области знаний нет выбранных тестов</div>';
+        return '<div class="ts-alert ts-alert-warning">В области знаний нет выбранных тестов</div>';
     }
     
     // Подсчитываем общее количество вопросов
@@ -146,12 +146,12 @@ if ($knowledgeAreaId > 0) {
     
     if (!$stmt) {
         $modx->log(modX::LOG_LEVEL_ERROR, '[testRunner] Failed to prepare questions count query for knowledge area');
-        return '<div class="alert alert-danger">Ошибка при загрузке вопросов</div>';
+        return '<div class="ts-alert ts-alert-danger">Ошибка при загрузке вопросов</div>';
     }
     
     if (!$stmt->execute($testIds)) {
         $modx->log(modX::LOG_LEVEL_ERROR, '[testRunner] Failed to count questions for knowledge area: ' . print_r($stmt->errorInfo(), true));
-        return '<div class="alert alert-danger">Ошибка при загрузке вопросов</div>';
+        return '<div class="ts-alert ts-alert-danger">Ошибка при загрузке вопросов</div>';
     }
     
     $totalQuestions = (int)$stmt->fetchColumn();
@@ -161,10 +161,10 @@ if ($knowledgeAreaId > 0) {
         $manageAreasPageId = Config::getPageId('manage_areas', 125);
         $manageAreasPageUrl = rtrim($modx->makeUrl($manageAreasPageId, 'web', []), '/');
         
-        return '<div class="alert alert-warning">
+        return '<div class="ts-alert ts-alert-warning">
             <h4>В области знаний нет вопросов</h4>
             <p>Возможно, выбранные тесты пусты или все вопросы сняты с публикации.</p>
-            <a href="' . htmlspecialchars($manageAreasPageUrl, ENT_QUOTES, 'UTF-8') . '" class="btn btn-primary mt-2">Вернуться к управлению областями</a>
+            <a href="' . htmlspecialchars($manageAreasPageUrl, ENT_QUOTES, 'UTF-8') . '" class="ts-btn ts-btn-primary mt-2">Вернуться к управлению областями</a>
         </div>';
     }
     
@@ -180,7 +180,7 @@ if ($knowledgeAreaId > 0) {
     $output .= '<div class="card-header">';
     $output .= '<div class="d-flex justify-content-between align-items-center">';
     $output .= '<h2><i class="bi bi-collection-fill text-primary"></i> ' . htmlspecialchars($knowledgeArea['name'], ENT_QUOTES, 'UTF-8') . '</h2>';
-    $output .= '<a href="' . htmlspecialchars($manageAreasPageUrl, ENT_QUOTES, 'UTF-8') . '" class="btn btn-outline-secondary btn-sm">';
+    $output .= '<a href="' . htmlspecialchars($manageAreasPageUrl, ENT_QUOTES, 'UTF-8') . '" class="ts-btn ts-btn-secondary ts-btn-sm">';
     $output .= '<i class="bi bi-arrow-left"></i> Назад';
     $output .= '</a>';
     $output .= '</div>';
@@ -192,7 +192,7 @@ if ($knowledgeAreaId > 0) {
         $output .= '<p class="lead">' . nl2br(htmlspecialchars($knowledgeArea['description'], ENT_QUOTES, 'UTF-8')) . '</p>';
     }
     
-    $output .= '<div class="alert alert-info">';
+    $output .= '<div class="ts-alert ts-alert-info">';
     $output .= '<i class="bi bi-info-circle-fill"></i> ';
     $output .= '<strong>Комбинированный тест из вашей личной подборки</strong><br>';
     $output .= 'Вопросы случайным образом выбираются из ' . count($testIds) . ' выбранных вами тестов.';
@@ -208,7 +208,7 @@ if ($knowledgeAreaId > 0) {
     // Кнопка старта (только Training для областей знаний)
     $output .= '<hr>';
     $output .= '<div class="d-grid gap-2">';
-    $output .= '<button class="btn btn-primary btn-lg start-test-btn" data-mode="training">';
+    $output .= '<button class="ts-btn ts-btn-primary ts-btn-lg start-test-btn" data-mode="training">';
     $output .= '<i class="bi bi-play-fill"></i> Начать тест';
     $output .= '</button>';
     $output .= '</div>';
@@ -226,23 +226,23 @@ if ($knowledgeAreaId > 0) {
     $output .= '<div class="card mb-3">';
     $output .= '<div class="card-header d-flex justify-content-between align-items-center">';
     $output .= '<span id="question-progress">Вопрос <span id="current-q">1</span> из <span id="total-q">' . (int)$questionsPerSession . '</span></span>';
-    $output .= '<span class="badge bg-primary">TRAINING</span>';
+    $output .= '<span class="ts-badge ts-badge-primary">TRAINING</span>';
     $output .= '</div>';
     $output .= '<div class="card-body">';
     $output .= '<h4 id="question-text"></h4>';
     $output .= '<div id="question-type-hint" style="display: none;"></div>';
     $output .= '<div id="answer-options" class="mt-3"></div>';
-    $output .= '<div id="explanation-block" class="alert alert-info mt-3" style="display:none;"></div>';
+    $output .= '<div id="explanation-block" class="ts-alert ts-alert-info mt-3" style="display:none;"></div>';
     $output .= '</div>';
     
     $output .= '<div class="card-footer">';
     $output .= '<div class="d-flex justify-content-between align-items-center mb-2">';
     $output .= '<div class="d-flex align-items-center">';
-    $output .= '<button id="submit-answer-btn" class="btn btn-primary" disabled>Ответить</button>';
-    $output .= '<button id="next-question-btn" class="btn btn-success" style="display:none;">Следующий вопрос</button>';
+    $output .= '<button id="submit-answer-btn" class="ts-btn ts-btn-primary" disabled>Ответить</button>';
+    $output .= '<button id="next-question-btn" class="ts-btn ts-btn-success" style="display:none;">Следующий вопрос</button>';
     $output .= '</div>';
     $output .= '<div class="d-flex align-items-center gap-2">';
-    $output .= '<button id="restart-test-btn" class="btn btn-outline-secondary btn-sm" style="display: none;">';
+    $output .= '<button id="restart-test-btn" class="ts-btn ts-btn-secondary ts-btn-sm" style="display: none;">';
     $output .= '<i class="bi bi-arrow-counterclockwise"></i> Начать сначала';
     $output .= '</button>';
     $output .= '</div>';
@@ -259,8 +259,8 @@ if ($knowledgeAreaId > 0) {
     $output .= '<div id="result-details" class="mt-3"></div>';
     
     $retryUrl = rtrim($modx->makeUrl($modx->resource->get('id'), 'web', ['knowledge_area' => $knowledgeAreaId]), '/');
-    $output .= '<a href="' . htmlspecialchars($retryUrl, ENT_QUOTES, 'UTF-8') . '" class="btn btn-primary mt-3">Пройти еще раз</a>';
-    $output .= '<a href="' . htmlspecialchars($manageAreasPageUrl, ENT_QUOTES, 'UTF-8') . '" class="btn btn-secondary mt-3">К списку областей</a>';
+    $output .= '<a href="' . htmlspecialchars($retryUrl, ENT_QUOTES, 'UTF-8') . '" class="ts-btn ts-btn-primary mt-3">Пройти еще раз</a>';
+    $output .= '<a href="' . htmlspecialchars($manageAreasPageUrl, ENT_QUOTES, 'UTF-8') . '" class="ts-btn ts-btn-secondary mt-3">К списку областей</a>';
     
     $output .= '</div></div></div>';
     $output .= '</div>';
@@ -319,12 +319,12 @@ if ($testIdFromUrl > 0) {
 $stmt = $modx->prepare($sql);
 if (!$stmt) {
     $modx->log(modX::LOG_LEVEL_ERROR, '[testRunner] Failed to prepare test query');
-    return '<div class="alert alert-danger">Ошибка при загрузке теста</div>';
+    return '<div class="ts-alert ts-alert-danger">Ошибка при загрузке теста</div>';
 }
 
 if (!$stmt->execute([$queryParam])) {
     $modx->log(modX::LOG_LEVEL_ERROR, '[testRunner] Failed to execute test query: ' . print_r($stmt->errorInfo(), true));
-    return '<div class="alert alert-danger">Тест не найден или неактивен</div>';
+    return '<div class="ts-alert ts-alert-danger">Тест не найден или неактивен</div>';
 }
 
 $test = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -353,13 +353,13 @@ if (!$test) {
         $questionsManagerId = (int)$modx->getOption('lms.questions_manager_page', null, 0);
         $questionsUrl = $questionsManagerId > 0 ? $modx->makeUrl($questionsManagerId, 'web', [], 'full') : '#';
         
-        return '<div class="alert alert-warning">
+        return '<div class="ts-alert ts-alert-warning">
             <h4>Тест не найден</h4>
             <p>К этой странице не привязан тест. Вы можете создать тест через <a href="' . htmlspecialchars($questionsUrl, ENT_QUOTES, 'UTF-8') . '">панель управления</a>.</p>
         </div>';
     }
     
-    return '<div class="alert alert-danger">Тест не найден или неактивен</div>';
+    return '<div class="ts-alert ts-alert-danger">Тест не найден или неактивен</div>';
 }
 
 
@@ -378,7 +378,7 @@ $testAccess = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$modx->user->hasSessionContext('web')) {
     $authId = (int)$modx->getOption('lms.auth_page', null, 0);
     $authUrl = $authId > 0 ? $modx->makeUrl($authId, 'web', '', 'full') : $modx->makeUrl($modx->resource->get('id'), 'web', '', 'full');
-    return '<div class="alert alert-warning"><p>Для прохождения теста необходимо <a href="' . htmlspecialchars($authUrl, ENT_QUOTES, 'UTF-8') . '">войти в систему</a>.</p></div>';
+    return '<div class="ts-alert ts-alert-warning"><p>Для прохождения теста необходимо <a href="' . htmlspecialchars($authUrl, ENT_QUOTES, 'UTF-8') . '">войти в систему</a>.</p></div>';
 }
 
 $userId = (int)$modx->user->get('id');
@@ -430,7 +430,7 @@ if ($isAdminOrExpert) {
 // Если нет доступа - показываем сообщение
 if (!$hasAccess) {
     $modx->log(modX::LOG_LEVEL_WARN, "[testRunner] User {$userId} denied access to test {$testId} (status: {$publicationStatus})");
-    return '<div class="alert alert-danger">
+    return '<div class="ts-alert ts-alert-danger">
         <h4>Доступ запрещен</h4>
         <p>Этот тест является приватным. Для доступа к нему требуется разрешение владельца.</p>
     </div>';
@@ -445,12 +445,12 @@ $totalQuestions = 0;
 
 if (!$stmt) {
     $modx->log(modX::LOG_LEVEL_ERROR, '[testRunner] Failed to prepare questions count query for test ' . $testId);
-    return '<div class="alert alert-danger">Ошибка при загрузке вопросов теста</div>';
+    return '<div class="ts-alert ts-alert-danger">Ошибка при загрузке вопросов теста</div>';
 }
 
 if (!$stmt->execute([$testId])) {
     $modx->log(modX::LOG_LEVEL_ERROR, '[testRunner] Failed to count questions for test ' . $testId . ': ' . print_r($stmt->errorInfo(), true));
-    return '<div class="alert alert-danger">Ошибка при загрузке вопросов теста</div>';
+    return '<div class="ts-alert ts-alert-danger">Ошибка при загрузке вопросов теста</div>';
 }
 
 $totalQuestions = (int)$stmt->fetchColumn();
@@ -482,24 +482,24 @@ if ($totalQuestions === 0) {
         $importUrl = $modx->makeUrl($importPageId, 'web', ['test_id' => $testId], 'full');
         
         if (!empty($importUrl)) {
-            return '<div class="alert alert-warning">
+            return '<div class="ts-alert ts-alert-warning">
                 <h4>В тесте нет вопросов</h4>
                 <p>Добавьте вопросы через импорт CSV файла.</p>
-                <a href="' . htmlspecialchars($importUrl, ENT_QUOTES, 'UTF-8') . '" class="btn btn-success mt-2">📤 Импортировать вопросы из CSV</a>
+                <a href="' . htmlspecialchars($importUrl, ENT_QUOTES, 'UTF-8') . '" class="ts-btn ts-btn-success mt-2">📤 Импортировать вопросы из CSV</a>
             </div>';
         }
         
         $questionsManagerId = (int)$modx->getOption('lms.questions_manager_page', null, 0);
         if ($questionsManagerId > 0) {
             $questionsUrl = $modx->makeUrl($questionsManagerId, 'web', ['test' => $testId], 'full');
-            return '<div class="alert alert-warning">
+            return '<div class="ts-alert ts-alert-warning">
                 <h4>В тесте нет вопросов</h4>
                 <p>Добавьте вопросы через <a href="' . htmlspecialchars($questionsUrl, ENT_QUOTES, 'UTF-8') . '" class="alert-link">панель управления вопросами</a>.</p>
             </div>';
         }
     }
     
-    return '<div class="alert alert-danger">В тесте отсутствуют вопросы. Пожалуйста, обратитесь к администратору.</div>';
+    return '<div class="ts-alert ts-alert-danger">В тесте отсутствуют вопросы. Пожалуйста, обратитесь к администратору.</div>';
 }
 
 // Валидация questions_per_session
@@ -535,7 +535,7 @@ $managerUrl = rtrim($managerUrl, '/') . '/';
 
 $editLinks = '';
 if ($canEditTest) {
-    $editLinks .= '<div class="alert alert-light border">';
+    $editLinks .= '<div class="ts-alert ts-alert-info border">';
     $editLinks .= '<div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center justify-content-between gap-2">';
     $editLinks .= '<span class="text-muted small"><strong>Режим редактирования</strong></span>';
     
@@ -546,18 +546,18 @@ if ($canEditTest) {
     $importPageId = Config::getPageId('import_csv', 29);
     $importUrl = $modx->makeUrl($importPageId, 'web', ['test_id' => $testId], 'full');
     if (!empty($importUrl)) {
-        $editLinks .= '<a class="btn btn-outline-success" href="' . htmlspecialchars($importUrl, ENT_QUOTES, 'UTF-8') . '"><i class="bi bi-upload"></i> Импорт</a>';
+        $editLinks .= '<a class="ts-btn ts-btn-ghost-success" href="' . htmlspecialchars($importUrl, ENT_QUOTES, 'UTF-8') . '"><i class="bi bi-upload"></i> Импорт</a>';
     }
 
-    $editLinks .= '<button class="btn btn-outline-info" type="button" onclick="showAllQuestionsView()"><i class="bi bi-list-ul"></i> Вопросы</button>';
+    $editLinks .= '<button class="ts-btn ts-btn-ghost" type="button" onclick="showAllQuestionsView()"><i class="bi bi-list-ul"></i> Вопросы</button>';
 
     // Объединенная кнопка "Управление тестом" - открывает модальное окно с вкладками
-    $editLinks .= '<button class="btn btn-outline-primary" type="button" onclick="openTestManagementModal(' . (int)$testId . ', \'' . $publicationStatus . '\')"><i class="bi bi-gear"></i> Управление</button>';
+    $editLinks .= '<button class="ts-btn ts-btn-ghost" type="button" onclick="openTestManagementModal(' . (int)$testId . ', \'' . $publicationStatus . '\')"><i class="bi bi-gear"></i> Управление</button>';
 
     // Кнопка удаления (только для владельца или админа)
     $canDelete = ($isAdmin || $createdBy === $userId);
     if ($canDelete) {
-        $editLinks .= '<button class="btn btn-outline-danger" type="button" onclick="deleteTestConfirm(' . (int)$testId . ')"><i class="bi bi-trash"></i> Удалить</button>';
+        $editLinks .= '<button class="ts-btn ts-btn-ghost-danger" type="button" onclick="deleteTestConfirm(' . (int)$testId . ')"><i class="bi bi-trash"></i> Удалить</button>';
     }
 
     $editLinks .= '</div>';
@@ -566,14 +566,14 @@ if ($canEditTest) {
     $editLinks .= '<div class="btn-group-vertical btn-group-sm d-md-none w-100" role="group">';
 
     if (!empty($importUrl)) {
-        $editLinks .= '<a class="btn btn-outline-success" href="' . htmlspecialchars($importUrl, ENT_QUOTES, 'UTF-8') . '"><i class="bi bi-upload"></i> Импорт вопросов</a>';
+        $editLinks .= '<a class="ts-btn ts-btn-ghost-success" href="' . htmlspecialchars($importUrl, ENT_QUOTES, 'UTF-8') . '"><i class="bi bi-upload"></i> Импорт вопросов</a>';
     }
-    $editLinks .= '<button class="btn btn-outline-info" type="button" onclick="showAllQuestionsView()"><i class="bi bi-list-ul"></i> Список вопросов</button>';
-    $editLinks .= '<button class="btn btn-outline-primary" type="button" onclick="openTestManagementModal(' . (int)$testId . ', \'' . $publicationStatus . '\')"><i class="bi bi-gear"></i> Управление тестом</button>';
+    $editLinks .= '<button class="ts-btn ts-btn-ghost" type="button" onclick="showAllQuestionsView()"><i class="bi bi-list-ul"></i> Список вопросов</button>';
+    $editLinks .= '<button class="ts-btn ts-btn-ghost" type="button" onclick="openTestManagementModal(' . (int)$testId . ', \'' . $publicationStatus . '\')"><i class="bi bi-gear"></i> Управление тестом</button>';
 
     // Кнопка удаления (только для владельца или админа)
     if ($canDelete) {
-        $editLinks .= '<button class="btn btn-outline-danger" type="button" onclick="deleteTestConfirm(' . (int)$testId . ')"><i class="bi bi-trash"></i> Удалить</button>';
+        $editLinks .= '<button class="ts-btn ts-btn-ghost-danger" type="button" onclick="deleteTestConfirm(' . (int)$testId . ')"><i class="bi bi-trash"></i> Удалить</button>';
     }
 
     $editLinks .= '</div>';
@@ -632,7 +632,7 @@ if (!$skipModeSelection && $testMode === 'both') {
     $output .= '<div class="training-questions-control mt-2">';
     $output .= '<div class="input-group input-group-sm">';
     $output .= '<input type="number" class="form-control form-control-sm" id="training-questions-count" min="1" max="' . (int)$totalQuestions . '" value="' . min(20, (int)$totalQuestions) . '" data-max="' . (int)$totalQuestions . '" style="max-width: 80px;">';
-    $output .= '<button class="btn btn-outline-secondary btn-sm" type="button" id="training-all-questions" data-total="' . (int)$totalQuestions . '">Все</button>';
+    $output .= '<button class="ts-btn ts-btn-secondary ts-btn-sm" type="button" id="training-all-questions" data-total="' . (int)$totalQuestions . '">Все</button>';
     $output .= '</div>';
     $output .= '<small class="form-text text-muted d-block mt-1">Макс: ' . (int)$totalQuestions . '</small>';
     $output .= '</div>';
@@ -670,7 +670,7 @@ if (!$skipModeSelection && $testMode === 'both') {
     
     // Единая кнопка старта
     $output .= '<div class="text-center mb-3">';
-    $output .= '<button class="btn btn-primary start-test-btn start-test-btn-compact" id="start-test-unified" data-mode="training">';
+    $output .= '<button class="ts-btn ts-btn-primary start-test-btn start-test-btn-compact" id="start-test-unified" data-mode="training">';
     $output .= '<span id="start-btn-text">Начать Training</span>';
     $output .= '</button>';
     $output .= '</div>';
@@ -680,17 +680,17 @@ if (!$skipModeSelection && $testMode === 'both') {
 } elseif ($testMode === 'training') {
     // Только режим Training
     $output .= '<hr>';
-    $output .= '<div class="alert alert-info">';
+    $output .= '<div class="ts-alert ts-alert-info">';
     $output .= '<strong>Режим:</strong> Обучение (Training) - будут показаны правильные ответы и объяснения';
     $output .= '</div>';
-    $output .= '<button class="btn btn-primary btn-lg w-100 start-test-btn" data-mode="training">Начать тест</button>';
+    $output .= '<button class="ts-btn ts-btn-primary ts-btn-lg w-100 start-test-btn" data-mode="training">Начать тест</button>';
 } elseif ($testMode === 'exam') {
     // Только режим Exam
     $output .= '<hr>';
-    $output .= '<div class="alert alert-warning">';
+    $output .= '<div class="ts-alert ts-alert-warning">';
     $output .= '<strong>Режим:</strong> Экзамен (Exam) - результат будет показан только в конце';
     $output .= '</div>';
-    $output .= '<button class="btn btn-danger btn-lg w-100 start-test-btn" data-mode="exam">Начать тест</button>';
+    $output .= '<button class="ts-btn ts-btn-danger ts-btn-lg w-100 start-test-btn" data-mode="exam">Начать тест</button>';
 }
 
 if ($editLinks !== '') {
@@ -712,15 +712,15 @@ $output .= '<div class="card mb-3">';
 $output .= '<div class="card-header d-flex justify-content-between align-items-center">';
 $output .= '<span id="question-progress">Вопрос <span id="current-q">1</span> из <span id="total-q">' . (int)$questionsPerSession . '</span></span>';
 $output .= '<div class="d-flex align-items-center gap-2">';
-$output .= '<span id="exam-timer" class="badge bg-warning text-dark" style="display:none;"><i class="bi bi-alarm me-1"></i><span id="timer-display">00:00</span></span>';
-$output .= '<span id="mode-badge" class="badge"></span>';
+$output .= '<span id="exam-timer" class="ts-badge ts-badge-warning" style="display:none;"><i class="bi bi-alarm me-1"></i><span id="timer-display">00:00</span></span>';
+$output .= '<span id="mode-badge" class="ts-badge"></span>';
 $output .= '</div>';
 $output .= '</div>';
 $output .= '<div class="card-body">';
 $output .= '<h4 id="question-text"></h4>';
 $output .= '<div id="question-type-hint" style="display: none;"></div>';
 $output .= '<div id="answer-options" class="mt-3"></div>';
-$output .= '<div id="explanation-block" class="alert alert-info mt-3" style="display:none;"></div>';
+$output .= '<div id="explanation-block" class="ts-alert ts-alert-info mt-3" style="display:none;"></div>';
 $output .= '</div>';
 
 // ИСПРАВЛЕННЫЙ БЛОК С КНОПКАМИ:
@@ -730,12 +730,12 @@ $output .= '<div class="card-footer">';
 $output .= '<div class="d-flex justify-content-between align-items-center mb-2">';
 // СЛЕВА - кнопки навигации
 $output .= '<div class="d-flex align-items-center">';
-$output .= '<button id="submit-answer-btn" class="btn btn-primary" disabled>Ответить</button>';
-$output .= '<button id="next-question-btn" class="btn btn-success" style="display:none;">Следующий вопрос</button>';
+$output .= '<button id="submit-answer-btn" class="ts-btn ts-btn-primary" disabled>Ответить</button>';
+$output .= '<button id="next-question-btn" class="ts-btn ts-btn-success" style="display:none;">Следующий вопрос</button>';
 $output .= '</div>';
 // СПРАВА - кнопка "К началу"
 $output .= '<div class="d-flex align-items-center  gap-2">';
-$output .= '<button id="restart-test-btn" class="btn btn-outline-secondary btn-sm" style="display: none;">';
+$output .= '<button id="restart-test-btn" class="ts-btn ts-btn-secondary ts-btn-sm" style="display: none;">';
 $output .= '<i class="bi bi-arrow-counterclockwise"></i> Начать сначала';
 $output .= '</button>';
 $output .= '</div>';
@@ -757,10 +757,10 @@ $output .= '<p id="result-message" class="lead"></p>';
 $output .= '<div id="result-details" class="mt-3"></div>';
 
 $retryUrl = $modx->makeUrl($modx->resource->get('id'), 'web', '', 'full');
-$output .= '<a href="' . htmlspecialchars($retryUrl, ENT_QUOTES, 'UTF-8') . '" class="btn btn-primary mt-3 me-2">Пройти еще раз</a>';
+$output .= '<a href="' . htmlspecialchars($retryUrl, ENT_QUOTES, 'UTF-8') . '" class="ts-btn ts-btn-primary mt-3 me-2">Пройти еще раз</a>';
 
 // Страница со списком тестов - жёсткий URL /tests (id 35)
-$output .= '<a href="/tests" class="btn btn-secondary mt-3">К списку тестов</a>';
+$output .= '<a href="/tests" class="ts-btn ts-btn-secondary mt-3">К списку тестов</a>';
 
 $output .= '</div></div></div>';
 $output .= '</div>';

@@ -227,7 +227,7 @@ foreach ($categories as $cat) {
     $output .= '<a class="list-group-item list-group-item-action' . $isActive . '" href="' . $categoryUrl . '">';
     $output .= '<div class="d-flex w-100 justify-content-between align-items-center">';
     $output .= '<span><i class="bi bi-folder me-2"></i>' . htmlspecialchars($cat['name'], ENT_QUOTES, 'UTF-8') . '</span>';
-    $output .= '<span class="badge bg-primary rounded-pill">' . (int)$cat['test_count'] . '</span>';
+    $output .= '<span class="ts-badge ts-badge-primary">' . (int)$cat['test_count'] . '</span>';
     $output .= '</div>';
     $output .= '</a>';
 }
@@ -257,10 +257,10 @@ $output .= '<div class="col-md-8 col-lg-9 tests-content">';
 $output .= '<div class="mb-4">';
 $output .= '<div class="input-group">';
 $output .= '<input type="text" class="form-control" id="tests-search-input" placeholder="Поиск тестов по названию..." value="' . htmlspecialchars($searchQuery, ENT_QUOTES, 'UTF-8') . '">';
-$output .= '<button class="btn btn-primary" type="button" id="tests-search-btn"><i class="bi bi-search"></i> Найти</button>';
+$output .= '<button class="ts-btn ts-btn-primary" type="button" id="tests-search-btn"><i class="bi bi-search"></i> Найти</button>';
 if ($searchQuery) {
     $clearUrl = htmlspecialchars($modx->makeUrl($modx->resource->id) . ($categoryId ? '?category=' . $categoryId : ''), ENT_QUOTES, 'UTF-8');
-    $output .= '<a href="' . $clearUrl . '" class="btn btn-outline-secondary"><i class="bi bi-x"></i> Очистить</a>';
+    $output .= '<a href="' . $clearUrl . '" class="ts-btn ts-btn-secondary"><i class="bi bi-x"></i> Очистить</a>';
 }
 $output .= '</div>';
 $output .= '</div>';
@@ -313,7 +313,7 @@ $stmt->execute($params);
 $tests = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 if (!$tests) {
-    $output .= '<div class="alert alert-secondary">';
+    $output .= '<div class="ts-alert ts-alert-info">';
     $output .= '<p><i class="bi bi-inbox"></i> ';
     if ($searchQuery) {
         $output .= 'По вашему запросу ничего не найдено. Попробуйте изменить поисковый запрос.';
@@ -421,28 +421,28 @@ $output .= '<div class="card-header bg-light">';
 $output .= '<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-3">';
 $output .= '<h3 class="mb-0"><i class="bi bi-list-ul"></i> Список вопросов теста</h3>';
 $output .= '<div class="d-flex flex-column flex-sm-row gap-2 w-100 w-md-auto align-items-stretch align-items-sm-center">';
-$output .= '<button class="btn btn-outline-secondary btn-sm" onclick="backToTestsList()">';
+$output .= '<button class="ts-btn ts-btn-secondary ts-btn-sm" onclick="backToTestsList()">';
 $output .= '<i class="bi bi-arrow-left"></i> Назад к списку тестов';
 $output .= '</button>';
-$output .= '<button class="btn btn-success btn-sm" onclick="openAddQuestionModalFromTests()">';
+$output .= '<button class="ts-btn ts-btn-success ts-btn-sm" onclick="openAddQuestionModalFromTests()">';
 $output .= '<i class="bi bi-plus-circle-fill"></i> Добавить вопрос';
 $output .= '</button>';
 // Контролы запуска теста
 $output .= '<div class="d-flex gap-1 align-items-center">';
 $output .= '<input type="number" id="editor-questions-count" class="form-control form-control-sm" style="width: 70px;" value="20" min="1" placeholder="20">';
-$output .= '<button class="btn btn-outline-secondary btn-sm" style="white-space: nowrap;" id="editor-all-questions-btn">Все</button>';
-$output .= '<button class="btn btn-primary btn-sm" style="white-space: nowrap;" onclick="startTestFromEditor(\'training\')"><i class="bi bi-play-circle"></i> Тренировка</button>';
-$output .= '<button class="btn btn-danger btn-sm" style="white-space: nowrap;" onclick="startTestFromEditor(\'exam\')"><i class="bi bi-clipboard-check"></i> Экзамен</button>';
+$output .= '<button class="ts-btn ts-btn-secondary ts-btn-sm" style="white-space: nowrap;" id="editor-all-questions-btn">Все</button>';
+$output .= '<button class="ts-btn ts-btn-primary ts-btn-sm" style="white-space: nowrap;" onclick="startTestFromEditor(\'training\')"><i class="bi bi-play-circle"></i> Тренировка</button>';
+$output .= '<button class="ts-btn ts-btn-danger ts-btn-sm" style="white-space: nowrap;" onclick="startTestFromEditor(\'exam\')"><i class="bi bi-clipboard-check"></i> Экзамен</button>';
 $output .= '</div>';
 $output .= '</div>';
 $output .= '</div>';
 // Фильтры
 $output .= '<div class="questions-filters-container">';
 $output .= '<div class="row g-2">';
-$output .= '<div class="col-6 col-md-3"><button type="button" class="btn btn-primary w-100 questions-filter-btn" data-filter="all">Все <span class="badge bg-light text-dark ms-1" id="filter-count-all">0</span></button></div>';
-$output .= '<div class="col-6 col-md-3"><button type="button" class="btn btn-outline-success w-100 questions-filter-btn" data-filter="published">Опубликовано <span class="badge bg-light text-dark ms-1" id="filter-count-published">0</span></button></div>';
-$output .= '<div class="col-6 col-md-3"><button type="button" class="btn btn-outline-secondary w-100 questions-filter-btn" data-filter="unpublished">Не опубликовано <span class="badge bg-light text-dark ms-1" id="filter-count-unpublished">0</span></button></div>';
-$output .= '<div class="col-6 col-md-3"><button type="button" class="btn btn-outline-info w-100 questions-filter-btn" data-filter="learning">В обучении <span class="badge bg-light text-dark ms-1" id="filter-count-learning">0</span></button></div>';
+$output .= '<div class="col-6 col-md-3"><button type="button" class="ts-btn ts-btn-primary w-100 questions-filter-btn" data-filter="all">Все <span class="ts-badge ts-badge-neutral ms-1" id="filter-count-all">0</span></button></div>';
+$output .= '<div class="col-6 col-md-3"><button type="button" class="ts-btn ts-btn-ghost-success w-100 questions-filter-btn" data-filter="published">Опубликовано <span class="ts-badge ts-badge-neutral ms-1" id="filter-count-published">0</span></button></div>';
+$output .= '<div class="col-6 col-md-3"><button type="button" class="ts-btn ts-btn-secondary w-100 questions-filter-btn" data-filter="unpublished">Не опубликовано <span class="ts-badge ts-badge-neutral ms-1" id="filter-count-unpublished">0</span></button></div>';
+$output .= '<div class="col-6 col-md-3"><button type="button" class="ts-btn ts-btn-ghost w-100 questions-filter-btn" data-filter="learning">В обучении <span class="ts-badge ts-badge-neutral ms-1" id="filter-count-learning">0</span></button></div>';
 $output .= '</div></div>';
 $output .= '</div>'; // card-header
 $output .= '<div class="card-body p-2 p-md-3">';

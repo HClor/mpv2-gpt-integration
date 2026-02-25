@@ -12,7 +12,7 @@
 require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
 
 if (!$modx instanceof modX) {
-    return '<div class="alert alert-danger">MODX context required</div>';
+    return '<div class="ts-alert ts-alert-danger">MODX context required</div>';
 }
 
 // Проверка авторизации
@@ -51,13 +51,13 @@ $output .= '<div id="knowledge-areas-container" class="knowledge-areas-wrapper"
 // Заголовок и кнопка создания
 $output .= '<div class="d-flex justify-content-between align-items-center mb-4">';
 $output .= '<h2><i class="bi bi-collection"></i> Мои области знаний</h2>';
-$output .= '<button class="btn btn-success" id="create-area-btn">';
+$output .= '<button class="ts-btn ts-btn-success" id="create-area-btn">';
 $output .= '<i class="bi bi-plus-circle"></i> Создать область';
 $output .= '</button>';
 $output .= '</div>';
 
 // Описание
-$output .= '<div class="alert alert-info">';
+$output .= '<div class="ts-alert ts-alert-info">';
 $output .= '<strong>💡 Что такое область знаний?</strong><br>';
 $output .= 'Это персональная подборка тестов из разных категорий. ';
 $output .= 'Вы выбираете интересующие вас тесты, и система генерирует комбинированный тест со случайными вопросами.';
@@ -124,7 +124,7 @@ $output .= '
                 </div>
                 
                 <!-- Статистика выбора -->
-                <div class="alert alert-light border">
+                <div class="ts-alert ts-alert-info border">
                     <div class="row text-center">
                         <div class="col-6">
                             <strong class="d-block text-muted small">Выбрано тестов</strong>
@@ -145,7 +145,7 @@ $output .= '
                     <div class="input-group">
                         <input type="number" class="form-control" id="questions-per-session" 
                                min="5" max="200" value="20">
-                        <button class="btn btn-outline-secondary" type="button" id="set-max-questions">
+                        <button class="ts-btn ts-btn-secondary" type="button" id="set-max-questions">
                             Максимум
                         </button>
                     </div>
@@ -197,7 +197,7 @@ $output .= '
                 </div>
                 
                 <!-- Превью распределения -->
-                <div class="alert alert-light border" id="distribution-preview">
+                <div class="ts-alert ts-alert-info border" id="distribution-preview">
                     <strong class="d-block mb-2">📊 Предварительное распределение:</strong>
                     <div id="distribution-details" class="small text-muted">
                         Выберите тесты и укажите количество вопросов
@@ -207,10 +207,10 @@ $output .= '
             </div>
             <div class="modal-footer">
                 <input type="hidden" id="editing-area-id" value="">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <button type="button" class="ts-btn ts-btn-secondary" data-bs-dismiss="modal">
                     <i class="bi bi-x-circle"></i> Отмена
                 </button>
-                <button type="button" class="btn btn-success" id="save-area-btn">
+                <button type="button" class="ts-btn ts-btn-success" id="save-area-btn">
                     <i class="bi bi-check-circle"></i> Сохранить область
                 </button>
             </div>
@@ -235,8 +235,8 @@ $output .= '
             </div>
             <div class="modal-footer">
                 <input type="hidden" id="deleting-area-id" value="">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
-                <button type="button" class="btn btn-danger" id="confirm-delete-area-btn">
+                <button type="button" class="ts-btn ts-btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                <button type="button" class="ts-btn ts-btn-danger" id="confirm-delete-area-btn">
                     <i class="bi bi-trash"></i> Удалить
                 </button>
             </div>

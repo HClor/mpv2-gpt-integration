@@ -20,7 +20,7 @@ require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
 // Проверка прав администратора
 $userId = $modx->user->id;
 if ($userId === 0) {
-    return '<div class="alert alert-danger">Требуется авторизация</div>';
+    return '<div class="ts-alert ts-alert-danger">Требуется авторизация</div>';
 }
 
 $userGroups = $modx->user->getUserGroups();
@@ -28,7 +28,7 @@ $adminGroup = Config::getGroup('admins');
 $isAdmin = in_array($adminGroup, $userGroups, true) || $userId === 1;
 
 if (!$isAdmin) {
-    return '<div class="alert alert-danger">Доступ запрещен. Требуются права администратора.</div>';
+    return '<div class="ts-alert ts-alert-danger">Доступ запрещен. Требуются права администратора.</div>';
 }
 
 // HTML разметка
@@ -38,16 +38,16 @@ $output = '
 
     <!-- Кнопки действий -->
     <div class="mb-4">
-        <button class="btn btn-primary" id="btn-check-integrity">
+        <button class="ts-btn ts-btn-primary" id="btn-check-integrity">
             <i class="bi bi-search"></i> Проверить целостность
         </button>
-        <button class="btn btn-warning" id="btn-clean-all" disabled>
+        <button class="ts-btn ts-btn-warning" id="btn-clean-all" disabled>
             <i class="bi bi-brush"></i> Очистить все проблемы
         </button>
-        <button class="btn btn-info" id="btn-system-stats">
+        <button class="ts-btn ts-btn-primary" id="btn-system-stats">
             <i class="bi bi-bar-chart"></i> Статистика системы
         </button>
-        <button class="btn btn-secondary" id="btn-clean-old-sessions">
+        <button class="ts-btn ts-btn-secondary" id="btn-clean-old-sessions">
             <i class="bi bi-trash"></i> Очистить старые сессии (90+ дней)
         </button>
     </div>
@@ -164,9 +164,9 @@ document.addEventListener(\'DOMContentLoaded\', function() {
         let html = \'\';
 
         if (report.total_issues === 0) {
-            html = \'<div class="alert alert-success"><i class="bi bi-check-circle-fill"></i> Проблем не обнаружено! База данных в порядке.</div>\';
+            html = \'<div class="ts-alert ts-alert-success"><i class="bi bi-check-circle-fill"></i> Проблем не обнаружено! База данных в порядке.</div>\';
         } else {
-            html = \'<div class="alert alert-warning"><strong>Обнаружено проблем: \' + report.total_issues + \'</strong></div>\';
+            html = \'<div class="ts-alert ts-alert-warning"><strong>Обнаружено проблем: \' + report.total_issues + \'</strong></div>\';
 
             // Осиротевшие тесты
             if (report.orphaned_tests.length > 0) {
@@ -225,7 +225,7 @@ document.addEventListener(\'DOMContentLoaded\', function() {
         let html = `
             <div class="card issue-card border-${variant}">
                 <div class="card-header bg-${variant} text-white">
-                    <strong>${title}</strong> <span class="badge bg-light text-dark">${items.length}</span>
+                    <strong>${title}</strong> <span class="ts-badge ts-badge-neutral">${items.length}</span>
                 </div>
                 <div class="card-body">
                     <ul class="list-unstyled mb-0">
@@ -298,7 +298,7 @@ document.addEventListener(\'DOMContentLoaded\', function() {
 
         if (stats.popular_tests && stats.popular_tests.length > 0) {
             stats.popular_tests.forEach(test => {
-                html += `<li>${test.title} <span class="badge bg-secondary">${test.session_count} сессий</span></li>`;
+                html += `<li>${test.title} <span class="ts-badge ts-badge-neutral">${test.session_count} сессий</span></li>`;
             });
         } else {
             html += `<li class="text-muted">Нет данных</li>`;
@@ -322,7 +322,7 @@ document.addEventListener(\'DOMContentLoaded\', function() {
                 </div>
             </div>
 
-            <div class="alert alert-info">
+            <div class="ts-alert ts-alert-info">
                 <strong>Размер БД:</strong> ${stats.database_size_mb} MB
             </div>
         `;

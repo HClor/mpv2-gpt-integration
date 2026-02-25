@@ -30,8 +30,8 @@ $output[] = '<div class="container text-center">';
 $output[] = '<h1 class="display-5 fw-bold mb-3"><i class="bi bi-mortarboard-fill me-2"></i>Система тестирования</h1>';
 $output[] = '<p class="lead mb-4">Проверьте свои знания, изучайте материалы и получайте сертификаты</p>';
 $output[] = '<div class="d-flex justify-content-center gap-3 flex-wrap">';
-$output[] = '<a href="' . $testsUrl . '" class="btn btn-light btn-lg"><i class="bi bi-card-checklist me-2"></i>Пройти тест</a>';
-$output[] = '<a href="' . $materialsUrl . '" class="btn btn-outline-light btn-lg"><i class="bi bi-book me-2"></i>Учебные материалы</a>';
+$output[] = '<a href="' . $testsUrl . '" class="ts-btn ts-btn-secondary ts-btn-lg"><i class="bi bi-card-checklist me-2"></i>Пройти тест</a>';
+$output[] = '<a href="' . $materialsUrl . '" class="ts-btn ts-btn-ghost ts-btn-lg"><i class="bi bi-book me-2"></i>Учебные материалы</a>';
 $output[] = '</div>';
 $output[] = '</div>';
 $output[] = '</div>';
@@ -143,7 +143,7 @@ if (empty($popularTests)) {
 
 $output[] = '</div>';
 $output[] = '<div class="card-footer bg-white">';
-$output[] = '<a href="' . $testsUrl . '" class="btn btn-outline-primary btn-sm w-100">Все тесты <i class="bi bi-arrow-right ms-1"></i></a>';
+$output[] = '<a href="' . $testsUrl . '" class="ts-btn ts-btn-ghost ts-btn-sm w-100">Все тесты <i class="bi bi-arrow-right ms-1"></i></a>';
 $output[] = '</div>';
 $output[] = '</div>';
 $output[] = '</div>';
@@ -181,7 +181,7 @@ if (empty($materials)) {
 
 $output[] = '</div>';
 $output[] = '<div class="card-footer bg-white">';
-$output[] = '<a href="' . $materialsUrl . '" class="btn btn-outline-primary btn-sm w-100">Все материалы <i class="bi bi-arrow-right ms-1"></i></a>';
+$output[] = '<a href="' . $materialsUrl . '" class="ts-btn ts-btn-ghost ts-btn-sm w-100">Все материалы <i class="bi bi-arrow-right ms-1"></i></a>';
 $output[] = '</div>';
 $output[] = '</div>';
 $output[] = '</div>';
@@ -233,7 +233,7 @@ if (empty($leaders)) {
 
 $output[] = '</div>';
 $output[] = '<div class="card-footer bg-white">';
-$output[] = '<a href="' . $leaderboardUrl . '" class="btn btn-outline-warning btn-sm w-100">Весь рейтинг <i class="bi bi-arrow-right ms-1"></i></a>';
+$output[] = '<a href="' . $leaderboardUrl . '" class="ts-btn ts-btn-ghost-warning ts-btn-sm w-100">Весь рейтинг <i class="bi bi-arrow-right ms-1"></i></a>';
 $output[] = '</div>';
 $output[] = '</div>';
 $output[] = '</div>';
@@ -269,7 +269,7 @@ if (!empty($paths)) {
     $output[] = '<div class="card shadow-sm mb-4">';
     $output[] = '<div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">';
     $output[] = '<h5 class="mb-0"><i class="bi bi-signpost-split text-info me-2"></i>Траектории обучения</h5>';
-    $output[] = '<a href="' . $pathsUrl . '" class="btn btn-outline-info btn-sm">Все траектории</a>';
+    $output[] = '<a href="' . $pathsUrl . '" class="ts-btn ts-btn-ghost ts-btn-sm">Все траектории</a>';
     $output[] = '</div>';
     $output[] = '<div class="card-body">';
     $output[] = '<div class="row g-3">';
@@ -289,7 +289,7 @@ if (!empty($paths)) {
         $output[] = '</div>';
         $output[] = '</div>';
         $output[] = '<div class="card-footer bg-white">';
-        $output[] = '<a href="' . $pathUrl . '" class="btn btn-sm btn-outline-primary w-100">Подробнее</a>';
+        $output[] = '<a href="' . $pathUrl . '" class="ts-btn ts-btn-sm ts-btn-ghost w-100">Подробнее</a>';
         $output[] = '</div>';
         $output[] = '</div>';
         $output[] = '</div>';
@@ -305,7 +305,7 @@ if (!$isLoggedIn) {
     $output[] = '<div class="bg-light rounded-3 p-4 text-center">';
     $output[] = '<h4 class="mb-3">Присоединяйтесь к обучению!</h4>';
     $output[] = '<p class="text-muted mb-3">Зарегистрируйтесь, чтобы отслеживать прогресс и получать сертификаты</p>';
-    $output[] = '<a href="' . $loginUrl . '" class="btn btn-primary"><i class="bi bi-person-plus me-2"></i>Войти / Регистрация</a>';
+    $output[] = '<a href="' . $loginUrl . '" class="ts-btn ts-btn-primary"><i class="bi bi-person-plus me-2"></i>Войти / Регистрация</a>';
     $output[] = '</div>';
 }
 

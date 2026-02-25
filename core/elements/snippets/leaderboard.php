@@ -175,10 +175,10 @@ if ($userId > 0 && $myStats) {
         $output .= '</div>';
     } else {
         $testsUrl = $modx->makeUrl(35);
-        $output .= '<div class="alert alert-info">';
+        $output .= '<div class="ts-alert ts-alert-info">';
         $output .= '<h5>🌱 Начните свой путь обучения!</h5>';
         $output .= '<p>Пройдите первый тест и получите ранг "Новичок"</p>';
-        $output .= '<a href="' . $testsUrl . '" class="btn btn-primary mt-2">Начать тестирование</a>';
+        $output .= '<a href="' . $testsUrl . '" class="ts-btn ts-btn-primary mt-2">Начать тестирование</a>';
         $output .= '</div>';
     }
 }
@@ -233,7 +233,7 @@ if (empty($leaders)) {
         $output .= '<td>';
         $output .= '<strong>' . htmlspecialchars($leader["username"]) . '</strong>';
         if ($isCurrentUser) {
-            $output .= ' <span class="badge bg-primary">Вы</span>';
+            $output .= ' <span class="ts-badge ts-badge-primary">Вы</span>';
         }
         $output .= '</td>';
         

@@ -50,7 +50,7 @@ $sql .= " GROUP BY ts.id ORDER BY ts.completed_at DESC LIMIT 1";
 $stmt = $modx->query($sql);
 
 if ($stmt === false) {
-    return '<p class="alert alert-danger">Ошибка при получении результатов</p>';
+    return '<p class="ts-alert ts-alert-danger">Ошибка при получении результатов</p>';
 }
 
 $result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -58,7 +58,7 @@ $result = $stmt->fetch(PDO::FETCH_ASSOC);
 if (!$result) {
     return '
         <p class="text-muted mb-3">Нет результатов тестов.</p>
-        <a href="' . $modx->makeUrl(35) . '" class="btn btn-primary btn-sm">
+        <a href="' . $modx->makeUrl(35) . '" class="ts-btn ts-btn-primary ts-btn-sm">
             <i class="bi bi-play-circle"></i> Пройти тест
         </a>
     ';

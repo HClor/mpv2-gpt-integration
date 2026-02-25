@@ -75,7 +75,7 @@ if ($_POST && isset($_POST['reset_request'])) {
 
 if ($success) {
     $authId = $modx->getOption('lms.auth_page', null, 0);
-    return '<div class="alert alert-success">
+    return '<div class="ts-alert ts-alert-success">
         <h4>✅ Письмо отправлено</h4>
         <p>Если аккаунт с таким email существует, на него отправлена ссылка для восстановления пароля.</p>
         <p>Проверьте почту и перейдите по ссылке.</p>
@@ -85,7 +85,7 @@ if ($success) {
 
 $errorMsg = '';
 if (!empty($errors)) {
-    $errorMsg = '<div class="alert alert-danger"><ul class="mb-0">';
+    $errorMsg = '<div class="ts-alert ts-alert-danger"><ul class="mb-0">';
     foreach ($errors as $error) {
         $errorMsg .= '<li>' . htmlspecialchars($error) . '</li>';
     }
@@ -111,7 +111,7 @@ return $errorMsg . '<div class="container">
                             <label class="form-label">Email</label>
                             <input type="email" name="email" class="form-control" value="' . $emailValue . '" required>
                         </div>
-                        <button type="submit" class="btn btn-primary w-100">Отправить ссылку</button>
+                        <button type="submit" class="ts-btn ts-btn-primary w-100">Отправить ссылку</button>
                     </form>
                     <div class="text-center mt-3">
                         <a href="' . $modx->makeUrl($authId ?: $modx->getOption('site_start')) . '">← Вернуться к входу</a>
