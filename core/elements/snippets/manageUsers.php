@@ -62,7 +62,8 @@ try {
     $isPost = $_SERVER['REQUEST_METHOD'] === 'POST';
 
     $sanitizeText = static function (modX $modx, string $value): string {
-        return $modx->sanitize($value, $modx->sanitizePatterns['text']);
+        // modX::sanitize() принимает массив, а не строку — используем strip_tags + trim
+        return htmlspecialchars(strip_tags(trim($value)), ENT_QUOTES, 'UTF-8');
     };
 
     if ($isPost && isset($_POST['change_role'])) {
