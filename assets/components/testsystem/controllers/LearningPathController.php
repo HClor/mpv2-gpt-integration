@@ -157,7 +157,7 @@ class LearningPathController extends BaseController
             return $this->error($e->getMessage(), 400);
         } catch (PermissionException $e) {
             return $this->error($e->getMessage(), 403);
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             return $this->error($e->getMessage(), 500);
         }
     }
