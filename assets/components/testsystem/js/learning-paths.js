@@ -27,6 +27,15 @@
         return div.innerHTML;
     }
 
+    // Escape string for use inside JS onclick attribute (single-quoted string literal)
+    function escapeForOnclick(text) {
+        return escapeHtml(text)
+            .replace(/\\/g, '\\\\')
+            .replace(/'/g, "\\'")
+            .replace(/\r/g, '')
+            .replace(/\n/g, ' ');
+    }
+
     // State
     let currentPathId = null;
     let pathSteps = [];
@@ -292,7 +301,7 @@
                             <div class="d-grid gap-2">
                                 ${path.is_template ? `
                                     <button class="btn btn-info"
-                                            onclick="LearningPaths.showCloneModal(${path.id}, '${escapeHtml(path.name).replace(/'/g, "\\'")}')">
+                                            onclick="LearningPaths.showCloneModal(${path.id}, '${escapeForOnclick(path.name)}')">
                                         <i class="bi bi-copy"></i> Клонировать шаблон
                                     </button>
                                 ` : `
@@ -303,7 +312,7 @@
                                 `}
                                 ${path.can_edit ? `
                                     <button class="btn btn-outline-primary btn-sm mb-2 w-100"
-                                            onclick="LearningPaths.showEnrollModal(${path.id}, '${escapeHtml(path.name).replace(/'/g, "\\'")}')">
+                                            onclick="LearningPaths.showEnrollModal(${path.id}, '${escapeForOnclick(path.name)}')">
                                         <i class="bi bi-person-plus"></i> Назначить студентам
                                     </button>
                                     <div class="btn-group btn-group-sm w-100">
@@ -312,13 +321,13 @@
                                         </a>
                                         ${path.is_template ? '' : `
                                             <button class="btn btn-outline-info"
-                                                    onclick="LearningPaths.showCloneModal(${path.id}, '${escapeHtml(path.name).replace(/'/g, "\\'")}')"
+                                                    onclick="LearningPaths.showCloneModal(${path.id}, '${escapeForOnclick(path.name)}')"
                                                     title="Клонировать">
                                                 <i class="bi bi-files"></i> Клон
                                             </button>
                                         `}
                                         <button class="btn btn-outline-danger"
-                                                onclick="LearningPaths.deletePath(${path.id}, '${escapeHtml(path.name).replace(/'/g, "\\'")}')">
+                                                onclick="LearningPaths.deletePath(${path.id}, '${escapeForOnclick(path.name)}')">
                                             <i class="bi bi-trash"></i>
                                         </button>
                                     </div>
@@ -1403,7 +1412,7 @@
                 <div class="content-item d-flex justify-content-between align-items-center p-2 mb-1 rounded
                             ${isSelected ? 'bg-primary text-white' : 'bg-light'}"
                      style="cursor: pointer;"
-                     onclick="LearningPaths.selectContent(${item.id}, '${escapeHtml(item.name).replace(/'/g, "\\'")}')">
+                     onclick="LearningPaths.selectContent(${item.id}, '${escapeForOnclick(item.name)}')">
                     <div>
                         <strong>${escapeHtml(item.name)}</strong>
                         <br>
