@@ -518,49 +518,56 @@ class SessionController extends BaseController
         $this->requireAuth();
         $userId = $this->getCurrentUserId();
 
-        // Получаем данные сессии
-        $session = $this->modx->getObject('TestSession', $sessionId);
+        // Получаем данные сессии через raw SQL (xPDO-модель TestSession не зарегистрирована)
+        $stmt = $this->modx->prepare("
+            SELECT s.id, s.user_id, s.test_id, s.mode, s.status, s.question_order,
+                   t.title as test_title
+            FROM {$this->prefix}test_sessions s
+            LEFT JOIN {$this->prefix}test_tests t ON t.id = s.test_id
+            WHERE s.id = ?
+        ");
+
+        if (!$stmt || !$stmt->execute(array($sessionId))) {
+            return $this->error('Session not found', 404);
+        }
+
+        $session = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!$session) {
             return $this->error('Session not found', 404);
         }
 
         // Проверяем права доступа
-        if ($session->get('user_id') != $userId) {
+        if ((int)$session['user_id'] !== $userId) {
             return $this->error('Access denied to this session', 403);
         }
 
-        // Получаем информацию о тесте
-        $testId = $session->get('test_id');
-        $test = $this->modx->getObject('TestTest', $testId);
-
-        if (!$test) {
+        if (!$session['test_title']) {
             return $this->error('Test not found', 404);
         }
 
         // Подсчитываем общее количество вопросов в сессии
-        $questionOrder = json_decode($session->get('question_order'), true);
+        $questionOrder = json_decode($session['question_order'], true);
         $totalQuestions = is_array($questionOrder) ? count($questionOrder) : 0;
 
         // Подсчитываем текущий номер вопроса (сколько уже отвечено)
-        $answersTable = $this->modx->getTableName('TestUserAnswer');
         $stmt = $this->modx->prepare("
             SELECT COUNT(*) as answered_count
-            FROM {$answersTable}
+            FROM {$this->prefix}test_user_answers
             WHERE session_id = ?
         ");
-        $stmt->execute([$sessionId]);
+        $stmt->execute(array($sessionId));
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         $currentQuestionNumber = (int)$result['answered_count'];
 
-        return $this->success([
+        return $this->success(array(
             'session_id' => $sessionId,
-            'test_id' => $testId,
-            'mode' => $session->get('mode'),
-            'status' => $session->get('status'),
+            'test_id' => (int)$session['test_id'],
+            'mode' => $session['mode'],
+            'status' => $session['status'],
             'total_questions' => $totalQuestions,
             'current_question_number' => $currentQuestionNumber,
-            'test_title' => $test->get('title')
-        ]);
+            'test_title' => $session['test_title']
+        ));
     }
 }
