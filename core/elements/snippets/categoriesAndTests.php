@@ -110,11 +110,11 @@ function renderTestCard($test, $modx, $testPageId, $currentUserId, $isAdmin, $is
 
     // Кнопки запуска
     $output .= '<div class="test-action-buttons">';
-    $output .= '<button class="btn-start-training btn-large" data-test-id="' . $testId . '">';
+    $output .= '<button class="btn-start-training ts-btn" data-test-id="' . $testId . '">';
     $output .= '<span class="btn-icon">🎓</span>';
     $output .= '<span class="btn-text">Тренировка</span>';
     $output .= '</button>';
-    $output .= '<button class="btn-start-exam btn-large" data-test-id="' . $testId . '">';
+    $output .= '<button class="btn-start-exam ts-btn" data-test-id="' . $testId . '">';
     $output .= '<span class="btn-icon">🎯</span>';
     $output .= '<span class="btn-text">Экзамен</span>';
     $output .= '</button>';
