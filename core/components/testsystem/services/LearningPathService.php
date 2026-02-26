@@ -1778,10 +1778,10 @@ class LearningPathService
             case 'test':
             case 'quiz':
                 // Проверяем существование теста
-                $stmt = $modx->prepare("SELECT id, published FROM {$prefix}test_tests WHERE id = ?");
+                $stmt = $modx->prepare("SELECT id, publication_status FROM {$prefix}test_tests WHERE id = ?");
                 $stmt->execute([$itemId]);
                 $test = $stmt->fetch(PDO::FETCH_ASSOC);
-                return $test && $test['published'];
+                return $test && $test['publication_status'] === 'public';
 
             case 'assignment':
                 // Для заданий пока считаем всегда доступным

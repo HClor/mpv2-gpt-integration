@@ -164,7 +164,8 @@ class CategoryPermissionService
      */
     public static function isGlobalAdmin($modx, $userId)
     {
-        if ($userId === 1) {
+        // ФИКС: User ID 2 - админ фронтенда, User ID 1 - админ бэкенда
+        if ($userId === 1 || $userId === 2) {
             return true;
         }
 

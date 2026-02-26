@@ -538,3 +538,21 @@ core/components/testsystem/services/       # Бизнес-логика (прив
 ```php
 $modx->regClientScript($assetsUrl . 'js/new-module.js');
 ```
+
+---
+
+## 11. Среда тестирования
+
+**Инструменты:** MODX Admin → дополнение **Console** (выполнение PHP-кода), консоль браузера (JS).
+
+**Контексты авторизации в MODX:**
+- Контекст `mgr` (админка): пользователь с `id = 1`.
+- Контекст `web` (фронтенд): пользователь с `id = 2`.
+
+В Console MODX нельзя напрямую выполнить код от имени пользователя `id=2`, но можно эмулировать его авторизацию:
+```php
+$modx->user = $modx->getObject('modUser', 2);
+$modx->user->addSessionContext('web');
+```
+
+**Доступ к окружению:** полный доступ к файлам сайта и MySQL через phpMyAdmin.

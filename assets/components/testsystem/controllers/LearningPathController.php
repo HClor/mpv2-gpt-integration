@@ -1592,7 +1592,7 @@ class LearningPathController extends BaseController
             case 'test':
             case 'quiz':
                 // Проверяем существование теста
-                $stmt = $this->modx->prepare("SELECT id, published FROM {$prefix}test_tests WHERE id = ?");
+                $stmt = $this->modx->prepare("SELECT id, publication_status FROM {$prefix}test_tests WHERE id = ?");
                 $stmt->execute([$itemId]);
                 $test = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -1601,7 +1601,7 @@ class LearningPathController extends BaseController
                 }
 
                 // Проверяем, что тест опубликован
-                if (!$test['published']) {
+                if ($test['publication_status'] !== 'public') {
                     throw new ValidationException('Тест не опубликован (ID=' . $itemId . '). Опубликуйте тест или выберите другой.');
                 }
                 break;
