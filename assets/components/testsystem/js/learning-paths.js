@@ -31,6 +31,7 @@
     function escapeForOnclick(text) {
         return escapeHtml(text)
             .replace(/\\/g, '\\\\')
+            .replace(/"/g, '&quot;')
             .replace(/'/g, "\\'")
             .replace(/\r/g, '')
             .replace(/\n/g, ' ');

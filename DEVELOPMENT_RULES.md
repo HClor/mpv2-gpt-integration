@@ -541,6 +541,70 @@ $modx->regClientScript($assetsUrl . 'js/new-module.js');
 
 ---
 
+## 12. Экранирование в JS: onclick-атрибуты с пользовательскими данными
+
+Типичный паттерн — кнопка, сгенерированная через JS-шаблон с данными из БД:
+
+```js
+html += `<button onclick="App.action(${item.id}, '${escapeHtml(item.name)}')">`;
+```
+
+### 12.1. Почему `escapeHtml()` недостаточно
+
+`escapeHtml()` через `div.textContent + div.innerHTML` экранирует `&`, `<`, `>` — но **не экранирует `"` и `\n`** в текстовых нодах. Это ломает onclick-атрибут:
+
+| Символ в названии | Результат в HTML | Эффект |
+|---|---|---|
+| `"` (двойная кавычка) | `onclick="App.fn('Name "X"')"` | Атрибут обрывается на первой `"` — onclick не выполняется вообще |
+| `\n` (перенос строки) | `onclick="App.fn('Name\n Here')"` | `SyntaxError: Invalid or unexpected token` при рендере карточки |
+| `\` (обратный слэш) | `onclick="App.fn('Path\dir')"` | `\d` интерпретируется как escape-последовательность JS |
+| `'` (одинарная кавычка) | `onclick="App.fn('it's')"` | JS-строка обрывается — SyntaxError |
+
+### 12.2. Правильное решение — отдельная функция экранирования для onclick
+
+```js
+function escapeForOnclick(text) {
+    return escapeHtml(text)          // &, <, > → HTML-entities
+        .replace(/\\/g, '\\\\')      // \ → \\ (первым, иначе двойное экранирование)
+        .replace(/"/g, '&quot;')     // " → &quot; (браузер декодирует при парсинге атрибута)
+        .replace(/'/g, "\\'")        // ' → \' (внутри одинарных кавычек JS)
+        .replace(/\r/g, '')          // \r — удалить
+        .replace(/\n/g, ' ');        // \n → пробел
+}
+```
+
+Использование:
+```js
+// НЕВЕРНО
+html += `<button onclick="App.fn(${id}, '${escapeHtml(name).replace(/'/g, "\\'")}')">`;
+
+// ВЕРНО
+html += `<button onclick="App.fn(${id}, '${escapeForOnclick(name)}')">`;
+```
+
+### 12.3. Диагностика
+
+В браузерной консоли при рендере карточек:
+- `Uncaught SyntaxError: Invalid or unexpected token (at script.js:N:COL)` → перенос строки или обратный слэш в названии
+- Кнопка не реагирует на клик без ошибок в консоли → двойная кавычка обрывает HTML-атрибут (проверить через DevTools: Inspect → посмотреть значение атрибута `onclick`)
+
+### 12.4. Альтернатива — передавать данные через data-атрибуты
+
+Полностью избегает проблемы экранирования:
+```html
+<button class="my-btn" data-id="5" data-name="Проектант &quot;0&quot;">Действие</button>
+```
+```js
+document.querySelectorAll('.my-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        App.fn(btn.dataset.id, btn.dataset.name);
+    });
+});
+```
+Браузер сам декодирует HTML-entities в `dataset`. Это надёжнее для данных с любыми спецсимволами.
+
+---
+
 ## 11. Среда тестирования
 
 **Инструменты:** MODX Admin → дополнение **Console** (выполнение PHP-кода), консоль браузера (JS).
