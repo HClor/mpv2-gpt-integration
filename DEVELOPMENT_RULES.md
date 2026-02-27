@@ -1,7 +1,33 @@
 # Правила разработки и решения проблем
 
 > MODX Revolution + Fenom: критические правила, типичные ошибки, решения и недокументированные особенности.
-> Консолидировано из опыта разработки 17 спринтов. Обновлено: 2026-02-23
+> Консолидировано из опыта разработки 17 спринтов. Обновлено: 2026-02-27
+
+---
+
+## 0. Окружение и архитектурные принципы
+
+### 0.1. Окружение
+
+| Параметр | Значение |
+|---|---|
+| PHP | 8.2.28 |
+| MySQL | 5.7.21 |
+| CMS | MODX Revolution 2.x + Fenom |
+| CSS-фреймворк | Bootstrap 5 (LMS-часть) |
+| Иконки | Bootstrap Icons |
+
+Все современные конструкции PHP 8.x поддерживаются: `[]`, `??`, `?->`, `match`, named arguments, union types и т.д.
+
+### 0.2. Архитектурные принципы
+
+1. **Контроллеры** — только HTTP: валидация входа → вызов сервиса → формат ответа
+2. **Сервисы** — вся бизнес-логика и SQL
+3. **SQL** — только в сервисах (и в repositories)
+4. **Валидация** — на границе входа (контроллер)
+5. **UI** не содержит бизнес-логики
+6. **Никаких «быстрых правок в snippet»** — новый код только через контроллеры и сервисы
+7. **Триггеры MySQL** — не используются; вся логика в PHP-сервисах (архитектурное решение, см. 5.2)
 
 ---
 
@@ -9,44 +35,31 @@
 
 ### 1.1. Фигурные скобки `{}` — конфликт с Fenom
 
-Fenom интерпретирует `{` и `}` как разметку шаблонизатора. Любой inline JavaScript с фигурными скобками в PHP-сниппете вызовет ошибку 500.
+Fenom интерпретирует `{` и `}` как разметку шаблонизатора. Inline JavaScript с фигурными скобками в **выводе PHP-сниппета** вызовет ошибку 500, потому что вывод сниппета обрабатывается Fenom.
 
+**В PHP-сниппетах** — выносить JS в отдельные файлы:
 ```php
-// НЕВЕРНО — inline JS с фигурными скобками
+// НЕВЕРНО — inline JS с фигурными скобками в output
 $output .= '<script>function test() { console.log("test"); }</script>';
-
-// НЕВЕРНО — JSDoc комментарии
-$output .= '<script>/** @param {string} name */</script>';
 
 // ВЕРНО — выносить JS в отдельные файлы
 $modx->regClientScript('/assets/components/testsystem/js/my-script.js');
 ```
 
-### 1.2. Короткий синтаксис массивов `[]` — ошибка 500
-
-```php
-// НЕВЕРНО — вызовет 500!
-$params = ['key' => 'value'];
-$modx->makeUrl($id, '', ['param' => $value]);
-
-// ВЕРНО — использовать array()
-$params = array('key' => 'value');
-$modx->makeUrl($id, '', array('param' => $value));
+**В Fenom-шаблонах (.tpl)** — использовать `{ignore}`:
+```html
+{ignore}
+<script>
+function test() {
+    console.log("ok");
+}
+</script>
+{/ignore}
 ```
 
-### 1.3. Оператор `??` — осторожно
+### 1.2. HEREDOC с JavaScript — запрещено
 
-```php
-// МОЖЕТ ВЫЗВАТЬ ПРОБЛЕМЫ
-$value = $_GET['param'] ?? 'default';
-
-// ВЕРНО — явная проверка
-$value = isset($_GET['param']) ? $_GET['param'] : 'default';
-```
-
-### 1.4. HEREDOC с JavaScript — запрещено
-
-HEREDOC содержащий JS код с `{}` проблематичен из-за Fenom.
+HEREDOC содержащий JS код с `{}` проблематичен из-за Fenom (вывод сниппета проходит через шаблонизатор).
 
 ```php
 // ВЕРНО — выносить в отдельный JS файл
@@ -88,6 +101,29 @@ const formData = new FormData();
 formData.append('csrf_token', csrfToken);
 ```
 
+### 2.3. XSS-защита в Fenom-шаблонах
+
+В Fenom **всегда** экранировать пользовательские данные через `| escape`:
+
+```html
+<!-- ЗАПРЕЩЕНО — XSS-вектор -->
+<h1>{$pagetitle}</h1>
+<span>{$_modx->user.username}</span>
+<meta content="{$description}">
+
+<!-- ВЕРНО — экранирование через | escape -->
+<h1>{$pagetitle | escape}</h1>
+<span>{$_modx->user.username | escape}</span>
+<meta content="{$description | escape}">
+```
+
+**Исключение:** `| raw` допустим только для полей с намеренным HTML-контентом (`content`, `richtext`), проверенных перед сохранением.
+
+В PHP-сниппетах — `htmlspecialchars()`:
+```php
+$output .= '<span>' . htmlspecialchars($userName, ENT_QUOTES, 'UTF-8') . '</span>';
+```
+
 ---
 
 ## 3. Работа с базой данных через MODX API
@@ -100,44 +136,130 @@ formData.append('csrf_token', csrfToken);
 // НЕВЕРНО — Fatal error: undefined method
 $db = $modx->getConnection();
 $stmt = $db->prepare("SELECT ...");  // НЕ СУЩЕСТВУЕТ
-$db->query("SELECT ...");            // НЕ СУЩЕСТВУЕТ
-$db->quote($value);                  // НЕ СУЩЕСТВУЕТ
 
-// ВЕРНО — использовать методы $modx напрямую
-$stmt = $modx->query("SELECT ...");  // Возвращает PDOStatement
-$count = $modx->exec("INSERT ...");  // Возвращает int (кол-во строк)
-$safe = $modx->quote($value);        // Экранирование строк
+// ВЕРНО — использовать методы $modx напрямую (см. 3.2–3.4)
 ```
 
-### 3.2. Таблица API-методов
+### 3.2. Основной подход: `prepare()` + `bindValue()` (параметризованные запросы)
 
-| Операция | Неверно | Верно | Возвращает |
-|----------|---------|-------|-----------|
-| SELECT | `$db->prepare()` | `$modx->query()` | PDOStatement |
-| INSERT/UPDATE/DELETE | `$db->prepare()` | `$modx->exec()` | int |
-| Экранирование | `$db->quote()` | `$modx->quote()` | string |
-
-### 3.3. Обязательная проверка результата
+Для любого SQL с пользовательскими данными — **только prepared statements**:
 
 ```php
-// ВЕРНО — всегда проверять перед fetch()
-$stmt = $modx->query($sql);
-if ($stmt === false) {
-    error_log("SQL Error: {$sql}");
-    return false;
-}
+// ВЕРНО — безопасно, чисто, рефакторится легко
+$stmt = $modx->prepare("SELECT id, title FROM modx_test_tests WHERE resource_id = :catId AND publication_status = :status");
+$stmt->bindValue(':catId', $categoryId, PDO::PARAM_INT);
+$stmt->bindValue(':status', 'public', PDO::PARAM_STR);
+$stmt->execute();
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ```
 
-### 3.4. Экранирование значений
+Для INSERT/UPDATE/DELETE:
+```php
+$stmt = $modx->prepare("UPDATE modx_test_tests SET title = :title WHERE id = :id");
+$stmt->bindValue(':title', $title, PDO::PARAM_STR);
+$stmt->bindValue(':id', $id, PDO::PARAM_INT);
+$stmt->execute();
+$affected = $stmt->rowCount();
+```
+
+### 3.3. Альтернатива: `query()` + `quote()` (простые запросы)
+
+Для запросов без пользовательских данных или с простыми параметрами:
 
 ```php
-// Строки — через $modx->quote()
-$sql = "INSERT INTO table (name) VALUES (" . $modx->quote($name) . ")";
+// Простой SELECT без параметров
+$stmt = $modx->query("SELECT COUNT(*) FROM modx_test_tests");
 
-// Числа — через intval()/floatval()
-$sql = "DELETE FROM table WHERE id = " . intval($id);
+// С экранированием (допустимо для простых случаев)
+$sql = "DELETE FROM modx_test_tests WHERE id = " . intval($id);
+$modx->exec($sql);
 ```
+
+### 3.4. Таблица API-методов
+
+| Операция | Метод | Возвращает | Когда использовать |
+|----------|-------|-----------|-------------------|
+| SELECT (параметры) | `$modx->prepare()` + `execute()` | PDOStatement | Основной подход |
+| SELECT (простой) | `$modx->query()` | PDOStatement\|false | Запросы без параметров |
+| INSERT/UPDATE/DELETE | `$modx->prepare()` + `execute()` | PDOStatement | Основной подход |
+| INSERT/UPDATE/DELETE (простой) | `$modx->exec()` | int | Простые запросы |
+| Экранирование | `$modx->quote()` | string | Только если не используется prepare |
+
+### 3.5. Обязательная проверка результата
+
+```php
+// Для prepare():
+$stmt = $modx->prepare($sql);
+if ($stmt === false) {
+    error_log("[TS] SQL prepare error: {$sql}");
+    return false;
+}
+if (!$stmt->execute()) {
+    error_log("[TS] SQL execute error: " . implode(' ', $stmt->errorInfo()));
+    return false;
+}
+$rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Для query():
+$stmt = $modx->query($sql);
+if ($stmt === false) {
+    error_log("[TS] SQL error: {$sql}");
+    return false;
+}
+```
+
+### 3.6. Транзакции — обязательны при изменении 2+ таблиц
+
+Любая операция, изменяющая данные в нескольких таблицах, — только в транзакции:
+
+```php
+$modx->beginTransaction();
+try {
+    $stmt1 = $modx->prepare("UPDATE modx_test_sessions SET status = 'completed' WHERE id = :id");
+    $stmt1->bindValue(':id', $sessionId, PDO::PARAM_INT);
+    $stmt1->execute();
+
+    $stmt2 = $modx->prepare("INSERT INTO modx_test_certificates (user_id, test_id) VALUES (:uid, :tid)");
+    $stmt2->bindValue(':uid', $userId, PDO::PARAM_INT);
+    $stmt2->bindValue(':tid', $testId, PDO::PARAM_INT);
+    $stmt2->execute();
+
+    $modx->commit();
+} catch (Exception $e) {
+    $modx->rollBack();
+    error_log("[TS] Transaction failed: " . $e->getMessage());
+}
+```
+
+### 3.7. Защита от N+1 Query
+
+Запрещено выполнять SQL внутри цикла. Использовать `IN (...)` или JOIN:
+
+```php
+// ЗАПРЕЩЕНО — N+1 запросов
+foreach ($tests as $test) {
+    $stmt = $modx->prepare("SELECT name FROM modx_test_categories WHERE id = :id");
+    $stmt->bindValue(':id', $test['resource_id'], PDO::PARAM_INT);
+    $stmt->execute();
+}
+
+// ВЕРНО — один запрос
+$ids = array_map('intval', array_column($tests, 'resource_id'));
+$in = implode(',', $ids);
+$stmt = $modx->query("SELECT id, name FROM modx_test_categories WHERE id IN ({$in})");
+$categories = [];
+foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+    $categories[$row['id']] = $row['name'];
+}
+```
+
+### 3.8. Индексы и производительность (MySQL 5.7)
+
+Чеклист для новых или изменяемых запросов:
+- [ ] Проверен `EXPLAIN` для SELECT — нет `type: ALL` на таблицах > 1000 строк
+- [ ] Есть индексы по foreign keys (`resource_id`, `user_id`, `test_id`, `session_id`)
+- [ ] Есть индексы по полям в WHERE и ORDER BY
+- [ ] MySQL 5.7: нет функций MySQL 8.0+ (`ROW_NUMBER()`, `JSON_TABLE()`, `WITH CTE`)
 
 ---
 
@@ -189,7 +311,7 @@ grep -n "is_public\|category_id\|tc\.title" your_snippet.php
 ### 5.2. Триггер БД блокирует UPDATE сессий
 **Проблема:** Триггер `trg_session_complete_award_xp` блокировал обновление `status` теста.
 **Решение:** Логика XP и streak перенесена в PHP (`SessionController.php`), триггер удалён.
-**Архитектурный вывод:** Бизнес-логику держать в PHP-сервисах, не в триггерах MySQL.
+**Архитектурное решение:** Все триггеры MySQL удалены, новые не создаются. Бизнес-логика приложения (XP, награды, уведомления, сертификаты) — только в PHP-сервисах. Теоретически триггеры допустимы для аудита или технических гарантий целостности, но в данном проекте вся логика реализуется в PHP-слое.
 
 ### 5.3. Сертификаты не создаются при завершении теста
 **Проблема:** Метод для выдачи сертификатов отсутствовал.
@@ -223,9 +345,9 @@ grep "case '" assets/components/testsystem/ajax/testsystem.php | grep -oP "case 
 **Причина:** `$modx->query($sql)` возвращает `false` при ошибке SQL (неверный синтаксис, несуществующая таблица/колонка, GROUP BY без агрегации).
 **Решение:** Всегда проверять `$stmt === false` перед `fetch()`.
 
-### 5.8. MySQL 5.7 — несовместимость с MySQL 8.0+ синтаксисом
+### 5.8. MySQL 5.7.21 — несовместимость с MySQL 8.0+ синтаксисом
 **Проблема:** Используются `IF NOT EXISTS` в DDL (17 случаев), `CREATE OR REPLACE VIEW`, partial indexes.
-**Решение:** Минимальная версия MySQL 5.7.21. Избегать MySQL 8.0+ функций.
+**Решение:** Версия MySQL: 5.7.21. Запрещены функции MySQL 8.0+: `ROW_NUMBER()`, `JSON_TABLE()`, `WITH ... AS (CTE)`, `GROUPING()`, оконные функции.
 
 ### 5.9. Чанки отображаются как текст `[[!snippet]]`
 **Причина:** Чанк не обновлён в БД после изменения файла.
@@ -271,16 +393,17 @@ $corePath = MODX_CORE_PATH;                    // /path/to/core/
 
 ### 7.1 PHP/MODX
 
-- [ ] Нет inline JavaScript с фигурными скобками в PHP-сниппетах
-- [ ] Используется `array()` вместо `[]`
-- [ ] Переменные проверяются через `isset()`
-- [ ] `htmlspecialchars()` для вывода пользовательских данных
-- [ ] SQL через `$modx->query()`/`$modx->exec()` с `$modx->quote()`
+- [ ] Нет inline JavaScript с `{}` в выводе PHP-сниппетов (или используется `{ignore}` в .tpl)
+- [ ] SQL с пользовательскими данными через `$modx->prepare()` + `bindValue()`
 - [ ] `$stmt === false` проверяется перед `fetch()`
+- [ ] Нет SQL внутри циклов (N+1 Query)
+- [ ] Операции на 2+ таблицы — в транзакции (`beginTransaction/commit/rollBack`)
+- [ ] `htmlspecialchars()` в PHP, `| escape` в Fenom для пользовательских данных
 - [ ] Скрипты подключены через `regClientScript()`
 - [ ] CSRF-токен в сниппетах и AJAX-запросах
-- [ ] Все `apiCall()` из JS имеют маппинг в `ControllerFactory.php` (или inline case в `testsystem.php`)
+- [ ] Все `apiCall()` из JS имеют маппинг в `ControllerFactory.php`
 - [ ] `publication_status`, `c.name`, `t.resource_id` — актуальные поля
+- [ ] Нет `error_log()` без условия `ts_debug` (кроме обработки ошибок)
 - [ ] Очищен кеш MODX перед тестированием
 - [ ] `php -l file.php` — проверка синтаксиса
 
@@ -292,8 +415,8 @@ $corePath = MODX_CORE_PATH;                    // /path/to/core/
 # Не должно быть Font Awesome иконок (fas/far/fab)
 grep -r "fas fa-\|far fa-\|fab fa-" core/elements/ assets/components/testsystem/
 
-# Не должно быть hex-цветов в CSS (кроме ts-variables.css — определения токенов)
-grep -rE "#[0-9a-fA-F]{6}\b" assets/components/testsystem/css/ | grep -v "ts-variables.css"
+# Не должно быть hex-цветов в CSS (кроме ts-variables.css и SVG)
+grep -rE "#[0-9a-fA-F]{6}\b" assets/components/testsystem/css/ | grep -v "ts-variables.css" | grep -v "\.svg"
 
 # Не должно быть inline <style> в шаблонах, чанках и сниппетах
 grep -rn "<style" core/elements/
@@ -307,7 +430,7 @@ grep -r 'class="btn btn-' core/elements/snippets/
 echo "--- FA иконки ---" && \
 grep -rc "fas fa-\|far fa-\|fab fa-" core/elements/ assets/components/testsystem/ | grep -v ":0" && \
 echo "--- Hex в CSS ---" && \
-grep -rEn "#[0-9a-fA-F]{6}\b" assets/components/testsystem/css/ | grep -v "ts-variables.css" && \
+grep -rEn "#[0-9a-fA-F]{6}\b" assets/components/testsystem/css/ | grep -v "ts-variables.css" | grep -v "\.svg" && \
 echo "--- Inline style ---" && \
 grep -rn "<style" core/elements/ && \
 echo "--- Bootstrap btn ---" && \
@@ -351,6 +474,17 @@ foreach ($methods as $m) {
 `testsystem.php` пишет логи в `core/cache/logs/testsystem_errors.log` — за пределами webroot.
 `display_errors = 0`, `log_errors = 1` — ошибки только в лог, не в ответ клиенту.
 
+**Правило:** `error_log()` для отладки нельзя оставлять в продакшене без условия. Использовать флаг:
+```php
+// ЗАПРЕЩЕНО — мусор в логах на продакшене
+error_log("[TS] Debug: user_id = {$userId}");
+
+// ВЕРНО — условное логирование
+if ($modx->getOption('ts_debug')) {
+    error_log("[TS] Debug: user_id = {$userId}");
+}
+```
+
 **Просмотр логов:**
 ```bash
 tail -f /var/log/php-fpm/error.log         # PHP
@@ -359,14 +493,37 @@ tail -f core/cache/logs/testsystem*.log    # Приложение
 ```
 
 ### 8.4. Правила диагностического кода
-Используйте сквозную нумерацию:
+
+Диагностический код — **временные** отладочные вставки. Удаляется после решения проблемы.
+
+**Сквозная нумерация** — обязательна. Один DIAG-код может выдавать несколько ответов или ошибок. Нумерация позволяет однозначно определить, на какой именно диагностический вызов пришёл ответ:
+
 ```php
-error_log('[DIAG-1] Start function X');
-error_log('[DIAG-2] Variable: ' . var_export($var, true));
+error_log('[DIAG-1] Start processSession, sessionId=' . $sessionId);
+// ... код ...
+error_log('[DIAG-2] After query, rows=' . count($rows));
+// ... код ...
+error_log('[DIAG-3] Before updateStatus, status=' . $status);
+// ... код ...
+error_log('[DIAG-4] After updateStatus, affected=' . $affected);
 ```
+
 ```javascript
-console.log('[DIAG-1] Script loaded');
-console.log('[DIAG-2] Element:', element);
+console.log('[DIAG-1] Script loaded, testId:', testId);
+console.log('[DIAG-2] API response:', response);
+console.log('[DIAG-3] After render, elements:', document.querySelectorAll('.ts-card').length);
+```
+
+**Правила:**
+- Нумерация **сквозная** по всему отлаживаемому потоку (DIAG-1, DIAG-2, ... DIAG-N)
+- Каждый DIAG-номер уникален — если в логе видишь `[DIAG-3]`, точно знаешь, какая строка кода его породила
+- Указывать ключевые переменные рядом с номером для контекста
+- **Не путать** с постоянным логированием (там используется `[TS][Controller][method]`)
+
+**Постоянное логирование** (не удаляется) — структурный формат:
+```php
+error_log('[TS][SessionController][finish] Session completed: id=' . $sessionId);
+error_log('[TS][UploadController][uploadImage] Invalid MIME: ' . $mimeType);
 ```
 
 ---
