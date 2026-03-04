@@ -144,7 +144,8 @@ $csrfExemptActions = [
     'getNotifications',          // Список уведомлений (legacy)
     'getRecentNotifications',    // Список уведомлений (JS alias)
     'getAllNotifications',       // Все уведомления (JS alias)
-    'getUnreadNotificationsCount', // Счётчик непрочитанных (JS alias)
+    'getUnreadNotifications',       // Счётчик непрочитанных (JS alias tsScripts.tpl)
+    'getUnreadNotificationsCount', // Счётчик непрочитанных (JS alias notifications.js)
     'getNotificationSettings',   // Настройки уведомлений (JS alias)
     'getAllQuestions',           // Все вопросы теста
     'checkResourcePermissions',  // Проверка прав на ресурсы

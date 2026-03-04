@@ -32,6 +32,7 @@ class NotificationController extends BaseController
 
                 case 'getUnreadCount':
                 case 'getUnreadNotificationsCount':  // JS alias (notifications.js)
+                case 'getUnreadNotifications':       // JS alias (tsScripts.tpl)
                     return $this->getUnreadCount($data);
 
                 case 'markAsRead':

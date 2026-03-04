@@ -179,6 +179,7 @@ class ControllerFactory
         'cleanupOld' => 'NotificationController',
         'getStatistics' => 'NotificationController',
         // Notification Controller — JS aliases (notifications.js uses different action names)
+        'getUnreadNotifications' => 'NotificationController',      // tsScripts.tpl alias
         'getUnreadNotificationsCount' => 'NotificationController',
         'getRecentNotifications' => 'NotificationController',
         'markNotificationAsRead' => 'NotificationController',
