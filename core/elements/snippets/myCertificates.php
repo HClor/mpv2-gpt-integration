@@ -78,9 +78,6 @@ if ($stmtPath) {
 $html = [];
 $html[] = '<div class="certificates-container">';
 
-$html[] = '<div class="d-flex justify-content-between align-items-center mb-4">';
-$html[] = '<h2><i class="bi bi-award me-2"></i>Мои сертификаты</h2>';
-$html[] = '</div>';
 
 // Статистика
 $totalCerts = count($certificates) + count($pathCertificates);

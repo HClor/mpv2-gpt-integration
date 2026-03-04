@@ -34,9 +34,6 @@ $achievements = LearningPathService::getUserAchievements($modx, $userId);
 $html = [];
 $html[] = '<div class="achievements-container">';
 
-$html[] = '<div class="d-flex justify-content-between align-items-center mb-4">';
-$html[] = '<h2><i class="bi bi-trophy me-2"></i>Мои достижения</h2>';
-$html[] = '</div>';
 
 // Статистика
 $totalAchievements = count($achievements);
