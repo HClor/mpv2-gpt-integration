@@ -401,14 +401,9 @@ $html = array_merge($html, $modals);
 // Подключаем JavaScript для управления экспертами
 $html[] = "<script src=\"/assets/components/testsystem/js/category-experts.js\"></script>";
 
-// Инициализация Bootstrap tooltip для кнопок удаления с тестами
-$html[] = "{literal}<script>document.addEventListener('DOMContentLoaded',function(){";
-$html[] = "document.querySelectorAll('[data-bs-toggle=\"tooltip\"]').forEach(function(el){new bootstrap.Tooltip(el);});";
-$html[] = "});</script>{/literal}";
-
-// Если POST на добавление вернул ошибку — переоткрываем modal
+// Если POST на добавление вернул ошибку — переоткрываем modal (через data-атрибут, без inline JS)
 if (!empty($errors) && isset($_POST['add_category'])) {
-    $html[] = "{literal}<script>document.addEventListener('DOMContentLoaded',function(){new bootstrap.Modal(document.getElementById('addCategoryModal')).show();});</script>{/literal}";
+    $html[] = "<div id=\"ts-reopen-modal\" data-modal=\"addCategoryModal\" style=\"display:none\"></div>";
 }
 
 return implode("", $html);

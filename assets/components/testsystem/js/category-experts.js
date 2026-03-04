@@ -290,6 +290,20 @@ class CategoryExpertsManager {
 let categoryExpertsManager = null;
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Инициализация Bootstrap tooltips
+    document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(function(el) {
+        new bootstrap.Tooltip(el);
+    });
+
+    // Переоткрываем modal если PHP указал через data-атрибут
+    const reopenEl = document.getElementById('ts-reopen-modal');
+    if (reopenEl) {
+        const modalId = reopenEl.getAttribute('data-modal');
+        if (modalId) {
+            new bootstrap.Modal(document.getElementById(modalId)).show();
+        }
+    }
+
     // Получаем URL API из конфигурации
     const apiUrl = '/assets/components/testsystem/ajax/testsystem.php';
 
