@@ -304,7 +304,7 @@ if (!empty($errors) && isset($_POST['add_category'])) {
 
 ---
 
-## ЭТАП 7 — `usersStats`: padding первого и последнего столбца в таблицах
+## ~~ЭТАП 7~~ ✅ ВЫПОЛНЕНО — `usersStats`: padding первого и последнего столбца в таблицах
 
 **Файл:** `core/elements/snippets/usersStats.php`
 

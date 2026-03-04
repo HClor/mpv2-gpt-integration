@@ -321,13 +321,13 @@ if ($viewUserId) {
               <table class="table table-sm table-hover mb-0">
                 <thead class="table-light">
                   <tr>
-                    <th style="width: 50px;">#</th>
+                    <th style="width: 50px; padding-left: 1rem;">#</th>
                     <th>Пользователь</th>
                     <th class="text-end">Тестов</th>
                     <th class="text-end">Ср. балл</th>
                     <th class="text-end">Всего баллов</th>
                     <th>Активность</th>
-                    <th></th>
+                    <th style="padding-right: 1rem;"></th>
                   </tr>
                 </thead>
                 <tbody>';
@@ -339,7 +339,7 @@ if ($viewUserId) {
 
             $out[] = '
                 <tr>
-                  <td class="text-center">'.$rankBadge.'</td>
+                  <td class="text-center" style="padding-left: 1rem;">'.$rankBadge.'</td>
                   <td>
                     <strong>'.$h($user['fullname'] ?: $user['username']).'</strong>
                     '.($user['fullname'] ? '<br><small class="text-muted">@'.$h($user['username']).'</small>' : '').'
@@ -348,7 +348,7 @@ if ($viewUserId) {
                   <td class="text-end">'.round($user['avg_score'] ?? 0).'%</td>
                   <td class="text-end"><strong>'.(int)$user['total_score'].'</strong></td>
                   <td class="small text-muted">'.($user['last_activity'] ? date('d.m.Y', strtotime($user['last_activity'])) : '-').'</td>
-                  <td>
+                  <td style="padding-right: 1rem;">
                     <a href="'.$h($pageUrl).'?user_id='.(int)$user['id'].'" class="ts-btn ts-btn-sm ts-btn-ghost" title="Подробнее">
                       <i class="bi bi-person"></i>
                     </a>
@@ -383,11 +383,11 @@ if ($viewUserId) {
               <table class="table table-sm table-hover mb-0">
                 <thead class="table-light">
                   <tr>
-                    <th>Пользователь</th>
+                    <th style="padding-left: 1rem;">Пользователь</th>
                     <th>Тест</th>
                     <th>Дата</th>
                     <th>Статус</th>
-                    <th class="text-end">Результат</th>
+                    <th class="text-end" style="padding-right: 1rem;">Результат</th>
                   </tr>
                 </thead>
                 <tbody>';
@@ -398,14 +398,14 @@ if ($viewUserId) {
 
             $out[] = '
                 <tr>
-                  <td>
+                  <td style="padding-left: 1rem;">
                     <a href="'.$h($pageUrl).'?user_id='.(int)$activity['user_id'].'">'
                     .$h($activity['fullname'] ?: $activity['username']).'</a>
                   </td>
                   <td>'.$h($activity['test_name'] ?: 'Тест #'.$activity['test_id']).'</td>
                   <td class="small">'.date('d.m.Y H:i', strtotime($activity['started_at'])).'</td>
                   <td><span class="badge bg-'.$statusClass.'">'.$statusLabel.'</span></td>
-                  <td class="text-end"><strong>'.($activity['status'] === 'completed' ? (int)$activity['score'].'%' : '-').'</strong></td>
+                  <td class="text-end" style="padding-right: 1rem;"><strong>'.($activity['status'] === 'completed' ? (int)$activity['score'].'%' : '-').'</strong></td>
                 </tr>';
         }
 
