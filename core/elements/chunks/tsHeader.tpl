@@ -22,33 +22,22 @@
     </button>
 
     <div class="collapse navbar-collapse" id="navbarMain">
-      <!-- Основное меню (явные пункты с иконками) -->
+      <!-- Основное меню: названия из menutitle ресурса, иконки из поля description -->
+      <!-- Порядок задаётся через menuindex ресурсов в MODX Admin -->
       <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-        <li class="nav-item">
-          <a class="nav-link{if $_modx->resource.id == 149} active{/if}" href="{$_modx->makeUrl(149)}">
-            <i class="bi bi-book me-1"></i> Учебные материалы
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link{if $_modx->resource.id == 35} active{/if}" href="{$_modx->makeUrl(35)}">
-            <i class="bi bi-card-checklist me-1"></i> Тесты
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link{if $_modx->resource.id == 193 || $_modx->resource.parent == 193} active{/if}" href="{$_modx->makeUrl(193)}">
-            <i class="bi bi-signpost-split me-1"></i> Траектории
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link{if $_modx->resource.id == 159} active{/if}" href="{$_modx->makeUrl(159)}">
-            <i class="bi bi-trophy me-1"></i> Лидеры
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link{if $_modx->resource.id == 185} active{/if}" href="{$_modx->makeUrl(185)}">
-            <i class="bi bi-lightbulb me-1"></i> Области знаний
-          </a>
-        </li>
+        {$_modx->runSnippet('pdoMenu', [
+          'resources' => '149,35,193,159,185',
+          'parents' => '-1',
+          'level' => 1,
+          'showHidden' => 1,
+          'sortby' => 'menuindex',
+          'sortdir' => 'ASC',
+          'tplOuter' => '@INLINE [[+wrapper]]',
+          'tpl' => '@INLINE <li class="nav-item"><a class="nav-link" href="[[+link]]"><i class="bi [[+description]] me-1"></i> [[+menutitle]]</a></li>',
+          'tplHere' => '@INLINE <li class="nav-item"><a class="nav-link active" href="[[+link]]"><i class="bi [[+description]] me-1"></i> [[+menutitle]]</a></li>',
+          'tplParentRow' => '@INLINE <li class="nav-item"><a class="nav-link" href="[[+link]]"><i class="bi [[+description]] me-1"></i> [[+menutitle]]</a></li>',
+          'tplParentRowHere' => '@INLINE <li class="nav-item"><a class="nav-link active" href="[[+link]]"><i class="bi [[+description]] me-1"></i> [[+menutitle]]</a></li>'
+        ])}
       </ul>
 
       <!-- Правая часть меню -->
