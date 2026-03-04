@@ -31,7 +31,7 @@ $output[] = '<h1 class="display-5 fw-bold mb-3"><i class="bi bi-mortarboard-fill
 $output[] = '<p class="lead mb-4">Проверьте свои знания, изучайте материалы и получайте сертификаты</p>';
 $output[] = '<div class="d-flex justify-content-center gap-3 flex-wrap">';
 $output[] = '<a href="' . $testsUrl . '" class="ts-btn ts-btn-secondary ts-btn-lg"><i class="bi bi-card-checklist me-2"></i>Пройти тест</a>';
-$output[] = '<a href="' . $materialsUrl . '" class="ts-btn ts-btn-ghost ts-btn-lg"><i class="bi bi-book me-2"></i>Учебные материалы</a>';
+$output[] = '<a href="' . $materialsUrl . '" class="ts-btn ts-btn-ghost-white ts-btn-lg"><i class="bi bi-book me-2"></i>Учебные материалы</a>';
 $output[] = '</div>';
 $output[] = '</div>';
 $output[] = '</div>';
@@ -301,12 +301,16 @@ if (!empty($paths)) {
 }
 
 // ===== CTA для незарегистрированных =====
-if (!$isLoggedIn) {
-    $output[] = '<div class="bg-light rounded-3 p-4 text-center">';
-    $output[] = '<h4 class="mb-3">Присоединяйтесь к обучению!</h4>';
-    $output[] = '<p class="text-muted mb-3">Зарегистрируйтесь, чтобы отслеживать прогресс и получать сертификаты</p>';
-    $output[] = '<a href="' . $loginUrl . '" class="ts-btn ts-btn-primary"><i class="bi bi-person-plus me-2"></i>Войти / Регистрация</a>';
-    $output[] = '</div>';
-}
+// Блок скрыт по умолчанию; JS показывает его только гостям (у авторизованных в шапке есть #userMenu).
+// Это обходит проблему кеширования сниппета — PHP-проверка $isLoggedIn не нужна.
+$output[] = '<div class="bg-light rounded-3 p-4 text-center" id="home-cta-block" style="display:none;">';
+$output[] = '<h4 class="mb-3">Присоединяйтесь к обучению!</h4>';
+$output[] = '<p class="text-muted mb-3">Зарегистрируйтесь, чтобы отслеживать прогресс и получать сертификаты</p>';
+$output[] = '<a href="' . $loginUrl . '" class="ts-btn ts-btn-primary"><i class="bi bi-person-plus me-2"></i>Войти / Регистрация</a>';
+$output[] = '</div>';
+$output[] = '<script>document.addEventListener("DOMContentLoaded",function(){';
+$output[] = 'if(!document.getElementById("userMenu")){';
+$output[] = 'var el=document.getElementById("home-cta-block");if(el)el.style.display="";';
+$output[] = '}});</script>';
 
 return implode("\n", $output);

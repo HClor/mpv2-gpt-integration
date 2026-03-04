@@ -153,6 +153,17 @@
     background-color: var(--color-warning-light);
 }
 
+.ts-btn-ghost-white {
+    background-color: transparent;
+    color: #FFFFFF;
+    border-color: rgba(255, 255, 255, 0.8);
+}
+
+.ts-btn-ghost-white:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+    border-color: #FFFFFF;
+}
+
 /* --- Disabled --- */
 
 .ts-btn:disabled,
