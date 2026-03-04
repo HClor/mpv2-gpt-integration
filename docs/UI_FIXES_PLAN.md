@@ -72,7 +72,7 @@ $output[] = '<a href="' . $materialsUrl . '" class="ts-btn ts-btn-ghost-white ts
 
 ---
 
-## ЭТАП 3 — `knowledgeAreasManager`: алерт без `<br>` + отступ снизу
+## ~~ЭТАП 3~~ ✅ ВЫПОЛНЕНО — `knowledgeAreasManager`: алерт без `<br>` + отступ снизу
 
 **Файл:** `core/elements/snippets/knowledgeAreasManager.php`
 
