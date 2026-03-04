@@ -178,44 +178,10 @@ if (!empty($errors)) {
     $html[] = "</ul><button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"alert\"></button></div>";
 }
 
-$html[] = "<div class=\"row\">";
-
-// ЛЕВАЯ КОЛОНКА - Форма добавления
-$html[] = "<div class=\"col-md-4\">";
-$html[] = "<div class=\"card\">";
-$html[] = "<div class=\"card-header bg-primary text-white\"><h5 class=\"mb-0\"><i class=\"bi bi-plus-circle\"></i> Добавить категорию</h5></div>";
-$html[] = "<div class=\"card-body\">";
-
-$html[] = "<form method=\"POST\">";
-$html[] = CsrfProtection::getTokenField(); // CSRF Protection
-$html[] = "<input type=\"hidden\" name=\"add_category\" value=\"1\">";
-
-$html[] = "<div class=\"mb-3\">";
-$html[] = "<label class=\"form-label\">Название *</label>";
-$html[] = "<input type=\"text\" name=\"name\" class=\"form-control\" required>";
+// Кнопка открытия модала добавления категории
+$html[] = "<div class=\"d-flex justify-content-end mb-3\">";
+$html[] = "<button class=\"btn btn-success\" data-bs-toggle=\"modal\" data-bs-target=\"#addCategoryModal\"><i class=\"bi bi-plus-circle me-1\"></i> Добавить категорию</button>";
 $html[] = "</div>";
-
-$html[] = "<div class=\"mb-3\">";
-$html[] = "<label class=\"form-label\">Описание</label>";
-$html[] = "<textarea name=\"description\" class=\"form-control\" rows=\"3\"></textarea>";
-$html[] = "</div>";
-
-$html[] = "<div class=\"mb-3\">";
-$html[] = "<label class=\"form-label\">Порядок сортировки</label>";
-$html[] = "<input type=\"number\" name=\"sort_order\" class=\"form-control\" value=\"99\">";
-$html[] = "<small class=\"form-text text-muted\">Чем меньше число, тем выше в списке</small>";
-$html[] = "</div>";
-
-$html[] = "<button type=\"submit\" class=\"btn btn-success w-100\"><i class=\"bi bi-check-circle\"></i> Добавить</button>";
-
-$html[] = "</form>";
-
-$html[] = "</div>";
-$html[] = "</div>";
-$html[] = "</div>";
-
-// ПРАВАЯ КОЛОНКА - Список категорий
-$html[] = "<div class=\"col-md-8\">";
 $html[] = "<div class=\"card\">";
 $html[] = "<div class=\"card-header bg-light\"><h5 class=\"mb-0\"><i class=\"bi bi-folder-fill text-primary\"></i> Все категории (" . count($categories) . ")</h5></div>";
 $html[] = "<div class=\"card-body p-0\">";
@@ -245,22 +211,24 @@ if (empty($categories)) {
         }
         $html[] = "</td>";
         $html[] = "<td><span class=\"badge bg-secondary\">" . $cat["test_count"] . "</span></td>";
-        $html[] = "<td>";
+        $html[] = "<td><div class=\"d-flex flex-wrap gap-1 align-items-center\">";
 
         // Кнопка управления экспертами
-        $html[] = "<button class=\"btn btn-sm btn-info\" data-bs-toggle=\"modal\" data-bs-target=\"#expertsModal" . $cat["id"] . "\"><i class=\"bi bi-people\"></i> Эксперты</button> ";
+        $html[] = "<button class=\"btn btn-sm btn-info\" data-bs-toggle=\"modal\" data-bs-target=\"#expertsModal" . $cat["id"] . "\"><i class=\"bi bi-people\"></i> Эксперты</button>";
 
         // Кнопка редактирования
-        $html[] = "<button class=\"btn btn-sm btn-warning\" data-bs-toggle=\"modal\" data-bs-target=\"#editModal" . $cat["id"] . "\"><i class=\"bi bi-pencil\"></i> Редактировать</button> ";
+        $html[] = "<button class=\"btn btn-sm btn-warning\" data-bs-toggle=\"modal\" data-bs-target=\"#editModal" . $cat["id"] . "\"><i class=\"bi bi-pencil\"></i> Редактировать</button>";
 
         // Кнопка удаления
         if ($cat["test_count"] == 0) {
             $html[] = "<button class=\"btn btn-sm btn-danger\" data-bs-toggle=\"modal\" data-bs-target=\"#deleteModal" . $cat["id"] . "\"><i class=\"bi bi-trash\"></i> Удалить</button>";
         } else {
-            $html[] = "<button class=\"btn btn-sm btn-secondary\" disabled title=\"Есть тесты\"><i class=\"bi bi-trash\"></i> Удалить</button>";
+            $html[] = "<span data-bs-toggle=\"tooltip\" data-bs-placement=\"top\" title=\"Категория содержит " . $cat["test_count"] . " тестов — удаление невозможно\">";
+            $html[] = "<button class=\"btn btn-sm btn-secondary\" disabled style=\"pointer-events: none;\"><i class=\"bi bi-trash\"></i> Удалить</button>";
+            $html[] = "</span>";
         }
 
-        $html[] = "</td>";
+        $html[] = "</div></td>";
         $html[] = "</tr>";
 
         // Модальное окно редактирования
@@ -401,13 +369,46 @@ $html[] = "</div>";
 $html[] = "</div>";
 $html[] = "</div>";
 
-$html[] = "</div>";
-$html[] = "</div>";
+// Modal добавления категории
+$modals[] = "<div class=\"modal fade\" id=\"addCategoryModal\" tabindex=\"-1\">";
+$modals[] = "<div class=\"modal-dialog\">";
+$modals[] = "<div class=\"modal-content\">";
+$modals[] = "<form method=\"POST\">";
+$modals[] = CsrfProtection::getTokenField();
+$modals[] = "<input type=\"hidden\" name=\"add_category\" value=\"1\">";
+$modals[] = "<div class=\"modal-header\">";
+$modals[] = "<h5 class=\"modal-title\"><i class=\"bi bi-plus-circle me-2\"></i>Добавить категорию</h5>";
+$modals[] = "<button type=\"button\" class=\"btn-close\" data-bs-dismiss=\"modal\"></button>";
+$modals[] = "</div>";
+$modals[] = "<div class=\"modal-body\">";
+$modals[] = "<div class=\"mb-3\"><label class=\"form-label\">Название *</label>";
+$modals[] = "<input type=\"text\" name=\"name\" class=\"form-control\" required></div>";
+$modals[] = "<div class=\"mb-3\"><label class=\"form-label\">Описание</label>";
+$modals[] = "<textarea name=\"description\" class=\"form-control\" rows=\"3\"></textarea></div>";
+$modals[] = "<div class=\"mb-3\"><label class=\"form-label\">Порядок сортировки</label>";
+$modals[] = "<input type=\"number\" name=\"sort_order\" class=\"form-control\" value=\"99\">";
+$modals[] = "<small class=\"form-text text-muted\">Чем меньше число, тем выше в списке</small></div>";
+$modals[] = "</div>";
+$modals[] = "<div class=\"modal-footer\">";
+$modals[] = "<button type=\"button\" class=\"btn btn-secondary\" data-bs-dismiss=\"modal\">Отмена</button>";
+$modals[] = "<button type=\"submit\" class=\"btn btn-success\"><i class=\"bi bi-check-circle me-1\"></i> Добавить</button>";
+$modals[] = "</div>";
+$modals[] = "</form></div></div></div>";
 
 // Выводим модальные окна вне контейнера
 $html = array_merge($html, $modals);
 
 // Подключаем JavaScript для управления экспертами
 $html[] = "<script src=\"/assets/components/testsystem/js/category-experts.js\"></script>";
+
+// Инициализация Bootstrap tooltip для кнопок удаления с тестами
+$html[] = "<script>document.addEventListener('DOMContentLoaded',function(){";
+$html[] = "document.querySelectorAll('[data-bs-toggle=\"tooltip\"]').forEach(function(el){new bootstrap.Tooltip(el);});";
+$html[] = "});</script>";
+
+// Если POST на добавление вернул ошибку — переоткрываем modal
+if (!empty($errors) && isset($_POST['add_category'])) {
+    $html[] = "<script>document.addEventListener('DOMContentLoaded',function(){new bootstrap.Modal(document.getElementById('addCategoryModal')).show();});</script>";
+}
 
 return implode("", $html);

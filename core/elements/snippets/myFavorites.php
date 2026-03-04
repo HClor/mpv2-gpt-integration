@@ -62,7 +62,6 @@ if (empty($favorites)) {
 }
 
 $output .= '<div class="d-flex justify-content-between align-items-center mb-4">';
-$output .= '<h1><i class="bi bi-star-fill text-warning"></i> Мои избранные вопросы</h1>';
 $output .= '<span class="ts-badge ts-badge-warning fs-5">' . count($favorites) . '</span>';
 $output .= '</div>';
 

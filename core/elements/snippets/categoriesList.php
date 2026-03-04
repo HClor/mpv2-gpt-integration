@@ -26,7 +26,6 @@ $categories = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $html = [];
 $html[] = "<div class=\"container mt-4\">";
 $html[] = "<div class=\"d-flex justify-content-between align-items-center mb-3\">";
-$html[] = "<h2 class=\"mb-0\">Категории тестов</h2>";
 if ($modx->user->hasSessionContext("web")) {
     $addUrl = $modx->makeUrl($modx->getOption("lms.add_test_page", null, 0));
     $html[] = "<a href=\"" . $addUrl . "\" class=\"btn btn-success\">+ Добавить тест</a>";

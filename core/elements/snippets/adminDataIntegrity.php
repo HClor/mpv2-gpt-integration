@@ -34,8 +34,6 @@ if (!$isAdmin) {
 // HTML разметка
 $output = '
 <div class="container-fluid mt-4" id="data-integrity-admin">
-    <h2 class="mb-4">🔍 Проверка целостности данных</h2>
-
     <!-- Кнопки действий -->
     <div class="mb-4">
         <button class="ts-btn ts-btn-primary" id="btn-check-integrity">

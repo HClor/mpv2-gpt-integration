@@ -155,7 +155,6 @@ try {
     }
 
     $output = '<div class="container-fluid py-4">';
-    $output .= '<h2 class="mb-4">Управление пользователями</h2>';
 
     foreach ($errors as $err) {
         $output .= '<div class="ts-alert ts-alert-danger">' . htmlspecialchars($err, ENT_QUOTES, 'UTF-8') . '</div>';

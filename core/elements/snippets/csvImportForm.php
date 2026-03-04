@@ -378,7 +378,6 @@ $output .= '<div class="row">';
 $output .= '<div class="col-lg-10 offset-lg-1">';
 
 $output .= '<div class="d-flex justify-content-between align-items-center mb-4">';
-$output .= '<h2><i class="bi bi-file-earmark-spreadsheet"></i> Импорт вопросов</h2>';
 $backLink = $testUrl !== '#' ? $testUrl : 'javascript:history.back()';
 $output .= '<a href="' . htmlspecialchars($backLink, ENT_QUOTES, 'UTF-8') . '" class="ts-btn ts-btn-secondary">← Вернуться к тесту</a>';
 $output .= '</div>';

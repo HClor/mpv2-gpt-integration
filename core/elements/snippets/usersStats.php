@@ -120,7 +120,10 @@ if ($viewUserId) {
     <nav aria-label="breadcrumb" class="mb-3">
       <ol class="breadcrumb">
         <li class="breadcrumb-item"><a href="'.$h($pageUrl).'">Статистика пользователей</a></li>
-        <li class="breadcrumb-item active">'.$h($user['fullname'] ?: $user['username']).'</li>
+        <li class="breadcrumb-item active">'
+        .$h($user['fullname'] ?: $user['username'])
+        .($user['fullname'] ? ' <span class="text-muted fw-normal small">@'.$h($user['username']).'</span>' : '')
+        .'</li>
       </ol>
     </nav>
 

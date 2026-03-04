@@ -50,7 +50,6 @@ $output .= '<div id="knowledge-areas-container" class="knowledge-areas-wrapper"
 
 // Заголовок и кнопка создания
 $output .= '<div class="d-flex justify-content-between align-items-center mb-4">';
-$output .= '<h2><i class="bi bi-collection"></i> Мои области знаний</h2>';
 $output .= '<button class="ts-btn ts-btn-success" id="create-area-btn">';
 $output .= '<i class="bi bi-plus-circle"></i> Создать область';
 $output .= '</button>';
