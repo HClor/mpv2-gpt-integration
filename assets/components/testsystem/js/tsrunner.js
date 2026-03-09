@@ -2790,8 +2790,12 @@ async function addFavoritesViewToggle(questionId) {
     async function showAllQuestionsView(filterStatus = 'all') {
         console.log("=== showAllQuestionsView START ===");
         currentQuestionsFilter = filterStatus;
-        
+
         try {
+            if (!canEdit) {
+                await checkEditRights();
+            }
+
             const result = await apiCall("getAllQuestions", { test_id: testId });
             
             if (!result.success) {

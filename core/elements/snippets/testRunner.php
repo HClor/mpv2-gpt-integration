@@ -551,16 +551,16 @@ if ($canManage) {
         $testCardMenu .= '</a>';
     }
 
-    $testCardMenu .= '<a href="#" class="menu-item" onclick="event.preventDefault(); showAllQuestionsView(); return false;">';
+    $testCardMenu .= '<a href="javascript:void(0)" class="menu-item" onclick="event.preventDefault(); showAllQuestionsView(); return false;">';
     $testCardMenu .= '<i class="bi bi-question-circle"></i> Редактировать вопросы';
     $testCardMenu .= '</a>';
 
-    $testCardMenu .= '<a href="#" class="menu-item" onclick="event.preventDefault(); openTestManagementModal(' . (int)$testId . ', \'' . htmlspecialchars($publicationStatus, ENT_QUOTES, 'UTF-8') . '\'); return false;">';
+    $testCardMenu .= '<a href="javascript:void(0)" class="menu-item" onclick="event.preventDefault(); openTestManagementModal(' . (int)$testId . ', \'' . htmlspecialchars($publicationStatus, ENT_QUOTES, 'UTF-8') . '\'); return false;">';
     $testCardMenu .= '<i class="bi bi-gear"></i> Настройки теста';
     $testCardMenu .= '</a>';
 
     if ($canDelete) {
-        $testCardMenu .= '<a href="#" class="menu-item menu-item-danger" onclick="event.preventDefault(); deleteTestConfirm(' . (int)$testId . '); return false;">';
+        $testCardMenu .= '<a href="javascript:void(0)" class="menu-item menu-item-danger" onclick="event.preventDefault(); deleteTestConfirm(' . (int)$testId . '); return false;">';
         $testCardMenu .= '<i class="bi bi-trash"></i> Удалить тест';
         $testCardMenu .= '</a>';
     }
