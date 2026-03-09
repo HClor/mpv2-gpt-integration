@@ -733,7 +733,7 @@ async function addFavoritesViewToggle(questionId) {
                 <input type="checkbox" id="learning-favorite-toggle-input" ${isFavorite ? 'checked' : ''}>
                 <span class="favorite-toggle-slider"></span>
             </label>
-            <span class="favorite-toggle-label">В избранном</span>
+            <span class="favorite-toggle-label">${isFavorite ? 'В избранном' : 'В избранное'}</span>
         `;
         
         // ИСПРАВЛЕНИЕ: Добавляем в конец card-header
@@ -741,9 +741,13 @@ async function addFavoritesViewToggle(questionId) {
         
         // Обработчик
         const toggleInput = document.getElementById("learning-favorite-toggle-input");
+        const toggleLabel = toggleContainer.querySelector('.favorite-toggle-label');
         toggleInput.addEventListener("change", async function() {
             const newState = this.checked;
-            
+            if (toggleLabel) {
+                toggleLabel.textContent = newState ? 'В избранном' : 'В избранное';
+            }
+
             try {
                 const result = await apiCall("toggleFavorite", {
                     question_id: questionId
@@ -758,9 +762,15 @@ async function addFavoritesViewToggle(questionId) {
                     }
                 } else {
                     this.checked = !newState;
+                    if (toggleLabel) {
+                        toggleLabel.textContent = this.checked ? 'В избранном' : 'В избранное';
+                    }
                 }
             } catch (error) {
                 this.checked = !newState;
+                if (toggleLabel) {
+                    toggleLabel.textContent = this.checked ? 'В избранном' : 'В избранное';
+                }
                 alert("Ошибка: " + error.message);
             }
         });
@@ -1764,16 +1774,20 @@ async function addFavoritesViewToggle(questionId) {
                 <input type="checkbox" id="favorite-toggle-input" ${isFavorite ? 'checked' : ''}>
                 <span class="favorite-toggle-slider"></span>
             </label>
-            <span class="favorite-toggle-label">В избранном</span>
+            <span class="favorite-toggle-label">${isFavorite ? 'В избранном' : 'В избранное'}</span>
         `;
         
         questionHeader.appendChild(toggleContainer);
         
         // Обработчик переключения
         const toggleInput = document.getElementById("favorite-toggle-input");
+        const toggleLabel = toggleContainer.querySelector('.favorite-toggle-label');
         toggleInput.addEventListener("change", async function() {
             const newState = this.checked;
-            
+            if (toggleLabel) {
+                toggleLabel.textContent = newState ? 'В избранном' : 'В избранное';
+            }
+
             try {
                 const result = await apiCall("toggleFavorite", {
                     question_id: currentQuestionId
@@ -1788,9 +1802,15 @@ async function addFavoritesViewToggle(questionId) {
                     }
                 } else {
                     this.checked = !newState;
+                    if (toggleLabel) {
+                        toggleLabel.textContent = this.checked ? 'В избранном' : 'В избранное';
+                    }
                 }
             } catch (error) {
                 this.checked = !newState;
+                if (toggleLabel) {
+                    toggleLabel.textContent = this.checked ? 'В избранном' : 'В избранное';
+                }
                 alert("Ошибка: " + error.message);
             }
         });
