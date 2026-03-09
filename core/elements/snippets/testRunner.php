@@ -231,6 +231,7 @@ if ($knowledgeAreaId > 0) {
     $output .= '<span class="ts-badge ts-badge-primary">TRAINING</span>';
     $output .= '</div>';
     $output .= '<div class="card-body">';
+    $output .= '<h3 id="test-title-heading" class="mb-3">' . htmlspecialchars($knowledgeArea['name'], ENT_QUOTES, 'UTF-8') . '</h3>';
     $output .= '<h4 id="question-text"></h4>';
     $output .= '<div id="question-type-hint" style="display: none;"></div>';
     $output .= '<div id="answer-options" class="mt-3"></div>';
@@ -657,6 +658,7 @@ $output .= '<span id="mode-badge" class="ts-badge"></span>';
 $output .= '</div>';
 $output .= '</div>';
 $output .= '<div class="card-body">';
+$output .= '<h3 id="test-title-heading" class="mb-3">' . htmlspecialchars($test['title'], ENT_QUOTES, 'UTF-8') . '</h3>';
 $output .= '<h4 id="question-text"></h4>';
 $output .= '<div id="question-type-hint" style="display: none;"></div>';
 $output .= '<div id="answer-options" class="mt-3"></div>';
