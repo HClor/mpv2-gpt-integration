@@ -57,7 +57,7 @@ $output .= '</div>';
 
 // Описание
 $output .= '<div class="ts-alert ts-alert-info mb-4">';
-$output .= '<strong>💡 Что такое область знаний?</strong> ';
+$output .= '<strong class="knowledge-area-info-title">💡 Что такое область знаний?</strong> ';
 $output .= 'Это персональная подборка тестов из разных категорий. ';
 $output .= 'Вы выбираете интересующие вас тесты, и система генерирует комбинированный тест со случайными вопросами.';
 $output .= '</div>';
