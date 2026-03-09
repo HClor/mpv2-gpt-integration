@@ -174,15 +174,20 @@ class NotificationService
         $prefix = $modx->getOption('table_prefix');
         $pdo = $modx->getPDO();
 
-        $stmt = $pdo->prepare("
-            SELECT COUNT(*) as count
-            FROM {$prefix}test_notifications
-            WHERE user_id = ? AND is_read = 0
-        ");
-        $stmt->execute([$userId]);
+        try {
+            $stmt = $pdo->prepare("
+                SELECT COUNT(*) as count
+                FROM {$prefix}test_notifications
+                WHERE user_id = ? AND is_read = 0
+            ");
+            $stmt->execute([$userId]);
 
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-        return (int)$result['count'];
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            return (int)$result['count'];
+        } catch (Exception $e) {
+            $modx->log(modX::LOG_LEVEL_ERROR, 'NotificationService::getUnreadCount error: ' . $e->getMessage());
+            return 0;
+        }
     }
 
     /**

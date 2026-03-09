@@ -109,10 +109,10 @@ class NotificationController extends BaseController
 
         $notifications = NotificationService::getUserNotifications($this->modx, $userId, $filters);
 
-        return ResponseHelper::success('Notifications loaded successfully', [
+        return ResponseHelper::success([
             'notifications' => $notifications,
             'total' => count($notifications)
-        ]);
+        ], 'Notifications loaded successfully');
     }
 
     /**
@@ -128,9 +128,10 @@ class NotificationController extends BaseController
 
         $count = NotificationService::getUnreadCount($this->modx, $userId);
 
-        return ResponseHelper::success('Unread count loaded successfully', [
-            'unread_count' => $count
-        ]);
+        return ResponseHelper::success([
+            'unread_count' => $count,
+            'count' => $count
+        ], 'Unread count loaded successfully');
     }
 
     /**
@@ -152,9 +153,9 @@ class NotificationController extends BaseController
             return ResponseHelper::error('Notification not found or already read', 404);
         }
 
-        return ResponseHelper::success('Notification marked as read', [
+        return ResponseHelper::success([
             'notification_id' => $notificationId
-        ]);
+        ], 'Notification marked as read');
     }
 
     /**
@@ -196,9 +197,9 @@ class NotificationController extends BaseController
             return ResponseHelper::error('Notification not found', 404);
         }
 
-        return ResponseHelper::success('Notification deleted successfully', [
+        return ResponseHelper::success([
             'notification_id' => $notificationId
-        ]);
+        ], 'Notification deleted successfully');
     }
 
     /**
