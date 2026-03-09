@@ -269,6 +269,9 @@ if ($knowledgeAreaId > 0) {
     $assetsUrl = $modx->getOption('assets_url', null, MODX_ASSETS_URL);
     $assetsUrl = rtrim($assetsUrl, '/') . '/';
 
+    $categoriesAndTestsCssPath = $assetsUrl . 'components/testsystem/css/categories-and-tests.css';
+    $modx->regClientCSS($categoriesAndTestsCssPath);
+
     $jsPath = $assetsUrl . 'components/testsystem/js/tsrunner.js';
 
     // ПРИМЕЧАНИЕ: CSRF токен и CSS уже подключены в tsHead.tpl
@@ -594,103 +597,55 @@ $output = '<div id="test-container" data-test-id="' . (int)$testId . '" data-can
 
 // Скрываем test-info если view=questions или view=manage (для быстрой загрузки)
 $testInfoStyle = ($viewParam === 'questions' || $viewParam === 'manage') ? ' style="display:none;"' : '';
-$output .= '<div id="test-info" class="card mb-4"' . $testInfoStyle . '>';
-$output .= '<div class="card-header"><h2>' . htmlspecialchars($test['title'], ENT_QUOTES, 'UTF-8') . '</h2></div>';
-$output .= '<div class="card-body">';
-$output .= '<p>' . nl2br(htmlspecialchars($test['description'], ENT_QUOTES, 'UTF-8')) . '</p>';
-$output .= '<ul class="list-unstyled">';
-$output .= '<li><strong>Вопросов в банке:</strong> ' . (int)$totalQuestions . '</li>';
-$output .= '<li><strong>Вопросов за попытку:</strong> ' . (int)$questionsPerSession . '</li>';
-$output .= '<li><strong>Проходной балл:</strong> ' . (int)$passScore . '%</li>';
+$output .= '<div id="test-info" class="test-card mb-4"' . $testInfoStyle . '>';
+$output .= '<div class="test-card-header">';
+$output .= '<h3 class="test-title">' . htmlspecialchars($test['title'], ENT_QUOTES, 'UTF-8') . '</h3>';
+$output .= '</div>';
+
+$description = !empty($test['description']) ? $test['description'] : 'Нет описания';
+$output .= '<p class="test-description">' . nl2br(htmlspecialchars($description, ENT_QUOTES, 'UTF-8')) . '</p>';
+
+$output .= '<div class="test-meta">';
+$output .= '<span class="meta-item"><span class="meta-icon">📊</span><span class="meta-label">Вопросов в банке:</span><span class="meta-value">' . (int)$totalQuestions . '</span></span>';
+$output .= '<span class="meta-item"><span class="meta-icon">📝</span><span class="meta-label">Вопросов за попытку:</span><span class="meta-value">' . (int)$questionsPerSession . '</span></span>';
+$output .= '<span class="meta-item"><span class="meta-icon">✅</span><span class="meta-label">Проходной балл:</span><span class="meta-value">' . (int)$passScore . '%</span></span>';
 if ($timeLimit > 0) {
-    $output .= '<li><strong>Время:</strong> ' . (int)$timeLimit . ' минут</li>';
+    $output .= '<span class="meta-item"><span class="meta-icon">⏱️</span><span class="meta-label">Время:</span><span class="meta-value">' . (int)$timeLimit . ' мин</span></span>';
 }
-$output .= '</ul>';
+$output .= '</div>';
 
-// Интерфейс выбора режима (пропускаем, если есть sessionId)
 if (!$skipModeSelection && $testMode === 'both') {
-    $output .= '<hr>';
-    $output .= '<div class="test-mode-selector">';
-    $output .= '<h5 class="mb-3 text-center">Выберите режим прохождения:</h5>';
-    
-    $output .= '<div class="mode-toggle-wrapper">';
-    $output .= '<div class="mode-info-cards mb-3">';
-    $output .= '<div class="row g-2">';
-    
-    // Карточка Training - КОМПАКТНАЯ
-    $output .= '<div class="col-md-6">';
-    $output .= '<div class="mode-card mode-card-compact" id="training-card">';
-    $output .= '<div class="d-flex align-items-center gap-2">';
-    $output .= '<div class="mode-card-icon-small">📚</div>';
-    $output .= '<div class="flex-grow-1">';
-    $output .= '<h6 class="mode-card-title-compact mb-1">Обучение (Training)</h6>';
-    $output .= '<small class="text-muted d-block">С объяснениями и подсказками</small>';
+    $output .= '<hr class="test-divider">';
+    $output .= '<div class="test-training-controls">';
+    $output .= '<label for="training-questions-count">Количество вопросов:</label>';
+    $output .= '<div class="questions-input-group">';
+    $output .= '<input type="number" id="training-questions-count" class="questions-count-input" min="1" max="' . (int)$totalQuestions . '" value="' . min(20, (int)$totalQuestions) . '" data-max="' . (int)$totalQuestions . '">';
+    $output .= '<button class="btn-all-questions" type="button" id="training-all-questions" data-total="' . (int)$totalQuestions . '">Все</button>';
     $output .= '</div>';
     $output .= '</div>';
-    
-    // Контролы выбора количества вопросов - ВАЖНО: оставляем старый класс!
-    $output .= '<div class="training-questions-control mt-2">';
-    $output .= '<div class="input-group input-group-sm">';
-    $output .= '<input type="number" class="form-control form-control-sm" id="training-questions-count" min="1" max="' . (int)$totalQuestions . '" value="' . min(20, (int)$totalQuestions) . '" data-max="' . (int)$totalQuestions . '" style="max-width: 80px;">';
-    $output .= '<button class="ts-btn ts-btn-secondary ts-btn-sm" type="button" id="training-all-questions" data-total="' . (int)$totalQuestions . '">Все</button>';
-    $output .= '</div>';
-    $output .= '<small class="form-text text-muted d-block mt-1">Макс: ' . (int)$totalQuestions . '</small>';
-    $output .= '</div>';
-    
-    $output .= '</div></div>';    
 
-    
-    // Карточка Exam - КОМПАКТНАЯ
-    $output .= '<div class="col-md-6">';
-    $output .= '<div class="mode-card mode-card-compact" id="exam-card">';
-    $output .= '<div class="d-flex align-items-center gap-2">';
-    $output .= '<div class="mode-card-icon-small">🎓</div>';
-    $output .= '<div class="flex-grow-1">';
-    $output .= '<h6 class="mode-card-title-compact mb-1">Экзамен (Exam)</h6>';
-    $output .= '<small class="text-muted d-block">Строгая проверка знаний</small>';
-    $output .= '</div>';
-    $output .= '</div>';
-    $output .= '</div></div>';
-    
-    $output .= '</div></div>';
-
-    // Переключатель режима - ВАЖНО: оставляем старый класс mode-switch-container!
-    $output .= '<div class="mode-switch-container mode-switch-container-compact text-center mb-3">';
-    $output .= '<div class="mode-labels">';
-    $output .= '<span class="mode-label mode-label-training active">Training</span>';
-    $output .= '<label class="mode-switch">';
-    $output .= '<input type="checkbox" id="mode-toggle" value="exam">';
-    $output .= '<span class="mode-slider"></span>';
-    $output .= '</label>';
-    $output .= '<span class="mode-label mode-label-exam">Exam</span>';
-    $output .= '</div>';
-    $output .= '</div>';
-    
-    $output .= '</div>';
-    
-    // Единая кнопка старта
-    $output .= '<div class="text-center mb-3">';
-    $output .= '<button class="ts-btn ts-btn-primary start-test-btn start-test-btn-compact" id="start-test-unified" data-mode="training">';
-    $output .= '<span id="start-btn-text">Начать Training</span>';
+    $output .= '<div class="test-action-buttons">';
+    $output .= '<button class="btn-start-training ts-btn start-test-btn" data-mode="training">';
+    $output .= '<span class="btn-icon">🎓</span><span class="btn-text">Тренировка</span>';
+    $output .= '</button>';
+    $output .= '<button class="btn-start-exam ts-btn start-test-btn" data-mode="exam">';
+    $output .= '<span class="btn-icon">🎯</span><span class="btn-text">Экзамен</span>';
     $output .= '</button>';
     $output .= '</div>';
-    
-    $output .= '</div>';
-
 } elseif ($testMode === 'training') {
-    // Только режим Training
-    $output .= '<hr>';
-    $output .= '<div class="ts-alert ts-alert-info">';
-    $output .= '<strong>Режим:</strong> Обучение (Training) - будут показаны правильные ответы и объяснения';
+    $output .= '<hr class="test-divider">';
+    $output .= '<div class="test-action-buttons">';
+    $output .= '<button class="btn-start-training ts-btn start-test-btn" data-mode="training">';
+    $output .= '<span class="btn-icon">🎓</span><span class="btn-text">Тренировка</span>';
+    $output .= '</button>';
     $output .= '</div>';
-    $output .= '<button class="ts-btn ts-btn-primary ts-btn-lg w-100 start-test-btn" data-mode="training">Начать тест</button>';
 } elseif ($testMode === 'exam') {
-    // Только режим Exam
-    $output .= '<hr>';
-    $output .= '<div class="ts-alert ts-alert-warning">';
-    $output .= '<strong>Режим:</strong> Экзамен (Exam) - результат будет показан только в конце';
+    $output .= '<hr class="test-divider">';
+    $output .= '<div class="test-action-buttons">';
+    $output .= '<button class="btn-start-exam ts-btn start-test-btn" data-mode="exam">';
+    $output .= '<span class="btn-icon">🎯</span><span class="btn-text">Экзамен</span>';
+    $output .= '</button>';
     $output .= '</div>';
-    $output .= '<button class="ts-btn ts-btn-danger ts-btn-lg w-100 start-test-btn" data-mode="exam">Начать тест</button>';
 }
 
 if ($editLinks !== '') {
@@ -768,6 +723,9 @@ $output .= '</div>';
 // Подключение ресурсов
 $assetsUrl = $modx->getOption('assets_url', null, MODX_ASSETS_URL);
 $assetsUrl = rtrim($assetsUrl, '/') . '/';
+
+$categoriesAndTestsCssPath = $assetsUrl . 'components/testsystem/css/categories-and-tests.css';
+$modx->regClientCSS($categoriesAndTestsCssPath);
 
 $jsPath = $assetsUrl . 'components/testsystem/js/tsrunner.js';
 
