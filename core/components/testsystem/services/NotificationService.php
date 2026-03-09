@@ -54,7 +54,6 @@ class NotificationService
     public static function createNotification($modx, $userId, $type, $title, $message, $options = [])
     {
         $prefix = $modx->getOption('table_prefix');
-        $pdo = $modx->getPDO();
 
         $actionUrl = $options['action_url'] ?? null;
         $icon = $options['icon'] ?? null;
@@ -65,7 +64,7 @@ class NotificationService
         $expiresAt = $options['expires_at'] ?? null;
 
         try {
-            $stmt = $pdo->prepare("
+            $stmt = $modx->prepare("
                 INSERT INTO {$prefix}test_notifications
                 (user_id, notification_type, title, message, action_url, icon, priority,
                  related_type, related_id, metadata, expires_at)
@@ -86,7 +85,7 @@ class NotificationService
                 $expiresAt
             ]);
 
-            return $pdo->lastInsertId();
+            return $modx->lastInsertId();
         } catch (Exception $e) {
             $modx->log(modX::LOG_LEVEL_ERROR, 'Error creating notification: ' . $e->getMessage());
             return false;
@@ -104,7 +103,6 @@ class NotificationService
     public static function getUserNotifications($modx, $userId, $filters = [])
     {
         $prefix = $modx->getOption('table_prefix');
-        $pdo = $modx->getPDO();
 
         $conditions = ["user_id = ?"];
         $params = [$userId];
@@ -131,7 +129,7 @@ class NotificationService
         $limit = isset($filters['limit']) ? (int)$filters['limit'] : 50;
         $offset = isset($filters['offset']) ? (int)$filters['offset'] : 0;
 
-        $stmt = $pdo->prepare("
+        $stmt = $modx->prepare("
             SELECT *
             FROM {$prefix}test_notifications
             WHERE $whereClause
@@ -172,10 +170,9 @@ class NotificationService
     public static function getUnreadCount($modx, $userId)
     {
         $prefix = $modx->getOption('table_prefix');
-        $pdo = $modx->getPDO();
 
         try {
-            $stmt = $pdo->prepare("
+            $stmt = $modx->prepare("
                 SELECT COUNT(*) as count
                 FROM {$prefix}test_notifications
                 WHERE user_id = ? AND is_read = 0
@@ -201,9 +198,8 @@ class NotificationService
     public static function markAsRead($modx, $notificationId, $userId)
     {
         $prefix = $modx->getOption('table_prefix');
-        $pdo = $modx->getPDO();
 
-        $stmt = $pdo->prepare("
+        $stmt = $modx->prepare("
             UPDATE {$prefix}test_notifications
             SET is_read = 1, read_at = NOW()
             WHERE id = ? AND user_id = ? AND is_read = 0
@@ -222,9 +218,8 @@ class NotificationService
     public static function markAllAsRead($modx, $userId)
     {
         $prefix = $modx->getOption('table_prefix');
-        $pdo = $modx->getPDO();
 
-        $stmt = $pdo->prepare("
+        $stmt = $modx->prepare("
             UPDATE {$prefix}test_notifications
             SET is_read = 1, read_at = NOW()
             WHERE user_id = ? AND is_read = 0
@@ -244,9 +239,8 @@ class NotificationService
     public static function deleteNotification($modx, $notificationId, $userId)
     {
         $prefix = $modx->getOption('table_prefix');
-        $pdo = $modx->getPDO();
 
-        $stmt = $pdo->prepare("
+        $stmt = $modx->prepare("
             DELETE FROM {$prefix}test_notifications
             WHERE id = ? AND user_id = ?
         ");
@@ -268,7 +262,6 @@ class NotificationService
     public static function queueNotification($modx, $userId, $templateKey, $channel, $placeholders = [], $options = [])
     {
         $prefix = $modx->getOption('table_prefix');
-        $pdo = $modx->getPDO();
 
         // Проверяем настройки пользователя
         if (!self::isNotificationEnabled($modx, $userId, $templateKey, $channel)) {
@@ -291,7 +284,7 @@ class NotificationService
         }
 
         try {
-            $stmt = $pdo->prepare("
+            $stmt = $modx->prepare("
                 INSERT INTO {$prefix}test_notification_queue
                 (user_id, template_key, channel, recipient, placeholders, priority, scheduled_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -307,7 +300,7 @@ class NotificationService
                 $scheduledAt
             ]);
 
-            return $pdo->lastInsertId();
+            return $modx->lastInsertId();
         } catch (Exception $e) {
             $modx->log(modX::LOG_LEVEL_ERROR, 'Error queueing notification: ' . $e->getMessage());
             return false;
@@ -326,9 +319,8 @@ class NotificationService
     private static function isNotificationEnabled($modx, $userId, $notificationType, $channel)
     {
         $prefix = $modx->getOption('table_prefix');
-        $pdo = $modx->getPDO();
 
-        $stmt = $pdo->prepare("
+        $stmt = $modx->prepare("
             SELECT is_enabled, frequency
             FROM {$prefix}test_notification_preferences
             WHERE user_id = ? AND notification_type = ? AND channel = ?
@@ -358,10 +350,9 @@ class NotificationService
     public static function updatePreference($modx, $userId, $notificationType, $channel, $isEnabled, $frequency = 'immediate')
     {
         $prefix = $modx->getOption('table_prefix');
-        $pdo = $modx->getPDO();
 
         try {
-            $stmt = $pdo->prepare("
+            $stmt = $modx->prepare("
                 INSERT INTO {$prefix}test_notification_preferences
                 (user_id, notification_type, channel, is_enabled, frequency)
                 VALUES (?, ?, ?, ?, ?)
@@ -393,9 +384,8 @@ class NotificationService
     public static function getUserPreferences($modx, $userId)
     {
         $prefix = $modx->getOption('table_prefix');
-        $pdo = $modx->getPDO();
 
-        $stmt = $pdo->prepare("
+        $stmt = $modx->prepare("
             SELECT *
             FROM {$prefix}test_notification_preferences
             WHERE user_id = ?
@@ -419,11 +409,10 @@ class NotificationService
     public static function sendEmail($modx, $userId, $templateKey, $placeholders = [], $options = [])
     {
         $prefix = $modx->getOption('table_prefix');
-        $pdo = $modx->getPDO();
 
         try {
             // Получаем шаблон
-            $stmt = $pdo->prepare("
+            $stmt = $modx->prepare("
                 SELECT *
                 FROM {$prefix}test_notification_templates
                 WHERE template_key = ? AND channel = ? AND is_active = 1
@@ -523,10 +512,9 @@ class NotificationService
                                        $recipient, $subject, $body, $status, $errorMessage = null)
     {
         $prefix = $modx->getOption('table_prefix');
-        $pdo = $modx->getPDO();
 
         try {
-            $stmt = $pdo->prepare("
+            $stmt = $modx->prepare("
                 INSERT INTO {$prefix}test_notification_delivery
                 (notification_id, user_id, channel, notification_type, recipient, subject, body, status, error_message, sent_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -560,10 +548,9 @@ class NotificationService
     public static function processQueue($modx, $batchSize = 50)
     {
         $prefix = $modx->getOption('table_prefix');
-        $pdo = $modx->getPDO();
 
         // Получаем задачи из очереди
-        $stmt = $pdo->prepare("
+        $stmt = $modx->prepare("
             SELECT *
             FROM {$prefix}test_notification_queue
             WHERE status = 'pending'
@@ -579,7 +566,7 @@ class NotificationService
 
         foreach ($tasks as $task) {
             // Помечаем как "в обработке"
-            $updateStmt = $pdo->prepare("
+            $updateStmt = $modx->prepare("
                 UPDATE {$prefix}test_notification_queue
                 SET status = 'processing', attempts = attempts + 1
                 WHERE id = ?
@@ -600,7 +587,7 @@ class NotificationService
 
             // Обновляем статус задачи
             if ($success) {
-                $updateStmt = $pdo->prepare("
+                $updateStmt = $modx->prepare("
                     UPDATE {$prefix}test_notification_queue
                     SET status = 'completed', processed_at = NOW()
                     WHERE id = ?
@@ -610,7 +597,7 @@ class NotificationService
             } else {
                 // Если достигнуто максимальное количество попыток, помечаем как failed
                 if ($task['attempts'] + 1 >= $task['max_attempts']) {
-                    $updateStmt = $pdo->prepare("
+                    $updateStmt = $modx->prepare("
                         UPDATE {$prefix}test_notification_queue
                         SET status = 'failed', processed_at = NOW(), error_message = 'Max attempts reached'
                         WHERE id = ?
@@ -618,7 +605,7 @@ class NotificationService
                     $updateStmt->execute([$task['id']]);
                 } else {
                     // Возвращаем в pending для повторной попытки
-                    $updateStmt = $pdo->prepare("
+                    $updateStmt = $modx->prepare("
                         UPDATE {$prefix}test_notification_queue
                         SET status = 'pending'
                         WHERE id = ?
@@ -641,9 +628,8 @@ class NotificationService
     public static function cleanupOldNotifications($modx, $daysToKeep = 30)
     {
         $prefix = $modx->getOption('table_prefix');
-        $pdo = $modx->getPDO();
 
-        $stmt = $pdo->prepare("CALL cleanup_old_notifications(?)");
+        $stmt = $modx->prepare("CALL cleanup_old_notifications(?)");
         $stmt->execute([$daysToKeep]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -660,13 +646,12 @@ class NotificationService
     public static function getStatistics($modx, $userId = null)
     {
         $prefix = $modx->getOption('table_prefix');
-        $pdo = $modx->getPDO();
 
         $stats = [];
 
         if ($userId) {
             // Статистика для конкретного пользователя
-            $stmt = $pdo->prepare("
+            $stmt = $modx->prepare("
                 SELECT
                     COUNT(*) as total,
                     SUM(is_read = 0) as unread,
@@ -678,7 +663,7 @@ class NotificationService
             $stats['notifications'] = $stmt->fetch(PDO::FETCH_ASSOC);
 
             // Статистика по типам
-            $stmt = $pdo->prepare("
+            $stmt = $modx->prepare("
                 SELECT notification_type, COUNT(*) as count
                 FROM {$prefix}test_notifications
                 WHERE user_id = ?
@@ -689,7 +674,7 @@ class NotificationService
             $stats['by_type'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
         } else {
             // Общая статистика системы
-            $stmt = $pdo->query("
+            $stmt = $modx->query("
                 SELECT
                     COUNT(*) as total_notifications,
                     SUM(is_read = 0) as total_unread,
@@ -699,7 +684,7 @@ class NotificationService
             $stats['overview'] = $stmt->fetch(PDO::FETCH_ASSOC);
 
             // Статистика очереди
-            $stmt = $pdo->query("
+            $stmt = $modx->query("
                 SELECT status, COUNT(*) as count
                 FROM {$prefix}test_notification_queue
                 GROUP BY status
@@ -707,7 +692,7 @@ class NotificationService
             $stats['queue'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
             // Статистика доставки за последние 7 дней
-            $stmt = $pdo->query("
+            $stmt = $modx->query("
                 SELECT channel, status, COUNT(*) as count
                 FROM {$prefix}test_notification_delivery
                 WHERE created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
