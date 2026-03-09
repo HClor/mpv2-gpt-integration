@@ -16,6 +16,9 @@
     let currentEditorTestId = null;
     let allQuestionsData = [];
     let currentFilter = 'all';
+    let editorCanEdit = false;
+    let editorCanDelete = false;
+    let selectedQuestionIds = new Set();
 
     // ============================================
     // API Helper
@@ -283,8 +286,26 @@
         document.getElementById('categories-tests-view').style.display = 'block';
         currentEditorTestId = null;
         allQuestionsData = [];
+        selectedQuestionIds.clear();
     }
     window.backToTestsList = backToTestsList;
+
+
+    async function checkEditorRights() {
+        try {
+            var result = await apiCall('checkEditRights', {});
+            if (result && result.success && result.data) {
+                editorCanEdit = !!result.data.canEdit;
+                editorCanDelete = !!result.data.isAdmin;
+            } else {
+                editorCanEdit = false;
+                editorCanDelete = false;
+            }
+        } catch (error) {
+            editorCanEdit = false;
+            editorCanDelete = false;
+        }
+    }
 
     // ============================================
     // ЗАГРУЗКА ВОПРОСОВ ДЛЯ РЕДАКТОРА
@@ -296,6 +317,13 @@
         listContent.innerHTML = '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Загрузка вопросов...</p></div>';
 
         try {
+            await checkEditorRights();
+
+            if (!editorCanEdit) {
+                listContent.innerHTML = '<div class="alert alert-warning">Недостаточно прав для редактирования вопросов в этом тесте</div>';
+                return;
+            }
+
             var result = await apiCall('getAllQuestions', { test_id: testId });
 
             if (!result.success) {
@@ -367,12 +395,29 @@
             };
         }
 
+        var existingIds = new Set(allQuestionsData.map(function(q) { return parseInt(q.id, 10); }));
+        selectedQuestionIds = new Set(Array.from(selectedQuestionIds).filter(function(id) { return existingIds.has(id); }));
+
         if (filteredQuestions.length === 0) {
             listContent.innerHTML = '<div class="alert alert-warning">Нет вопросов для отображения</div>';
             return;
         }
 
-        var html = '<div class="list-group">';
+        var html = '';
+        html += '<div id="bulk-actions-panel" class="alert alert-light border mb-3 ' + (selectedQuestionIds.size > 0 ? '' : 'd-none') + '">';
+        html += '<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">';
+        html += '<div><strong>Выбрано: <span id="selected-questions-count">' + selectedQuestionIds.size + '</span></strong></div>';
+        html += '<div class="d-flex flex-wrap gap-2">';
+        html += '<button class="btn btn-sm btn-outline-primary" onclick="toggleSelectAllQuestionsFromTests()"><i class="bi bi-check2-square"></i> Выбрать все</button>';
+        html += '<button class="btn btn-sm btn-outline-success" onclick="bulkPublishQuestionsFromTests()"><i class="bi bi-eye"></i> Опубликовать</button>';
+        html += '<button class="btn btn-sm btn-outline-warning" onclick="bulkUnpublishQuestionsFromTests()"><i class="bi bi-eye-slash"></i> Снять с публикации</button>';
+        if (editorCanDelete) {
+            html += '<button class="btn btn-sm btn-outline-danger" onclick="bulkDeleteQuestionsFromTests()"><i class="bi bi-trash"></i> Удалить</button>';
+        }
+        html += '<button class="btn btn-sm btn-outline-secondary" onclick="clearBulkSelectionFromTests()"><i class="bi bi-x-circle"></i> Сбросить</button>';
+        html += '</div></div></div>';
+
+        html += '<div class="list-group">';
 
         filteredQuestions.forEach(function(question) {
             var questionText = stripHtml(question.question_text).substring(0, 120);
@@ -393,6 +438,12 @@
             }));
 
             html += '<div class="list-group-item ' + publishClass + ' question-list-item-minimal">';
+            if (editorCanEdit) {
+                var checked = selectedQuestionIds.has(parseInt(question.id, 10)) ? ' checked' : '';
+                html += '<div class="mb-2"><label class="d-inline-flex align-items-center gap-2 small text-muted">';
+                html += '<input type="checkbox" class="question-select-checkbox" value="' + question.id + '" onchange="toggleQuestionSelectionFromTests(this)"' + checked + '>';
+                html += '<span>Выбрать</span></label></div>';
+            }
             html += '<div class="d-flex flex-column gap-2">';
 
             // Текст вопроса
@@ -449,6 +500,115 @@
             renderQuestionsEditor(filter);
         }
     });
+
+
+    function updateBulkActionsStateFromTests() {
+        var panel = document.getElementById('bulk-actions-panel');
+        var countEl = document.getElementById('selected-questions-count');
+        var count = selectedQuestionIds.size;
+
+        if (countEl) countEl.textContent = String(count);
+        if (panel) {
+            if (count > 0) panel.classList.remove('d-none');
+            else panel.classList.add('d-none');
+        }
+    }
+
+    function toggleQuestionSelectionFromTests(checkbox) {
+        var id = parseInt(checkbox.value, 10);
+        if (!id) return;
+        if (checkbox.checked) selectedQuestionIds.add(id);
+        else selectedQuestionIds.delete(id);
+        updateBulkActionsStateFromTests();
+    }
+    window.toggleQuestionSelectionFromTests = toggleQuestionSelectionFromTests;
+
+    function clearBulkSelectionFromTests() {
+        selectedQuestionIds.clear();
+        document.querySelectorAll('.question-select-checkbox').forEach(function(cb) { cb.checked = false; });
+        updateBulkActionsStateFromTests();
+    }
+    window.clearBulkSelectionFromTests = clearBulkSelectionFromTests;
+
+    function toggleSelectAllQuestionsFromTests() {
+        var checkboxes = document.querySelectorAll('.question-select-checkbox');
+        if (checkboxes.length === 0) return;
+
+        var allChecked = Array.from(checkboxes).every(function(cb) { return cb.checked; });
+        checkboxes.forEach(function(cb) {
+            cb.checked = !allChecked;
+            var id = parseInt(cb.value, 10);
+            if (!id) return;
+            if (cb.checked) selectedQuestionIds.add(id);
+            else selectedQuestionIds.delete(id);
+        });
+        updateBulkActionsStateFromTests();
+    }
+    window.toggleSelectAllQuestionsFromTests = toggleSelectAllQuestionsFromTests;
+
+    async function bulkSetPublishedFromTests(targetPublished) {
+        if (selectedQuestionIds.size === 0) {
+            alert('Выберите хотя бы один вопрос');
+            return;
+        }
+
+        var selectedSet = new Set(Array.from(selectedQuestionIds));
+        var questionsToChange = allQuestionsData.filter(function(q) {
+            var id = parseInt(q.id, 10);
+            return selectedSet.has(id) && parseInt(q.published, 10) !== targetPublished;
+        });
+
+        if (questionsToChange.length === 0) {
+            alert(targetPublished === 1 ? 'Все выбранные вопросы уже опубликованы' : 'Все выбранные вопросы уже сняты с публикации');
+            return;
+        }
+
+        for (var i = 0; i < questionsToChange.length; i++) {
+            var q = questionsToChange[i];
+            var res = await apiCall('togglePublished', { question_id: q.id });
+            if (!res.success) throw new Error(res.message || 'Ошибка при массовом изменении публикации');
+        }
+
+        showNotification('Обновлено вопросов: ' + questionsToChange.length, 'success');
+        await loadQuestionsForEditor(currentEditorTestId, currentFilter);
+    }
+
+    async function bulkPublishQuestionsFromTests() {
+        try { await bulkSetPublishedFromTests(1); }
+        catch (error) { alert('Ошибка: ' + error.message); }
+    }
+    window.bulkPublishQuestionsFromTests = bulkPublishQuestionsFromTests;
+
+    async function bulkUnpublishQuestionsFromTests() {
+        try { await bulkSetPublishedFromTests(0); }
+        catch (error) { alert('Ошибка: ' + error.message); }
+    }
+    window.bulkUnpublishQuestionsFromTests = bulkUnpublishQuestionsFromTests;
+
+    async function bulkDeleteQuestionsFromTests() {
+        if (!editorCanDelete) {
+            alert('Недостаточно прав для удаления вопросов');
+            return;
+        }
+
+        var ids = Array.from(selectedQuestionIds);
+        if (ids.length === 0) {
+            alert('Выберите хотя бы один вопрос');
+            return;
+        }
+
+        if (!confirm('Удалить выбранные вопросы (' + ids.length + ' шт.)?')) return;
+
+        for (var i = 0; i < ids.length; i++) {
+            var result = await apiCall('deleteQuestion', { question_id: ids[i], session_id: 0 });
+            if (!result.success) throw new Error(result.message || ('Ошибка удаления вопроса ID ' + ids[i]));
+        }
+
+        showNotification('Удалено вопросов: ' + ids.length, 'success');
+        selectedQuestionIds.clear();
+        await loadQuestionsForEditor(currentEditorTestId, currentFilter);
+    }
+    window.bulkDeleteQuestionsFromTests = bulkDeleteQuestionsFromTests;
 
     // ============================================
     // CRUD ВОПРОСОВ (для страницы /testy)
