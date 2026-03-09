@@ -1133,7 +1133,8 @@ input:checked + .mode-slider:before {
 #restart-test-btn {
     border: none;
     font-weight: 500;
-    padding: 0.5rem 1.5rem;
+    font-size: 1.05rem;
+    padding: 0.65rem 1.75rem;
     border-radius: var(--radius-badge);
     transition: all 0.2s ease;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -1893,6 +1894,7 @@ img[style*="width"] {
 #learning-question-text,
 #explanation-block,
 #learning-explanation {
+    font-size: 1.25rem;
     overflow-x: hidden;
 }
 
