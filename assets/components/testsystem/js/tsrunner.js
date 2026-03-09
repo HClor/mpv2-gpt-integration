@@ -11,9 +11,11 @@
     let currentQuestionNumber = 0;
     let testMode = "training";
     let canEdit = false;
+    let canDelete = false;
 
     let allQuestions = [];
     let currentIndex = 0;
+    let currentQuestionsFilter = 'all';
 
     // Timer variables
     let timerInterval = null;
@@ -29,6 +31,7 @@
 
     const container = document.getElementById("test-container");
     const testId = container ? container.dataset.testId : null;
+    canDelete = container ? container.dataset.canDelete === '1' : false;
 
     // ПОДДЕРЖКА ОБЛАСТЕЙ ЗНАНИЙ
     const knowledgeAreaId = container ? (container.dataset.knowledgeAreaId || null) : null;
@@ -733,7 +736,7 @@ async function addFavoritesViewToggle(questionId) {
                 <input type="checkbox" id="learning-favorite-toggle-input" ${isFavorite ? 'checked' : ''}>
                 <span class="favorite-toggle-slider"></span>
             </label>
-            <span class="favorite-toggle-label">В избранном</span>
+            <span class="favorite-toggle-label">${isFavorite ? 'В избранном' : 'В избранное'}</span>
         `;
         
         // ИСПРАВЛЕНИЕ: Добавляем в конец card-header
@@ -741,9 +744,13 @@ async function addFavoritesViewToggle(questionId) {
         
         // Обработчик
         const toggleInput = document.getElementById("learning-favorite-toggle-input");
+        const toggleLabel = toggleContainer.querySelector('.favorite-toggle-label');
         toggleInput.addEventListener("change", async function() {
             const newState = this.checked;
-            
+            if (toggleLabel) {
+                toggleLabel.textContent = newState ? 'В избранном' : 'В избранное';
+            }
+
             try {
                 const result = await apiCall("toggleFavorite", {
                     question_id: questionId
@@ -758,9 +765,15 @@ async function addFavoritesViewToggle(questionId) {
                     }
                 } else {
                     this.checked = !newState;
+                    if (toggleLabel) {
+                        toggleLabel.textContent = this.checked ? 'В избранном' : 'В избранное';
+                    }
                 }
             } catch (error) {
                 this.checked = !newState;
+                if (toggleLabel) {
+                    toggleLabel.textContent = this.checked ? 'В избранном' : 'В избранное';
+                }
                 alert("Ошибка: " + error.message);
             }
         });
@@ -1357,6 +1370,8 @@ async function addFavoritesViewToggle(questionId) {
 
     
     function initializeTestMode() {
+        setupTestCardMenuHandlers();
+
         const trainingCard = document.getElementById("training-card");
         if (trainingCard) {
             trainingCard.classList.add("active");
@@ -1464,6 +1479,34 @@ async function addFavoritesViewToggle(questionId) {
                 this.value = val;
             });
         }
+    }
+
+    function setupTestCardMenuHandlers() {
+        document.addEventListener('click', function(e) {
+            const toggle = e.target.closest('.test-menu-toggle');
+
+            if (toggle) {
+                e.stopPropagation();
+                const testId = toggle.dataset.testId;
+                const menu = document.getElementById('menu-' + testId);
+                if (!menu) return;
+
+                document.querySelectorAll('.test-menu-dropdown').forEach(function(m) {
+                    if (m !== menu) {
+                        m.style.display = 'none';
+                    }
+                });
+
+                menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+                return;
+            }
+
+            if (!e.target.closest('.test-menu-dropdown')) {
+                document.querySelectorAll('.test-menu-dropdown').forEach(function(m) {
+                    m.style.display = 'none';
+                });
+            }
+        });
     }
 
     
@@ -1764,16 +1807,20 @@ async function addFavoritesViewToggle(questionId) {
                 <input type="checkbox" id="favorite-toggle-input" ${isFavorite ? 'checked' : ''}>
                 <span class="favorite-toggle-slider"></span>
             </label>
-            <span class="favorite-toggle-label">В избранном</span>
+            <span class="favorite-toggle-label">${isFavorite ? 'В избранном' : 'В избранное'}</span>
         `;
         
         questionHeader.appendChild(toggleContainer);
         
         // Обработчик переключения
         const toggleInput = document.getElementById("favorite-toggle-input");
+        const toggleLabel = toggleContainer.querySelector('.favorite-toggle-label');
         toggleInput.addEventListener("change", async function() {
             const newState = this.checked;
-            
+            if (toggleLabel) {
+                toggleLabel.textContent = newState ? 'В избранном' : 'В избранное';
+            }
+
             try {
                 const result = await apiCall("toggleFavorite", {
                     question_id: currentQuestionId
@@ -1788,9 +1835,15 @@ async function addFavoritesViewToggle(questionId) {
                     }
                 } else {
                     this.checked = !newState;
+                    if (toggleLabel) {
+                        toggleLabel.textContent = this.checked ? 'В избранном' : 'В избранное';
+                    }
                 }
             } catch (error) {
                 this.checked = !newState;
+                if (toggleLabel) {
+                    toggleLabel.textContent = this.checked ? 'В избранном' : 'В избранное';
+                }
                 alert("Ошибка: " + error.message);
             }
         });
@@ -2736,6 +2789,7 @@ async function addFavoritesViewToggle(questionId) {
 
     async function showAllQuestionsView(filterStatus = 'all') {
         console.log("=== showAllQuestionsView START ===");
+        currentQuestionsFilter = filterStatus;
         
         try {
             const result = await apiCall("getAllQuestions", { test_id: testId });
@@ -2789,9 +2843,16 @@ async function addFavoritesViewToggle(questionId) {
             html += '<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-3">';
             html += '<h3 class="mb-0"><i class="bi bi-list-ul"></i> Список вопросов теста</h3>';
             html += '<div class="d-flex flex-column flex-sm-row gap-2 w-100 w-md-auto align-items-stretch align-items-sm-center">';
-            html += '<button class="btn btn-success btn-sm" onclick="openAddQuestionModal()">';
-            html += '<i class="bi bi-plus-circle-fill"></i> Добавить вопрос';
-            html += '</button>';
+            if (canEdit) {
+                html += '<button class="btn btn-success btn-sm" onclick="openAddQuestionModal()">';
+                html += '<i class="bi bi-plus-circle-fill"></i> Добавить вопрос';
+                html += '</button>';
+            }
+            if (canDelete) {
+                html += '<button class="btn btn-outline-danger btn-sm" onclick="deleteAllQuestionsInTest()">';
+                html += '<i class="bi bi-trash3"></i> Удалить всё';
+                html += '</button>';
+            }
 
             // Контролы запуска теста
             html += '<div class="d-flex gap-1 align-items-center">';
@@ -2828,6 +2889,20 @@ async function addFavoritesViewToggle(questionId) {
             html += '</button></div>';
             
             html += '</div></div>';
+
+            if (canEdit) {
+                html += '<div id="bulk-actions-panel" class="alert alert-light border d-none mt-2 mb-0">';
+                html += '<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">';
+                html += '<div><strong>Выбрано: <span id="selected-questions-count">0</span></strong></div>';
+                html += '<div class="d-flex flex-wrap gap-2">';
+                html += '<button class="btn btn-sm btn-outline-success" onclick="bulkPublishQuestions()"><i class="bi bi-eye"></i> Опубликовать</button>';
+                html += '<button class="btn btn-sm btn-outline-warning" onclick="bulkUnpublishQuestions()"><i class="bi bi-eye-slash"></i> Снять с публикации</button>';
+                if (canDelete) {
+                    html += '<button class="btn btn-sm btn-outline-danger" onclick="bulkDeleteQuestions()"><i class="bi bi-trash"></i> Удалить</button>';
+                }
+                html += '<button class="btn btn-sm btn-outline-secondary" onclick="clearBulkSelection()"><i class="bi bi-x-circle"></i> Сбросить</button>';
+                html += '</div></div></div>';
+            }
             html += '</div>';
             
             html += '<div class="card-body p-2 p-md-3">';
@@ -2858,6 +2933,12 @@ async function addFavoritesViewToggle(questionId) {
                     }));
                     
                     html += `<div class="list-group-item ${publishClass} question-list-item-minimal">`;
+                    if (canEdit) {
+                        html += '<div class="mb-2">';
+                        html += `<label class="d-inline-flex align-items-center gap-2 small text-muted">`;
+                        html += `<input type="checkbox" class="question-select-checkbox" value="${question.id}" onchange="updateBulkActionsState()">`;
+                        html += '<span>Выбрать</span></label></div>';
+                    }
                     html += '<div class="d-flex flex-column gap-2">';
                     
                     // КЛИКАБЕЛЬНЫЙ ТЕКСТ ВОПРОСА
@@ -2880,26 +2961,34 @@ async function addFavoritesViewToggle(questionId) {
                     const publishTitle = isPublished ? 'Снять с публикации' : 'Опубликовать';
                     const publishColor = isPublished ? 'warning' : 'success';
                     
-                    html += `<button class="btn btn-sm btn-outline-${publishColor}" onclick="event.stopPropagation(); togglePublishedFromList(${question.id}, ${isPublished ? 1 : 0})" title="${publishTitle}">`;
-                    html += `<i class="bi bi-${publishIcon}"></i>`;
-                    html += '</button>';
+                    if (canEdit) {
+                        html += `<button class="btn btn-sm btn-outline-${publishColor}" onclick="event.stopPropagation(); togglePublishedFromList(${question.id}, ${isPublished ? 1 : 0})" title="${publishTitle}">`;
+                        html += `<i class="bi bi-${publishIcon}"></i>`;
+                        html += '</button>';
+                    }
                     
                     const learningIcon = isLearning ? 'book-fill' : 'book';
                     const learningTitle = isLearning ? 'Убрать из обучения' : 'Добавить в обучение';
                     // ИЗМЕНЕНИЕ: используем btn-info вместо btn-outline-info когда вопрос в обучении
                     const learningBtnClass = isLearning ? 'btn-info' : 'btn-outline-secondary';
                     
-                    html += `<button class="btn btn-sm ${learningBtnClass}" onclick="event.stopPropagation(); toggleLearningFromList(${question.id}, ${isLearning ? 1 : 0})" title="${learningTitle}">`;
-                    html += `<i class="bi bi-${learningIcon}"></i>`;
-                    html += '</button>';
+                    if (canEdit) {
+                        html += `<button class="btn btn-sm ${learningBtnClass}" onclick="event.stopPropagation(); toggleLearningFromList(${question.id}, ${isLearning ? 1 : 0})" title="${learningTitle}">`;
+                        html += `<i class="bi bi-${learningIcon}"></i>`;
+                        html += '</button>';
+                    }
 
-                    html += `<button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); editQuestionFromList(${question.id})" title="Редактировать">`;
-                    html += '<i class="bi bi-pencil"></i>';
-                    html += '</button>';
-                    
-                    html += `<button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); deleteQuestionFromList(${question.id})" title="Удалить">`;
-                    html += '<i class="bi bi-trash"></i>';
-                    html += '</button>';
+                    if (canEdit) {
+                        html += `<button class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation(); editQuestionFromList(${question.id})" title="Редактировать">`;
+                        html += '<i class="bi bi-pencil"></i>';
+                        html += '</button>';
+                    }
+
+                    if (canDelete) {
+                        html += `<button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); deleteQuestionFromList(${question.id})" title="Удалить">`;
+                        html += '<i class="bi bi-trash"></i>';
+                        html += '</button>';
+                    }
                     
                     html += '</div></div></div>';
                 });
@@ -3257,6 +3346,11 @@ async function addFavoritesViewToggle(questionId) {
 
     // Удалить вопрос из списка
     async function deleteQuestionFromList(questionId) {
+        if (!canDelete) {
+            alert("Недостаточно прав для удаления вопросов");
+            return;
+        }
+
         if (!confirm("Вы уверены, что хотите удалить этот вопрос?")) {
             return;
         }
@@ -3277,6 +3371,144 @@ async function addFavoritesViewToggle(questionId) {
             console.error("Delete error:", error);
             alert("Ошибка: " + error.message);
         }
+    }
+
+    function getSelectedQuestionIds() {
+        const checkboxes = document.querySelectorAll('.question-select-checkbox:checked');
+        return Array.from(checkboxes).map(cb => parseInt(cb.value, 10)).filter(Boolean);
+    }
+
+    function updateBulkActionsState() {
+        const selectedIds = getSelectedQuestionIds();
+        const panel = document.getElementById('bulk-actions-panel');
+        const countEl = document.getElementById('selected-questions-count');
+
+        if (countEl) {
+            countEl.textContent = String(selectedIds.length);
+        }
+
+        if (panel) {
+            if (selectedIds.length > 0) {
+                panel.classList.remove('d-none');
+            } else {
+                panel.classList.add('d-none');
+            }
+        }
+    }
+
+    function clearBulkSelection() {
+        document.querySelectorAll('.question-select-checkbox').forEach(cb => {
+            cb.checked = false;
+        });
+        updateBulkActionsState();
+    }
+
+    async function bulkSetPublished(targetPublished) {
+        if (!canEdit) {
+            alert("Недостаточно прав для изменения публикации");
+            return;
+        }
+
+        const selectedIds = getSelectedQuestionIds();
+        if (selectedIds.length === 0) {
+            alert('Выберите хотя бы один вопрос');
+            return;
+        }
+
+        const selectedSet = new Set(selectedIds);
+        const questionsToChange = allQuestions.filter(q => selectedSet.has(parseInt(q.id, 10)) && parseInt(q.published, 10) !== targetPublished);
+
+        if (questionsToChange.length === 0) {
+            alert(targetPublished === 1 ? 'Все выбранные вопросы уже опубликованы' : 'Все выбранные вопросы уже сняты с публикации');
+            return;
+        }
+
+        for (const q of questionsToChange) {
+            const res = await apiCall('togglePublished', { question_id: q.id });
+            if (!res.success) {
+                throw new Error(res.message || 'Ошибка при массовом изменении публикации');
+            }
+        }
+
+        alert(`✅ Обновлено вопросов: ${questionsToChange.length}`);
+        await showAllQuestionsView(currentQuestionsFilter);
+    }
+
+    async function bulkPublishQuestions() {
+        try {
+            await bulkSetPublished(1);
+        } catch (error) {
+            alert('Ошибка: ' + error.message);
+        }
+    }
+
+    async function bulkUnpublishQuestions() {
+        try {
+            await bulkSetPublished(0);
+        } catch (error) {
+            alert('Ошибка: ' + error.message);
+        }
+    }
+
+    async function bulkDeleteQuestions() {
+        if (!canDelete) {
+            alert("Недостаточно прав для удаления вопросов");
+            return;
+        }
+
+        const selectedIds = getSelectedQuestionIds();
+        if (selectedIds.length === 0) {
+            alert('Выберите хотя бы один вопрос');
+            return;
+        }
+
+        if (!confirm(`Удалить выбранные вопросы (${selectedIds.length} шт.)?`)) {
+            return;
+        }
+
+        for (const questionId of selectedIds) {
+            const result = await apiCall('deleteQuestion', {
+                question_id: questionId,
+                session_id: 0
+            });
+
+            if (!result.success) {
+                throw new Error(result.message || `Ошибка удаления вопроса ID ${questionId}`);
+            }
+        }
+
+        alert(`✅ Удалено вопросов: ${selectedIds.length}`);
+        await showAllQuestionsView(currentQuestionsFilter);
+    }
+
+    async function deleteAllQuestionsInTest() {
+        if (!canDelete) {
+            alert("Недостаточно прав для удаления вопросов");
+            return;
+        }
+
+        if (!allQuestions || allQuestions.length === 0) {
+            alert('В тесте нет вопросов для удаления');
+            return;
+        }
+
+        if (!confirm(`Удалить ВСЕ вопросы в тесте (${allQuestions.length} шт.)? Это действие нельзя отменить.`)) {
+            return;
+        }
+
+        for (const q of allQuestions) {
+            const result = await apiCall('deleteQuestion', {
+                question_id: q.id,
+                session_id: 0
+            });
+
+            if (!result.success) {
+                throw new Error(result.message || `Ошибка удаления вопроса ID ${q.id}`);
+            }
+        }
+
+        alert('✅ Все вопросы в тесте удалены');
+        await showAllQuestionsView(currentQuestionsFilter);
     }
 
     async function editLearningQuestion(questionId) {
@@ -3313,6 +3545,12 @@ async function addFavoritesViewToggle(questionId) {
     window.hideAllQuestionsView = hideAllQuestionsView;
     window.editQuestionFromList = editQuestionFromList;
     window.deleteQuestionFromList = deleteQuestionFromList;
+    window.updateBulkActionsState = updateBulkActionsState;
+    window.clearBulkSelection = clearBulkSelection;
+    window.bulkPublishQuestions = bulkPublishQuestions;
+    window.bulkUnpublishQuestions = bulkUnpublishQuestions;
+    window.bulkDeleteQuestions = bulkDeleteQuestions;
+    window.deleteAllQuestionsInTest = deleteAllQuestionsInTest;
     
     function updateProgressBar() {
         // Для основного теста
