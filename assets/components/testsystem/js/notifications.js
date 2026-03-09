@@ -52,6 +52,11 @@
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
 
+            const contentType = response.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) {
+                throw new Error('Invalid response format (expected JSON)');
+            }
+
             return await response.json();
         } catch (error) {
             console.error('API Error:', error);
@@ -101,7 +106,7 @@
             const result = await apiCall('getUnreadNotificationsCount', {});
 
             if (result.success) {
-                unreadCount = result.count || 0;
+                unreadCount = result.data?.unread_count ?? result.data?.count ?? result.count ?? 0;
                 updateBellIcon();
             }
         } catch (error) {
@@ -131,7 +136,7 @@
             const result = await apiCall('getRecentNotifications', { limit: 10 });
 
             if (result.success) {
-                notifications = result.data || [];
+                notifications = result.data?.notifications || result.data || [];
                 renderNotificationsDropdown();
             }
         } catch (error) {
