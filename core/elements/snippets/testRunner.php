@@ -398,10 +398,14 @@ $roleStmt = $modx->prepare("SELECT mgn.`name` FROM {$tableMemberGroups} AS mg
     JOIN {$tableMemberGroupNames} AS mgn ON mgn.`id` = mg.`user_group`
     WHERE mg.`member` = :uid AND mgn.`name` IN (:group1, :group2)");
 
+$isAdmin = false;
+$isExpert = false;
 $isAdminOrExpert = false;
 if ($roleStmt && $roleStmt->execute([':uid' => $userId, ':group1' => $groupAdmins, ':group2' => $groupExperts])) {
     $roleNames = $roleStmt->fetchAll(PDO::FETCH_COLUMN);
-    if (in_array($groupAdmins, $roleNames, true) || in_array($groupExperts, $roleNames, true)) {
+    $isAdmin = in_array($groupAdmins, $roleNames, true);
+    $isExpert = in_array($groupExperts, $roleNames, true);
+    if ($isAdmin || $isExpert) {
         $isAdminOrExpert = true;
     }
 }
@@ -511,9 +515,13 @@ if ($questionsPerSession <= 0 || $questionsPerSession > $totalQuestions) {
     $questionsPerSession = $totalQuestions;
 }
 
+// Определение прав на управление тестом (как в categoriesAndTests)
+$isOwner = ($createdBy === $userId);
+$canManage = $isAdmin || $isExpert || $isOwner;
+$canDelete = $isAdmin || $isOwner;
+
 // Определение прав на редактирование
-// ИСПРАВЛЕНО: используем уже определенные переменные из проверки доступа выше
-$canEditTest = $isAdminOrExpert || ($createdBy === $userId);
+$canEditTest = $canManage;
 
 // ДОБАВЛЕНО: Проверяем может ли пользователь редактировать через permissions
 if (!$canEditTest && $publicationStatus === 'private') {
@@ -529,59 +537,35 @@ if (!$canEditTest && $publicationStatus === 'private') {
         $canEditTest = true;
     }
 }
+$importPageId = Config::getPageId('import_csv', 29);
+$importUrl = $modx->makeUrl($importPageId, 'web', ['test_id' => $testId], 'full');
 
-
-
-// Формирование ссылок на редактирование - АДАПТИВНЫЕ
-$managerUrl = defined('MODX_MANAGER_URL') ? MODX_MANAGER_URL : $modx->getOption('manager_url', null, '/manager/');
-$managerUrl = rtrim($managerUrl, '/') . '/';
-
-$editLinks = '';
-if ($canEditTest) {
-    $editLinks .= '<div class="ts-alert ts-alert-info border">';
-    $editLinks .= '<div class="d-flex flex-column flex-md-row align-items-stretch align-items-md-center justify-content-between gap-2">';
-    $editLinks .= '<span class="text-muted small"><strong>Режим редактирования</strong></span>';
-    
-    // ДЕСКТОП
-    $editLinks .= '<div class="btn-group btn-group-sm d-none d-md-flex" role="group">';
-
-    // Импорт CSV
-    $importPageId = Config::getPageId('import_csv', 29);
-    $importUrl = $modx->makeUrl($importPageId, 'web', ['test_id' => $testId], 'full');
-    if (!empty($importUrl)) {
-        $editLinks .= '<a class="ts-btn ts-btn-ghost-success" href="' . htmlspecialchars($importUrl, ENT_QUOTES, 'UTF-8') . '"><i class="bi bi-upload"></i> Импорт</a>';
-    }
-
-    $editLinks .= '<button class="ts-btn ts-btn-ghost" type="button" onclick="showAllQuestionsView()"><i class="bi bi-list-ul"></i> Вопросы</button>';
-
-    // Объединенная кнопка "Управление тестом" - открывает модальное окно с вкладками
-    $editLinks .= '<button class="ts-btn ts-btn-ghost" type="button" onclick="openTestManagementModal(' . (int)$testId . ', \'' . $publicationStatus . '\')"><i class="bi bi-gear"></i> Управление</button>';
-
-    // Кнопка удаления (только для владельца или админа)
-    $canDelete = ($isAdmin || $createdBy === $userId);
-    if ($canDelete) {
-        $editLinks .= '<button class="ts-btn ts-btn-ghost-danger" type="button" onclick="deleteTestConfirm(' . (int)$testId . ')"><i class="bi bi-trash"></i> Удалить</button>';
-    }
-
-    $editLinks .= '</div>';
-
-    // МОБИЛЬНАЯ версия (вертикальные кнопки)
-    $editLinks .= '<div class="btn-group-vertical btn-group-sm d-md-none w-100" role="group">';
+$testCardMenu = '';
+if ($canManage) {
+    $testCardMenu .= '<div class="test-menu-toggle" data-test-id="' . (int)$testId . '">⋮</div>';
+    $testCardMenu .= '<div class="test-menu-dropdown" id="menu-' . (int)$testId . '" style="display: none;">';
 
     if (!empty($importUrl)) {
-        $editLinks .= '<a class="ts-btn ts-btn-ghost-success" href="' . htmlspecialchars($importUrl, ENT_QUOTES, 'UTF-8') . '"><i class="bi bi-upload"></i> Импорт вопросов</a>';
+        $testCardMenu .= '<a href="' . htmlspecialchars($importUrl, ENT_QUOTES, 'UTF-8') . '" class="menu-item">';
+        $testCardMenu .= '<i class="bi bi-file-earmark-arrow-down"></i> Импорт вопросов';
+        $testCardMenu .= '</a>';
     }
-    $editLinks .= '<button class="ts-btn ts-btn-ghost" type="button" onclick="showAllQuestionsView()"><i class="bi bi-list-ul"></i> Список вопросов</button>';
-    $editLinks .= '<button class="ts-btn ts-btn-ghost" type="button" onclick="openTestManagementModal(' . (int)$testId . ', \'' . $publicationStatus . '\')"><i class="bi bi-gear"></i> Управление тестом</button>';
 
-    // Кнопка удаления (только для владельца или админа)
+    $testCardMenu .= '<a href="#" class="menu-item" onclick="event.preventDefault(); showAllQuestionsView(); return false;">';
+    $testCardMenu .= '<i class="bi bi-question-circle"></i> Редактировать вопросы';
+    $testCardMenu .= '</a>';
+
+    $testCardMenu .= '<a href="#" class="menu-item" onclick="event.preventDefault(); openTestManagementModal(' . (int)$testId . ', \'' . htmlspecialchars($publicationStatus, ENT_QUOTES, 'UTF-8') . '\'); return false;">';
+    $testCardMenu .= '<i class="bi bi-gear"></i> Настройки теста';
+    $testCardMenu .= '</a>';
+
     if ($canDelete) {
-        $editLinks .= '<button class="ts-btn ts-btn-ghost-danger" type="button" onclick="deleteTestConfirm(' . (int)$testId . ')"><i class="bi bi-trash"></i> Удалить</button>';
+        $testCardMenu .= '<a href="#" class="menu-item menu-item-danger" onclick="event.preventDefault(); deleteTestConfirm(' . (int)$testId . '); return false;">';
+        $testCardMenu .= '<i class="bi bi-trash"></i> Удалить тест';
+        $testCardMenu .= '</a>';
     }
 
-    $editLinks .= '</div>';
-
-    $editLinks .= '</div></div>';
+    $testCardMenu .= '</div>';
 }
 
 // Валидация доступных режимов
@@ -594,12 +578,14 @@ $timeLimit = (int)$test['time_limit'];
 // Формирование HTML вывода
 $viewDataAttr = $viewParam ? ' data-view="' . htmlspecialchars($viewParam, ENT_QUOTES, 'UTF-8') . '"' : '';
 $output = '<div id="test-container" data-test-id="' . (int)$testId . '" data-can-edit="' . ($canEditTest ? '1' : '0') . '" data-test-mode="' . htmlspecialchars($testMode, ENT_QUOTES, 'UTF-8') . '"' . $viewDataAttr . '>';
+$output .= '<div class="tests-grid test-runner-launch-grid">';
 
 // Скрываем test-info если view=questions или view=manage (для быстрой загрузки)
 $testInfoStyle = ($viewParam === 'questions' || $viewParam === 'manage') ? ' style="display:none;"' : '';
 $output .= '<div id="test-info" class="test-card mb-4"' . $testInfoStyle . '>';
 $output .= '<div class="test-card-header">';
 $output .= '<h3 class="test-title">' . htmlspecialchars($test['title'], ENT_QUOTES, 'UTF-8') . '</h3>';
+$output .= $testCardMenu;
 $output .= '</div>';
 
 $description = !empty($test['description']) ? $test['description'] : 'Нет описания';
@@ -648,12 +634,7 @@ if (!$skipModeSelection && $testMode === 'both') {
     $output .= '</div>';
 }
 
-if ($editLinks !== '') {
-    $output .= '<hr>';
-    $output .= $editLinks;
-}
-
-$output .= '</div></div>';
+$output .= '</div></div></div>';
 
 // Контейнер для вопросов
 $output .= '<div id="question-container" style="display:none;">';

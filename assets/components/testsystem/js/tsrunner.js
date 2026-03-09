@@ -1367,6 +1367,8 @@ async function addFavoritesViewToggle(questionId) {
 
     
     function initializeTestMode() {
+        setupTestCardMenuHandlers();
+
         const trainingCard = document.getElementById("training-card");
         if (trainingCard) {
             trainingCard.classList.add("active");
@@ -1474,6 +1476,34 @@ async function addFavoritesViewToggle(questionId) {
                 this.value = val;
             });
         }
+    }
+
+    function setupTestCardMenuHandlers() {
+        document.addEventListener('click', function(e) {
+            const toggle = e.target.closest('.test-menu-toggle');
+
+            if (toggle) {
+                e.stopPropagation();
+                const testId = toggle.dataset.testId;
+                const menu = document.getElementById('menu-' + testId);
+                if (!menu) return;
+
+                document.querySelectorAll('.test-menu-dropdown').forEach(function(m) {
+                    if (m !== menu) {
+                        m.style.display = 'none';
+                    }
+                });
+
+                menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+                return;
+            }
+
+            if (!e.target.closest('.test-menu-dropdown')) {
+                document.querySelectorAll('.test-menu-dropdown').forEach(function(m) {
+                    m.style.display = 'none';
+                });
+            }
+        });
     }
 
     
