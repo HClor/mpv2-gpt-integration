@@ -96,7 +96,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
         })
-        .then(response => response.json())
+        .then(async response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const contentType = response.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) {
+                throw new Error('Invalid response format (expected JSON)');
+            }
+
+            return response.json();
+        })
         .then(data => {
             if (data.success && data.data.unread_count > 0) {
                 // Показать badge с количеством непрочитанных
@@ -141,7 +152,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Smooth scroll для якорей
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
-            const target = document.querySelector(this.getAttribute('href'));
+            const href = this.getAttribute('href');
+            if (!href || href === '#') {
+                return;
+            }
+
+            const target = document.querySelector(href);
             if (target) {
                 e.preventDefault();
                 target.scrollIntoView({
