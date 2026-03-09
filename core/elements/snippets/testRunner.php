@@ -217,6 +217,7 @@ if ($knowledgeAreaId > 0) {
     
     // Контейнер для вопросов (такой же как в обычном тесте)
     $output .= '<div id="question-container" style="display:none;">';
+    $output .= '<div id="test-title-heading" class="h4 text-secondary fw-normal mb-2">' . htmlspecialchars($knowledgeArea['name'], ENT_QUOTES, 'UTF-8') . '</div>';
     
     // ПРОГРЕСС-БАР
     $output .= '<div class="progress mb-3" style="height: 8px; border-radius: 10px;">';
@@ -638,6 +639,7 @@ $output .= '</div></div></div>';
 
 // Контейнер для вопросов
 $output .= '<div id="question-container" style="display:none;">';
+$output .= '<div id="test-title-heading" class="h4 text-secondary fw-normal mb-2">' . htmlspecialchars($test['title'], ENT_QUOTES, 'UTF-8') . '</div>';
 
 // ПРОГРЕСС-БАР
 $output .= '<div class="progress mb-3" style="height: 8px; border-radius: 10px;">';
