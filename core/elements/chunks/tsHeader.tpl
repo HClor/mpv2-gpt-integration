@@ -109,7 +109,7 @@
         {else}
           <!-- Гость: кнопка входа -->
           <li class="nav-item">
-            <a class="btn btn-primary ms-2" href="{$_modx->makeUrl(24)}">
+            <a class="ts-btn ts-btn-primary ms-2" href="{$_modx->makeUrl(24)}">
               <i class="bi bi-box-arrow-in-right me-1"></i> Вход
             </a>
           </li>

@@ -7,7 +7,7 @@
 {var $tpl      = $tpl      ?: 'tpl.contact_form'}
 {var $subject  = $subject  ?: 'Сообщение с сайта ' ~ $_modx->config.http_host}
 {var $validate = $validate ?: 'name:required,phone:required,check:required'}
-{var $success  = $success  ?: '<br><h3 style="text-align: center;">Ваше сообщение отправлено</h3><br><p style="text-align: center; width: 400px; line-height: 140%;">Наши специалисты свяжутся с вами<br>в ближайшее время.</p><br><br>'}
+{var $success  = $success  ?: '<div class="text-center py-3"><h3>Ваше сообщение отправлено</h3><p class="mx-auto">Наши специалисты свяжутся с вами<br>в ближайшее время.</p></div>'}
 {var $error    = $error    ?: 'В форме содержатся ошибки!'}
 {var $emailto  = $emailto  ?: $_modx->config.emailto}
 

@@ -213,9 +213,10 @@ function initLearningPathStepPanel() {
     // Создаём плавающую панель
     const panel = document.createElement('div');
     panel.id = 'learning-path-step-panel';
+    panel.className = 'position-fixed bottom-0 end-0 m-3';
     panel.innerHTML = `
-        <div class="lp-step-panel shadow-lg">
-            <div class="lp-step-header">
+        <div class="lp-step-panel ts-card shadow-lg">
+            <div class="lp-step-header d-flex align-items-center">
                 <i class="bi bi-signpost-2 me-2"></i>
                 <span>Шаг траектории</span>
                 <button type="button" class="btn-close btn-close-white btn-sm ms-auto" id="lp-panel-close"></button>
@@ -223,10 +224,10 @@ function initLearningPathStepPanel() {
             <div class="lp-step-body">
                 <p class="mb-3">Вы изучаете этот материал в рамках траектории обучения</p>
                 <div class="d-grid gap-2">
-                    <button class="btn btn-success" id="lp-complete-step">
+                    <button class="ts-btn ts-btn-success" id="lp-complete-step">
                         <i class="bi bi-check-circle me-1"></i> Завершить и продолжить
                     </button>
-                    <button class="btn btn-outline-light btn-sm" id="lp-back-to-path">
+                    <button class="ts-btn ts-btn-secondary ts-btn-sm" id="lp-back-to-path">
                         <i class="bi bi-arrow-left me-1"></i> Вернуться к траектории
                     </button>
                 </div>
@@ -234,63 +235,6 @@ function initLearningPathStepPanel() {
         </div>
     `;
 
-    // Стили для панели
-    const styles = document.createElement('style');
-    styles.textContent = `
-        #learning-path-step-panel {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 9999;
-            max-width: 320px;
-            animation: slideInRight 0.3s ease-out;
-        }
-        @keyframes slideInRight {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        .lp-step-panel {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 12px;
-            color: white;
-            overflow: hidden;
-        }
-        .lp-step-header {
-            display: flex;
-            align-items: center;
-            padding: 12px 16px;
-            background: rgba(0,0,0,0.1);
-            font-weight: 600;
-        }
-        .lp-step-body {
-            padding: 16px;
-        }
-        .lp-step-body p {
-            font-size: 0.9rem;
-            opacity: 0.9;
-        }
-        #learning-path-step-panel .btn-success {
-            background: #28a745;
-            border: none;
-            padding: 10px 16px;
-        }
-        #learning-path-step-panel .btn-success:hover {
-            background: #218838;
-        }
-        #learning-path-step-panel .btn-outline-light {
-            border-color: rgba(255,255,255,0.5);
-        }
-        #learning-path-step-panel .btn-outline-light:hover {
-            background: rgba(255,255,255,0.1);
-        }
-        #learning-path-step-panel.minimized .lp-step-body {
-            display: none;
-        }
-        #learning-path-step-panel.minimized .lp-step-header {
-            cursor: pointer;
-        }
-    `;
-    document.head.appendChild(styles);
     document.body.appendChild(panel);
 
     // Обработчики
@@ -332,8 +276,8 @@ function initLearningPathStepPanel() {
 
             if (result.success) {
                 btn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Готово!';
-                btn.classList.remove('btn-success');
-                btn.classList.add('btn-light', 'text-success');
+                btn.classList.remove('ts-btn-success');
+                btn.classList.add('ts-btn-secondary');
 
                 // Показываем уведомление
                 showLpNotification('Шаг успешно завершён!', 'success');
