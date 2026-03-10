@@ -13,11 +13,11 @@ $prefix = $modx->getOption('table_prefix');
 
 // Функция определения ранга
 function getUserRank($testsCompleted) {
-    if ($testsCompleted >= 51) return ['title' => '🏆 Мастер', 'class' => 'danger', 'level' => 5];
-    if ($testsCompleted >= 31) return ['title' => '⭐ Эксперт', 'class' => 'warning', 'level' => 4];
-    if ($testsCompleted >= 16) return ['title' => '💼 Специалист', 'class' => 'info', 'level' => 3];
-    if ($testsCompleted >= 6) return ['title' => '📚 Ученик', 'class' => 'primary', 'level' => 2];
-    return ['title' => '🌱 Новичок', 'class' => 'secondary', 'level' => 1];
+    if ($testsCompleted >= 51) return ['title' => 'Мастер', 'class' => 'danger', 'level' => 5];
+    if ($testsCompleted >= 31) return ['title' => 'Эксперт', 'class' => 'warning', 'level' => 4];
+    if ($testsCompleted >= 16) return ['title' => 'Специалист', 'class' => 'info', 'level' => 3];
+    if ($testsCompleted >= 6) return ['title' => 'Ученик', 'class' => 'primary', 'level' => 2];
+    return ['title' => 'Новичок', 'class' => 'secondary', 'level' => 1];
 }
 
 // Обновляем streak для текущего пользователя
@@ -117,59 +117,58 @@ if ($userId > 0 && $myStats) {
         $bestStreak = (int)$myStats["best_streak"];
         
         $rank = getUserRank($testsCompleted);
-        
-        $output .= '<div class="card mb-4 border-' . $rank['class'] . ' shadow">';
-        $output .= '<div class="card-header bg-' . $rank['class'] . ' text-white">';
-        $output .= '<div class="d-flex justify-content-between align-items-center">';
-        $output .= '<h5 class="mb-0">Ваша статистика</h5>';
-        $output .= '<span class="badge bg-white text-' . $rank['class'] . ' fs-6">' . $rank['title'] . '</span>';
+
+        $output .= '<div class="ts-card ts-leaderboard-my-stats">';
+        $output .= '<div class="ts-card-header ts-leaderboard-my-stats-header">';
+        $output .= '<div class="ts-leaderboard-my-stats-headline">';
+        $output .= '<h2 class="ts-card-title">Ваша статистика</h2>';
+        $output .= '<span class="ts-leaderboard-rank-title">' . $rank['title'] . '</span>';
         $output .= '</div>';
         $output .= '</div>';
-        $output .= '<div class="card-body">';
-        
+        $output .= '<div class="ts-card-body">';
+
         // Прогресс до следующего ранга
         $nextLevelTests = [6, 16, 31, 51, 999];
         $currentLevel = $rank['level'];
         $nextLevel = $nextLevelTests[$currentLevel - 1];
-        
+
         if ($currentLevel < 5) {
             $progress = round(($testsCompleted / $nextLevel) * 100);
             $remaining = $nextLevel - $testsCompleted;
-            
-            $output .= '<div class="mb-3">';
-            $output .= '<small class="text-muted">До следующего ранга: ' . $remaining . ' тестов</small>';
-            $output .= '<div class="progress">';
-            $output .= '<div class="progress-bar bg-' . $rank['class'] . '" style="width: ' . $progress . '%">' . $progress . '%</div>';
+
+            $output .= '<div class="ts-leaderboard-progress">';
+            $output .= '<p class="ts-leaderboard-progress-label">До следующего ранга: ' . $remaining . ' тестов</p>';
+            $output .= '<div class="progress ts-leaderboard-progress-track">';
+            $output .= '<div class="progress-bar ts-leaderboard-progress-bar" style="width: ' . $progress . '%">' . $progress . '%</div>';
             $output .= '</div>';
             $output .= '</div>';
         }
-        
-        $output .= '<div class="row text-center g-3">';
-        
-        $output .= '<div class="col-md-3">';
-        $output .= '<h3 class="text-primary mb-0">' . $testsCompleted . '</h3>';
-        $output .= '<p class="text-muted mb-0 small">Пройдено тестов</p>';
+
+        $output .= '<div class="ts-leaderboard-kpi-grid">';
+
+        $output .= '<div class="ts-leaderboard-kpi-item">';
+        $output .= '<p class="ts-leaderboard-kpi-value">' . $testsCompleted . '</p>';
+        $output .= '<p class="ts-leaderboard-kpi-label">Пройдено тестов</p>';
         $output .= '</div>';
-        
-        $output .= '<div class="col-md-3">';
-        $output .= '<h3 class="text-success mb-0">' . $testsPassed . '</h3>';
-        $output .= '<p class="text-muted mb-0 small">Сдано успешно</p>';
+
+        $output .= '<div class="ts-leaderboard-kpi-item">';
+        $output .= '<p class="ts-leaderboard-kpi-value">' . $testsPassed . '</p>';
+        $output .= '<p class="ts-leaderboard-kpi-label">Сдано успешно</p>';
         $output .= '</div>';
-        
-        $output .= '<div class="col-md-3">';
-        $output .= '<h3 class="text-warning mb-0">' . $avgScore . '%</h3>';
-        $output .= '<p class="text-muted mb-0 small">Средний балл</p>';
+
+        $output .= '<div class="ts-leaderboard-kpi-item">';
+        $output .= '<p class="ts-leaderboard-kpi-value">' . $avgScore . '%</p>';
+        $output .= '<p class="ts-leaderboard-kpi-label">Средний балл</p>';
         $output .= '</div>';
-        
-        $output .= '<div class="col-md-3">';
-        $streakClass = $currentStreak >= 7 ? 'danger' : ($currentStreak >= 3 ? 'warning' : 'secondary');
-        $output .= '<h3 class="text-' . $streakClass . ' mb-0">🔥 ' . $currentStreak . '</h3>';
-        $output .= '<p class="text-muted mb-0 small">Дней подряд</p>';
+
+        $output .= '<div class="ts-leaderboard-kpi-item">';
+        $output .= '<p class="ts-leaderboard-kpi-value">' . $currentStreak . '</p>';
+        $output .= '<p class="ts-leaderboard-kpi-label">Серия дней</p>';
         if ($bestStreak > $currentStreak) {
-            $output .= '<small class="text-muted">(рекорд: ' . $bestStreak . ')</small>';
+            $output .= '<p class="ts-leaderboard-kpi-note">Рекорд: ' . $bestStreak . '</p>';
         }
         $output .= '</div>';
-        
+
         $output .= '</div>';
         $output .= '</div>';
         $output .= '</div>';
@@ -184,11 +183,35 @@ if ($userId > 0 && $myStats) {
 }
 
 // ТАБЛИЦА ЛИДЕРОВ
-$output .= '<div class="card shadow">';
-$output .= '<div class="card-header">';
-$output .= '<h5 class="mb-0">🏆 Таблица лидеров</h5>';
+$output .= '<section class="ts-leaderboard-page-header">';
+$output .= '<p class="ts-leaderboard-page-header-kicker">Рейтинг участников</p>';
+$output .= '<h1 class="ts-leaderboard-page-header-title">Таблица лидеров</h1>';
+$output .= '<p class="ts-leaderboard-page-header-subtitle">Сводка по результатам прохождения тестов и стабильности учебной активности.</p>';
+$output .= '</section>';
+
+if (!empty($leaders)) {
+    $output .= '<div class="ts-leaderboard-summary">';
+    $output .= '<h2 class="ts-leaderboard-summary-title">Топ-3 участника</h2>';
+    $output .= '<div class="ts-leaderboard-summary-grid">';
+
+    for ($i = 0; $i < 3 && isset($leaders[$i]); $i++) {
+        $leader = $leaders[$i];
+        $output .= '<article class="ts-leaderboard-summary-item">';
+        $output .= '<span class="ts-leaderboard-summary-rank">#' . ($i + 1) . '</span>';
+        $output .= '<p class="ts-leaderboard-summary-user">' . htmlspecialchars($leader['username']) . '</p>';
+        $output .= '<p class="ts-leaderboard-summary-meta">Средний балл: ' . round((float)$leader['avg_score_pct']) . '%</p>';
+        $output .= '</article>';
+    }
+
+    $output .= '</div>';
+    $output .= '</div>';
+}
+
+$output .= '<div class="ts-card ts-leaderboard-card">';
+$output .= '<div class="ts-card-header">';
+$output .= '<h2 class="ts-card-title">Результаты</h2>';
 $output .= '</div>';
-$output .= '<div class="card-body p-0">';
+$output .= '<div class="ts-card-body ts-leaderboard-card-body">';
 
 if (empty($leaders)) {
     $output .= '<div class="p-4 text-center">';
@@ -196,16 +219,16 @@ if (empty($leaders)) {
     $output .= '</div>';
 } else {
     $output .= '<div class="table-responsive">';
-    $output .= '<table class="table table-hover mb-0">';
-    $output .= '<thead class="table-light">';
+    $output .= '<table class="ts-leaderboard-table">';
+    $output .= '<thead>';
     $output .= '<tr>';
-    $output .= '<th>#</th>';
+    $output .= '<th class="ts-leaderboard-col-rank">Место</th>';
     $output .= '<th>Пользователь</th>';
     $output .= '<th>Ранг</th>';
-    $output .= '<th>Пройдено</th>';
-    $output .= '<th>Сдано</th>';
-    $output .= '<th>Средний балл</th>';
-    $output .= '<th>Streak</th>';
+    $output .= '<th class="ts-leaderboard-col-number">Пройдено</th>';
+    $output .= '<th class="ts-leaderboard-col-number">Сдано</th>';
+    $output .= '<th class="ts-leaderboard-col-number">Средний балл</th>';
+    $output .= '<th class="ts-leaderboard-col-number">Серия дней</th>';
     $output .= '</tr>';
     $output .= '</thead>';
     $output .= '<tbody>';
@@ -213,25 +236,20 @@ if (empty($leaders)) {
     $rank = 1;
     foreach ($leaders as $leader) {
         $isCurrentUser = ($userId > 0 && (int)$leader["id"] == $userId);
-        $rowClass = $isCurrentUser ? 'table-primary' : '';
+        $rowClass = $isCurrentUser ? 'ts-leaderboard-row-current' : '';
         
         $userRank = getUserRank((int)$leader["tests_completed"]);
         
         $output .= '<tr class="' . $rowClass . '">';
         
         // Место
-        $output .= '<td>';
-        if ($rank <= 3) {
-            $medals = ['🥇', '🥈', '🥉'];
-            $output .= '<span class="fs-4">' . $medals[$rank - 1] . '</span>';
-        } else {
-            $output .= $rank;
-        }
+        $output .= '<td class="ts-leaderboard-cell-rank">';
+        $output .= '<span class="ts-leaderboard-rank-pill">#' . $rank . '</span>';
         $output .= '</td>';
         
         // Имя
-        $output .= '<td>';
-        $output .= '<strong>' . htmlspecialchars($leader["username"]) . '</strong>';
+        $output .= '<td class="ts-leaderboard-cell-user">';
+        $output .= '<span class="ts-leaderboard-user-name">' . htmlspecialchars($leader["username"]) . '</span>';
         if ($isCurrentUser) {
             $output .= ' <span class="ts-badge ts-badge-primary">Вы</span>';
         }
@@ -239,14 +257,14 @@ if (empty($leaders)) {
         
         // Ранг
         $output .= '<td>';
-        $output .= '<span class="badge bg-' . $userRank['class'] . '">' . $userRank['title'] . '</span>';
+        $output .= '<span class="ts-leaderboard-rank-title">' . $userRank['title'] . '</span>';
         $output .= '</td>';
         
         // Пройдено
-        $output .= '<td>' . (int)$leader["tests_completed"] . '</td>';
+        $output .= '<td class="ts-leaderboard-col-number">' . (int)$leader["tests_completed"] . '</td>';
         
         // Сдано
-        $output .= '<td class="text-success">' . (int)$leader["tests_passed"] . '</td>';
+        $output .= '<td class="ts-leaderboard-col-number ts-leaderboard-number-success">' . (int)$leader["tests_passed"] . '</td>';
         
         // Балл
         $score = round((float)$leader["avg_score_pct"]);
@@ -256,18 +274,18 @@ if (empty($leaders)) {
         elseif ($score >= 50) $badgeClass = 'warning';
         else $badgeClass = 'danger';
         
-        $output .= '<td>';
-        $output .= '<span class="badge bg-' . $badgeClass . ' fs-6">' . $score . '%</span>';
+        $output .= '<td class="ts-leaderboard-col-number">';
+        $output .= '<span class="ts-leaderboard-score ts-leaderboard-score-' . $badgeClass . '">' . $score . '%</span>';
         $output .= '</td>';
         
         // Streak
         $streak = (int)($leader["current_streak"] ?? 0);
-        $output .= '<td>';
+        $output .= '<td class="ts-leaderboard-col-number">';
         if ($streak > 0) {
             $streakColor = $streak >= 7 ? 'danger' : ($streak >= 3 ? 'warning' : 'secondary');
-            $output .= '<span class="text-' . $streakColor . '">🔥 ' . $streak . '</span>';
+            $output .= '<span class="ts-leaderboard-streak ts-leaderboard-streak-' . $streakColor . '">' . $streak . '</span>';
         } else {
-            $output .= '<span class="text-muted">—</span>';
+            $output .= '<span class="ts-leaderboard-empty">—</span>';
         }
         $output .= '</td>';
         

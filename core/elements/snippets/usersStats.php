@@ -173,13 +173,13 @@ if ($viewUserId) {
           <div class="card-header"><h6 class="mb-0">Последние тесты</h6></div>
           <div class="card-body p-0">
             <div class="table-responsive">
-              <table class="table table-sm table-hover mb-0">
-                <thead class="table-light">
+              <table class="ts-leaderboard-table">
+                <thead>
                   <tr>
                     <th>Тест</th>
                     <th>Дата</th>
                     <th>Статус</th>
-                    <th class="text-end">Результат</th>
+                    <th class="ts-leaderboard-col-number">Результат</th>
                   </tr>
                 </thead>
                 <tbody>';
@@ -193,7 +193,7 @@ if ($viewUserId) {
                   <td>'.$h($test['test_name'] ?: 'Тест #'.$test['test_id']).'</td>
                   <td class="small">'.date('d.m.Y H:i', strtotime($test['started_at'])).'</td>
                   <td><span class="badge bg-'.$statusClass.'">'.$statusLabel.'</span></td>
-                  <td class="text-end"><strong>'.($test['status'] === 'completed' ? (int)$test['score'].'%' : '-').'</strong></td>
+                  <td class="ts-leaderboard-col-number"><strong>'.($test['status'] === 'completed' ? (int)$test['score'].'%' : '-').'</strong></td>
                 </tr>';
         }
 
@@ -207,13 +207,13 @@ if ($viewUserId) {
           <div class="card-header"><h6 class="mb-0">Траектории обучения</h6></div>
           <div class="card-body p-0">
             <div class="table-responsive">
-              <table class="table table-sm table-hover mb-0">
-                <thead class="table-light">
+              <table class="ts-leaderboard-table">
+                <thead>
                   <tr>
                     <th>Траектория</th>
                     <th>Записан</th>
                     <th>Статус</th>
-                    <th class="text-center">Прогресс</th>
+                    <th class="ts-leaderboard-col-number">Прогресс</th>
                     <th>Активность</th>
                   </tr>
                 </thead>
@@ -321,14 +321,14 @@ if ($viewUserId) {
           <div class="card-header"><h6 class="mb-0">Топ пользователей по баллам</h6></div>
           <div class="card-body p-0">
             <div class="table-responsive">
-              <table class="table table-sm table-hover mb-0">
-                <thead class="table-light">
+              <table class="ts-leaderboard-table">
+                <thead>
                   <tr>
                     <th style="width: 50px; padding-left: 1rem;">#</th>
                     <th>Пользователь</th>
-                    <th class="text-end">Тестов</th>
-                    <th class="text-end">Ср. балл</th>
-                    <th class="text-end">Всего баллов</th>
+                    <th class="ts-leaderboard-col-number">Тестов</th>
+                    <th class="ts-leaderboard-col-number">Ср. балл</th>
+                    <th class="ts-leaderboard-col-number">Всего баллов</th>
                     <th>Активность</th>
                     <th style="padding-right: 1rem;"></th>
                   </tr>
@@ -342,14 +342,14 @@ if ($viewUserId) {
 
             $out[] = '
                 <tr>
-                  <td class="text-center" style="padding-left: 1rem;">'.$rankBadge.'</td>
+                  <td class="ts-leaderboard-col-number" style="padding-left: 1rem;">'.$rankBadge.'</td>
                   <td>
                     <strong>'.$h($user['fullname'] ?: $user['username']).'</strong>
                     '.($user['fullname'] ? '<br><small class="text-muted">@'.$h($user['username']).'</small>' : '').'
                   </td>
-                  <td class="text-end">'.(int)$user['tests_count'].'</td>
-                  <td class="text-end">'.round($user['avg_score'] ?? 0).'%</td>
-                  <td class="text-end"><strong>'.(int)$user['total_score'].'</strong></td>
+                  <td class="ts-leaderboard-col-number">'.(int)$user['tests_count'].'</td>
+                  <td class="ts-leaderboard-col-number">'.round($user['avg_score'] ?? 0).'%</td>
+                  <td class="ts-leaderboard-col-number"><strong>'.(int)$user['total_score'].'</strong></td>
                   <td class="small text-muted">'.($user['last_activity'] ? date('d.m.Y', strtotime($user['last_activity'])) : '-').'</td>
                   <td style="padding-right: 1rem;">
                     <a href="'.$h($pageUrl).'?user_id='.(int)$user['id'].'" class="ts-btn ts-btn-sm ts-btn-ghost" title="Подробнее">
@@ -383,14 +383,14 @@ if ($viewUserId) {
           <div class="card-header"><h6 class="mb-0">Последняя активность</h6></div>
           <div class="card-body p-0">
             <div class="table-responsive">
-              <table class="table table-sm table-hover mb-0">
-                <thead class="table-light">
+              <table class="ts-leaderboard-table">
+                <thead>
                   <tr>
                     <th style="padding-left: 1rem;">Пользователь</th>
                     <th>Тест</th>
                     <th>Дата</th>
                     <th>Статус</th>
-                    <th class="text-end" style="padding-right: 1rem;">Результат</th>
+                    <th class="ts-leaderboard-col-number" style="padding-right: 1rem;">Результат</th>
                   </tr>
                 </thead>
                 <tbody>';
@@ -408,7 +408,7 @@ if ($viewUserId) {
                   <td>'.$h($activity['test_name'] ?: 'Тест #'.$activity['test_id']).'</td>
                   <td class="small">'.date('d.m.Y H:i', strtotime($activity['started_at'])).'</td>
                   <td><span class="badge bg-'.$statusClass.'">'.$statusLabel.'</span></td>
-                  <td class="text-end" style="padding-right: 1rem;"><strong>'.($activity['status'] === 'completed' ? (int)$activity['score'].'%' : '-').'</strong></td>
+                  <td class="ts-leaderboard-col-number" style="padding-right: 1rem;"><strong>'.($activity['status'] === 'completed' ? (int)$activity['score'].'%' : '-').'</strong></td>
                 </tr>';
         }
 
