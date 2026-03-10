@@ -1898,6 +1898,17 @@ img[style*="width"] {
     overflow-x: hidden;
 }
 
+/* Убираем полосу прокрутки у текста вопроса */
+#question-text,
+#learning-question-text {
+    overflow-y: visible !important;
+}
+
+#question-text [style*="overflow"],
+#learning-question-text [style*="overflow"] {
+    overflow: visible !important;
+}
+
 
 /* ===================================================================
    МИНИМАЛИСТИЧНЫЙ СПИСОК ВОПРОСОВ v3.0

@@ -3573,9 +3573,15 @@ async function addFavoritesViewToggle(questionId) {
             learningProgressBar.setAttribute('aria-valuenow', percentage);
         }
     }
-    // Функция прокрутки отключена по задаче UX
+    // Функция плавной прокрутки к вопросу
     function scrollToQuestion() {
-        return;
+        const questionContainer = document.getElementById("question-container");
+        if (questionContainer) {
+            questionContainer.scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+            });
+        }
     }
 
     // Обработчик кнопки "Начать сначала"
