@@ -1890,12 +1890,27 @@ img[style*="width"] {
 /* Предотвращаем горизонтальный скролл из-за изображений */
 .card-body,
 .alert,
-#question-text,
-#learning-question-text,
 #explanation-block,
 #learning-explanation {
     font-size: 1.1rem;
     overflow-x: hidden;
+}
+
+#question-text,
+#learning-question-text {
+    font-size: 1.1rem;
+    overflow-x: visible !important;
+}
+
+/* Убираем полосу прокрутки у текста вопроса */
+#question-text,
+#learning-question-text {
+    overflow-y: visible !important;
+}
+
+#question-text [style*="overflow"],
+#learning-question-text [style*="overflow"] {
+    overflow: visible !important;
 }
 
 
