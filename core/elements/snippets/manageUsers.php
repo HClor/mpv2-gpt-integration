@@ -167,8 +167,8 @@ try {
 
     $users = $modx->getCollection('modUser');
 
-    $output .= '<table class="table table-hover mb-0"><thead class="table-light"><tr>';
-    $output .= '<th>ID</th><th>Логин</th><th>Email</th><th>Роль в LMS</th>';
+    $output .= '<table class="ts-leaderboard-table"><thead><tr>';
+    $output .= '<th class="ts-leaderboard-col-number">ID</th><th>Логин</th><th>Email</th><th>Роль в LMS</th>';
     $output .= '<th>Статус</th><th>Действия</th></tr></thead><tbody>';
 
     foreach ($users as $user) {
@@ -192,7 +192,7 @@ try {
             : '<span class="ts-badge ts-badge-success">Активен</span>';
 
         $output .= '<tr>';
-        $output .= '<td>' . $uid . '</td>';
+        $output .= '<td class="ts-leaderboard-col-number">' . $uid . '</td>';
         $output .= '<td><strong>' . htmlspecialchars($user->get('username'), ENT_QUOTES, 'UTF-8') . '</strong></td>';
         $output .= '<td>' . htmlspecialchars($email, ENT_QUOTES, 'UTF-8') . '</td>';
         $output .= '<td>' . $roleBadge . '</td>';

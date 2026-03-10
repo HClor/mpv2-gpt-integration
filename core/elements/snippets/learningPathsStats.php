@@ -113,17 +113,17 @@ if ($pathId) {
           <div class="card-header"><h6 class="mb-0">Статистика по шагам</h6></div>
           <div class="card-body p-0">
             <div class="table-responsive">
-              <table class="table table-sm table-hover mb-0">
-                <thead class="table-light">
+              <table class="ts-leaderboard-table">
+                <thead>
                   <tr>
                     <th>#</th>
                     <th>Название</th>
                     <th>Тип</th>
-                    <th class="text-center">Обязательный</th>
-                    <th class="text-end">Попыток</th>
-                    <th class="text-end">Завершили</th>
-                    <th class="text-end">% завершения</th>
-                    <th class="text-end">Ср. балл</th>
+                    <th class="ts-leaderboard-col-number">Обязательный</th>
+                    <th class="ts-leaderboard-col-number">Попыток</th>
+                    <th class="ts-leaderboard-col-number">Завершили</th>
+                    <th class="ts-leaderboard-col-number">% завершения</th>
+                    <th class="ts-leaderboard-col-number">Ср. балл</th>
                   </tr>
                 </thead>
                 <tbody>';
@@ -144,10 +144,10 @@ if ($pathId) {
                   <td>'.(int)$step['step_number'].'</td>
                   <td>'.$h($step['name']).'</td>
                   <td><span class="ts-badge ts-badge-neutral">'.($stepTypes[$step['step_type']] ?? $step['step_type']).'</span></td>
-                  <td class="text-center">'.($step['is_required'] ? '<i class="bi bi-check-circle text-success"></i>' : '<i class="bi bi-dash text-muted"></i>').'</td>
-                  <td class="text-end">'.(int)$step['total_attempts'].'</td>
-                  <td class="text-end">'.(int)$step['completed_count'].'</td>
-                  <td class="text-end">
+                  <td class="ts-leaderboard-col-number">'.($step['is_required'] ? '<i class="bi bi-check-circle text-success"></i>' : '<i class="bi bi-dash text-muted"></i>').'</td>
+                  <td class="ts-leaderboard-col-number">'.(int)$step['total_attempts'].'</td>
+                  <td class="ts-leaderboard-col-number">'.(int)$step['completed_count'].'</td>
+                  <td class="ts-leaderboard-col-number">
                     <div class="d-flex align-items-center justify-content-end">
                       <div class="progress me-2" style="width: 60px; height: 6px;">
                         <div class="progress-bar bg-'.$barClass.'" style="width: '.$completionRate.'%"></div>
@@ -155,7 +155,7 @@ if ($pathId) {
                       '.$completionRate.'%
                     </div>
                   </td>
-                  <td class="text-end">'.($step['avg_score'] ? round($step['avg_score']).'%' : '-').'</td>
+                  <td class="ts-leaderboard-col-number">'.($step['avg_score'] ? round($step['avg_score']).'%' : '-').'</td>
                 </tr>';
         }
 
@@ -171,14 +171,14 @@ if ($pathId) {
           </div>
           <div class="card-body p-0">
             <div class="table-responsive">
-              <table class="table table-sm table-hover mb-0">
-                <thead class="table-light">
+              <table class="ts-leaderboard-table">
+                <thead>
                   <tr>
                     <th>Пользователь</th>
                     <th>Записан</th>
                     <th>Статус</th>
-                    <th class="text-center">Прогресс</th>
-                    <th class="text-end">Шагов</th>
+                    <th class="ts-leaderboard-col-number">Прогресс</th>
+                    <th class="ts-leaderboard-col-number">Шагов</th>
                     <th>Последняя активность</th>
                   </tr>
                 </thead>
@@ -207,7 +207,7 @@ if ($pathId) {
                       <span class="small">'.$pct.'%</span>
                     </div>
                   </td>
-                  <td class="text-end">'.(int)$student['completed_steps'].' / '.(int)$path['total_steps'].'</td>
+                  <td class="ts-leaderboard-col-number">'.(int)$student['completed_steps'].' / '.(int)$path['total_steps'].'</td>
                   <td class="small text-muted">'.($student['last_activity_at'] ? date('d.m.Y H:i', strtotime($student['last_activity_at'])) : '-').'</td>
                 </tr>';
         }
@@ -260,15 +260,15 @@ if ($pathId) {
           <div class="card-header"><h6 class="mb-0">Топ траекторий по популярности</h6></div>
           <div class="card-body p-0">
             <div class="table-responsive">
-              <table class="table table-sm table-hover mb-0">
-                <thead class="table-light">
+              <table class="ts-leaderboard-table">
+                <thead>
                   <tr>
                     <th>Название</th>
                     <th>Статус</th>
                     <th>Сложность</th>
-                    <th class="text-end">Записей</th>
-                    <th class="text-end">Завершений</th>
-                    <th class="text-end">% завершения</th>
+                    <th class="ts-leaderboard-col-number">Записей</th>
+                    <th class="ts-leaderboard-col-number">Завершений</th>
+                    <th class="ts-leaderboard-col-number">% завершения</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -285,9 +285,9 @@ if ($pathId) {
                   <td><strong>'.$h($path['name']).'</strong></td>
                   <td><span class="badge bg-'.$statusClass.'">'.$statusLabel.'</span></td>
                   <td>'.$diffLabel.'</td>
-                  <td class="text-end">'.(int)$path['enrollments'].'</td>
-                  <td class="text-end">'.(int)$path['completions'].'</td>
-                  <td class="text-end">
+                  <td class="ts-leaderboard-col-number">'.(int)$path['enrollments'].'</td>
+                  <td class="ts-leaderboard-col-number">'.(int)$path['completions'].'</td>
+                  <td class="ts-leaderboard-col-number">
                     <div class="d-flex align-items-center justify-content-end">
                       <div class="progress me-2" style="width: 60px; height: 6px;">
                         <div class="progress-bar" style="width: '.$completionRate.'%"></div>
@@ -313,12 +313,12 @@ if ($pathId) {
           <div class="card-header"><h6 class="mb-0">Активность за последние 30 дней</h6></div>
           <div class="card-body p-0">
             <div class="table-responsive">
-              <table class="table table-sm mb-0">
-                <thead class="table-light">
+              <table class="ts-leaderboard-table">
+                <thead>
                   <tr>
                     <th>Дата</th>
-                    <th class="text-end">Новых записей</th>
-                    <th class="text-end">Завершений</th>
+                    <th class="ts-leaderboard-col-number">Новых записей</th>
+                    <th class="ts-leaderboard-col-number">Завершений</th>
                   </tr>
                 </thead>
                 <tbody>';
@@ -327,8 +327,8 @@ if ($pathId) {
             $out[] .= '
                 <tr>
                   <td>'.date('d.m.Y', strtotime($day['date'])).'</td>
-                  <td class="text-end"><span class="ts-badge ts-badge-primary">'.(int)$day['new_enrollments'].'</span></td>
-                  <td class="text-end"><span class="ts-badge ts-badge-success">'.(int)$day['completions'].'</span></td>
+                  <td class="ts-leaderboard-col-number"><span class="ts-badge ts-badge-primary">'.(int)$day['new_enrollments'].'</span></td>
+                  <td class="ts-leaderboard-col-number"><span class="ts-badge ts-badge-success">'.(int)$day['completions'].'</span></td>
                 </tr>';
         }
 

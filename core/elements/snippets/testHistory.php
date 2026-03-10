@@ -89,13 +89,13 @@ $html[] = '<div class="test-history-container">';
 
 // Таблица истории
 $html[] = '<div class="table-responsive">';
-$html[] = '<table class="table table-hover table-striped">';
-$html[] = '<thead class="table-light">';
+$html[] = '<table class="ts-leaderboard-table">';
+$html[] = '<thead>';
 $html[] = '<tr>';
 $html[] = '<th>Тест</th>';
 $html[] = '<th>Категория</th>';
-$html[] = '<th class="text-center">Результат</th>';
-$html[] = '<th class="text-center">Статус</th>';
+$html[] = '<th class="ts-leaderboard-col-number">Результат</th>';
+$html[] = '<th>Статус</th>';
 $html[] = '<th>Дата</th>';
 $html[] = '<th>Время</th>';
 $html[] = '<th></th>';
@@ -117,8 +117,8 @@ foreach ($sessions as $session) {
     $html[] = '<tr>';
     $html[] = '<td><strong>' . htmlspecialchars($session['test_title']) . '</strong></td>';
     $html[] = '<td><small class="text-muted">' . htmlspecialchars($session['category_title'] ?? 'Нет категории') . '</small></td>';
-    $html[] = '<td class="text-center"><span class="' . $resultClass . '">' . (int)$session['score'] . '%</span></td>';
-    $html[] = '<td class="text-center">' . $statusBadge . '</td>';
+    $html[] = '<td class="ts-leaderboard-col-number"><span class="' . $resultClass . '">' . (int)$session['score'] . '%</span></td>';
+    $html[] = '<td>' . $statusBadge . '</td>';
     $finishedAt = $session['finished_at'] ?: $session['started_at'];
     $html[] = '<td><small>' . date('d.m.Y H:i', strtotime($finishedAt)) . '</small></td>';
     $html[] = '<td><small>' . $timeSpent . '</small></td>';

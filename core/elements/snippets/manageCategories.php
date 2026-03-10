@@ -190,12 +190,12 @@ if (empty($categories)) {
     $html[] = "<div class=\"p-4 text-center text-muted\">Нет категорий</div>";
 } else {
     $html[] = "<div class=\"table-responsive\">";
-    $html[] = "<table class=\"table table-hover mb-0\">";
-    $html[] = "<thead class=\"table-light\">";
+    $html[] = "<table class=\"ts-leaderboard-table\">";
+    $html[] = "<thead>";
     $html[] = "<tr>";
-    $html[] = "<th style=\"width: 60px;\">Порядок</th>";
+    $html[] = "<th class=\"ts-leaderboard-col-number\" style=\"width: 60px;\">Порядок</th>";
     $html[] = "<th>Название</th>";
-    $html[] = "<th style=\"width: 100px;\">Тестов</th>";
+    $html[] = "<th class=\"ts-leaderboard-col-number\" style=\"width: 100px;\">Тестов</th>";
     $html[] = "<th style=\"width: 250px;\">Действия</th>";
     $html[] = "</tr>";
     $html[] = "</thead>";
@@ -203,14 +203,14 @@ if (empty($categories)) {
     
     foreach ($categories as $cat) {
         $html[] = "<tr>";
-        $html[] = "<td>" . $cat["sort_order"] . "</td>";
+        $html[] = "<td class=\"ts-leaderboard-col-number\">" . $cat["sort_order"] . "</td>";
         $html[] = "<td>";
         $html[] = "<strong>" . htmlspecialchars($cat["name"]) . "</strong>";
         if ($cat["description"]) {
             $html[] = "<br><small class=\"text-muted\">" . htmlspecialchars($cat["description"]) . "</small>";
         }
         $html[] = "</td>";
-        $html[] = "<td><span class=\"badge bg-secondary\">" . $cat["test_count"] . "</span></td>";
+        $html[] = "<td class=\"ts-leaderboard-col-number\"><span class=\"ts-leaderboard-rank-pill\">" . $cat["test_count"] . "</span></td>";
         $html[] = "<td><div class=\"d-flex flex-wrap gap-1 align-items-center\">";
 
         // Кнопка управления экспертами
