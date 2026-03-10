@@ -32,9 +32,7 @@
 
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2 pt-3 mt-3 border-top">
             <p class="mb-0">&copy; {$_modx->config.site_name} [[!Year]]</p>
-            {if $_modx->user.id > 0}
-                <a href="{$_modx->makeUrl(28)}">Личный кабинет</a>
-            {/if}
+            <a href="{$_modx->makeUrl(28)}">Личный кабинет</a>
         </div>
     </div>
 </footer>
