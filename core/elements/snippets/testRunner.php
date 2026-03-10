@@ -90,7 +90,7 @@ if ($knowledgeAreaId > 0) {
         $authUrl = $authId > 0 ? rtrim($modx->makeUrl($authId, 'web', []), '/') : rtrim($modx->makeUrl($modx->resource->get('id'), 'web', []), '/');
         return '<div class="ts-alert ts-alert-warning auth-required-alert">
             <div class="d-flex align-items-center mb-3">
-                <i class="bi bi-shield-lock me-2" style="font-size: 2rem;"></i>
+                <i class="bi bi-shield-lock me-2 fs-2"></i>
                 <h4 class="mb-0">Требуется авторизация</h4>
             </div>
             <p class="mb-3">Для прохождения области знаний необходимо войти в систему.</p>

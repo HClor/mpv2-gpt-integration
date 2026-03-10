@@ -168,8 +168,8 @@ try {
     $users = $modx->getCollection('modUser');
 
     $output .= '<table class="table table-hover mb-0"><thead class="table-light"><tr>';
-    $output .= '<th style="width: 50px;">ID</th><th>Логин</th><th>Email</th><th>Роль в LMS</th>';
-    $output .= '<th style="width: 100px;">Статус</th><th style="width: 180px;">Действия</th></tr></thead><tbody>';
+    $output .= '<th>ID</th><th>Логин</th><th>Email</th><th>Роль в LMS</th>';
+    $output .= '<th>Статус</th><th>Действия</th></tr></thead><tbody>';
 
     foreach ($users as $user) {
         $uid = (int)$user->get('id');

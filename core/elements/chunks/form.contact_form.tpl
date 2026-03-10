@@ -3,7 +3,7 @@
    Содержит: поля имя, телефон, сообщение, согласие
 *}
 <br><h2>Задать вопрос</h2><br>
-<form action="{$_modx->resource.id | url}" method="post" class="ajax_form form-horizontal well" style="max-width: 530px;">
+<form action="{$_modx->resource.id | url}" method="post" class="ajax_form form-horizontal well w-100">
 
 	<div class="form-group">
 		<label class="col-sm-4 control-label" for="af_name">Ваше имя</label>
@@ -44,8 +44,8 @@
 
 	<div class="form-group">
 		<div class="col-sm-offset-4 col-sm-8">
-			<button type="reset" class="btn btn-default">Отмена</button>
-			<button type="submit" class="btn btn-primary">Отправить</button>
+			<button type="reset" class="ts-btn ts-btn-secondary">Отмена</button>
+			<button type="submit" class="ts-btn ts-btn-primary">Отправить</button>
 		</div>
 	</div>
 	

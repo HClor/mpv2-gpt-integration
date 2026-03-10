@@ -132,7 +132,7 @@ foreach ($byCategory as $categoryName => $categoryData) {
             
             $output .= '<div class="list-group-item">';
             $output .= '<div class="d-flex justify-content-between align-items-start gap-3">';
-            $output .= '<div class="flex-grow-1 favorite-question-clickable" data-question=\'' . $questionData . '\' style="cursor: pointer;">';
+            $output .= '<div class="flex-grow-1 favorite-question-clickable" data-question=\'' . $questionData . '\'>';
             $output .= '<p class="mb-1 text-primary"><strong>' . htmlspecialchars($questionShort) . '</strong></p>';
             $output .= '<small class="text-muted">';
             $output .= $typeIcon . ' ' . $typeName . ' • Добавлено: ' . $addedDate;

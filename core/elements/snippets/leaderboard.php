@@ -138,7 +138,7 @@ if ($userId > 0 && $myStats) {
             
             $output .= '<div class="mb-3">';
             $output .= '<small class="text-muted">До следующего ранга: ' . $remaining . ' тестов</small>';
-            $output .= '<div class="progress" style="height: 20px;">';
+            $output .= '<div class="progress">';
             $output .= '<div class="progress-bar bg-' . $rank['class'] . '" style="width: ' . $progress . '%">' . $progress . '%</div>';
             $output .= '</div>';
             $output .= '</div>';
@@ -199,13 +199,13 @@ if (empty($leaders)) {
     $output .= '<table class="table table-hover mb-0">';
     $output .= '<thead class="table-light">';
     $output .= '<tr>';
-    $output .= '<th style="width: 50px;">#</th>';
+    $output .= '<th>#</th>';
     $output .= '<th>Пользователь</th>';
-    $output .= '<th style="width: 150px;">Ранг</th>';
-    $output .= '<th style="width: 100px;">Пройдено</th>';
-    $output .= '<th style="width: 100px;">Сдано</th>';
-    $output .= '<th style="width: 120px;">Средний балл</th>';
-    $output .= '<th style="width: 80px;">Streak</th>';
+    $output .= '<th>Ранг</th>';
+    $output .= '<th>Пройдено</th>';
+    $output .= '<th>Сдано</th>';
+    $output .= '<th>Средний балл</th>';
+    $output .= '<th>Streak</th>';
     $output .= '</tr>';
     $output .= '</thead>';
     $output .= '<tbody>';

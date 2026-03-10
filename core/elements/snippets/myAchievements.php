@@ -70,7 +70,7 @@ if (empty($achievements)) {
             <div class="card h-100 border-warning">
                 <div class="card-body text-center">
                     <div class="achievement-badge mb-3">
-                        <i class="bi ' . $h($icon) . ' text-warning" style="font-size: 3rem;"></i>
+                        <i class="bi ' . $h($icon) . ' text-warning fs-1"></i>
                     </div>
                     <h5 class="card-title">' . $h($achievement['name']) . '</h5>
                     <p class="text-muted small">' . $h($achievement['description'] ?? '') . '</p>
@@ -158,7 +158,7 @@ if (empty($availableAchievements)) {
             <div class="card h-100 border-secondary opacity-75">
                 <div class="card-body text-center">
                     <div class="achievement-badge mb-3">
-                        <i class="bi ' . $h($icon) . ' text-secondary" style="font-size: 3rem;"></i>
+                        <i class="bi ' . $h($icon) . ' text-secondary fs-1"></i>
                     </div>
                     <h5 class="card-title text-muted">' . $h($achievement['name']) . '</h5>
                     <p class="text-muted small">' . $h($achievement['description'] ?? '') . '</p>

@@ -195,9 +195,9 @@ foreach ($badges as $key => $badge) {
     $icon = $badge['title'];
 
     $html[] = '<div class="col-md-4 col-lg-3 mb-3">';
-    $html[] = '<div class="card h-100 ' . $opacity . '" style="cursor: pointer;" data-bs-toggle="tooltip" title="' . htmlspecialchars($badge['description']) . '">';
+    $html[] = '<div class="card h-100 ' . $opacity . '" data-bs-toggle="tooltip" title="' . htmlspecialchars($badge['description']) . '">';
     $html[] = '<div class="card-body text-center">';
-    $html[] = '<div style="font-size: 2.5rem; margin-bottom: 10px;">' . $icon . '</div>';
+    $html[] = '<div class="fs-1 mb-2">' . $icon . '</div>';
     $html[] = '<h6 class="card-title">' . htmlspecialchars($badge['title']) . '</h6>';
     $html[] = '<p class="card-text small text-muted">' . htmlspecialchars($badge['description']) . '</p>';
 
