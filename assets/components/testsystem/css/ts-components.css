@@ -155,13 +155,13 @@
 
 .ts-btn-ghost-white {
     background-color: transparent;
-    color: #FFFFFF;
-    border-color: rgba(255, 255, 255, 0.8);
+    color: var(--color-text-inverse);
+    border-color: color-mix(in srgb, var(--color-text-inverse) 80%, transparent);
 }
 
 .ts-btn-ghost-white:hover {
-    background-color: rgba(255, 255, 255, 0.15);
-    border-color: #FFFFFF;
+    background-color: color-mix(in srgb, var(--color-text-inverse) 15%, transparent);
+    border-color: var(--color-text-inverse);
 }
 
 /* --- Disabled --- */
