@@ -3573,28 +3573,16 @@ async function addFavoritesViewToggle(questionId) {
             learningProgressBar.setAttribute('aria-valuenow', percentage);
         }
     }
-
-
     // Функция плавной прокрутки к вопросу
     function scrollToQuestion() {
         const questionContainer = document.getElementById("question-container");
         if (questionContainer) {
-            // Плавная прокрутка к началу контейнера с вопросом
-            questionContainer.scrollIntoView({ 
-                behavior: 'smooth', 
-                block: 'start' 
+            questionContainer.scrollIntoView({
+                behavior: "smooth",
+                block: "start"
             });
-            
-            // Альтернативный вариант с отступом сверху (если нужно):
-            // const offset = 20; // отступ в пикселях
-            // const elementPosition = questionContainer.getBoundingClientRect().top;
-            // const offsetPosition = elementPosition + window.pageYOffset - offset;
-            // window.scrollTo({
-            //     top: offsetPosition,
-            //     behavior: 'smooth'
-            // });
         }
-    }    
+    }
 
     // Обработчик кнопки "Начать сначала"
 
