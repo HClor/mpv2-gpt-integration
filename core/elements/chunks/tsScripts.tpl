@@ -216,12 +216,12 @@ function initLearningPathStepPanel() {
     panel.className = 'position-fixed bottom-0 end-0 m-3';
     panel.innerHTML = `
         <div class="lp-step-panel ts-card shadow-lg">
-            <div class="lp-step-header d-flex align-items-center">
+            <div class="lp-step-header d-flex align-items-center px-4 py-3">
                 <i class="bi bi-signpost-2 me-2"></i>
                 <span>Шаг траектории</span>
                 <button type="button" class="btn-close btn-close-white btn-sm ms-auto" id="lp-panel-close"></button>
             </div>
-            <div class="lp-step-body">
+            <div class="lp-step-body p-4 pt-3">
                 <p class="mb-3">Вы изучаете этот материал в рамках траектории обучения</p>
                 <div class="d-grid gap-2">
                     <button class="ts-btn ts-btn-success" id="lp-complete-step">
@@ -250,6 +250,11 @@ function initLearningPathStepPanel() {
     });
 
     document.getElementById('lp-complete-step').addEventListener('click', async function() {
+        const isConfirmed = window.confirm('Вы подтверждаете, что изучили материал?');
+        if (!isConfirmed) {
+            return;
+        }
+
         const btn = this;
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Сохранение...';
