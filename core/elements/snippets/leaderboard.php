@@ -117,59 +117,58 @@ if ($userId > 0 && $myStats) {
         $bestStreak = (int)$myStats["best_streak"];
         
         $rank = getUserRank($testsCompleted);
-        
-        $output .= '<div class="card mb-4 border-' . $rank['class'] . ' shadow">';
-        $output .= '<div class="card-header bg-' . $rank['class'] . ' text-white">';
-        $output .= '<div class="d-flex justify-content-between align-items-center">';
-        $output .= '<h5 class="mb-0">Ваша статистика</h5>';
-        $output .= '<span class="badge bg-white text-' . $rank['class'] . ' fs-6">' . $rank['title'] . '</span>';
+
+        $output .= '<div class="ts-card ts-leaderboard-my-stats">';
+        $output .= '<div class="ts-card-header ts-leaderboard-my-stats-header">';
+        $output .= '<div class="ts-leaderboard-my-stats-headline">';
+        $output .= '<h2 class="ts-card-title">Ваша статистика</h2>';
+        $output .= '<span class="ts-leaderboard-rank-title">' . $rank['title'] . '</span>';
         $output .= '</div>';
         $output .= '</div>';
-        $output .= '<div class="card-body">';
-        
+        $output .= '<div class="ts-card-body">';
+
         // Прогресс до следующего ранга
         $nextLevelTests = [6, 16, 31, 51, 999];
         $currentLevel = $rank['level'];
         $nextLevel = $nextLevelTests[$currentLevel - 1];
-        
+
         if ($currentLevel < 5) {
             $progress = round(($testsCompleted / $nextLevel) * 100);
             $remaining = $nextLevel - $testsCompleted;
-            
-            $output .= '<div class="mb-3">';
-            $output .= '<small class="text-muted">До следующего ранга: ' . $remaining . ' тестов</small>';
-            $output .= '<div class="progress">';
-            $output .= '<div class="progress-bar bg-' . $rank['class'] . '" style="width: ' . $progress . '%">' . $progress . '%</div>';
+
+            $output .= '<div class="ts-leaderboard-progress">';
+            $output .= '<p class="ts-leaderboard-progress-label">До следующего ранга: ' . $remaining . ' тестов</p>';
+            $output .= '<div class="progress ts-leaderboard-progress-track">';
+            $output .= '<div class="progress-bar ts-leaderboard-progress-bar" style="width: ' . $progress . '%">' . $progress . '%</div>';
             $output .= '</div>';
             $output .= '</div>';
         }
-        
-        $output .= '<div class="row text-center g-3">';
-        
-        $output .= '<div class="col-md-3">';
-        $output .= '<h3 class="text-primary mb-0">' . $testsCompleted . '</h3>';
-        $output .= '<p class="text-muted mb-0 small">Пройдено тестов</p>';
+
+        $output .= '<div class="ts-leaderboard-kpi-grid">';
+
+        $output .= '<div class="ts-leaderboard-kpi-item">';
+        $output .= '<p class="ts-leaderboard-kpi-value">' . $testsCompleted . '</p>';
+        $output .= '<p class="ts-leaderboard-kpi-label">Пройдено тестов</p>';
         $output .= '</div>';
-        
-        $output .= '<div class="col-md-3">';
-        $output .= '<h3 class="text-success mb-0">' . $testsPassed . '</h3>';
-        $output .= '<p class="text-muted mb-0 small">Сдано успешно</p>';
+
+        $output .= '<div class="ts-leaderboard-kpi-item">';
+        $output .= '<p class="ts-leaderboard-kpi-value">' . $testsPassed . '</p>';
+        $output .= '<p class="ts-leaderboard-kpi-label">Сдано успешно</p>';
         $output .= '</div>';
-        
-        $output .= '<div class="col-md-3">';
-        $output .= '<h3 class="text-warning mb-0">' . $avgScore . '%</h3>';
-        $output .= '<p class="text-muted mb-0 small">Средний балл</p>';
+
+        $output .= '<div class="ts-leaderboard-kpi-item">';
+        $output .= '<p class="ts-leaderboard-kpi-value">' . $avgScore . '%</p>';
+        $output .= '<p class="ts-leaderboard-kpi-label">Средний балл</p>';
         $output .= '</div>';
-        
-        $output .= '<div class="col-md-3">';
-        $streakClass = $currentStreak >= 7 ? 'danger' : ($currentStreak >= 3 ? 'warning' : 'secondary');
-        $output .= '<h3 class="text-' . $streakClass . ' mb-0">🔥 ' . $currentStreak . '</h3>';
-        $output .= '<p class="text-muted mb-0 small">Дней подряд</p>';
+
+        $output .= '<div class="ts-leaderboard-kpi-item">';
+        $output .= '<p class="ts-leaderboard-kpi-value">' . $currentStreak . '</p>';
+        $output .= '<p class="ts-leaderboard-kpi-label">Серия дней</p>';
         if ($bestStreak > $currentStreak) {
-            $output .= '<small class="text-muted">(рекорд: ' . $bestStreak . ')</small>';
+            $output .= '<p class="ts-leaderboard-kpi-note">Рекорд: ' . $bestStreak . '</p>';
         }
         $output .= '</div>';
-        
+
         $output .= '</div>';
         $output .= '</div>';
         $output .= '</div>';
