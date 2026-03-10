@@ -248,21 +248,25 @@ $output[] = '</section>';
 $output[] = '</div>';
 $output[] = '</section>';
 
-// CTA
-$output[] = '<section class="ts-home-cta">';
-$output[] = '<div class="ts-cta-panel ts-cta-panel-hidden" id="home-cta-block">';
-$output[] = '<div class="ts-cta-content">';
-$output[] = '<h2 class="ts-cta-title">Начните обучение в системе</h2>';
-$output[] = '<p class="ts-cta-text">Войдите в аккаунт, чтобы проходить тесты, видеть прогресс и работать с результатами.</p>';
-$output[] = '</div>';
-$output[] = '<div class="ts-cta-actions">';
-$output[] = '<a href="' . $loginUrl . '" class="ts-btn ts-btn-primary">Войти / Регистрация</a>';
-$output[] = '</div>';
-$output[] = '</div>';
-$output[] = '</section>';
+// CTA (только для гостей)
+if (!$isLoggedIn) {
+    $output[] = '<section class="ts-home-cta">';
+    $output[] = '<div class="ts-cta-panel" id="home-cta-block">';
+    $output[] = '<div class="ts-cta-content">';
+    $output[] = '<h2 class="ts-cta-title">Начните обучение в системе</h2>';
+    $output[] = '<p class="ts-cta-text">Войдите в аккаунт, чтобы проходить тесты, видеть прогресс и работать с результатами.</p>';
+    $output[] = '</div>';
+    $output[] = '<div class="ts-cta-actions">';
+    $output[] = '<a href="' . $loginUrl . '" class="ts-btn ts-btn-primary">Войти / Регистрация</a>';
+    $output[] = '</div>';
+    $output[] = '<div class="ts-material-list">';
+    foreach ($materials as $material) {
+        $output[] = '<a href="' . $modx->makeUrl($material['id']) . '" class="ts-material-link">' . htmlspecialchars($material['pagetitle']) . '</a>';
+    }
+    $output[] = '</div>';
+    $output[] = '</section>';
+}
 
 $output[] = '</div>';
-
-$output[] = '<script>document.addEventListener("DOMContentLoaded",function(){if(!document.getElementById("userMenu")){var el=document.getElementById("home-cta-block");if(el){el.classList.remove("ts-cta-panel-hidden");}}});</script>';
 
 return implode("\n", $output);
