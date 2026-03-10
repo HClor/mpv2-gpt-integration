@@ -13,7 +13,6 @@ if (!$modx instanceof modX) {
 }
 
 $prefix = $modx->getOption('table_prefix');
-$isLoggedIn = $modx->user->id > 0;
 
 $testsUrl = $modx->makeUrl(35);
 $materialsUrl = $modx->makeUrl(149);
@@ -260,6 +259,10 @@ if (!$isLoggedIn) {
     $output[] = '<div class="ts-cta-actions">';
     $output[] = '<a href="' . $loginUrl . '" class="ts-btn ts-btn-primary">Войти / Регистрация</a>';
     $output[] = '</div>';
+    $output[] = '<div class="ts-material-list">';
+    foreach ($materials as $material) {
+        $output[] = '<a href="' . $modx->makeUrl($material['id']) . '" class="ts-material-link">' . htmlspecialchars($material['pagetitle']) . '</a>';
+    }
     $output[] = '</div>';
     $output[] = '</section>';
 }
