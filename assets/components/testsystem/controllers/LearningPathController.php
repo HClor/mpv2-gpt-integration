@@ -553,9 +553,25 @@ class LearningPathController extends BaseController
             throw new Exception('Learning path not found');
         }
 
-        // Публичные траектории доступны всем
+        // Для непубличных/неопубликованных траекторий проверяем расширенные права,
+        // аналогично логике доступа в getPath()
         if ($path['status'] !== 'published' && !$path['is_public']) {
-            throw new PermissionException('Learning path is not available for enrollment');
+            $isAuthor = (int)$path['created_by'] === $currentUserId;
+            $isAdmin = CategoryPermissionService::isGlobalAdmin($this->modx, $currentUserId);
+
+            $canEnroll = $isAuthor || $isAdmin;
+
+            if (!$canEnroll && $path['category_id']) {
+                $canEnroll = CategoryPermissionService::canViewStats(
+                    $this->modx,
+                    $path['category_id'],
+                    $currentUserId
+                );
+            }
+
+            if (!$canEnroll) {
+                throw new PermissionException('Learning path is not available for enrollment');
+            }
         }
 
         // Проверяем, не записан ли уже
