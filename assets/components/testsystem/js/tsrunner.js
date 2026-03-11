@@ -31,6 +31,7 @@
 
     const container = document.getElementById("test-container");
     const testId = container ? container.dataset.testId : null;
+    const importQuestionsUrl = container ? (container.dataset.importUrl || '') : '';
     canDelete = container ? container.dataset.canDelete === '1' : false;
 
     // ПОДДЕРЖКА ОБЛАСТЕЙ ЗНАНИЙ
@@ -115,7 +116,32 @@
 
 
     
-    async function apiCall(action, data) {
+    async function refreshCsrfToken() {
+        const response = await fetch(API_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ action: "getCsrfToken", data: {} })
+        });
+
+        const text = await response.text();
+        const result = JSON.parse(text);
+
+        if (!result.success || !result.data || !result.data.csrf_token) {
+            throw new Error(result.message || "Failed to refresh CSRF token");
+        }
+
+        let meta = document.querySelector('meta[name="csrf-token"]');
+        if (!meta) {
+            meta = document.createElement('meta');
+            meta.setAttribute('name', 'csrf-token');
+            document.head.appendChild(meta);
+        }
+        meta.setAttribute('content', result.data.csrf_token);
+    }
+
+    async function apiCall(action, data, retryOnCsrfFail = true) {
         try {
             // CSRF Protection: Получаем токен из meta тега
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
@@ -136,7 +162,20 @@
 
             const text = await response.text();
             try {
-                return JSON.parse(text);
+                const parsed = JSON.parse(text);
+
+                if (
+                    retryOnCsrfFail &&
+                    parsed &&
+                    parsed.success === false &&
+                    typeof parsed.message === 'string' &&
+                    parsed.message.toLowerCase().includes('csrf token validation failed')
+                ) {
+                    await refreshCsrfToken();
+                    return apiCall(action, data, false);
+                }
+
+                return parsed;
             } catch (e) {
                 console.error("JSON parse error:", text);
                 throw new Error("Invalid server response");
@@ -1356,8 +1395,6 @@ async function addFavoritesViewToggle(questionId) {
             });
             
             if (result.success) {
-                const status = result.published ? "опубликован" : "снят с публикации";
-                alert(`✅ Вопрос ${status}`);
                 loadNextQuestion();
             } else {
                 alert("Ошибка: " + result.message);
@@ -2598,7 +2635,7 @@ async function addFavoritesViewToggle(questionId) {
 
         // Настройки санитизации: разрешаем только безопасные теги
         const config = {
-            ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 's', 'ol', 'ul', 'li', 'a', 'img', 'h1', 'h2', 'h3', 'blockquote', 'code', 'pre', 'div', 'span'],
+            ALLOWED_TAGS: ['p', 'br', 'strong', 'b', 'em', 'i', 'u', 's', 'ol', 'ul', 'li', 'a', 'img', 'h1', 'h2', 'h3', 'blockquote', 'code', 'pre', 'div', 'span'],
             ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'style'],
             ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
             KEEP_CONTENT: true,
@@ -2843,69 +2880,112 @@ async function addFavoritesViewToggle(questionId) {
             let html = '<div class="card mb-4">';
             html += '<div class="card-header bg-light">';
             
+            const sharedRenderer = window.QuestionListShared || null;
+
             // ШАПКА
-            html += '<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-3">';
-            html += '<h3 class="mb-0"><i class="bi bi-list-ul"></i> Список вопросов теста</h3>';
-            html += '<div class="d-flex flex-column flex-sm-row gap-2 w-100 w-md-auto align-items-stretch align-items-sm-center">';
+            let headerControlsHtml = '';
             if (canEdit) {
-                html += '<button class="btn btn-success btn-sm" onclick="openAddQuestionModal()">';
-                html += '<i class="bi bi-plus-circle-fill"></i> Добавить вопрос';
-                html += '</button>';
+                headerControlsHtml += '<button class="btn btn-success btn-sm" onclick="openAddQuestionModal()">';
+                headerControlsHtml += '<i class="bi bi-plus-circle-fill"></i> Добавить вопрос';
+                headerControlsHtml += '</button>';
+                if (importQuestionsUrl) {
+                    headerControlsHtml += '<a class="btn btn-outline-success btn-sm" href="' + importQuestionsUrl + '">';
+                    headerControlsHtml += '<i class="bi bi-file-earmark-arrow-down"></i> Импорт вопросов';
+                    headerControlsHtml += '</a>';
+                }
             }
             if (canDelete) {
-                html += '<button class="btn btn-outline-danger btn-sm" onclick="deleteAllQuestionsInTest()">';
-                html += '<i class="bi bi-trash3"></i> Удалить всё';
-                html += '</button>';
+                headerControlsHtml += '<button class="btn btn-outline-danger btn-sm" onclick="deleteAllQuestionsInTest()">';
+                headerControlsHtml += '<i class="bi bi-trash3"></i> Удалить всё';
+                headerControlsHtml += '</button>';
             }
 
             // Контролы запуска теста
-            html += '<div class="d-flex gap-1 align-items-center">';
-            html += '<input type="number" id="questions-count-header" class="form-control form-control-sm" style="width: 70px;" value="20" min="1" placeholder="20">';
-            html += '<button class="btn btn-outline-secondary btn-sm" style="white-space: nowrap;" onclick="document.getElementById(\'questions-count-header\').value = ' + totalCount + '">Все</button>';
-            html += '<button class="btn btn-primary btn-sm" style="white-space: nowrap;" onclick="startTestFromQuestions(\'training\')"><i class="bi bi-play-circle"></i> Тренировка</button>';
-            html += '<button class="btn btn-danger btn-sm" style="white-space: nowrap;" onclick="startTestFromQuestions(\'exam\')"><i class="bi bi-clipboard-check"></i> Экзамен</button>';
-            html += '</div>';
-            html += '</div>';
-            html += '</div>';
+            headerControlsHtml += '<div class="d-flex gap-1 align-items-center">';
+            headerControlsHtml += '<input type="number" id="questions-count-header" class="form-control form-control-sm" style="width: 70px;" value="20" min="1" placeholder="20">';
+            headerControlsHtml += '<button class="btn btn-outline-secondary btn-sm" style="white-space: nowrap;" onclick="document.getElementById(\'questions-count-header\').value = ' + totalCount + '">Все</button>';
+            headerControlsHtml += '<button class="btn btn-primary btn-sm" style="white-space: nowrap;" onclick="startTestFromQuestions(\'training\')"><i class="bi bi-play-circle"></i> Тренировка</button>';
+            headerControlsHtml += '<button class="btn btn-danger btn-sm" style="white-space: nowrap;" onclick="startTestFromQuestions(\'exam\')"><i class="bi bi-clipboard-check"></i> Экзамен</button>';
+            headerControlsHtml += '</div>';
+
+            if (sharedRenderer && typeof sharedRenderer.buildHeaderHtml === 'function') {
+                html += sharedRenderer.buildHeaderHtml({
+                    title: 'Список вопросов теста',
+                    controlsHtml: headerControlsHtml,
+                    titleClass: 'mb-3',
+                    controlsClass: 'd-flex flex-column flex-sm-row gap-2 w-100 align-items-stretch align-items-sm-center mb-3'
+                });
+            } else {
+                html += '<h3 class="mb-3"><i class="bi bi-list-ul"></i> Список вопросов теста</h3>';
+                html += '<div class="d-flex flex-column flex-sm-row gap-2 w-100 align-items-stretch align-items-sm-center mb-3">';
+                html += headerControlsHtml;
+                html += '</div>';
+            }
             
             // ФИЛЬТРЫ
-            html += '<div class="questions-filters-container">';
-            html += '<div class="row g-2">';
-            
-            html += '<div class="col-6 col-md-3">';
-            html += `<button type="button" class="btn ${filterStatus === 'all' ? 'btn-primary' : 'btn-outline-primary'} w-100" onclick="showAllQuestionsView('all')">`;
-            html += `Все <span class="badge bg-light text-dark ms-1">${totalCount}</span>`;
-            html += '</button></div>';
-            
-            html += '<div class="col-6 col-md-3">';
-            html += `<button type="button" class="btn ${filterStatus === 'published' ? 'btn-success' : 'btn-outline-success'} w-100" onclick="showAllQuestionsView('published')">`;
-            html += `Опубликовано <span class="badge bg-light text-dark ms-1">${publishedCount}</span>`;
-            html += '</button></div>';
-            
-            html += '<div class="col-6 col-md-3">';
-            html += `<button type="button" class="btn ${filterStatus === 'unpublished' ? 'btn-secondary' : 'btn-outline-secondary'} w-100" onclick="showAllQuestionsView('unpublished')">`;
-            html += `Не опубликовано <span class="badge bg-light text-dark ms-1">${unpublishedCount}</span>`;
-            html += '</button></div>';
-            
-            html += '<div class="col-6 col-md-3">';
-            html += `<button type="button" class="btn ${filterStatus === 'learning' ? 'btn-info' : 'btn-outline-info'} w-100" onclick="showAllQuestionsView('learning')">`;
-            html += `В обучении <span class="badge bg-light text-dark ms-1">${learningCount}</span>`;
-            html += '</button></div>';
-            
-            html += '</div></div>';
+            if (sharedRenderer && typeof sharedRenderer.buildFiltersHtml === 'function') {
+                const filtersHtml = sharedRenderer.buildFiltersHtml({
+                    total: totalCount,
+                    published: publishedCount,
+                    unpublished: unpublishedCount,
+                    learning: learningCount
+                }, filterStatus, {
+                    onclickMap: {
+                        all: "showAllQuestionsView('all')",
+                        published: "showAllQuestionsView('published')",
+                        unpublished: "showAllQuestionsView('unpublished')",
+                        learning: "showAllQuestionsView('learning')"
+                    }
+                });
+                html += filtersHtml;
+            } else {
+                html += '<div class="questions-filters-container">';
+                html += '<div class="row g-2">';
+                
+                html += '<div class="col-6 col-md-3">';
+                html += `<button type="button" class="btn ${filterStatus === 'all' ? 'btn-primary' : 'btn-outline-primary'} w-100" onclick="showAllQuestionsView('all')">`;
+                html += `Все <span class="badge bg-light text-dark ms-1">${totalCount}</span>`;
+                html += '</button></div>';
+                
+                html += '<div class="col-6 col-md-3">';
+                html += `<button type="button" class="btn ${filterStatus === 'published' ? 'btn-success' : 'btn-outline-success'} w-100" onclick="showAllQuestionsView('published')">`;
+                html += `Опубликовано <span class="badge bg-light text-dark ms-1">${publishedCount}</span>`;
+                html += '</button></div>';
+                
+                html += '<div class="col-6 col-md-3">';
+                html += `<button type="button" class="btn ${filterStatus === 'unpublished' ? 'btn-secondary' : 'btn-outline-secondary'} w-100" onclick="showAllQuestionsView('unpublished')">`;
+                html += `Не опубликовано <span class="badge bg-light text-dark ms-1">${unpublishedCount}</span>`;
+                html += '</button></div>';
+                
+                html += '<div class="col-6 col-md-3">';
+                html += `<button type="button" class="btn ${filterStatus === 'learning' ? 'btn-info' : 'btn-outline-info'} w-100" onclick="showAllQuestionsView('learning')">`;
+                html += `В обучении <span class="badge bg-light text-dark ms-1">${learningCount}</span>`;
+                html += '</button></div>';
+                
+                html += '</div></div>';
+            }
 
             if (canEdit) {
-                html += '<div id="bulk-actions-panel" class="alert alert-light border d-none mt-2 mb-0">';
-                html += '<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">';
-                html += '<div><strong>Выбрано: <span id="selected-questions-count">0</span></strong></div>';
-                html += '<div class="d-flex flex-wrap gap-2">';
-                html += '<button class="btn btn-sm btn-outline-success" onclick="bulkPublishQuestions()"><i class="bi bi-eye"></i> Опубликовать</button>';
-                html += '<button class="btn btn-sm btn-outline-warning" onclick="bulkUnpublishQuestions()"><i class="bi bi-eye-slash"></i> Снять с публикации</button>';
+                let bulkActionsHtml = '';
+                bulkActionsHtml += '<button class="btn btn-sm btn-outline-primary" onclick="selectAllVisibleQuestions()"><i class="bi bi-check2-square"></i> Выбрать все</button>';
+                bulkActionsHtml += '<button class="btn btn-sm btn-outline-success" onclick="bulkPublishQuestions()"><i class="bi bi-eye"></i> Опубликовать</button>';
+                bulkActionsHtml += '<button class="btn btn-sm btn-outline-warning" onclick="bulkUnpublishQuestions()"><i class="bi bi-eye-slash"></i> Снять с публикации</button>';
                 if (canDelete) {
-                    html += '<button class="btn btn-sm btn-outline-danger" onclick="bulkDeleteQuestions()"><i class="bi bi-trash"></i> Удалить</button>';
+                    bulkActionsHtml += '<button class="btn btn-sm btn-outline-danger" onclick="bulkDeleteQuestions()"><i class="bi bi-trash"></i> Удалить</button>';
                 }
-                html += '<button class="btn btn-sm btn-outline-secondary" onclick="clearBulkSelection()"><i class="bi bi-x-circle"></i> Сбросить</button>';
-                html += '</div></div></div>';
+                bulkActionsHtml += '<button class="btn btn-sm btn-outline-secondary" onclick="clearBulkSelection()"><i class="bi bi-x-circle"></i> Сбросить</button>';
+
+                if (sharedRenderer && typeof sharedRenderer.buildBulkPanelHtml === 'function') {
+                    html += sharedRenderer.buildBulkPanelHtml({ selectedCount: 0, actionsHtml: bulkActionsHtml });
+                } else {
+                    html += '<div id="bulk-actions-panel" class="alert alert-light border d-none mt-2 mb-0">';
+                    html += '<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">';
+                    html += '<div class="d-flex align-items-center gap-2 flex-wrap">';
+                    html += '<strong>Выбрано: <span id="selected-questions-count">0</span></strong>';
+                    html += '</div>';
+                    html += '<div class="d-flex flex-wrap gap-2">' + bulkActionsHtml + '</div>';
+                    html += '</div></div>';
+                }
             }
             html += '</div>';
             
@@ -3400,6 +3480,19 @@ async function addFavoritesViewToggle(questionId) {
         }
     }
 
+    function selectAllVisibleQuestions() {
+        const checkboxes = window.QuestionListShared && typeof window.QuestionListShared.toggleSelectAllCheckboxes === 'function'
+            ? window.QuestionListShared.toggleSelectAllCheckboxes('.question-select-checkbox')
+            : Array.from(document.querySelectorAll('.question-select-checkbox'));
+        if (!window.QuestionListShared || typeof window.QuestionListShared.toggleSelectAllCheckboxes !== 'function') {
+            const allChecked = checkboxes.length > 0 && checkboxes.every(cb => cb.checked);
+            checkboxes.forEach(cb => {
+                cb.checked = !allChecked;
+            });
+        }
+        updateBulkActionsState();
+    }
+
     function clearBulkSelection() {
         document.querySelectorAll('.question-select-checkbox').forEach(cb => {
             cb.checked = false;
@@ -3550,6 +3643,7 @@ async function addFavoritesViewToggle(questionId) {
     window.editQuestionFromList = editQuestionFromList;
     window.deleteQuestionFromList = deleteQuestionFromList;
     window.updateBulkActionsState = updateBulkActionsState;
+    window.selectAllVisibleQuestions = selectAllVisibleQuestions;
     window.clearBulkSelection = clearBulkSelection;
     window.bulkPublishQuestions = bulkPublishQuestions;
     window.bulkUnpublishQuestions = bulkUnpublishQuestions;
