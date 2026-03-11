@@ -169,7 +169,14 @@ $isExpert = $modx->user->isMember($groupExperts);
 
 // CSRF Protection: добавляем meta тег с токеном для JavaScript
 $output = CsrfProtection::getTokenMeta();
-$output .= '<div id="tests-page-container">';
+$importPageId = Config::getPageId('import_csv', 29);
+$importBaseUrl = $importPageId > 0 ? $modx->makeUrl($importPageId, 'web', []) : '';
+$testsContainerImportAttr = '';
+if (!empty($importBaseUrl)) {
+    $testsContainerImportAttr = ' data-import-base-url="' . htmlspecialchars($importBaseUrl, ENT_QUOTES, 'UTF-8') . '"';
+}
+
+$output .= '<div id="tests-page-container"' . $testsContainerImportAttr . '>';
 
 // Основной вид: Категории + Тесты
 $output .= '<div id="categories-tests-view">';
@@ -418,32 +425,12 @@ $output .= '<div id="questions-editor-view" style="display: none;">';
 $output .= '<div class="container-fluid">';
 $output .= '<div class="card">';
 $output .= '<div class="card-header bg-light">';
-$output .= '<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-3">';
-$output .= '<h3 class="mb-0"><i class="bi bi-list-ul"></i> Список вопросов теста</h3>';
-$output .= '<div class="d-flex flex-column flex-sm-row gap-2 w-100 w-md-auto align-items-stretch align-items-sm-center">';
-$output .= '<button class="ts-btn ts-btn-secondary ts-btn-sm" onclick="backToTestsList()">';
-$output .= '<i class="bi bi-arrow-left"></i> Назад к списку тестов';
-$output .= '</button>';
-$output .= '<button class="ts-btn ts-btn-success ts-btn-sm" onclick="openAddQuestionModalFromTests()">';
-$output .= '<i class="bi bi-plus-circle-fill"></i> Добавить вопрос';
-$output .= '</button>';
-// Контролы запуска теста
-$output .= '<div class="d-flex gap-1 align-items-center">';
-$output .= '<input type="number" id="editor-questions-count" class="form-control form-control-sm" style="width: 70px;" value="20" min="1" placeholder="20">';
-$output .= '<button class="ts-btn ts-btn-secondary ts-btn-sm" style="white-space: nowrap;" id="editor-all-questions-btn">Все</button>';
-$output .= '<button class="ts-btn ts-btn-primary ts-btn-sm" style="white-space: nowrap;" onclick="startTestFromEditor(\'training\')"><i class="bi bi-play-circle"></i> Тренировка</button>';
-$output .= '<button class="ts-btn ts-btn-danger ts-btn-sm" style="white-space: nowrap;" onclick="startTestFromEditor(\'exam\')"><i class="bi bi-clipboard-check"></i> Экзамен</button>';
+$output .= '<div id="questions-editor-header-content">';
+$output .= '<div class="text-center py-2">';
+$output .= '<div class="spinner-border text-primary spinner-border-sm" role="status"></div>';
+$output .= '<span class="ms-2">Подготовка интерфейса вопросов...</span>';
 $output .= '</div>';
 $output .= '</div>';
-$output .= '</div>';
-// Фильтры
-$output .= '<div class="questions-filters-container">';
-$output .= '<div class="row g-2">';
-$output .= '<div class="col-6 col-md-3"><button type="button" class="ts-btn ts-btn-primary w-100 questions-filter-btn" data-filter="all">Все <span class="ts-badge ts-badge-neutral ms-1" id="filter-count-all">0</span></button></div>';
-$output .= '<div class="col-6 col-md-3"><button type="button" class="ts-btn ts-btn-ghost-success w-100 questions-filter-btn" data-filter="published">Опубликовано <span class="ts-badge ts-badge-neutral ms-1" id="filter-count-published">0</span></button></div>';
-$output .= '<div class="col-6 col-md-3"><button type="button" class="ts-btn ts-btn-secondary w-100 questions-filter-btn" data-filter="unpublished">Не опубликовано <span class="ts-badge ts-badge-neutral ms-1" id="filter-count-unpublished">0</span></button></div>';
-$output .= '<div class="col-6 col-md-3"><button type="button" class="ts-btn ts-btn-ghost w-100 questions-filter-btn" data-filter="learning">В обучении <span class="ts-badge ts-badge-neutral ms-1" id="filter-count-learning">0</span></button></div>';
-$output .= '</div></div>';
 $output .= '</div>'; // card-header
 $output .= '<div class="card-body p-2 p-md-3">';
 $output .= '<div id="questions-list-content">'; // заполняется через JS
@@ -466,6 +453,7 @@ $output .= '<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purif
 $output .= '<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">';
 $output .= '<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>';
 
+$modx->regClientScript('/assets/components/testsystem/js/question-list-shared.js');
 $modx->regClientScript('/assets/components/testsystem/js/test-cards.js');
 $modx->regClientScript('/assets/components/testsystem/js/tests-search.js');
 
