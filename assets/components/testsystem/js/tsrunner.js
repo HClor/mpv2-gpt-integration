@@ -2635,7 +2635,7 @@ async function addFavoritesViewToggle(questionId) {
 
         // Настройки санитизации: разрешаем только безопасные теги
         const config = {
-            ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 's', 'ol', 'ul', 'li', 'a', 'img', 'h1', 'h2', 'h3', 'blockquote', 'code', 'pre', 'div', 'span'],
+            ALLOWED_TAGS: ['p', 'br', 'strong', 'b', 'em', 'i', 'u', 's', 'ol', 'ul', 'li', 'a', 'img', 'h1', 'h2', 'h3', 'blockquote', 'code', 'pre', 'div', 'span'],
             ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'style'],
             ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
             KEEP_CONTENT: true,
