@@ -122,6 +122,7 @@ $response = ['success' => false, 'message' => 'Unknown action'];
 // ============================================
 // Список actions, которые НЕ требуют CSRF проверки (только чтение данных)
 $csrfExemptActions = [
+    'getCsrfToken',              // Обновление CSRF токена (для long-running UI)
     'getApiVersion',             // Информация о версии API
     'getTestInfo',
     'getQuestion',
@@ -217,6 +218,12 @@ try {
                 'mtime' => date('Y-m-d H:i:s', filemtime(__FILE__)),
                 'deleteMaterial_fixed' => true
             ], 'API version info');
+            break;
+
+        case 'getCsrfToken':
+            $response = ResponseHelper::success([
+                'csrf_token' => CsrfProtection::getToken()
+            ], 'CSRF token refreshed');
             break;
 
         case 'getParentUri':

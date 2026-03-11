@@ -31,6 +31,7 @@
 
     const container = document.getElementById("test-container");
     const testId = container ? container.dataset.testId : null;
+    const importQuestionsUrl = container ? (container.dataset.importUrl || '') : '';
     canDelete = container ? container.dataset.canDelete === '1' : false;
 
     // ПОДДЕРЖКА ОБЛАСТЕЙ ЗНАНИЙ
@@ -115,7 +116,32 @@
 
 
     
-    async function apiCall(action, data) {
+    async function refreshCsrfToken() {
+        const response = await fetch(API_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ action: "getCsrfToken", data: {} })
+        });
+
+        const text = await response.text();
+        const result = JSON.parse(text);
+
+        if (!result.success || !result.data || !result.data.csrf_token) {
+            throw new Error(result.message || "Failed to refresh CSRF token");
+        }
+
+        let meta = document.querySelector('meta[name="csrf-token"]');
+        if (!meta) {
+            meta = document.createElement('meta');
+            meta.setAttribute('name', 'csrf-token');
+            document.head.appendChild(meta);
+        }
+        meta.setAttribute('content', result.data.csrf_token);
+    }
+
+    async function apiCall(action, data, retryOnCsrfFail = true) {
         try {
             // CSRF Protection: Получаем токен из meta тега
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
@@ -136,7 +162,20 @@
 
             const text = await response.text();
             try {
-                return JSON.parse(text);
+                const parsed = JSON.parse(text);
+
+                if (
+                    retryOnCsrfFail &&
+                    parsed &&
+                    parsed.success === false &&
+                    typeof parsed.message === 'string' &&
+                    parsed.message.toLowerCase().includes('csrf token validation failed')
+                ) {
+                    await refreshCsrfToken();
+                    return apiCall(action, data, false);
+                }
+
+                return parsed;
             } catch (e) {
                 console.error("JSON parse error:", text);
                 throw new Error("Invalid server response");
@@ -1356,8 +1395,6 @@ async function addFavoritesViewToggle(questionId) {
             });
             
             if (result.success) {
-                const status = result.published ? "опубликован" : "снят с публикации";
-                alert(`✅ Вопрос ${status}`);
                 loadNextQuestion();
             } else {
                 alert("Ошибка: " + result.message);
@@ -2598,7 +2635,7 @@ async function addFavoritesViewToggle(questionId) {
 
         // Настройки санитизации: разрешаем только безопасные теги
         const config = {
-            ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 's', 'ol', 'ul', 'li', 'a', 'img', 'h1', 'h2', 'h3', 'blockquote', 'code', 'pre', 'div', 'span'],
+            ALLOWED_TAGS: ['p', 'br', 'strong', 'b', 'em', 'i', 'u', 's', 'ol', 'ul', 'li', 'a', 'img', 'h1', 'h2', 'h3', 'blockquote', 'code', 'pre', 'div', 'span'],
             ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class', 'style'],
             ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
             KEEP_CONTENT: true,
@@ -2843,69 +2880,66 @@ async function addFavoritesViewToggle(questionId) {
             let html = '<div class="card mb-4">';
             html += '<div class="card-header bg-light">';
             
+            const sharedRenderer = window.QuestionListShared && typeof window.QuestionListShared.requireSharedApi === 'function'
+                ? window.QuestionListShared.requireSharedApi(['buildHeaderHtml', 'buildFiltersHtml', 'buildBulkPanelHtml', 'toggleSelectAllCheckboxes'])
+                : null;
+            if (!sharedRenderer) {
+                throw new Error('QuestionListShared is not available');
+            }
+
             // ШАПКА
-            html += '<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-3">';
-            html += '<h3 class="mb-0"><i class="bi bi-list-ul"></i> Список вопросов теста</h3>';
-            html += '<div class="d-flex flex-column flex-sm-row gap-2 w-100 w-md-auto align-items-stretch align-items-sm-center">';
+            let headerControlsHtml = '';
             if (canEdit) {
-                html += '<button class="btn btn-success btn-sm" onclick="openAddQuestionModal()">';
-                html += '<i class="bi bi-plus-circle-fill"></i> Добавить вопрос';
-                html += '</button>';
+                headerControlsHtml += '<button class="btn btn-success btn-sm" onclick="openAddQuestionModal()">';
+                headerControlsHtml += '<i class="bi bi-plus-circle-fill"></i> Добавить вопрос';
+                headerControlsHtml += '</button>';
+                if (importQuestionsUrl) {
+                    headerControlsHtml += '<a class="btn btn-outline-success btn-sm" href="' + importQuestionsUrl + '">';
+                    headerControlsHtml += '<i class="bi bi-file-earmark-arrow-down"></i> Импорт вопросов';
+                    headerControlsHtml += '</a>';
+                }
             }
             if (canDelete) {
-                html += '<button class="btn btn-outline-danger btn-sm" onclick="deleteAllQuestionsInTest()">';
-                html += '<i class="bi bi-trash3"></i> Удалить всё';
-                html += '</button>';
+                headerControlsHtml += '<button class="btn btn-outline-danger btn-sm" onclick="deleteAllQuestionsInTest()">';
+                headerControlsHtml += '<i class="bi bi-trash3"></i> Удалить всё';
+                headerControlsHtml += '</button>';
             }
 
             // Контролы запуска теста
-            html += '<div class="d-flex gap-1 align-items-center">';
-            html += '<input type="number" id="questions-count-header" class="form-control form-control-sm" style="width: 70px;" value="20" min="1" placeholder="20">';
-            html += '<button class="btn btn-outline-secondary btn-sm" style="white-space: nowrap;" onclick="document.getElementById(\'questions-count-header\').value = ' + totalCount + '">Все</button>';
-            html += '<button class="btn btn-primary btn-sm" style="white-space: nowrap;" onclick="startTestFromQuestions(\'training\')"><i class="bi bi-play-circle"></i> Тренировка</button>';
-            html += '<button class="btn btn-danger btn-sm" style="white-space: nowrap;" onclick="startTestFromQuestions(\'exam\')"><i class="bi bi-clipboard-check"></i> Экзамен</button>';
-            html += '</div>';
-            html += '</div>';
-            html += '</div>';
+            headerControlsHtml += '<div class="d-flex gap-1 align-items-center">';
+            headerControlsHtml += '<input type="number" id="questions-count-header" class="form-control form-control-sm" style="width: 70px;" value="20" min="1" placeholder="20">';
+            headerControlsHtml += '<button class="btn btn-outline-secondary btn-sm" style="white-space: nowrap;" onclick="document.getElementById(\'questions-count-header\').value = ' + totalCount + '">Все</button>';
+            headerControlsHtml += '<button class="btn btn-primary btn-sm" style="white-space: nowrap;" onclick="startTestFromQuestions(\'training\')"><i class="bi bi-play-circle"></i> Тренировка</button>';
+            headerControlsHtml += '<button class="btn btn-danger btn-sm" style="white-space: nowrap;" onclick="startTestFromQuestions(\'exam\')"><i class="bi bi-clipboard-check"></i> Экзамен</button>';
+            headerControlsHtml += '</div>';
+
+            html += sharedRenderer.buildHeaderHtml({
+                title: 'Список вопросов теста',
+                controlsHtml: headerControlsHtml,
+                titleClass: 'mb-3',
+                controlsClass: 'd-flex flex-column flex-sm-row gap-2 w-100 align-items-stretch align-items-sm-center mb-3'
+            });
             
             // ФИЛЬТРЫ
-            html += '<div class="questions-filters-container">';
-            html += '<div class="row g-2">';
-            
-            html += '<div class="col-6 col-md-3">';
-            html += `<button type="button" class="btn ${filterStatus === 'all' ? 'btn-primary' : 'btn-outline-primary'} w-100" onclick="showAllQuestionsView('all')">`;
-            html += `Все <span class="badge bg-light text-dark ms-1">${totalCount}</span>`;
-            html += '</button></div>';
-            
-            html += '<div class="col-6 col-md-3">';
-            html += `<button type="button" class="btn ${filterStatus === 'published' ? 'btn-success' : 'btn-outline-success'} w-100" onclick="showAllQuestionsView('published')">`;
-            html += `Опубликовано <span class="badge bg-light text-dark ms-1">${publishedCount}</span>`;
-            html += '</button></div>';
-            
-            html += '<div class="col-6 col-md-3">';
-            html += `<button type="button" class="btn ${filterStatus === 'unpublished' ? 'btn-secondary' : 'btn-outline-secondary'} w-100" onclick="showAllQuestionsView('unpublished')">`;
-            html += `Не опубликовано <span class="badge bg-light text-dark ms-1">${unpublishedCount}</span>`;
-            html += '</button></div>';
-            
-            html += '<div class="col-6 col-md-3">';
-            html += `<button type="button" class="btn ${filterStatus === 'learning' ? 'btn-info' : 'btn-outline-info'} w-100" onclick="showAllQuestionsView('learning')">`;
-            html += `В обучении <span class="badge bg-light text-dark ms-1">${learningCount}</span>`;
-            html += '</button></div>';
-            
-            html += '</div></div>';
+            const filtersHtml = sharedRenderer.buildFiltersHtml({
+                total: totalCount,
+                published: publishedCount,
+                unpublished: unpublishedCount,
+                learning: learningCount
+            }, filterStatus);
+            html += filtersHtml;
 
             if (canEdit) {
-                html += '<div id="bulk-actions-panel" class="alert alert-light border d-none mt-2 mb-0">';
-                html += '<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">';
-                html += '<div><strong>Выбрано: <span id="selected-questions-count">0</span></strong></div>';
-                html += '<div class="d-flex flex-wrap gap-2">';
-                html += '<button class="btn btn-sm btn-outline-success" onclick="bulkPublishQuestions()"><i class="bi bi-eye"></i> Опубликовать</button>';
-                html += '<button class="btn btn-sm btn-outline-warning" onclick="bulkUnpublishQuestions()"><i class="bi bi-eye-slash"></i> Снять с публикации</button>';
+                let bulkActionsHtml = '';
+                bulkActionsHtml += '<button class="btn btn-sm btn-outline-primary" onclick="selectAllVisibleQuestions()"><i class="bi bi-check2-square"></i> Выбрать все</button>';
+                bulkActionsHtml += '<button class="btn btn-sm btn-outline-success" onclick="bulkPublishQuestions()"><i class="bi bi-eye"></i> Опубликовать</button>';
+                bulkActionsHtml += '<button class="btn btn-sm btn-outline-warning" onclick="bulkUnpublishQuestions()"><i class="bi bi-eye-slash"></i> Снять с публикации</button>';
                 if (canDelete) {
-                    html += '<button class="btn btn-sm btn-outline-danger" onclick="bulkDeleteQuestions()"><i class="bi bi-trash"></i> Удалить</button>';
+                    bulkActionsHtml += '<button class="btn btn-sm btn-outline-danger" onclick="bulkDeleteQuestions()"><i class="bi bi-trash"></i> Удалить</button>';
                 }
-                html += '<button class="btn btn-sm btn-outline-secondary" onclick="clearBulkSelection()"><i class="bi bi-x-circle"></i> Сбросить</button>';
-                html += '</div></div></div>';
+                bulkActionsHtml += '<button class="btn btn-sm btn-outline-secondary" onclick="clearBulkSelection()"><i class="bi bi-x-circle"></i> Сбросить</button>';
+
+                html += sharedRenderer.buildBulkPanelHtml({ selectedCount: 0, actionsHtml: bulkActionsHtml });
             }
             html += '</div>';
             
@@ -3089,6 +3123,24 @@ async function addFavoritesViewToggle(questionId) {
     }
     
     window.openQuestionViewModal = openQuestionViewModal;
+
+    if (!window.__tsRunnerFilterDelegationBound) {
+        document.addEventListener('click', function (e) {
+            const filterBtn = e.target.closest('#questions-list-container .questions-filters-container button[data-filter]');
+            if (!filterBtn) {
+                return;
+            }
+
+            const filter = filterBtn.getAttribute('data-filter');
+            if (!filter) {
+                return;
+            }
+
+            e.preventDefault();
+            showAllQuestionsView(filter);
+        });
+        window.__tsRunnerFilterDelegationBound = true;
+    }
     window.editQuestionFromModal = editQuestionFromModal;
     
     
@@ -3382,6 +3434,47 @@ async function addFavoritesViewToggle(questionId) {
         return Array.from(checkboxes).map(cb => parseInt(cb.value, 10)).filter(Boolean);
     }
 
+    let questionListActions = null;
+
+    function getQuestionListActions() {
+        if (questionListActions) {
+            return questionListActions;
+        }
+
+        const sharedRenderer = window.QuestionListShared && typeof window.QuestionListShared.requireSharedApi === 'function'
+            ? window.QuestionListShared.requireSharedApi(['createQuestionListActions', 'toggleSelectAllCheckboxes'])
+            : null;
+        if (!sharedRenderer) {
+            throw new Error('QuestionListShared actions are not available');
+        }
+
+        questionListActions = sharedRenderer.createQuestionListActions({
+            getSelectedIds: getSelectedQuestionIds,
+            noSelectionMessage: 'Выберите хотя бы один вопрос',
+            onSelectAll: function () {
+                sharedRenderer.toggleSelectAllCheckboxes('.question-select-checkbox');
+                updateBulkActionsState();
+            },
+            onClearSelection: function () {
+                document.querySelectorAll('.question-select-checkbox').forEach(cb => {
+                    cb.checked = false;
+                });
+                updateBulkActionsState();
+            },
+            onPublish: function (selectedIds) {
+                return bulkSetPublished(1, selectedIds);
+            },
+            onUnpublish: function (selectedIds) {
+                return bulkSetPublished(0, selectedIds);
+            },
+            onDelete: function (selectedIds) {
+                return bulkDeleteByIds(selectedIds);
+            }
+        });
+
+        return questionListActions;
+    }
+
     function updateBulkActionsState() {
         const selectedIds = getSelectedQuestionIds();
         const panel = document.getElementById('bulk-actions-panel');
@@ -3400,20 +3493,29 @@ async function addFavoritesViewToggle(questionId) {
         }
     }
 
-    function clearBulkSelection() {
-        document.querySelectorAll('.question-select-checkbox').forEach(cb => {
-            cb.checked = false;
-        });
-        updateBulkActionsState();
+    function selectAllVisibleQuestions() {
+        try {
+            getQuestionListActions().selectAll();
+        } catch (error) {
+            alert('Ошибка: ' + error.message);
+        }
     }
 
-    async function bulkSetPublished(targetPublished) {
+    function clearBulkSelection() {
+        try {
+            getQuestionListActions().clearSelection();
+        } catch (error) {
+            alert('Ошибка: ' + error.message);
+        }
+    }
+
+    async function bulkSetPublished(targetPublished, selectedIdsInput) {
         if (!canEdit) {
             alert("Недостаточно прав для изменения публикации");
             return;
         }
 
-        const selectedIds = getSelectedQuestionIds();
+        const selectedIds = selectedIdsInput || getSelectedQuestionIds();
         if (selectedIds.length === 0) {
             alert('Выберите хотя бы один вопрос');
             return;
@@ -3440,7 +3542,7 @@ async function addFavoritesViewToggle(questionId) {
 
     async function bulkPublishQuestions() {
         try {
-            await bulkSetPublished(1);
+            await getQuestionListActions().publishSelected();
         } catch (error) {
             alert('Ошибка: ' + error.message);
         }
@@ -3448,20 +3550,19 @@ async function addFavoritesViewToggle(questionId) {
 
     async function bulkUnpublishQuestions() {
         try {
-            await bulkSetPublished(0);
+            await getQuestionListActions().unpublishSelected();
         } catch (error) {
             alert('Ошибка: ' + error.message);
         }
     }
 
-    async function bulkDeleteQuestions() {
+    async function bulkDeleteByIds(selectedIds) {
         if (!canDelete) {
             alert("Недостаточно прав для удаления вопросов");
             return;
         }
 
-        const selectedIds = getSelectedQuestionIds();
-        if (selectedIds.length === 0) {
+        if (!selectedIds.length) {
             alert('Выберите хотя бы один вопрос');
             return;
         }
@@ -3483,6 +3584,14 @@ async function addFavoritesViewToggle(questionId) {
 
         alert(`✅ Удалено вопросов: ${selectedIds.length}`);
         await showAllQuestionsView(currentQuestionsFilter);
+    }
+
+    async function bulkDeleteQuestions() {
+        try {
+            await getQuestionListActions().deleteSelected();
+        } catch (error) {
+            alert('Ошибка: ' + error.message);
+        }
     }
 
     async function deleteAllQuestionsInTest() {
@@ -3550,6 +3659,7 @@ async function addFavoritesViewToggle(questionId) {
     window.editQuestionFromList = editQuestionFromList;
     window.deleteQuestionFromList = deleteQuestionFromList;
     window.updateBulkActionsState = updateBulkActionsState;
+    window.selectAllVisibleQuestions = selectAllVisibleQuestions;
     window.clearBulkSelection = clearBulkSelection;
     window.bulkPublishQuestions = bulkPublishQuestions;
     window.bulkUnpublishQuestions = bulkUnpublishQuestions;
