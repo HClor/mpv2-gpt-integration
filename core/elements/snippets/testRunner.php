@@ -282,6 +282,8 @@ if ($knowledgeAreaId > 0) {
     // XSS Protection: Подключаем DOMPurify для санитизации HTML
     $output .= '<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>';
 
+    $sharedJsPath = $assetsUrl . 'components/testsystem/js/question-list-shared.js';
+    $output .= '<script src="' . htmlspecialchars($sharedJsPath, ENT_QUOTES, 'UTF-8') . '"></script>';
     $output .= '<script src="' . htmlspecialchars($jsPath, ENT_QUOTES, 'UTF-8') . '"></script>';
 
     // Подключение Quill для редактирования вопросов
@@ -579,7 +581,12 @@ $timeLimit = (int)$test['time_limit'];
 
 // Формирование HTML вывода
 $viewDataAttr = $viewParam ? ' data-view="' . htmlspecialchars($viewParam, ENT_QUOTES, 'UTF-8') . '"' : '';
-$output = '<div id="test-container" data-test-id="' . (int)$testId . '" data-can-edit="' . ($canEditTest ? '1' : '0') . '" data-can-delete="' . ($canDelete ? '1' : '0') . '" data-test-mode="' . htmlspecialchars($testMode, ENT_QUOTES, 'UTF-8') . '"' . $viewDataAttr . '>';
+$importUrlAttr = '';
+if (!empty($importUrl)) {
+    $importUrlAttr = ' data-import-url="' . htmlspecialchars($importUrl, ENT_QUOTES, 'UTF-8') . '"';
+}
+
+$output = '<div id="test-container" data-test-id="' . (int)$testId . '" data-can-edit="' . ($canEditTest ? '1' : '0') . '" data-can-delete="' . ($canDelete ? '1' : '0') . '" data-test-mode="' . htmlspecialchars($testMode, ENT_QUOTES, 'UTF-8') . '"' . $importUrlAttr . $viewDataAttr . '>';
 $output .= '<div class="tests-grid test-runner-launch-grid">';
 
 // Скрываем test-info если view=questions или view=manage (для быстрой загрузки)
@@ -720,6 +727,8 @@ $jsPath = $assetsUrl . 'components/testsystem/js/tsrunner.js';
 // XSS Protection: Подключаем DOMPurify для санитизации HTML
 $output .= '<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>';
 
+$sharedJsPath = $assetsUrl . 'components/testsystem/js/question-list-shared.js';
+$output .= '<script src="' . htmlspecialchars($sharedJsPath, ENT_QUOTES, 'UTF-8') . '"></script>';
 $output .= '<script src="' . htmlspecialchars($jsPath, ENT_QUOTES, 'UTF-8') . '"></script>';
 
 // Подключение Quill для редактирования вопросов
