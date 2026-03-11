@@ -31,6 +31,7 @@
 
     const container = document.getElementById("test-container");
     const testId = container ? container.dataset.testId : null;
+    const importQuestionsUrl = container ? (container.dataset.importUrl || '') : '';
     canDelete = container ? container.dataset.canDelete === '1' : false;
 
     // ПОДДЕРЖКА ОБЛАСТЕЙ ЗНАНИЙ
@@ -1356,8 +1357,6 @@ async function addFavoritesViewToggle(questionId) {
             });
             
             if (result.success) {
-                const status = result.published ? "опубликован" : "снят с публикации";
-                alert(`✅ Вопрос ${status}`);
                 loadNextQuestion();
             } else {
                 alert("Ошибка: " + result.message);
@@ -2844,13 +2843,17 @@ async function addFavoritesViewToggle(questionId) {
             html += '<div class="card-header bg-light">';
             
             // ШАПКА
-            html += '<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-3">';
-            html += '<h3 class="mb-0"><i class="bi bi-list-ul"></i> Список вопросов теста</h3>';
-            html += '<div class="d-flex flex-column flex-sm-row gap-2 w-100 w-md-auto align-items-stretch align-items-sm-center">';
+            html += '<h3 class="mb-3"><i class="bi bi-list-ul"></i> Список вопросов теста</h3>';
+            html += '<div class="d-flex flex-column flex-sm-row gap-2 w-100 align-items-stretch align-items-sm-center mb-3">';
             if (canEdit) {
                 html += '<button class="btn btn-success btn-sm" onclick="openAddQuestionModal()">';
                 html += '<i class="bi bi-plus-circle-fill"></i> Добавить вопрос';
                 html += '</button>';
+                if (importQuestionsUrl) {
+                    html += '<a class="btn btn-outline-success btn-sm" href="' + importQuestionsUrl + '">';
+                    html += '<i class="bi bi-file-earmark-arrow-down"></i> Импорт вопросов';
+                    html += '</a>';
+                }
             }
             if (canDelete) {
                 html += '<button class="btn btn-outline-danger btn-sm" onclick="deleteAllQuestionsInTest()">';
@@ -2864,7 +2867,6 @@ async function addFavoritesViewToggle(questionId) {
             html += '<button class="btn btn-outline-secondary btn-sm" style="white-space: nowrap;" onclick="document.getElementById(\'questions-count-header\').value = ' + totalCount + '">Все</button>';
             html += '<button class="btn btn-primary btn-sm" style="white-space: nowrap;" onclick="startTestFromQuestions(\'training\')"><i class="bi bi-play-circle"></i> Тренировка</button>';
             html += '<button class="btn btn-danger btn-sm" style="white-space: nowrap;" onclick="startTestFromQuestions(\'exam\')"><i class="bi bi-clipboard-check"></i> Экзамен</button>';
-            html += '</div>';
             html += '</div>';
             html += '</div>';
             
@@ -2897,7 +2899,10 @@ async function addFavoritesViewToggle(questionId) {
             if (canEdit) {
                 html += '<div id="bulk-actions-panel" class="alert alert-light border d-none mt-2 mb-0">';
                 html += '<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">';
-                html += '<div><strong>Выбрано: <span id="selected-questions-count">0</span></strong></div>';
+                html += '<div class="d-flex align-items-center gap-2 flex-wrap">';
+                html += '<strong>Выбрано: <span id="selected-questions-count">0</span></strong>';
+                html += '<button class="btn btn-sm btn-outline-primary" onclick="selectAllVisibleQuestions()"><i class="bi bi-check2-square"></i> Выбрать все</button>';
+                html += '</div>';
                 html += '<div class="d-flex flex-wrap gap-2">';
                 html += '<button class="btn btn-sm btn-outline-success" onclick="bulkPublishQuestions()"><i class="bi bi-eye"></i> Опубликовать</button>';
                 html += '<button class="btn btn-sm btn-outline-warning" onclick="bulkUnpublishQuestions()"><i class="bi bi-eye-slash"></i> Снять с публикации</button>';
@@ -3400,6 +3405,18 @@ async function addFavoritesViewToggle(questionId) {
         }
     }
 
+    function selectAllVisibleQuestions() {
+        const checkboxes = document.querySelectorAll('.question-select-checkbox');
+        if (checkboxes.length === 0) {
+            return;
+        }
+
+        checkboxes.forEach(cb => {
+            cb.checked = true;
+        });
+        updateBulkActionsState();
+    }
+
     function clearBulkSelection() {
         document.querySelectorAll('.question-select-checkbox').forEach(cb => {
             cb.checked = false;
@@ -3550,6 +3567,7 @@ async function addFavoritesViewToggle(questionId) {
     window.editQuestionFromList = editQuestionFromList;
     window.deleteQuestionFromList = deleteQuestionFromList;
     window.updateBulkActionsState = updateBulkActionsState;
+    window.selectAllVisibleQuestions = selectAllVisibleQuestions;
     window.clearBulkSelection = clearBulkSelection;
     window.bulkPublishQuestions = bulkPublishQuestions;
     window.bulkUnpublishQuestions = bulkUnpublishQuestions;
