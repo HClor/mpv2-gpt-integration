@@ -116,7 +116,32 @@
 
 
     
-    async function apiCall(action, data) {
+    async function refreshCsrfToken() {
+        const response = await fetch(API_URL, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ action: "getCsrfToken", data: {} })
+        });
+
+        const text = await response.text();
+        const result = JSON.parse(text);
+
+        if (!result.success || !result.data || !result.data.csrf_token) {
+            throw new Error(result.message || "Failed to refresh CSRF token");
+        }
+
+        let meta = document.querySelector('meta[name="csrf-token"]');
+        if (!meta) {
+            meta = document.createElement('meta');
+            meta.setAttribute('name', 'csrf-token');
+            document.head.appendChild(meta);
+        }
+        meta.setAttribute('content', result.data.csrf_token);
+    }
+
+    async function apiCall(action, data, retryOnCsrfFail = true) {
         try {
             // CSRF Protection: Получаем токен из meta тега
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
@@ -137,7 +162,20 @@
 
             const text = await response.text();
             try {
-                return JSON.parse(text);
+                const parsed = JSON.parse(text);
+
+                if (
+                    retryOnCsrfFail &&
+                    parsed &&
+                    parsed.success === false &&
+                    typeof parsed.message === 'string' &&
+                    parsed.message.toLowerCase().includes('csrf token validation failed')
+                ) {
+                    await refreshCsrfToken();
+                    return apiCall(action, data, false);
+                }
+
+                return parsed;
             } catch (e) {
                 console.error("JSON parse error:", text);
                 throw new Error("Invalid server response");
