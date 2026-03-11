@@ -579,7 +579,12 @@ $timeLimit = (int)$test['time_limit'];
 
 // Формирование HTML вывода
 $viewDataAttr = $viewParam ? ' data-view="' . htmlspecialchars($viewParam, ENT_QUOTES, 'UTF-8') . '"' : '';
-$output = '<div id="test-container" data-test-id="' . (int)$testId . '" data-can-edit="' . ($canEditTest ? '1' : '0') . '" data-can-delete="' . ($canDelete ? '1' : '0') . '" data-test-mode="' . htmlspecialchars($testMode, ENT_QUOTES, 'UTF-8') . '"' . $viewDataAttr . '>';
+$importUrlAttr = '';
+if (!empty($importUrl)) {
+    $importUrlAttr = ' data-import-url="' . htmlspecialchars($importUrl, ENT_QUOTES, 'UTF-8') . '"';
+}
+
+$output = '<div id="test-container" data-test-id="' . (int)$testId . '" data-can-edit="' . ($canEditTest ? '1' : '0') . '" data-can-delete="' . ($canDelete ? '1' : '0') . '" data-test-mode="' . htmlspecialchars($testMode, ENT_QUOTES, 'UTF-8') . '"' . $importUrlAttr . $viewDataAttr . '>';
 $output .= '<div class="tests-grid test-runner-launch-grid">';
 
 // Скрываем test-info если view=questions или view=manage (для быстрой загрузки)
