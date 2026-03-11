@@ -31,6 +31,7 @@
 
     const container = document.getElementById("test-container");
     const testId = container ? container.dataset.testId : null;
+    const importQuestionsUrl = container ? (container.dataset.importUrl || '') : '';
     canDelete = container ? container.dataset.canDelete === '1' : false;
 
     // ПОДДЕРЖКА ОБЛАСТЕЙ ЗНАНИЙ
@@ -2851,6 +2852,11 @@ async function addFavoritesViewToggle(questionId) {
                 html += '<button class="btn btn-success btn-sm" onclick="openAddQuestionModal()">';
                 html += '<i class="bi bi-plus-circle-fill"></i> Добавить вопрос';
                 html += '</button>';
+                if (importQuestionsUrl) {
+                    html += '<a class="btn btn-outline-success btn-sm" href="' + importQuestionsUrl + '">';
+                    html += '<i class="bi bi-file-earmark-arrow-down"></i> Импорт вопросов';
+                    html += '</a>';
+                }
             }
             if (canDelete) {
                 html += '<button class="btn btn-outline-danger btn-sm" onclick="deleteAllQuestionsInTest()">';
