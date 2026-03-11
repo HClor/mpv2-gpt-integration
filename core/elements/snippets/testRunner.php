@@ -282,6 +282,8 @@ if ($knowledgeAreaId > 0) {
     // XSS Protection: Подключаем DOMPurify для санитизации HTML
     $output .= '<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>';
 
+    $sharedJsPath = $assetsUrl . 'components/testsystem/js/question-list-shared.js';
+    $output .= '<script src="' . htmlspecialchars($sharedJsPath, ENT_QUOTES, 'UTF-8') . '"></script>';
     $output .= '<script src="' . htmlspecialchars($jsPath, ENT_QUOTES, 'UTF-8') . '"></script>';
 
     // Подключение Quill для редактирования вопросов
@@ -725,6 +727,8 @@ $jsPath = $assetsUrl . 'components/testsystem/js/tsrunner.js';
 // XSS Protection: Подключаем DOMPurify для санитизации HTML
 $output .= '<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>';
 
+$sharedJsPath = $assetsUrl . 'components/testsystem/js/question-list-shared.js';
+$output .= '<script src="' . htmlspecialchars($sharedJsPath, ENT_QUOTES, 'UTF-8') . '"></script>';
 $output .= '<script src="' . htmlspecialchars($jsPath, ENT_QUOTES, 'UTF-8') . '"></script>';
 
 // Подключение Quill для редактирования вопросов

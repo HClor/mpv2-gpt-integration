@@ -362,6 +362,7 @@
         filterStatus = filterStatus || 'all';
         currentFilter = filterStatus;
         var listContent = document.getElementById('questions-list-content');
+        var sharedRenderer = window.QuestionListShared || null;
 
         // Фильтрация
         var filteredQuestions = allQuestionsData;
@@ -392,17 +393,12 @@
         document.querySelectorAll('.questions-filter-btn').forEach(function(btn) {
             var filter = btn.dataset.filter;
             btn.className = 'btn w-100 questions-filter-btn';
-            if (filter === filterStatus) {
-                if (filter === 'all') btn.classList.add('btn-primary');
-                else if (filter === 'published') btn.classList.add('btn-success');
-                else if (filter === 'unpublished') btn.classList.add('btn-secondary');
-                else if (filter === 'learning') btn.classList.add('btn-info');
-            } else {
-                if (filter === 'all') btn.classList.add('btn-outline-primary');
-                else if (filter === 'published') btn.classList.add('btn-outline-success');
-                else if (filter === 'unpublished') btn.classList.add('btn-outline-secondary');
-                else if (filter === 'learning') btn.classList.add('btn-outline-info');
-            }
+            var resolvedClass = sharedRenderer && typeof sharedRenderer.getFilterButtonClass === 'function'
+                ? sharedRenderer.getFilterButtonClass(filter, filter === filterStatus)
+                : (filter === filterStatus
+                    ? (filter === 'all' ? 'btn-primary' : filter === 'published' ? 'btn-success' : filter === 'unpublished' ? 'btn-secondary' : 'btn-info')
+                    : (filter === 'all' ? 'btn-outline-primary' : filter === 'published' ? 'btn-outline-success' : filter === 'unpublished' ? 'btn-outline-secondary' : 'btn-outline-info'));
+            btn.classList.add(resolvedClass);
         });
 
         // Обновляем кнопку "Все"
@@ -423,24 +419,36 @@
         }
 
         var html = '';
-        html += '<div id="bulk-actions-panel" class="alert alert-light border mb-3 ' + (selectedQuestionIds.size > 0 ? '' : 'd-none') + '">';
-        html += '<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">';
-        html += '<div><strong>Выбрано: <span id="selected-questions-count">' + selectedQuestionIds.size + '</span></strong></div>';
-        html += '<div class="d-flex flex-wrap gap-2">';
-        html += '<button class="btn btn-sm btn-outline-primary" onclick="toggleSelectAllQuestionsFromTests()"><i class="bi bi-check2-square"></i> Выбрать все</button>';
-        html += '<button class="btn btn-sm btn-outline-success" onclick="bulkPublishQuestionsFromTests()"><i class="bi bi-eye"></i> Опубликовать</button>';
-        html += '<button class="btn btn-sm btn-outline-warning" onclick="bulkUnpublishQuestionsFromTests()"><i class="bi bi-eye-slash"></i> Снять с публикации</button>';
+        var bulkActionsHtml = '';
+        bulkActionsHtml += '<button class="btn btn-sm btn-outline-primary" onclick="toggleSelectAllQuestionsFromTests()"><i class="bi bi-check2-square"></i> Выбрать все</button>';
+        bulkActionsHtml += '<button class="btn btn-sm btn-outline-success" onclick="bulkPublishQuestionsFromTests()"><i class="bi bi-eye"></i> Опубликовать</button>';
+        bulkActionsHtml += '<button class="btn btn-sm btn-outline-warning" onclick="bulkUnpublishQuestionsFromTests()"><i class="bi bi-eye-slash"></i> Снять с публикации</button>';
         if (editorCanDelete) {
-            html += '<button class="btn btn-sm btn-outline-danger" onclick="bulkDeleteQuestionsFromTests()"><i class="bi bi-trash"></i> Удалить</button>';
+            bulkActionsHtml += '<button class="btn btn-sm btn-outline-danger" onclick="bulkDeleteQuestionsFromTests()"><i class="bi bi-trash"></i> Удалить</button>';
         }
-        html += '<button class="btn btn-sm btn-outline-secondary" onclick="clearBulkSelectionFromTests()"><i class="bi bi-x-circle"></i> Сбросить</button>';
-        html += '</div></div></div>';
+        bulkActionsHtml += '<button class="btn btn-sm btn-outline-secondary" onclick="clearBulkSelectionFromTests()"><i class="bi bi-x-circle"></i> Сбросить</button>';
+
+        if (sharedRenderer && typeof sharedRenderer.buildBulkPanelHtml === 'function') {
+            html += sharedRenderer.buildBulkPanelHtml({
+                selectedCount: selectedQuestionIds.size,
+                actionsHtml: bulkActionsHtml
+            }).replace(' mt-2 mb-0', ' mb-3');
+        } else {
+            html += '<div id="bulk-actions-panel" class="alert alert-light border mb-3 ' + (selectedQuestionIds.size > 0 ? '' : 'd-none') + '">';
+            html += '<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">';
+            html += '<div><strong>Выбрано: <span id="selected-questions-count">' + selectedQuestionIds.size + '</span></strong></div>';
+            html += '<div class="d-flex flex-wrap gap-2">' + bulkActionsHtml + '</div>';
+            html += '</div></div>';
+        }
 
         html += '<div class="list-group">';
 
         filteredQuestions.forEach(function(question) {
-            var questionText = stripHtml(question.question_text).substring(0, 120);
-            var hasExplanation = question.explanation ? '✓' : '—';
+            var preview = sharedRenderer && typeof sharedRenderer.buildQuestionPreview === 'function'
+                ? sharedRenderer.buildQuestionPreview(question)
+                : null;
+            var questionText = preview ? preview.shortText : stripHtml(question.question_text).substring(0, 120);
+            var hasExplanation = preview ? (preview.hasExplanation ? '✓' : '—') : (question.explanation ? '✓' : '—');
             var isPublished = parseInt(question.published) === 1;
             var isLearning = parseInt(question.is_learning) === 1;
             var realIndex = allQuestionsData.findIndex(function(q) { return q.id === question.id; });
@@ -470,9 +478,9 @@
             html += '<div class="d-flex align-items-start gap-2">';
             html += '<span class="badge bg-primary flex-shrink-0" style="min-width: 36px; font-size: 0.9rem;">' + (realIndex + 1) + '</span>';
             html += '<div class="flex-grow-1">';
-            html += '<p class="mb-1 fw-bold text-dark">' + escapeHtml(questionText) + (questionText.length >= 120 ? '...' : '') + '</p>';
+            html += '<p class="mb-1 fw-bold text-dark">' + escapeHtml(questionText) + ((preview ? preview.isTrimmed : questionText.length >= 120) ? '...' : '') + '</p>';
             html += '<small class="text-muted">';
-            html += (question.question_type === 'single' ? 'Один ответ' : 'Несколько ответов') + ' • ';
+            html += (preview ? preview.questionTypeLabel : (question.question_type === 'single' ? 'Один ответ' : 'Несколько ответов')) + ' • ';
             html += 'Объяснение: ' + hasExplanation;
             html += '</small></div></div></div>';
 
@@ -550,12 +558,19 @@
     window.clearBulkSelectionFromTests = clearBulkSelectionFromTests;
 
     function toggleSelectAllQuestionsFromTests() {
-        var checkboxes = document.querySelectorAll('.question-select-checkbox');
+        var checkboxes = window.QuestionListShared && typeof window.QuestionListShared.toggleSelectAllCheckboxes === 'function'
+            ? window.QuestionListShared.toggleSelectAllCheckboxes('.question-select-checkbox')
+            : Array.from(document.querySelectorAll('.question-select-checkbox'));
         if (checkboxes.length === 0) return;
 
-        var allChecked = Array.from(checkboxes).every(function(cb) { return cb.checked; });
+        if (!window.QuestionListShared || typeof window.QuestionListShared.toggleSelectAllCheckboxes !== 'function') {
+            var allChecked = Array.from(checkboxes).every(function(cb) { return cb.checked; });
+            checkboxes.forEach(function(cb) {
+                cb.checked = !allChecked;
+            });
+        }
+
         checkboxes.forEach(function(cb) {
-            cb.checked = !allChecked;
             var id = parseInt(cb.value, 10);
             if (!id) return;
             if (cb.checked) selectedQuestionIds.add(id);
