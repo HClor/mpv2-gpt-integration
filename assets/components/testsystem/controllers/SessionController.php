@@ -136,12 +136,29 @@ class SessionController extends BaseController
         $stmt->execute([$sessionId]);
         $answeredIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-        // Находим следующий неотвеченный вопрос
-        $nextQuestionId = null;
+        // Находим следующий неотвеченный И опубликованный вопрос
+        $answeredMap = array_flip(array_map('intval', $answeredIds));
+        $unansweredIds = [];
         foreach ($questionOrder as $qid) {
-            if (!in_array($qid, $answeredIds)) {
-                $nextQuestionId = $qid;
-                break;
+            $qid = (int)$qid;
+            if ($qid > 0 && !isset($answeredMap[$qid])) {
+                $unansweredIds[] = $qid;
+            }
+        }
+
+        $nextQuestionId = null;
+        if (!empty($unansweredIds)) {
+            $placeholders = implode(',', array_fill(0, count($unansweredIds), '?'));
+            $stmt = $this->modx->prepare("\n                SELECT id\n                FROM {$this->prefix}test_questions\n                WHERE id IN ({$placeholders}) AND published = 1\n            ");
+            $stmt->execute($unansweredIds);
+            $publishedIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            $publishedMap = array_flip(array_map('intval', $publishedIds));
+
+            foreach ($unansweredIds as $qid) {
+                if (isset($publishedMap[$qid])) {
+                    $nextQuestionId = $qid;
+                    break;
+                }
             }
         }
 

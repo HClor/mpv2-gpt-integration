@@ -1357,8 +1357,6 @@ async function addFavoritesViewToggle(questionId) {
             });
             
             if (result.success) {
-                const status = result.published ? "опубликован" : "снят с публикации";
-                alert(`✅ Вопрос ${status}`);
                 loadNextQuestion();
             } else {
                 alert("Ошибка: " + result.message);
