@@ -3594,22 +3594,6 @@ async function addFavoritesViewToggle(questionId) {
         }
     }
 
-    async function bulkDeleteQuestions() {
-        try {
-            await getQuestionListActions().deleteSelected();
-        } catch (error) {
-            alert('Ошибка: ' + error.message);
-        }
-    }
-
-    async function bulkDeleteQuestions() {
-        try {
-            await getQuestionListActions().deleteSelected();
-        } catch (error) {
-            alert('Ошибка: ' + error.message);
-        }
-    }
-
     async function deleteAllQuestionsInTest() {
         if (!canDelete) {
             alert("Недостаточно прав для удаления вопросов");
@@ -4270,7 +4254,7 @@ async function addFavoritesViewToggle(questionId) {
             const form = document.getElementById(`test-settings-form-${testId}`);
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                await saveTestSettings(testId, form);
+                await saveTestSettingsFromManagementModal(testId, form);
             });
 
         } catch (error) {
@@ -4279,7 +4263,7 @@ async function addFavoritesViewToggle(questionId) {
         }
     }
 
-    async function saveTestSettings(testId, form) {
+    async function saveTestSettingsFromManagementModal(testId, form) {
         try {
             const formData = new FormData(form);
             const data = {

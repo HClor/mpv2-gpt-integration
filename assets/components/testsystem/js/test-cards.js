@@ -454,8 +454,9 @@
 
         html += sharedRenderer.buildBulkPanelHtml({
             selectedCount: selectedQuestionIds.size,
-            actionsHtml: bulkActionsHtml
-        }).replace(' mt-2 mb-0', ' mb-3');
+            actionsHtml: bulkActionsHtml,
+            spacingClass: 'mb-3'
+        });
 
         html += '<div class="list-group">';
 
@@ -532,15 +533,19 @@
     // Обработчик фильтров
     // ============================================
 
-    document.addEventListener('click', function(e) {
-        var filterBtn = e.target.closest('.questions-filter-btn');
-        if (!filterBtn) return;
+    if (!window.__testsPageFilterDelegationBound) {
+        document.addEventListener('click', function(e) {
+            var filterBtn = e.target.closest('#questions-editor-view .questions-filters-container button[data-filter]');
+            if (!filterBtn) return;
 
-        var filter = filterBtn.dataset.filter;
-        if (filter && currentEditorTestId) {
-            renderQuestionsEditor(filter);
-        }
-    });
+            var filter = filterBtn.dataset.filter;
+            if (filter && currentEditorTestId) {
+                e.preventDefault();
+                renderQuestionsEditor(filter);
+            }
+        });
+        window.__testsPageFilterDelegationBound = true;
+    }
 
 
     function updateBulkActionsStateFromTests() {

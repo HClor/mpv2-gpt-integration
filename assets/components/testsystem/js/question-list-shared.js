@@ -164,9 +164,10 @@
         const selectedCount = Number(opts.selectedCount || 0);
         const visibleClass = selectedCount > 0 ? '' : ' d-none';
         const actionsHtml = opts.actionsHtml || '';
+        const spacingClass = opts.spacingClass || 'mt-2 mb-0';
 
         return '' +
-            '<div id="bulk-actions-panel" class="alert alert-light border mt-2 mb-0' + visibleClass + '">' +
+            '<div id="bulk-actions-panel" class="alert alert-light border ' + escapeHtml(spacingClass) + visibleClass + '">' +
             '<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">' +
             '<div class="d-flex align-items-center gap-2 flex-wrap">' +
             '<strong>Выбрано: <span id="selected-questions-count">' + selectedCount + '</span></strong>' +
