@@ -272,6 +272,7 @@
         currentEditorTestId = testId;
         document.getElementById('categories-tests-view').style.display = 'none';
         document.getElementById('questions-editor-view').style.display = 'block';
+        updateEditorImportButton(testId);
         loadQuestionsForEditor(testId, 'all');
 
         // Закрываем меню
@@ -281,9 +282,27 @@
     }
     window.showQuestionsEditor = showQuestionsEditor;
 
+    function updateEditorImportButton(testId) {
+        var importButton = document.getElementById('editor-import-questions-btn');
+        if (!importButton) return;
+
+        var container = document.getElementById('tests-page-container');
+        var importBaseUrl = container ? (container.dataset.importBaseUrl || '') : '';
+        if (!importBaseUrl || !testId) {
+            importButton.style.display = 'none';
+            importButton.setAttribute('href', '#');
+            return;
+        }
+
+        var separator = importBaseUrl.indexOf('?') !== -1 ? '&' : '?';
+        importButton.setAttribute('href', importBaseUrl + separator + 'test_id=' + encodeURIComponent(testId));
+        importButton.style.display = '';
+    }
+
     function backToTestsList() {
         document.getElementById('questions-editor-view').style.display = 'none';
         document.getElementById('categories-tests-view').style.display = 'block';
+        updateEditorImportButton(null);
         currentEditorTestId = null;
         allQuestionsData = [];
         selectedQuestionIds.clear();

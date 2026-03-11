@@ -169,7 +169,14 @@ $isExpert = $modx->user->isMember($groupExperts);
 
 // CSRF Protection: добавляем meta тег с токеном для JavaScript
 $output = CsrfProtection::getTokenMeta();
-$output .= '<div id="tests-page-container">';
+$importPageId = Config::getPageId('import_csv', 29);
+$importBaseUrl = $importPageId > 0 ? $modx->makeUrl($importPageId, 'web', []) : '';
+$testsContainerImportAttr = '';
+if (!empty($importBaseUrl)) {
+    $testsContainerImportAttr = ' data-import-base-url="' . htmlspecialchars($importBaseUrl, ENT_QUOTES, 'UTF-8') . '"';
+}
+
+$output .= '<div id="tests-page-container"' . $testsContainerImportAttr . '>';
 
 // Основной вид: Категории + Тесты
 $output .= '<div id="categories-tests-view">';
@@ -427,6 +434,9 @@ $output .= '</button>';
 $output .= '<button class="ts-btn ts-btn-success ts-btn-sm" onclick="openAddQuestionModalFromTests()">';
 $output .= '<i class="bi bi-plus-circle-fill"></i> Добавить вопрос';
 $output .= '</button>';
+$output .= '<a id="editor-import-questions-btn" class="ts-btn ts-btn-secondary ts-btn-sm" href="#" style="display:none;">';
+$output .= '<i class="bi bi-file-earmark-arrow-down"></i> Импорт вопросов';
+$output .= '</a>';
 // Контролы запуска теста
 $output .= '<div class="d-flex gap-1 align-items-center">';
 $output .= '<input type="number" id="editor-questions-count" class="form-control form-control-sm" style="width: 70px;" value="20" min="1" placeholder="20">';
