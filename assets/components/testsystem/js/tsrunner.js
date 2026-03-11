@@ -3434,6 +3434,47 @@ async function addFavoritesViewToggle(questionId) {
         return Array.from(checkboxes).map(cb => parseInt(cb.value, 10)).filter(Boolean);
     }
 
+    var questionListActions = null;
+
+    function getQuestionListActions() {
+        if (questionListActions) {
+            return questionListActions;
+        }
+
+        const sharedRenderer = window.QuestionListShared && typeof window.QuestionListShared.requireSharedApi === 'function'
+            ? window.QuestionListShared.requireSharedApi(['createQuestionListActions', 'toggleSelectAllCheckboxes'])
+            : null;
+        if (!sharedRenderer) {
+            throw new Error('QuestionListShared actions are not available');
+        }
+
+        questionListActions = sharedRenderer.createQuestionListActions({
+            getSelectedIds: getSelectedQuestionIds,
+            noSelectionMessage: 'Выберите хотя бы один вопрос',
+            onSelectAll: function () {
+                sharedRenderer.toggleSelectAllCheckboxes('.question-select-checkbox');
+                updateBulkActionsState();
+            },
+            onClearSelection: function () {
+                document.querySelectorAll('.question-select-checkbox').forEach(cb => {
+                    cb.checked = false;
+                });
+                updateBulkActionsState();
+            },
+            onPublish: function (selectedIds) {
+                return bulkSetPublished(1, selectedIds);
+            },
+            onUnpublish: function (selectedIds) {
+                return bulkSetPublished(0, selectedIds);
+            },
+            onDelete: function (selectedIds) {
+                return bulkDeleteByIds(selectedIds);
+            }
+        });
+
+        return questionListActions;
+    }
+
     let questionListActions = null;
 
     function getQuestionListActions() {
@@ -3625,6 +3666,14 @@ async function addFavoritesViewToggle(questionId) {
 
         alert(`✅ Удалено вопросов: ${selectedIds.length}`);
         await showAllQuestionsView(currentQuestionsFilter);
+    }
+
+    async function bulkDeleteQuestions() {
+        try {
+            await getQuestionListActions().deleteSelected();
+        } catch (error) {
+            alert('Ошибка: ' + error.message);
+        }
     }
 
     async function bulkDeleteQuestions() {

@@ -383,7 +383,7 @@
         html += sharedRenderer.buildHeaderHtml({
             title: 'Список вопросов теста',
             controlsHtml: controlsHtml,
-            titleClass: 'mb-0',
+            titleClass: 'mb-3',
             controlsClass: 'd-flex flex-column flex-sm-row gap-2 w-100 align-items-stretch align-items-sm-center'
         });
         html += sharedRenderer.buildFiltersHtml(stats, filterStatus);
