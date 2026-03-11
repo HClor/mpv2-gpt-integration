@@ -362,7 +362,13 @@
         filterStatus = filterStatus || 'all';
         currentFilter = filterStatus;
         var listContent = document.getElementById('questions-list-content');
-        var sharedRenderer = window.QuestionListShared || null;
+        var sharedRenderer = window.QuestionListShared && typeof window.QuestionListShared.requireSharedApi === 'function'
+            ? window.QuestionListShared.requireSharedApi(['getFilterButtonClass', 'buildBulkPanelHtml', 'buildQuestionPreview', 'toggleSelectAllCheckboxes'])
+            : null;
+        if (!sharedRenderer) {
+            listContent.innerHTML = '<div class="alert alert-danger">Ошибка: не загружен модуль QuestionListShared. Обновите страницу.</div>';
+            return;
+        }
 
         // Фильтрация
         var filteredQuestions = allQuestionsData;
@@ -393,11 +399,7 @@
         document.querySelectorAll('.questions-filter-btn').forEach(function(btn) {
             var filter = btn.dataset.filter;
             btn.className = 'btn w-100 questions-filter-btn';
-            var resolvedClass = sharedRenderer && typeof sharedRenderer.getFilterButtonClass === 'function'
-                ? sharedRenderer.getFilterButtonClass(filter, filter === filterStatus)
-                : (filter === filterStatus
-                    ? (filter === 'all' ? 'btn-primary' : filter === 'published' ? 'btn-success' : filter === 'unpublished' ? 'btn-secondary' : 'btn-info')
-                    : (filter === 'all' ? 'btn-outline-primary' : filter === 'published' ? 'btn-outline-success' : filter === 'unpublished' ? 'btn-outline-secondary' : 'btn-outline-info'));
+            var resolvedClass = sharedRenderer.getFilterButtonClass(filter, filter === filterStatus);
             btn.classList.add(resolvedClass);
         });
 
@@ -428,27 +430,17 @@
         }
         bulkActionsHtml += '<button class="btn btn-sm btn-outline-secondary" onclick="clearBulkSelectionFromTests()"><i class="bi bi-x-circle"></i> Сбросить</button>';
 
-        if (sharedRenderer && typeof sharedRenderer.buildBulkPanelHtml === 'function') {
-            html += sharedRenderer.buildBulkPanelHtml({
-                selectedCount: selectedQuestionIds.size,
-                actionsHtml: bulkActionsHtml
-            }).replace(' mt-2 mb-0', ' mb-3');
-        } else {
-            html += '<div id="bulk-actions-panel" class="alert alert-light border mb-3 ' + (selectedQuestionIds.size > 0 ? '' : 'd-none') + '">';
-            html += '<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">';
-            html += '<div><strong>Выбрано: <span id="selected-questions-count">' + selectedQuestionIds.size + '</span></strong></div>';
-            html += '<div class="d-flex flex-wrap gap-2">' + bulkActionsHtml + '</div>';
-            html += '</div></div>';
-        }
+        html += sharedRenderer.buildBulkPanelHtml({
+            selectedCount: selectedQuestionIds.size,
+            actionsHtml: bulkActionsHtml
+        }).replace(' mt-2 mb-0', ' mb-3');
 
         html += '<div class="list-group">';
 
         filteredQuestions.forEach(function(question) {
-            var preview = sharedRenderer && typeof sharedRenderer.buildQuestionPreview === 'function'
-                ? sharedRenderer.buildQuestionPreview(question)
-                : null;
-            var questionText = preview ? preview.shortText : stripHtml(question.question_text).substring(0, 120);
-            var hasExplanation = preview ? (preview.hasExplanation ? '✓' : '—') : (question.explanation ? '✓' : '—');
+            var preview = sharedRenderer.buildQuestionPreview(question);
+            var questionText = preview.shortText;
+            var hasExplanation = preview.hasExplanation ? '✓' : '—';
             var isPublished = parseInt(question.published) === 1;
             var isLearning = parseInt(question.is_learning) === 1;
             var realIndex = allQuestionsData.findIndex(function(q) { return q.id === question.id; });
@@ -478,9 +470,9 @@
             html += '<div class="d-flex align-items-start gap-2">';
             html += '<span class="badge bg-primary flex-shrink-0" style="min-width: 36px; font-size: 0.9rem;">' + (realIndex + 1) + '</span>';
             html += '<div class="flex-grow-1">';
-            html += '<p class="mb-1 fw-bold text-dark">' + escapeHtml(questionText) + ((preview ? preview.isTrimmed : questionText.length >= 120) ? '...' : '') + '</p>';
+            html += '<p class="mb-1 fw-bold text-dark">' + escapeHtml(questionText) + (preview.isTrimmed ? '...' : '') + '</p>';
             html += '<small class="text-muted">';
-            html += (preview ? preview.questionTypeLabel : (question.question_type === 'single' ? 'Один ответ' : 'Несколько ответов')) + ' • ';
+            html += preview.questionTypeLabel + ' • ';
             html += 'Объяснение: ' + hasExplanation;
             html += '</small></div></div></div>';
 
@@ -541,6 +533,56 @@
         }
     }
 
+    function getSelectedQuestionIdsFromTests() {
+        return Array.from(selectedQuestionIds);
+    }
+
+    let questionsEditorActions = null;
+
+    function getQuestionsEditorActions() {
+        if (questionsEditorActions) {
+            return questionsEditorActions;
+        }
+
+        var sharedRenderer = window.QuestionListShared && typeof window.QuestionListShared.requireSharedApi === 'function'
+            ? window.QuestionListShared.requireSharedApi(['createQuestionListActions', 'toggleSelectAllCheckboxes'])
+            : null;
+        if (!sharedRenderer) {
+            throw new Error('QuestionListShared actions are not available');
+        }
+
+        questionsEditorActions = sharedRenderer.createQuestionListActions({
+            getSelectedIds: getSelectedQuestionIdsFromTests,
+            noSelectionMessage: 'Выберите хотя бы один вопрос',
+            onSelectAll: function () {
+                var checkboxes = sharedRenderer.toggleSelectAllCheckboxes('.question-select-checkbox');
+                checkboxes.forEach(function(cb) {
+                    var id = parseInt(cb.value, 10);
+                    if (!id) return;
+                    if (cb.checked) selectedQuestionIds.add(id);
+                    else selectedQuestionIds.delete(id);
+                });
+                updateBulkActionsStateFromTests();
+            },
+            onClearSelection: function () {
+                selectedQuestionIds.clear();
+                document.querySelectorAll('.question-select-checkbox').forEach(function(cb) { cb.checked = false; });
+                updateBulkActionsStateFromTests();
+            },
+            onPublish: function (selectedIds) {
+                return bulkSetPublishedFromTests(1, selectedIds);
+            },
+            onUnpublish: function (selectedIds) {
+                return bulkSetPublishedFromTests(0, selectedIds);
+            },
+            onDelete: function (selectedIds) {
+                return bulkDeleteQuestionsByIdsFromTests(selectedIds);
+            }
+        });
+
+        return questionsEditorActions;
+    }
+
     function toggleQuestionSelectionFromTests(checkbox) {
         var id = parseInt(checkbox.value, 10);
         if (!id) return;
@@ -551,42 +593,31 @@
     window.toggleQuestionSelectionFromTests = toggleQuestionSelectionFromTests;
 
     function clearBulkSelectionFromTests() {
-        selectedQuestionIds.clear();
-        document.querySelectorAll('.question-select-checkbox').forEach(function(cb) { cb.checked = false; });
-        updateBulkActionsStateFromTests();
+        try {
+            getQuestionsEditorActions().clearSelection();
+        } catch (error) {
+            alert('Ошибка: ' + error.message);
+        }
     }
     window.clearBulkSelectionFromTests = clearBulkSelectionFromTests;
 
     function toggleSelectAllQuestionsFromTests() {
-        var checkboxes = window.QuestionListShared && typeof window.QuestionListShared.toggleSelectAllCheckboxes === 'function'
-            ? window.QuestionListShared.toggleSelectAllCheckboxes('.question-select-checkbox')
-            : Array.from(document.querySelectorAll('.question-select-checkbox'));
-        if (checkboxes.length === 0) return;
-
-        if (!window.QuestionListShared || typeof window.QuestionListShared.toggleSelectAllCheckboxes !== 'function') {
-            var allChecked = Array.from(checkboxes).every(function(cb) { return cb.checked; });
-            checkboxes.forEach(function(cb) {
-                cb.checked = !allChecked;
-            });
+        try {
+            getQuestionsEditorActions().selectAll();
+        } catch (error) {
+            alert('Ошибка: ' + error.message);
         }
-
-        checkboxes.forEach(function(cb) {
-            var id = parseInt(cb.value, 10);
-            if (!id) return;
-            if (cb.checked) selectedQuestionIds.add(id);
-            else selectedQuestionIds.delete(id);
-        });
-        updateBulkActionsStateFromTests();
     }
     window.toggleSelectAllQuestionsFromTests = toggleSelectAllQuestionsFromTests;
 
-    async function bulkSetPublishedFromTests(targetPublished) {
-        if (selectedQuestionIds.size === 0) {
+    async function bulkSetPublishedFromTests(targetPublished, selectedIdsInput) {
+        var selectedIds = selectedIdsInput || Array.from(selectedQuestionIds);
+        if (selectedIds.length === 0) {
             alert('Выберите хотя бы один вопрос');
             return;
         }
 
-        var selectedSet = new Set(Array.from(selectedQuestionIds));
+        var selectedSet = new Set(selectedIds);
         var questionsToChange = allQuestionsData.filter(function(q) {
             var id = parseInt(q.id, 10);
             return selectedSet.has(id) && parseInt(q.published, 10) !== targetPublished;
@@ -608,24 +639,23 @@
     }
 
     async function bulkPublishQuestionsFromTests() {
-        try { await bulkSetPublishedFromTests(1); }
+        try { await getQuestionsEditorActions().publishSelected(); }
         catch (error) { alert('Ошибка: ' + error.message); }
     }
     window.bulkPublishQuestionsFromTests = bulkPublishQuestionsFromTests;
 
     async function bulkUnpublishQuestionsFromTests() {
-        try { await bulkSetPublishedFromTests(0); }
+        try { await getQuestionsEditorActions().unpublishSelected(); }
         catch (error) { alert('Ошибка: ' + error.message); }
     }
     window.bulkUnpublishQuestionsFromTests = bulkUnpublishQuestionsFromTests;
 
-    async function bulkDeleteQuestionsFromTests() {
+    async function bulkDeleteQuestionsByIdsFromTests(ids) {
         if (!editorCanDelete) {
             alert('Недостаточно прав для удаления вопросов');
             return;
         }
 
-        var ids = Array.from(selectedQuestionIds);
         if (ids.length === 0) {
             alert('Выберите хотя бы один вопрос');
             return;
@@ -641,6 +671,11 @@
         showNotification('Удалено вопросов: ' + ids.length, 'success');
         selectedQuestionIds.clear();
         await loadQuestionsForEditor(currentEditorTestId, currentFilter);
+    }
+
+    async function bulkDeleteQuestionsFromTests() {
+        try { await getQuestionsEditorActions().deleteSelected(); }
+        catch (error) { alert('Ошибка: ' + error.message); }
     }
     window.bulkDeleteQuestionsFromTests = bulkDeleteQuestionsFromTests;
 

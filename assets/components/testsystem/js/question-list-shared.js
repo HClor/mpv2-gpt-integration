@@ -89,6 +89,76 @@
         return Array.from(checkboxes);
     }
 
+    function createQuestionListActions(options) {
+        const opts = options || {};
+
+        function getSelected() {
+            const getter = opts.getSelectedIds;
+            if (typeof getter !== 'function') {
+                throw new Error('getSelectedIds is not configured');
+            }
+            return getter() || [];
+        }
+
+        async function runWithSelection(handlerName, emptyMessage) {
+            const selectedIds = getSelected();
+            if (!selectedIds.length) {
+                throw new Error(emptyMessage || 'Выберите хотя бы один вопрос');
+            }
+
+            const handler = opts[handlerName];
+            if (typeof handler !== 'function') {
+                throw new Error(handlerName + ' is not configured');
+            }
+
+            return handler(selectedIds);
+        }
+
+        return {
+            selectAll: function () {
+                const handler = opts.onSelectAll;
+                if (typeof handler !== 'function') {
+                    throw new Error('onSelectAll is not configured');
+                }
+                return handler();
+            },
+            clearSelection: function () {
+                const handler = opts.onClearSelection;
+                if (typeof handler !== 'function') {
+                    throw new Error('onClearSelection is not configured');
+                }
+                return handler();
+            },
+            publishSelected: function () {
+                return runWithSelection('onPublish', opts.noSelectionMessage);
+            },
+            unpublishSelected: function () {
+                return runWithSelection('onUnpublish', opts.noSelectionMessage);
+            },
+            deleteSelected: function () {
+                return runWithSelection('onDelete', opts.noSelectionMessage);
+            }
+        };
+    }
+
+    function requireSharedApi(requiredMethods) {
+        const methods = Array.isArray(requiredMethods) ? requiredMethods : [];
+        const api = window.QuestionListShared;
+        if (!api) {
+            throw new Error('QuestionListShared is not loaded');
+        }
+
+        const missing = methods.filter(function (name) {
+            return typeof api[name] !== 'function';
+        });
+
+        if (missing.length > 0) {
+            throw new Error('QuestionListShared missing methods: ' + missing.join(', '));
+        }
+
+        return api;
+    }
+
     function buildBulkPanelHtml(options) {
         const opts = options || {};
         const selectedCount = Number(opts.selectedCount || 0);
@@ -126,6 +196,8 @@
         buildFiltersHtml: buildFiltersHtml,
         buildBulkPanelHtml: buildBulkPanelHtml,
         buildQuestionPreview: buildQuestionPreview,
-        toggleSelectAllCheckboxes: toggleSelectAllCheckboxes
+        toggleSelectAllCheckboxes: toggleSelectAllCheckboxes,
+        createQuestionListActions: createQuestionListActions,
+        requireSharedApi: requireSharedApi
     };
 })();

@@ -2880,7 +2880,12 @@ async function addFavoritesViewToggle(questionId) {
             let html = '<div class="card mb-4">';
             html += '<div class="card-header bg-light">';
             
-            const sharedRenderer = window.QuestionListShared || null;
+            const sharedRenderer = window.QuestionListShared && typeof window.QuestionListShared.requireSharedApi === 'function'
+                ? window.QuestionListShared.requireSharedApi(['buildHeaderHtml', 'buildFiltersHtml', 'buildBulkPanelHtml', 'toggleSelectAllCheckboxes'])
+                : null;
+            if (!sharedRenderer) {
+                throw new Error('QuestionListShared is not available');
+            }
 
             // ШАПКА
             let headerControlsHtml = '';
@@ -2908,62 +2913,21 @@ async function addFavoritesViewToggle(questionId) {
             headerControlsHtml += '<button class="btn btn-danger btn-sm" style="white-space: nowrap;" onclick="startTestFromQuestions(\'exam\')"><i class="bi bi-clipboard-check"></i> Экзамен</button>';
             headerControlsHtml += '</div>';
 
-            if (sharedRenderer && typeof sharedRenderer.buildHeaderHtml === 'function') {
-                html += sharedRenderer.buildHeaderHtml({
-                    title: 'Список вопросов теста',
-                    controlsHtml: headerControlsHtml,
-                    titleClass: 'mb-3',
-                    controlsClass: 'd-flex flex-column flex-sm-row gap-2 w-100 align-items-stretch align-items-sm-center mb-3'
-                });
-            } else {
-                html += '<h3 class="mb-3"><i class="bi bi-list-ul"></i> Список вопросов теста</h3>';
-                html += '<div class="d-flex flex-column flex-sm-row gap-2 w-100 align-items-stretch align-items-sm-center mb-3">';
-                html += headerControlsHtml;
-                html += '</div>';
-            }
+            html += sharedRenderer.buildHeaderHtml({
+                title: 'Список вопросов теста',
+                controlsHtml: headerControlsHtml,
+                titleClass: 'mb-3',
+                controlsClass: 'd-flex flex-column flex-sm-row gap-2 w-100 align-items-stretch align-items-sm-center mb-3'
+            });
             
             // ФИЛЬТРЫ
-            if (sharedRenderer && typeof sharedRenderer.buildFiltersHtml === 'function') {
-                const filtersHtml = sharedRenderer.buildFiltersHtml({
-                    total: totalCount,
-                    published: publishedCount,
-                    unpublished: unpublishedCount,
-                    learning: learningCount
-                }, filterStatus, {
-                    onclickMap: {
-                        all: "showAllQuestionsView('all')",
-                        published: "showAllQuestionsView('published')",
-                        unpublished: "showAllQuestionsView('unpublished')",
-                        learning: "showAllQuestionsView('learning')"
-                    }
-                });
-                html += filtersHtml;
-            } else {
-                html += '<div class="questions-filters-container">';
-                html += '<div class="row g-2">';
-                
-                html += '<div class="col-6 col-md-3">';
-                html += `<button type="button" class="btn ${filterStatus === 'all' ? 'btn-primary' : 'btn-outline-primary'} w-100" onclick="showAllQuestionsView('all')">`;
-                html += `Все <span class="badge bg-light text-dark ms-1">${totalCount}</span>`;
-                html += '</button></div>';
-                
-                html += '<div class="col-6 col-md-3">';
-                html += `<button type="button" class="btn ${filterStatus === 'published' ? 'btn-success' : 'btn-outline-success'} w-100" onclick="showAllQuestionsView('published')">`;
-                html += `Опубликовано <span class="badge bg-light text-dark ms-1">${publishedCount}</span>`;
-                html += '</button></div>';
-                
-                html += '<div class="col-6 col-md-3">';
-                html += `<button type="button" class="btn ${filterStatus === 'unpublished' ? 'btn-secondary' : 'btn-outline-secondary'} w-100" onclick="showAllQuestionsView('unpublished')">`;
-                html += `Не опубликовано <span class="badge bg-light text-dark ms-1">${unpublishedCount}</span>`;
-                html += '</button></div>';
-                
-                html += '<div class="col-6 col-md-3">';
-                html += `<button type="button" class="btn ${filterStatus === 'learning' ? 'btn-info' : 'btn-outline-info'} w-100" onclick="showAllQuestionsView('learning')">`;
-                html += `В обучении <span class="badge bg-light text-dark ms-1">${learningCount}</span>`;
-                html += '</button></div>';
-                
-                html += '</div></div>';
-            }
+            const filtersHtml = sharedRenderer.buildFiltersHtml({
+                total: totalCount,
+                published: publishedCount,
+                unpublished: unpublishedCount,
+                learning: learningCount
+            }, filterStatus);
+            html += filtersHtml;
 
             if (canEdit) {
                 let bulkActionsHtml = '';
@@ -2975,17 +2939,7 @@ async function addFavoritesViewToggle(questionId) {
                 }
                 bulkActionsHtml += '<button class="btn btn-sm btn-outline-secondary" onclick="clearBulkSelection()"><i class="bi bi-x-circle"></i> Сбросить</button>';
 
-                if (sharedRenderer && typeof sharedRenderer.buildBulkPanelHtml === 'function') {
-                    html += sharedRenderer.buildBulkPanelHtml({ selectedCount: 0, actionsHtml: bulkActionsHtml });
-                } else {
-                    html += '<div id="bulk-actions-panel" class="alert alert-light border d-none mt-2 mb-0">';
-                    html += '<div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-2">';
-                    html += '<div class="d-flex align-items-center gap-2 flex-wrap">';
-                    html += '<strong>Выбрано: <span id="selected-questions-count">0</span></strong>';
-                    html += '</div>';
-                    html += '<div class="d-flex flex-wrap gap-2">' + bulkActionsHtml + '</div>';
-                    html += '</div></div>';
-                }
+                html += sharedRenderer.buildBulkPanelHtml({ selectedCount: 0, actionsHtml: bulkActionsHtml });
             }
             html += '</div>';
             
@@ -3169,6 +3123,24 @@ async function addFavoritesViewToggle(questionId) {
     }
     
     window.openQuestionViewModal = openQuestionViewModal;
+
+    if (!window.__tsRunnerFilterDelegationBound) {
+        document.addEventListener('click', function (e) {
+            const filterBtn = e.target.closest('#questions-list-container .questions-filters-container button[data-filter]');
+            if (!filterBtn) {
+                return;
+            }
+
+            const filter = filterBtn.getAttribute('data-filter');
+            if (!filter) {
+                return;
+            }
+
+            e.preventDefault();
+            showAllQuestionsView(filter);
+        });
+        window.__tsRunnerFilterDelegationBound = true;
+    }
     window.editQuestionFromModal = editQuestionFromModal;
     
     
@@ -3462,6 +3434,47 @@ async function addFavoritesViewToggle(questionId) {
         return Array.from(checkboxes).map(cb => parseInt(cb.value, 10)).filter(Boolean);
     }
 
+    let questionListActions = null;
+
+    function getQuestionListActions() {
+        if (questionListActions) {
+            return questionListActions;
+        }
+
+        const sharedRenderer = window.QuestionListShared && typeof window.QuestionListShared.requireSharedApi === 'function'
+            ? window.QuestionListShared.requireSharedApi(['createQuestionListActions', 'toggleSelectAllCheckboxes'])
+            : null;
+        if (!sharedRenderer) {
+            throw new Error('QuestionListShared actions are not available');
+        }
+
+        questionListActions = sharedRenderer.createQuestionListActions({
+            getSelectedIds: getSelectedQuestionIds,
+            noSelectionMessage: 'Выберите хотя бы один вопрос',
+            onSelectAll: function () {
+                sharedRenderer.toggleSelectAllCheckboxes('.question-select-checkbox');
+                updateBulkActionsState();
+            },
+            onClearSelection: function () {
+                document.querySelectorAll('.question-select-checkbox').forEach(cb => {
+                    cb.checked = false;
+                });
+                updateBulkActionsState();
+            },
+            onPublish: function (selectedIds) {
+                return bulkSetPublished(1, selectedIds);
+            },
+            onUnpublish: function (selectedIds) {
+                return bulkSetPublished(0, selectedIds);
+            },
+            onDelete: function (selectedIds) {
+                return bulkDeleteByIds(selectedIds);
+            }
+        });
+
+        return questionListActions;
+    }
+
     function updateBulkActionsState() {
         const selectedIds = getSelectedQuestionIds();
         const panel = document.getElementById('bulk-actions-panel');
@@ -3481,32 +3494,28 @@ async function addFavoritesViewToggle(questionId) {
     }
 
     function selectAllVisibleQuestions() {
-        const checkboxes = window.QuestionListShared && typeof window.QuestionListShared.toggleSelectAllCheckboxes === 'function'
-            ? window.QuestionListShared.toggleSelectAllCheckboxes('.question-select-checkbox')
-            : Array.from(document.querySelectorAll('.question-select-checkbox'));
-        if (!window.QuestionListShared || typeof window.QuestionListShared.toggleSelectAllCheckboxes !== 'function') {
-            const allChecked = checkboxes.length > 0 && checkboxes.every(cb => cb.checked);
-            checkboxes.forEach(cb => {
-                cb.checked = !allChecked;
-            });
+        try {
+            getQuestionListActions().selectAll();
+        } catch (error) {
+            alert('Ошибка: ' + error.message);
         }
-        updateBulkActionsState();
     }
 
     function clearBulkSelection() {
-        document.querySelectorAll('.question-select-checkbox').forEach(cb => {
-            cb.checked = false;
-        });
-        updateBulkActionsState();
+        try {
+            getQuestionListActions().clearSelection();
+        } catch (error) {
+            alert('Ошибка: ' + error.message);
+        }
     }
 
-    async function bulkSetPublished(targetPublished) {
+    async function bulkSetPublished(targetPublished, selectedIdsInput) {
         if (!canEdit) {
             alert("Недостаточно прав для изменения публикации");
             return;
         }
 
-        const selectedIds = getSelectedQuestionIds();
+        const selectedIds = selectedIdsInput || getSelectedQuestionIds();
         if (selectedIds.length === 0) {
             alert('Выберите хотя бы один вопрос');
             return;
@@ -3533,7 +3542,7 @@ async function addFavoritesViewToggle(questionId) {
 
     async function bulkPublishQuestions() {
         try {
-            await bulkSetPublished(1);
+            await getQuestionListActions().publishSelected();
         } catch (error) {
             alert('Ошибка: ' + error.message);
         }
@@ -3541,20 +3550,19 @@ async function addFavoritesViewToggle(questionId) {
 
     async function bulkUnpublishQuestions() {
         try {
-            await bulkSetPublished(0);
+            await getQuestionListActions().unpublishSelected();
         } catch (error) {
             alert('Ошибка: ' + error.message);
         }
     }
 
-    async function bulkDeleteQuestions() {
+    async function bulkDeleteByIds(selectedIds) {
         if (!canDelete) {
             alert("Недостаточно прав для удаления вопросов");
             return;
         }
 
-        const selectedIds = getSelectedQuestionIds();
-        if (selectedIds.length === 0) {
+        if (!selectedIds.length) {
             alert('Выберите хотя бы один вопрос');
             return;
         }
@@ -3576,6 +3584,14 @@ async function addFavoritesViewToggle(questionId) {
 
         alert(`✅ Удалено вопросов: ${selectedIds.length}`);
         await showAllQuestionsView(currentQuestionsFilter);
+    }
+
+    async function bulkDeleteQuestions() {
+        try {
+            await getQuestionListActions().deleteSelected();
+        } catch (error) {
+            alert('Ошибка: ' + error.message);
+        }
     }
 
     async function deleteAllQuestionsInTest() {
