@@ -2881,7 +2881,7 @@ async function addFavoritesViewToggle(questionId) {
             html += '<div class="card-header bg-light">';
             
             const sharedRenderer = window.QuestionListShared && typeof window.QuestionListShared.requireSharedApi === 'function'
-                ? window.QuestionListShared.requireSharedApi(['buildHeaderHtml', 'buildFiltersHtml', 'buildBulkPanelHtml', 'toggleSelectAllCheckboxes'])
+                ? window.QuestionListShared.requireSharedApi(['buildHeaderHtml', 'buildFiltersHtml', 'buildBulkPanelHtml', 'buildQuestionPreview', 'toggleSelectAllCheckboxes'])
                 : null;
             if (!sharedRenderer) {
                 throw new Error('QuestionListShared is not available');
@@ -2951,10 +2951,10 @@ async function addFavoritesViewToggle(questionId) {
                 html += '<div class="list-group">';
                 
                 filteredQuestions.forEach((question, index) => {
-                    const questionText = stripHtml(question.question_text).substring(0, 120);
-                    const hasExplanation = question.explanation ? '✓' : '—';
+                    const preview = window.QuestionListShared.buildQuestionPreview(question);
                     const isPublished = parseInt(question.published) === 1;
                     const isLearning = parseInt(question.is_learning) === 1;
+                    const hasExplanation = preview.hasExplanation ? '✓' : '—';
                     
                     const realIndex = allQuestions.findIndex(q => q.id === question.id);
                     const publishClass = isPublished ? '' : 'list-group-item-secondary';
@@ -2984,10 +2984,10 @@ async function addFavoritesViewToggle(questionId) {
                     html += '<div class="d-flex align-items-start gap-2">';
                     html += `<span class="badge bg-primary flex-shrink-0" style="min-width: 36px; font-size: 0.9rem;">${realIndex + 1}</span>`;
                     html += '<div class="flex-grow-1">';
-                    html += `<p class="mb-1 fw-bold text-dark">${escapeHtml(questionText)}${questionText.length >= 120 ? '...' : ''}</p>`;
+                    html += `<p class="mb-1 fw-bold text-dark">${escapeHtml(preview.shortText)}${preview.isTrimmed ? '...' : ''}</p>`;
 
                     html += `<small class="text-muted">`;
-                    html += `${question.question_type === 'single' ? '⭕ Один ответ' : '☑️ Несколько ответов'} • `;
+                    html += `${preview.questionTypeLabel} • `;
                     html += `Объяснение: ${hasExplanation}`;
                     html += `</small></div></div></div>`;
 
@@ -3475,6 +3475,47 @@ async function addFavoritesViewToggle(questionId) {
         return questionListActions;
     }
 
+    let questionListActions = null;
+
+    function getQuestionListActions() {
+        if (questionListActions) {
+            return questionListActions;
+        }
+
+        const sharedRenderer = window.QuestionListShared && typeof window.QuestionListShared.requireSharedApi === 'function'
+            ? window.QuestionListShared.requireSharedApi(['createQuestionListActions', 'toggleSelectAllCheckboxes'])
+            : null;
+        if (!sharedRenderer) {
+            throw new Error('QuestionListShared actions are not available');
+        }
+
+        questionListActions = sharedRenderer.createQuestionListActions({
+            getSelectedIds: getSelectedQuestionIds,
+            noSelectionMessage: 'Выберите хотя бы один вопрос',
+            onSelectAll: function () {
+                sharedRenderer.toggleSelectAllCheckboxes('.question-select-checkbox');
+                updateBulkActionsState();
+            },
+            onClearSelection: function () {
+                document.querySelectorAll('.question-select-checkbox').forEach(cb => {
+                    cb.checked = false;
+                });
+                updateBulkActionsState();
+            },
+            onPublish: function (selectedIds) {
+                return bulkSetPublished(1, selectedIds);
+            },
+            onUnpublish: function (selectedIds) {
+                return bulkSetPublished(0, selectedIds);
+            },
+            onDelete: function (selectedIds) {
+                return bulkDeleteByIds(selectedIds);
+            }
+        });
+
+        return questionListActions;
+    }
+
     function updateBulkActionsState() {
         const selectedIds = getSelectedQuestionIds();
         const panel = document.getElementById('bulk-actions-panel');
@@ -3584,6 +3625,14 @@ async function addFavoritesViewToggle(questionId) {
 
         alert(`✅ Удалено вопросов: ${selectedIds.length}`);
         await showAllQuestionsView(currentQuestionsFilter);
+    }
+
+    async function bulkDeleteQuestions() {
+        try {
+            await getQuestionListActions().deleteSelected();
+        } catch (error) {
+            alert('Ошибка: ' + error.message);
+        }
     }
 
     async function bulkDeleteQuestions() {

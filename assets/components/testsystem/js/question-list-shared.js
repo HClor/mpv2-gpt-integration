@@ -184,7 +184,7 @@
             shortText: shortText,
             isTrimmed: rawText.length >= 120,
             hasExplanation: !!(q.explanation),
-            questionTypeLabel: q.question_type === 'single' ? 'Один ответ' : 'Несколько ответов'
+            questionTypeLabel: q.question_type === 'single' ? '⭕ Один ответ' : '☑️ Несколько ответов'
         };
     }
 

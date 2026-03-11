@@ -358,12 +358,54 @@
         }
     }
 
+    function renderQuestionsEditorHeader(sharedRenderer, stats, filterStatus) {
+        var headerContainer = document.getElementById('questions-editor-header-content');
+        if (!headerContainer) return;
+
+        var controlsHtml = '';
+        controlsHtml += '<button class="btn btn-outline-secondary btn-sm" onclick="backToTestsList()">';
+        controlsHtml += '<i class="bi bi-arrow-left"></i> Назад к списку тестов';
+        controlsHtml += '</button>';
+        controlsHtml += '<button class="btn btn-success btn-sm" onclick="openAddQuestionModalFromTests()">';
+        controlsHtml += '<i class="bi bi-plus-circle-fill"></i> Добавить вопрос';
+        controlsHtml += '</button>';
+        controlsHtml += '<a id="editor-import-questions-btn" class="btn btn-outline-success btn-sm" href="#" style="display:none;">';
+        controlsHtml += '<i class="bi bi-file-earmark-arrow-down"></i> Импорт вопросов';
+        controlsHtml += '</a>';
+        controlsHtml += '<div class="d-flex gap-1 align-items-center">';
+        controlsHtml += '<input type="number" id="editor-questions-count" class="form-control form-control-sm" style="width: 70px;" value="20" min="1" placeholder="20">';
+        controlsHtml += '<button class="btn btn-outline-secondary btn-sm" style="white-space: nowrap;" id="editor-all-questions-btn">Все</button>';
+        controlsHtml += '<button class="btn btn-primary btn-sm" style="white-space: nowrap;" onclick="startTestFromEditor(\'training\')"><i class="bi bi-play-circle"></i> Тренировка</button>';
+        controlsHtml += '<button class="btn btn-danger btn-sm" style="white-space: nowrap;" onclick="startTestFromEditor(\'exam\')"><i class="bi bi-clipboard-check"></i> Экзамен</button>';
+        controlsHtml += '</div>';
+
+        var html = '';
+        html += sharedRenderer.buildHeaderHtml({
+            title: 'Список вопросов теста',
+            controlsHtml: controlsHtml,
+            titleClass: 'mb-0',
+            controlsClass: 'd-flex flex-column flex-sm-row gap-2 w-100 align-items-stretch align-items-sm-center'
+        });
+        html += sharedRenderer.buildFiltersHtml(stats, filterStatus);
+        headerContainer.innerHTML = html;
+
+        updateEditorImportButton(currentEditorTestId);
+
+        var allQuestionsBtn = document.getElementById('editor-all-questions-btn');
+        if (allQuestionsBtn) {
+            allQuestionsBtn.onclick = function() {
+                var input = document.getElementById('editor-questions-count');
+                if (input) input.value = stats.total;
+            };
+        }
+    }
+
     function renderQuestionsEditor(filterStatus) {
         filterStatus = filterStatus || 'all';
         currentFilter = filterStatus;
         var listContent = document.getElementById('questions-list-content');
         var sharedRenderer = window.QuestionListShared && typeof window.QuestionListShared.requireSharedApi === 'function'
-            ? window.QuestionListShared.requireSharedApi(['getFilterButtonClass', 'buildBulkPanelHtml', 'buildQuestionPreview', 'toggleSelectAllCheckboxes'])
+            ? window.QuestionListShared.requireSharedApi(['buildHeaderHtml', 'buildFiltersHtml', 'buildBulkPanelHtml', 'buildQuestionPreview', 'toggleSelectAllCheckboxes'])
             : null;
         if (!sharedRenderer) {
             listContent.innerHTML = '<div class="alert alert-danger">Ошибка: не загружен модуль QuestionListShared. Обновите страницу.</div>';
@@ -380,37 +422,17 @@
             filteredQuestions = allQuestionsData.filter(function(q) { return parseInt(q.is_learning) === 1; });
         }
 
-        // Обновляем счетчики в фильтрах
         var totalCount = allQuestionsData.length;
         var publishedCount = allQuestionsData.filter(function(q) { return parseInt(q.published) === 1; }).length;
         var unpublishedCount = totalCount - publishedCount;
         var learningCount = allQuestionsData.filter(function(q) { return parseInt(q.is_learning) === 1; }).length;
 
-        var allEl = document.getElementById('filter-count-all');
-        var pubEl = document.getElementById('filter-count-published');
-        var unpubEl = document.getElementById('filter-count-unpublished');
-        var learnEl = document.getElementById('filter-count-learning');
-        if (allEl) allEl.textContent = totalCount;
-        if (pubEl) pubEl.textContent = publishedCount;
-        if (unpubEl) unpubEl.textContent = unpublishedCount;
-        if (learnEl) learnEl.textContent = learningCount;
-
-        // Обновляем стили фильтров
-        document.querySelectorAll('.questions-filter-btn').forEach(function(btn) {
-            var filter = btn.dataset.filter;
-            btn.className = 'btn w-100 questions-filter-btn';
-            var resolvedClass = sharedRenderer.getFilterButtonClass(filter, filter === filterStatus);
-            btn.classList.add(resolvedClass);
-        });
-
-        // Обновляем кнопку "Все"
-        var allQuestionsBtn = document.getElementById('editor-all-questions-btn');
-        if (allQuestionsBtn) {
-            allQuestionsBtn.onclick = function() {
-                var input = document.getElementById('editor-questions-count');
-                if (input) input.value = totalCount;
-            };
-        }
+        renderQuestionsEditorHeader(sharedRenderer, {
+            total: totalCount,
+            published: publishedCount,
+            unpublished: unpublishedCount,
+            learning: learningCount
+        }, filterStatus);
 
         var existingIds = new Set(allQuestionsData.map(function(q) { return parseInt(q.id, 10); }));
         selectedQuestionIds = new Set(Array.from(selectedQuestionIds).filter(function(id) { return existingIds.has(id); }));
