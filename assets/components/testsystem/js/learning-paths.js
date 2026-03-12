@@ -205,28 +205,28 @@
 
         paths.forEach(path => {
             const progress = path.completion_pct || 0;
-            const progressClass = progress === 100 ? 'bg-success' :
-                                  progress > 0 ? 'bg-warning' : 'bg-secondary';
+            const progressClass = progress === 100 ? 'ts-learning-path-progress-bar-success' :
+                                  progress > 0 ? 'ts-learning-path-progress-bar-active' : 'ts-learning-path-progress-bar-idle';
 
             const difficultyBadge = {
-                'beginner': '<span class="badge bg-success">Начальный</span>',
-                'intermediate': '<span class="badge bg-warning text-dark">Средний</span>',
-                'advanced': '<span class="badge bg-danger">Продвинутый</span>',
-                'expert': '<span class="badge bg-dark">Эксперт</span>'
+                'beginner': '<span class="ts-learning-path-tag ts-learning-path-tag-success">Начальный</span>',
+                'intermediate': '<span class="ts-learning-path-tag ts-learning-path-tag-warning">Средний</span>',
+                'advanced': '<span class="ts-learning-path-tag ts-learning-path-tag-danger">Продвинутый</span>',
+                'expert': '<span class="ts-learning-path-tag ts-learning-path-tag-neutral">Эксперт</span>'
             }[path.difficulty_level] || '';
 
             const statusBadge = path.status === 'published'
-                ? '<span class="badge bg-success">Опубликован</span>'
-                : '<span class="badge bg-secondary">Черновик</span>';
+                ? '<span class="ts-learning-path-tag ts-learning-path-tag-success">Опубликован</span>'
+                : '<span class="ts-learning-path-tag ts-learning-path-tag-neutral">Черновик</span>';
 
             // Badge для шаблона
             const templateBadge = path.is_template
-                ? '<span class="badge bg-info"><i class="bi bi-file-earmark-text"></i> Шаблон</span>'
+                ? '<span class="ts-learning-path-tag ts-learning-path-tag-primary"><i class="bi bi-file-earmark-text"></i> Шаблон</span>'
                 : '';
 
             // Если это клон - показываем ссылку на родителя
             const cloneBadge = path.parent_id
-                ? '<span class="badge bg-light text-dark"><i class="bi bi-copy"></i> Клон</span>'
+                ? '<span class="ts-learning-path-tag ts-learning-path-tag-muted"><i class="bi bi-copy"></i> Клон</span>'
                 : '';
 
             // Информация о дедлайне и назначении
@@ -239,7 +239,7 @@
                     <div class="small ${isOverdue ? 'text-danger' : 'text-muted'} mb-2">
                         <i class="bi bi-calendar-event"></i>
                         Дедлайн: ${deadlineDate.toLocaleDateString('ru-RU')}
-                        ${isOverdue ? '<span class="badge bg-danger">Просрочено</span>' : ''}
+                        ${isOverdue ? '<span class="ts-learning-path-tag ts-learning-path-tag-danger">Просрочено</span>' : ''}
                     </div>
                 `;
             }
@@ -257,39 +257,38 @@
                      data-category="${path.category_id || ''}"
                      data-difficulty="${path.difficulty_level || ''}"
                      data-is-template="${path.is_template || 0}">
-                    <div class="card h-100 shadow-sm ${path.is_template ? 'border-info' : ''}">
+                    <div class="card h-100 ts-learning-path-card ${path.is_template ? 'ts-learning-path-card-template' : ''}">
                         ${path.thumbnail_url ? `
                             <img src="${escapeHtml(path.thumbnail_url)}"
-                                 class="card-img-top"
+                                 class="card-img-top ts-learning-path-thumb"
                                  alt="${escapeHtml(path.name)}"
-                                 style="height: 180px; object-fit: cover;">
+                                >
                         ` : `
-                            <div class="card-img-top bg-gradient d-flex align-items-center justify-content-center"
-                                 style="height: 180px; background: linear-gradient(135deg, ${path.is_template ? '#17a2b8 0%, #138496 100%' : '#667eea 0%, #764ba2 100%'});">
-                                <i class="bi bi-${path.is_template ? 'file-earmark-text' : 'signpost'} text-white" style="font-size: 3rem;"></i>
+                            <div class="card-img-top ts-learning-path-cover d-flex align-items-center justify-content-center ${path.is_template ? 'ts-learning-path-cover-template' : ''}">
+                                <i class="bi bi-${path.is_template ? 'file-earmark-text' : 'signpost'} ts-learning-path-cover-icon"></i>
                             </div>
                         `}
-                        <div class="card-body">
-                            <h5 class="card-title">${escapeHtml(path.name)}</h5>
-                            <p class="card-text text-muted small">${escapeHtml(path.description || 'Нет описания')}</p>
+                        <div class="card-body ts-learning-path-body">
+                            <h5 class="card-title ts-learning-path-title">${escapeHtml(path.name)}</h5>
+                            <p class="card-text text-muted small ts-learning-path-description">${escapeHtml(path.description || 'Нет описания')}</p>
 
-                            <div class="mb-3">
+                            <div class="mb-2 ts-learning-path-badges">
                                 ${templateBadge}
                                 ${cloneBadge}
                                 ${statusBadge}
                                 ${difficultyBadge}
-                                ${path.certificate_template ? '<span class="badge bg-primary">🎓 С сертификатом</span>' : ''}
+                                ${path.certificate_template ? '<span class="ts-learning-path-tag ts-learning-path-tag-primary"><i class="bi bi-patch-check"></i> С сертификатом</span>' : ''}
                             </div>
 
                             ${assignmentInfo}
 
-                            <div class="d-flex justify-content-between text-muted small mb-3">
+                            <div class="d-flex justify-content-between text-muted small mb-2 ts-learning-path-meta">
                                 <span><i class="bi bi-list-ol"></i> ${path.steps_count || 0} шагов</span>
                                 <span><i class="bi bi-clock"></i> ~${path.estimated_hours || 0} ч</span>
                             </div>
 
                             ${progress > 0 ? `
-                                <div class="progress mb-2" style="height: 10px;">
+                                <div class="progress mb-1 ts-learning-path-progress">
                                     <div class="progress-bar ${progressClass}"
                                          role="progressbar"
                                          style="width: ${progress}%">
@@ -298,36 +297,36 @@
                                 <p class="small text-muted mb-0">Прогресс: ${progress}%</p>
                             ` : ''}
                         </div>
-                        <div class="card-footer bg-white">
+                        <div class="card-footer ts-learning-path-footer">
                             <div class="d-grid gap-2">
                                 ${path.is_template ? `
-                                    <button class="btn btn-info"
+                                    <button class="ts-btn ts-btn-secondary ts-btn-sm w-100"
                                             onclick="LearningPaths.showCloneModal(${path.id}, '${escapeForOnclick(path.name)}')">
                                         <i class="bi bi-copy"></i> Клонировать шаблон
                                     </button>
                                 ` : `
-                                    <a href="${getBasePath()}?mode=view&id=${path.id}" class="btn btn-primary">
+                                    <a href="${getBasePath()}?mode=view&id=${path.id}" class="ts-btn ts-btn-primary w-100">
                                         <i class="bi bi-play-fill"></i>
                                         ${progress > 0 ? 'Продолжить' : 'Начать'}
                                     </a>
                                 `}
                                 ${path.can_edit ? `
-                                    <button class="btn btn-outline-primary btn-sm mb-2 w-100"
+                                    <button class="ts-btn ts-btn-secondary ts-btn-sm w-100"
                                             onclick="LearningPaths.showEnrollModal(${path.id}, '${escapeForOnclick(path.name)}')">
                                         <i class="bi bi-person-plus"></i> Назначить студентам
                                     </button>
-                                    <div class="btn-group btn-group-sm w-100">
-                                        <a href="${getBasePath()}?mode=edit&id=${path.id}" class="btn btn-outline-secondary">
+                                    <div class="w-100 ts-learning-path-actions">
+                                        <a href="${getBasePath()}?mode=edit&id=${path.id}" class="ts-btn ts-btn-secondary ts-btn-sm">
                                             <i class="bi bi-pencil"></i> Редакт.
                                         </a>
                                         ${path.is_template ? '' : `
-                                            <button class="btn btn-outline-info"
+                                            <button class="ts-btn ts-btn-secondary ts-btn-sm"
                                                     onclick="LearningPaths.showCloneModal(${path.id}, '${escapeForOnclick(path.name)}')"
                                                     title="Клонировать">
                                                 <i class="bi bi-files"></i> Клон
                                             </button>
                                         `}
-                                        <button class="btn btn-outline-danger"
+                                        <button class="ts-btn ts-btn-ghost-danger ts-btn-sm"
                                                 onclick="LearningPaths.deletePath(${path.id}, '${escapeForOnclick(path.name)}')">
                                             <i class="bi bi-trash"></i>
                                         </button>
