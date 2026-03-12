@@ -410,26 +410,41 @@ if (!empty($errors)) {
 }
 
 if (!empty($success)) {
-    $output .= '<div class="ts-alert ts-alert-success">';
-    $output .= '<h5><i class="bi bi-check-circle"></i> Успешно импортировано: ' . $importedCount . ' вопросов</h5>';
+    $output .= '<div class="ts-card ts-import-result-card ts-import-result-success">';
+    $output .= '<div class="ts-card-body">';
+    $output .= '<div class="ts-import-result-grid">';
+
+    $output .= '<div class="ts-import-result-summary">';
+    $output .= '<p class="ts-import-result-kicker"><i class="bi bi-check-circle"></i> Импорт завершён</p>';
+    $output .= '<h3 class="ts-import-result-title">Успешно импортировано: ' . $importedCount . ' вопросов</h3>';
+    $output .= '<p class="ts-import-result-note">Проверьте краткую сводку и перейдите к тесту для финальной проверки.</p>';
+    $output .= '</div>';
+
+    $output .= '<div class="ts-import-result-messages">';
     if (count($success) <= 10) {
-        $output .= '<ul class="mb-0">';
+        $output .= '<p class="ts-import-result-caption">Добавленные строки:</p>';
+        $output .= '<ul class="ts-import-result-list">';
         foreach ($success as $msg) {
             $output .= '<li>' . htmlspecialchars($msg, ENT_QUOTES, 'UTF-8') . '</li>';
         }
         $output .= '</ul>';
     } else {
-        $output .= '<p class="mb-2">Показаны первые 10 сообщений:</p>';
-        $output .= '<ul>';
+        $output .= '<p class="ts-import-result-caption">Показаны первые 10 сообщений:</p>';
+        $output .= '<ul class="ts-import-result-list">';
         foreach (array_slice($success, 0, 10) as $msg) {
             $output .= '<li>' . htmlspecialchars($msg, ENT_QUOTES, 'UTF-8') . '</li>';
         }
         $output .= '</ul>';
-        $output .= '<p class="text-muted mb-0">...и ещё ' . (count($success) - 10) . ' вопросов</p>';
+        $output .= '<p class="ts-import-result-more">...и ещё ' . (count($success) - 10) . ' вопросов</p>';
     }
+    $output .= '</div>';
 
-    $output .= '<hr>';
+    $output .= '<div class="ts-import-result-action">';
     $output .= '<a href="' . htmlspecialchars($testUrl, ENT_QUOTES, 'UTF-8') . '" class="ts-btn ts-btn-primary ts-btn-lg"><i class="bi bi-play-circle"></i> Перейти к тесту</a>';
+    $output .= '</div>';
+
+    $output .= '</div>';
+    $output .= '</div>';
     $output .= '</div>';
 }
 
@@ -466,9 +481,9 @@ $output .= '<div class="ts-import-format-panel">';
 $output .= '<h6 class="ts-import-format-panel-title"><i class="bi bi-table"></i> Структура файла</h6>';
 $output .= '<ul class="ts-import-format-list">';
 $output .= '<li><span>A</span> Текст вопроса</li>';
-$output .= '<li><span>B</span> Тип: <code>single</code> или <code>multiple</code></li>';
+$output .= '<li><span>B</span> Тип: <span class="ts-import-inline-example">single / multiple</span></li>';
 $output .= '<li><span>C–F</span> Варианты ответов</li>';
-$output .= '<li><span>G</span> Правильные ответы: <code>2</code> или <code>1,3</code></li>';
+$output .= '<li><span>G</span> Правильные ответы: <span class="ts-import-inline-example">2</span> или <span class="ts-import-inline-example">1,3</span></li>';
 $output .= '<li><span>H</span> Объяснение (необязательно)</li>';
 $output .= '</ul>';
 $output .= '<p class="ts-import-format-panel-note mb-0">Рекомендуется использовать шаблон с заголовком в первой строке.</p>';
