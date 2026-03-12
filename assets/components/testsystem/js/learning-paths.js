@@ -257,23 +257,22 @@
                      data-category="${path.category_id || ''}"
                      data-difficulty="${path.difficulty_level || ''}"
                      data-is-template="${path.is_template || 0}">
-                    <div class="card h-100 shadow-sm ${path.is_template ? 'border-info' : ''}">
+                    <div class="card h-100 ts-learning-path-card ${path.is_template ? 'ts-learning-path-card-template' : ''}">
                         ${path.thumbnail_url ? `
                             <img src="${escapeHtml(path.thumbnail_url)}"
-                                 class="card-img-top"
+                                 class="card-img-top ts-learning-path-thumb"
                                  alt="${escapeHtml(path.name)}"
-                                 style="height: 180px; object-fit: cover;">
+                                >
                         ` : `
-                            <div class="card-img-top bg-gradient d-flex align-items-center justify-content-center"
-                                 style="height: 180px; background: linear-gradient(135deg, ${path.is_template ? '#17a2b8 0%, #138496 100%' : '#667eea 0%, #764ba2 100%'});">
-                                <i class="bi bi-${path.is_template ? 'file-earmark-text' : 'signpost'} text-white" style="font-size: 3rem;"></i>
+                            <div class="card-img-top ts-learning-path-cover d-flex align-items-center justify-content-center ${path.is_template ? 'ts-learning-path-cover-template' : ''}">
+                                <i class="bi bi-${path.is_template ? 'file-earmark-text' : 'signpost'} ts-learning-path-cover-icon"></i>
                             </div>
                         `}
-                        <div class="card-body">
-                            <h5 class="card-title">${escapeHtml(path.name)}</h5>
-                            <p class="card-text text-muted small">${escapeHtml(path.description || 'Нет описания')}</p>
+                        <div class="card-body ts-learning-path-body">
+                            <h5 class="card-title ts-learning-path-title">${escapeHtml(path.name)}</h5>
+                            <p class="card-text text-muted small ts-learning-path-description">${escapeHtml(path.description || 'Нет описания')}</p>
 
-                            <div class="mb-3">
+                            <div class="mb-2 ts-learning-path-badges">
                                 ${templateBadge}
                                 ${cloneBadge}
                                 ${statusBadge}
@@ -283,13 +282,13 @@
 
                             ${assignmentInfo}
 
-                            <div class="d-flex justify-content-between text-muted small mb-3">
+                            <div class="d-flex justify-content-between text-muted small mb-2 ts-learning-path-meta">
                                 <span><i class="bi bi-list-ol"></i> ${path.steps_count || 0} шагов</span>
                                 <span><i class="bi bi-clock"></i> ~${path.estimated_hours || 0} ч</span>
                             </div>
 
                             ${progress > 0 ? `
-                                <div class="progress mb-2" style="height: 10px;">
+                                <div class="progress mb-1 ts-learning-path-progress">
                                     <div class="progress-bar ${progressClass}"
                                          role="progressbar"
                                          style="width: ${progress}%">
@@ -298,36 +297,36 @@
                                 <p class="small text-muted mb-0">Прогресс: ${progress}%</p>
                             ` : ''}
                         </div>
-                        <div class="card-footer bg-white">
+                        <div class="card-footer ts-learning-path-footer">
                             <div class="d-grid gap-2">
                                 ${path.is_template ? `
-                                    <button class="btn btn-info"
+                                    <button class="ts-btn ts-btn-secondary ts-btn-sm w-100"
                                             onclick="LearningPaths.showCloneModal(${path.id}, '${escapeForOnclick(path.name)}')">
                                         <i class="bi bi-copy"></i> Клонировать шаблон
                                     </button>
                                 ` : `
-                                    <a href="${getBasePath()}?mode=view&id=${path.id}" class="btn btn-primary">
+                                    <a href="${getBasePath()}?mode=view&id=${path.id}" class="ts-btn ts-btn-primary w-100">
                                         <i class="bi bi-play-fill"></i>
                                         ${progress > 0 ? 'Продолжить' : 'Начать'}
                                     </a>
                                 `}
                                 ${path.can_edit ? `
-                                    <button class="btn btn-outline-primary btn-sm mb-2 w-100"
+                                    <button class="ts-btn ts-btn-ghost ts-btn-sm w-100"
                                             onclick="LearningPaths.showEnrollModal(${path.id}, '${escapeForOnclick(path.name)}')">
                                         <i class="bi bi-person-plus"></i> Назначить студентам
                                     </button>
-                                    <div class="btn-group btn-group-sm w-100">
-                                        <a href="${getBasePath()}?mode=edit&id=${path.id}" class="btn btn-outline-secondary">
+                                    <div class="w-100 ts-learning-path-actions">
+                                        <a href="${getBasePath()}?mode=edit&id=${path.id}" class="ts-btn ts-btn-secondary ts-btn-sm">
                                             <i class="bi bi-pencil"></i> Редакт.
                                         </a>
                                         ${path.is_template ? '' : `
-                                            <button class="btn btn-outline-info"
+                                            <button class="ts-btn ts-btn-ghost ts-btn-sm"
                                                     onclick="LearningPaths.showCloneModal(${path.id}, '${escapeForOnclick(path.name)}')"
                                                     title="Клонировать">
                                                 <i class="bi bi-files"></i> Клон
                                             </button>
                                         `}
-                                        <button class="btn btn-outline-danger"
+                                        <button class="ts-btn ts-btn-ghost-danger ts-btn-sm"
                                                 onclick="LearningPaths.deletePath(${path.id}, '${escapeForOnclick(path.name)}')">
                                             <i class="bi bi-trash"></i>
                                         </button>
