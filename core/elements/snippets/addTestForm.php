@@ -394,42 +394,50 @@ $output .= "</div>";
 // Блок загрузки файла
 $output .= "<hr class=\"my-4\">";
 
-$output .= "<h5 class=\"mb-3\"><i class=\"bi bi-upload\"></i> Импорт вопросов</h5>";
+$isUploadChecked = (isset($_POST['upload_file']) && $_POST['upload_file'] === '1');
 
-$output .= "<div class=\"card bg-light border-0\">";
-$output .= "<div class=\"card-body\">";
-$output .= "<div class=\"form-check form-switch mb-3\">";
-$output .= "<input class=\"form-check-input\" type=\"checkbox\" id=\"upload_file_toggle\" name=\"upload_file\" value=\"1\" style=\"width: 3em; height: 1.5em; cursor: pointer;\">";
-$output .= "<label class=\"form-check-label fw-bold ms-2\" for=\"upload_file_toggle\" style=\"cursor: pointer;\">";
-$output .= "<i class=\"bi bi-file-earmark-spreadsheet\"></i> Загрузить вопросы из файла (CSV или Excel)";
+$output .= "<section class=\"ts-import-step ts-import-step-questions\">";
+$output .= "<p class=\"ts-import-step-kicker\">Шаг 2</p>";
+$output .= "<h5 class=\"ts-import-step-title\"><i class=\"bi bi-upload\"></i> Добавление вопросов</h5>";
+$output .= "<p class=\"ts-import-step-subtitle\">Выберите удобный сценарий: загрузка файла сейчас или ручное добавление вопросов после создания теста.</p>";
+$output .= "</section>";
+
+$output .= "<div class=\"ts-card ts-import-upload-card\">";
+$output .= "<div class=\"ts-card-body\">";
+$output .= "<div class=\"ts-import-upload-toggle\">";
+$output .= "<div class=\"form-check form-switch mb-0\">";
+$output .= "<input class=\"form-check-input ts-import-upload-switch\" type=\"checkbox\" id=\"upload_file_toggle\" name=\"upload_file\" value=\"1\" " . ($isUploadChecked ? "checked" : "") . ">";
+$output .= "<label class=\"form-check-label fw-semibold ms-2\" for=\"upload_file_toggle\">";
+$output .= "<i class=\"bi bi-file-earmark-spreadsheet\"></i> Импортировать вопросы из CSV/Excel";
 $output .= "</label>";
 $output .= "</div>";
-
-$output .= "<div id=\"file_upload_block\" style=\"display: none;\">";
-$output .= "<div class=\"mb-3\">";
-$output .= "<label class=\"form-label\">Выберите файл *</label>";
-$output .= "<input type=\"file\" name=\"questions_file\" class=\"form-control\" accept=\".csv,.xlsx,.xls\" id=\"questions_file_input\">";
-$output .= "<small class=\"form-text text-muted\">";
-$output .= "Поддерживаемые форматы: CSV, XLSX, XLS (максимум 10MB)<br>";
-$output .= "После создания теста вы будете перенаправлены на страницу импорта с выбранным файлом";
-$output .= "</small>";
+$output .= "<p class=\"ts-import-upload-toggle-note\">Если переключатель выключен, вы перейдёте к ручному добавлению вопросов на следующем экране.</p>";
 $output .= "</div>";
 
-$output .= "<div class=\"alert alert-info mb-0\">";
-$output .= "<strong>Формат файла:</strong><br>";
-$output .= "<small>";
-$output .= "• <strong>Столбец A:</strong> Текст вопроса<br>";
-$output .= "• <strong>Столбец B:</strong> Тип (single/multiple)<br>";
-$output .= "• <strong>Столбец C:</strong> Ответ 1<br>";
-$output .= "• <strong>Столбец D:</strong> Ответ 2<br>";
-$output .= "• <strong>Столбец E:</strong> Ответ 3<br>";
-$output .= "• <strong>Столбец F:</strong> Ответ 4<br>";
-$output .= "• <strong>Столбец G:</strong> Правильные ответы (1,3 или 2)<br>";
-$output .= "• <strong>Столбец H:</strong> Объяснение (необязательно)";
-$output .= "</small>";
+$output .= "<div id=\"file_upload_block\" class=\"ts-import-upload-block" . ($isUploadChecked ? "" : " d-none") . "\">";
+$output .= "<div class=\"row g-4\">";
+$output .= "<div class=\"col-lg-6\">";
+$output .= "<label class=\"form-label fw-semibold\" for=\"questions_file_input\">Выберите файл *</label>";
+$output .= "<input type=\"file\" name=\"questions_file\" class=\"form-control\" accept=\".csv,.xlsx,.xls\" id=\"questions_file_input\"" . ($isUploadChecked ? " required" : "") . ">";
+$output .= "<small class=\"form-text text-muted\">Поддерживаемые форматы: CSV, XLSX, XLS. Максимальный размер: 10MB.</small>";
+$output .= "<p class=\"ts-import-upload-hint\">После создания теста файл обработается автоматически, а результаты импорта откроются на отдельной странице.</p>";
 $output .= "</div>";
 
+$output .= "<div class=\"col-lg-6\">";
+$output .= "<div class=\"ts-import-format-card\">";
+$output .= "<h6 class=\"ts-import-format-title\">Структура файла</h6>";
+$output .= "<ul class=\"ts-import-format-list\">";
+$output .= "<li><span>A</span> Текст вопроса</li>";
+$output .= "<li><span>B</span> Тип: <code>single</code> или <code>multiple</code></li>";
+$output .= "<li><span>C–F</span> Варианты ответов</li>";
+$output .= "<li><span>G</span> Правильные ответы (например: <code>2</code> или <code>1,3</code>)</li>";
+$output .= "<li><span>H</span> Объяснение (необязательно)</li>";
+$output .= "</ul>";
 $output .= "</div>";
+$output .= "</div>";
+$output .= "</div>";
+$output .= "</div>";
+
 $output .= "</div>";
 $output .= "</div>";
 
@@ -492,10 +500,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (toggle && block) {
         toggle.addEventListener('change', function() {
             if (this.checked) {
-                block.style.display = 'block';
+                block.classList.remove('d-none');
                 fileInput.setAttribute('required', 'required');
             } else {
-                block.style.display = 'none';
+                block.classList.add('d-none');
                 fileInput.removeAttribute('required');
                 fileInput.value = '';
             }
