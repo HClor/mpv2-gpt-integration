@@ -205,28 +205,28 @@
 
         paths.forEach(path => {
             const progress = path.completion_pct || 0;
-            const progressClass = progress === 100 ? 'bg-success' :
-                                  progress > 0 ? 'bg-warning' : 'bg-secondary';
+            const progressClass = progress === 100 ? 'ts-learning-path-progress-bar-success' :
+                                  progress > 0 ? 'ts-learning-path-progress-bar-active' : 'ts-learning-path-progress-bar-idle';
 
             const difficultyBadge = {
-                'beginner': '<span class="badge bg-success">Начальный</span>',
-                'intermediate': '<span class="badge bg-warning text-dark">Средний</span>',
-                'advanced': '<span class="badge bg-danger">Продвинутый</span>',
-                'expert': '<span class="badge bg-dark">Эксперт</span>'
+                'beginner': '<span class="ts-learning-path-tag ts-learning-path-tag-success">Начальный</span>',
+                'intermediate': '<span class="ts-learning-path-tag ts-learning-path-tag-warning">Средний</span>',
+                'advanced': '<span class="ts-learning-path-tag ts-learning-path-tag-danger">Продвинутый</span>',
+                'expert': '<span class="ts-learning-path-tag ts-learning-path-tag-neutral">Эксперт</span>'
             }[path.difficulty_level] || '';
 
             const statusBadge = path.status === 'published'
-                ? '<span class="badge bg-success">Опубликован</span>'
-                : '<span class="badge bg-secondary">Черновик</span>';
+                ? '<span class="ts-learning-path-tag ts-learning-path-tag-success">Опубликован</span>'
+                : '<span class="ts-learning-path-tag ts-learning-path-tag-neutral">Черновик</span>';
 
             // Badge для шаблона
             const templateBadge = path.is_template
-                ? '<span class="badge bg-info"><i class="bi bi-file-earmark-text"></i> Шаблон</span>'
+                ? '<span class="ts-learning-path-tag ts-learning-path-tag-primary"><i class="bi bi-file-earmark-text"></i> Шаблон</span>'
                 : '';
 
             // Если это клон - показываем ссылку на родителя
             const cloneBadge = path.parent_id
-                ? '<span class="badge bg-light text-dark"><i class="bi bi-copy"></i> Клон</span>'
+                ? '<span class="ts-learning-path-tag ts-learning-path-tag-muted"><i class="bi bi-copy"></i> Клон</span>'
                 : '';
 
             // Информация о дедлайне и назначении
@@ -239,7 +239,7 @@
                     <div class="small ${isOverdue ? 'text-danger' : 'text-muted'} mb-2">
                         <i class="bi bi-calendar-event"></i>
                         Дедлайн: ${deadlineDate.toLocaleDateString('ru-RU')}
-                        ${isOverdue ? '<span class="badge bg-danger">Просрочено</span>' : ''}
+                        ${isOverdue ? '<span class="ts-learning-path-tag ts-learning-path-tag-danger">Просрочено</span>' : ''}
                     </div>
                 `;
             }
@@ -277,7 +277,7 @@
                                 ${cloneBadge}
                                 ${statusBadge}
                                 ${difficultyBadge}
-                                ${path.certificate_template ? '<span class="badge bg-primary">🎓 С сертификатом</span>' : ''}
+                                ${path.certificate_template ? '<span class="ts-learning-path-tag ts-learning-path-tag-primary"><i class="bi bi-patch-check"></i> С сертификатом</span>' : ''}
                             </div>
 
                             ${assignmentInfo}
@@ -311,7 +311,7 @@
                                     </a>
                                 `}
                                 ${path.can_edit ? `
-                                    <button class="ts-btn ts-btn-ghost ts-btn-sm w-100"
+                                    <button class="ts-btn ts-btn-secondary ts-btn-sm w-100"
                                             onclick="LearningPaths.showEnrollModal(${path.id}, '${escapeForOnclick(path.name)}')">
                                         <i class="bi bi-person-plus"></i> Назначить студентам
                                     </button>
@@ -320,7 +320,7 @@
                                             <i class="bi bi-pencil"></i> Редакт.
                                         </a>
                                         ${path.is_template ? '' : `
-                                            <button class="ts-btn ts-btn-ghost ts-btn-sm"
+                                            <button class="ts-btn ts-btn-secondary ts-btn-sm"
                                                     onclick="LearningPaths.showCloneModal(${path.id}, '${escapeForOnclick(path.name)}')"
                                                     title="Клонировать">
                                                 <i class="bi bi-files"></i> Клон

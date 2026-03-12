@@ -75,7 +75,7 @@
 }
 
 .path-card:hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
 }
 
 .ts-learning-path-card {
@@ -95,16 +95,16 @@
 
 .ts-learning-path-cover {
     height: 84px;
-    background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary) 100%);
+    background: var(--color-bg-subtle);
 }
 
 .ts-learning-path-cover-template {
-    background: linear-gradient(135deg, var(--color-success-light) 0%, var(--color-success) 100%);
+    background: var(--color-success-light);
 }
 
 .ts-learning-path-cover-icon {
     font-size: 2rem;
-    color: var(--color-text-inverse);
+    color: var(--color-text-secondary);
 }
 
 .ts-learning-path-body {
@@ -126,9 +126,59 @@
     min-height: 2.75em;
 }
 
-.ts-learning-path-badges .badge {
+.ts-learning-path-badges .ts-learning-path-tag {
     margin-right: var(--spacing-xs);
     margin-bottom: var(--spacing-xs);
+}
+
+.ts-learning-path-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    background-color: var(--color-bg-page);
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    line-height: 1.2;
+}
+
+.ts-learning-path-tag-primary {
+    border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
+    background-color: var(--color-primary-light);
+    color: var(--color-primary-text);
+}
+
+.ts-learning-path-tag-success {
+    border-color: color-mix(in srgb, var(--color-success) 35%, var(--color-border));
+    background-color: var(--color-success-light);
+    color: var(--color-success-text);
+}
+
+.ts-learning-path-tag-warning {
+    border-color: color-mix(in srgb, var(--color-warning) 35%, var(--color-border));
+    background-color: var(--color-warning-light);
+    color: var(--color-warning-text);
+}
+
+.ts-learning-path-tag-danger {
+    border-color: color-mix(in srgb, var(--color-danger) 35%, var(--color-border));
+    background-color: var(--color-danger-light);
+    color: var(--color-danger-text);
+}
+
+.ts-learning-path-tag-neutral {
+    border-color: var(--color-border);
+    background-color: var(--color-bg-subtle);
+    color: var(--color-text-secondary);
+}
+
+.ts-learning-path-tag-muted {
+    border-color: var(--color-border);
+    background-color: var(--color-bg-page);
+    color: var(--color-text-muted);
 }
 
 .ts-learning-path-meta {
@@ -138,6 +188,23 @@
 
 .ts-learning-path-progress {
     height: 8px;
+    background-color: var(--color-bg-page);
+}
+
+.ts-learning-path-progress .progress-bar {
+    transition: width var(--transition-base);
+}
+
+.ts-learning-path-progress-bar-success {
+    background-color: var(--color-success);
+}
+
+.ts-learning-path-progress-bar-active {
+    background-color: var(--color-primary);
+}
+
+.ts-learning-path-progress-bar-idle {
+    background-color: var(--color-text-muted);
 }
 
 .ts-learning-path-footer {
