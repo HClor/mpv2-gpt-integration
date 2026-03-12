@@ -375,23 +375,32 @@ function processImportFile($filePath, $fileExtension, $testId, $modx, $prefix, $
 // ФОРМИРОВАНИЕ HTML
 $output = '<div class="container my-4">';
 $output .= '<div class="row">';
-$output .= '<div class="col-lg-10 offset-lg-1">';
+$output .= '<div class="col-xl-10 offset-xl-1">';
 
-$output .= '<div class="d-flex justify-content-between align-items-center mb-4">';
 $backLink = $testUrl !== '#' ? $testUrl : 'javascript:history.back()';
-$output .= '<a href="' . htmlspecialchars($backLink, ENT_QUOTES, 'UTF-8') . '" class="ts-btn ts-btn-secondary">← Вернуться к тесту</a>';
+$output .= '<div class="d-flex justify-content-between align-items-center mb-4">';
+$output .= '<a href="' . htmlspecialchars($backLink, ENT_QUOTES, 'UTF-8') . '" class="ts-btn ts-btn-secondary"><i class="bi bi-arrow-left"></i> Вернуться к тесту</a>';
 $output .= '</div>';
 
-$output .= '<div class="card mb-4">';
-$output .= '<div class="card-body">';
-$output .= '<h5 class="card-title">' . htmlspecialchars($test['title'], ENT_QUOTES, 'UTF-8') . '</h5>';
-$output .= '<p class="text-muted mb-0">ID теста: ' . $testId . '</p>';
+$output .= '<section class="ts-import-page-header">';
+$output .= '<p class="ts-import-page-header-kicker">Импорт вопросов</p>';
+$output .= '<h1 class="ts-import-page-header-title">Загрузка вопросов из CSV/Excel</h1>';
+$output .= '<p class="ts-import-page-header-subtitle">Добавьте вопросы в тест структурированным файлом. Интерфейс показывает только важные действия и проверку результата.</p>';
+$output .= '</section>';
+
+$output .= '<div class="ts-card ts-import-test-meta mb-4">';
+$output .= '<div class="ts-card-body d-flex flex-wrap justify-content-between align-items-center gap-2">';
+$output .= '<div>';
+$output .= '<h2 class="ts-card-title">' . htmlspecialchars($test['title'], ENT_QUOTES, 'UTF-8') . '</h2>';
+$output .= '<p class="mb-0 text-muted">ID теста: ' . $testId . '</p>';
+$output .= '</div>';
+$output .= '<span class="ts-badge ts-badge-primary">Шаг 2: Импорт вопросов</span>';
 $output .= '</div>';
 $output .= '</div>';
 
 if (!empty($errors)) {
     $output .= '<div class="ts-alert ts-alert-danger">';
-    $output .= '<h5><i class="bi bi-exclamation-triangle"></i> Ошибки импорта:</h5>';
+    $output .= '<h5><i class="bi bi-exclamation-triangle"></i> Ошибки импорта</h5>';
     $output .= '<ul class="mb-0">';
     foreach ($errors as $error) {
         $output .= '<li>' . htmlspecialchars($error, ENT_QUOTES, 'UTF-8') . '</li>';
@@ -410,7 +419,7 @@ if (!empty($success)) {
         }
         $output .= '</ul>';
     } else {
-        $output .= '<p class="mb-0">Показаны первые 10 сообщений:</p>';
+        $output .= '<p class="mb-2">Показаны первые 10 сообщений:</p>';
         $output .= '<ul>';
         foreach (array_slice($success, 0, 10) as $msg) {
             $output .= '<li>' . htmlspecialchars($msg, ENT_QUOTES, 'UTF-8') . '</li>';
@@ -418,57 +427,54 @@ if (!empty($success)) {
         $output .= '</ul>';
         $output .= '<p class="text-muted mb-0">...и ещё ' . (count($success) - 10) . ' вопросов</p>';
     }
-    
+
     $output .= '<hr>';
-    $output .= '<a href="' . htmlspecialchars($testUrl, ENT_QUOTES, 'UTF-8') . '" class="ts-btn ts-btn-primary ts-btn-lg">Перейти к тесту →</a>';
+    $output .= '<a href="' . htmlspecialchars($testUrl, ENT_QUOTES, 'UTF-8') . '" class="ts-btn ts-btn-primary ts-btn-lg"><i class="bi bi-play-circle"></i> Перейти к тесту</a>';
     $output .= '</div>';
 }
 
-$output .= '<div class="card">';
-$output .= '<div class="card-header bg-primary text-white">';
-$output .= '<h5 class="mb-0">Загрузить файл с вопросами</h5>';
+$output .= '<div class="ts-card ts-import-upload-main">';
+$output .= '<div class="ts-card-header">';
+$output .= '<h2 class="ts-card-title">Загрузить файл с вопросами</h2>';
+$output .= '<p class="ts-card-description">Поддерживаются CSV, XLSX и XLS. После загрузки система проверит структуру и добавит валидные строки.</p>';
 $output .= '</div>';
-$output .= '<div class="card-body">';
+$output .= '<div class="ts-card-body">';
 
 $output .= '<form method="POST" enctype="multipart/form-data">';
 $output .= CsrfProtection::getTokenField(); // CSRF Protection
 $output .= '<input type="hidden" name="test_id" value="' . $testId . '">';
 
-$output .= '<div class="mb-3">';
-$output .= '<label class="form-label fw-bold">Выберите файл (CSV или Excel)</label>';
+$output .= '<div class="row g-4">';
+$output .= '<div class="col-lg-6">';
+$output .= '<label class="form-label fw-semibold">Выберите файл (CSV или Excel)</label>';
 $output .= '<input type="file" name="csv_file" class="form-control" accept=".csv,.xlsx,.xls" required>';
-$output .= '<small class="form-text text-muted">Поддерживаемые форматы: CSV, XLSX, XLS</small>';
-$output .= '</div>';
-
-$output .= '<div class="ts-alert ts-alert-info">';
-$output .= '<h6><i class="bi bi-info-circle"></i> Формат файла:</h6>';
-$output .= '<table class="table table-sm table-bordered mb-0 bg-white">';
-$output .= '<thead><tr>';
-$output .= '<th>Столбец</th><th>Описание</th><th>Пример</th>';
-$output .= '</tr></thead>';
-$output .= '<tbody>';
-$output .= '<tr><td><strong>A</strong></td><td>Текст вопроса</td><td>Что такое SQL?</td></tr>';
-$output .= '<tr><td><strong>B</strong></td><td>Тип вопроса</td><td>single или multiple</td></tr>';
-$output .= '<tr><td><strong>C</strong></td><td>Вариант ответа 1</td><td>Язык программирования</td></tr>';
-$output .= '<tr><td><strong>D</strong></td><td>Вариант ответа 2</td><td>Язык запросов</td></tr>';
-$output .= '<tr><td><strong>E</strong></td><td>Вариант ответа 3</td><td>База данных</td></tr>';
-$output .= '<tr><td><strong>F</strong></td><td>Вариант ответа 4</td><td>Сервер</td></tr>';
-$output .= '<tr><td><strong>G</strong></td><td>Правильные ответы</td><td>2 (или 1,3 для multiple)</td></tr>';
-$output .= '<tr><td><strong>H</strong></td><td>Объяснение (необязательно)</td><td>SQL - это язык структурированных запросов</td></tr>';
-$output .= '</tbody>';
-$output .= '</table>';
-$output .= '</div>';
+$output .= '<small class="form-text text-muted">Максимальный размер файла: 10MB.</small>';
 
 if (!$hasPhpSpreadsheet) {
-    $output .= '<div class="ts-alert ts-alert-warning">';
-    $output .= '<strong>Внимание:</strong> PhpSpreadsheet не установлен. Excel файлы не поддерживаются.<br>';
-    $output .= 'Используйте CSV формат.';
+    $output .= '<div class="ts-alert ts-alert-warning mt-3 mb-0">';
+    $output .= '<strong>Внимание:</strong> PhpSpreadsheet не установлен. Excel файлы не поддерживаются, используйте CSV формат.';
     $output .= '</div>';
 }
 
-$output .= '<button type="submit" class="ts-btn ts-btn-primary ts-btn-lg w-100">';
+$output .= '<button type="submit" class="ts-btn ts-btn-primary ts-btn-lg w-100 mt-3">';
 $output .= '<i class="bi bi-upload"></i> Загрузить и импортировать';
 $output .= '</button>';
+$output .= '</div>';
+
+$output .= '<div class="col-lg-6">';
+$output .= '<div class="ts-import-format-panel">';
+$output .= '<h6 class="ts-import-format-panel-title"><i class="bi bi-table"></i> Структура файла</h6>';
+$output .= '<ul class="ts-import-format-list">';
+$output .= '<li><span>A</span> Текст вопроса</li>';
+$output .= '<li><span>B</span> Тип: <code>single</code> или <code>multiple</code></li>';
+$output .= '<li><span>C–F</span> Варианты ответов</li>';
+$output .= '<li><span>G</span> Правильные ответы: <code>2</code> или <code>1,3</code></li>';
+$output .= '<li><span>H</span> Объяснение (необязательно)</li>';
+$output .= '</ul>';
+$output .= '<p class="ts-import-format-panel-note mb-0">Рекомендуется использовать шаблон с заголовком в первой строке.</p>';
+$output .= '</div>';
+$output .= '</div>';
+$output .= '</div>';
 
 $output .= '</form>';
 $output .= '</div>';
