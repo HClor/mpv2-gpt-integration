@@ -1297,7 +1297,12 @@
     color: var(--color-text-primary);
 }
 
-.ts-import-format-list li span {
+
+.ts-import-format-list li > div {
+    min-width: 0;
+}
+
+.ts-import-format-list li > .ts-import-col-badge {
     display: inline-flex;
     align-items: center;
     justify-content: center;
