@@ -307,7 +307,11 @@ $output .= "<h5 class=\"ts-import-step-title\"><i class=\"bi bi-upload\"></i> Д
 $output .= "<p class=\"ts-import-step-subtitle\">Выберите удобный сценарий: загрузка файла сейчас или ручное добавление вопросов после создания теста.</p>";
 $output .= "</section>";
 
-$output .= "<div class=\"ts-card ts-import-upload-card\">";
+$output .= "<div class=\"ts-card ts-import-upload-main\">";
+$output .= "<div class=\"ts-card-header\">";
+$output .= "<h2 class=\"ts-card-title\">Загрузить файл с вопросами</h2>";
+$output .= "<p class=\"ts-card-description\">Поддерживаются CSV, XLSX и XLS. После создания теста вы перейдёте в единый интерфейс импорта, где система проверит структуру и покажет результат.</p>";
+$output .= "</div>";
 $output .= "<div class=\"ts-card-body\">";
 $output .= "<div class=\"ts-import-upload-toggle\">";
 $output .= "<div class=\"form-check form-switch mb-0\">";
@@ -329,15 +333,16 @@ $output .= "<p class=\"ts-import-upload-hint\">После создания те�
 $output .= "</div>";
 
 $output .= "<div class=\"col-lg-6\">";
-$output .= "<div class=\"ts-import-format-card\">";
-$output .= "<h6 class=\"ts-import-format-title\">Структура файла</h6>";
+$output .= "<div class=\"ts-import-format-panel\">";
+$output .= "<h6 class=\"ts-import-format-panel-title\"><i class=\"bi bi-table\"></i> Структура файла</h6>";
 $output .= "<ul class=\"ts-import-format-list\">";
-$output .= "<li><span>A</span> Текст вопроса</li>";
-$output .= "<li><span>B</span> Тип: <code>single</code> или <code>multiple</code></li>";
-$output .= "<li><span>C–F</span> Варианты ответов</li>";
-$output .= "<li><span>G</span> Правильные ответы (например: <code>2</code> или <code>1,3</code>)</li>";
-$output .= "<li><span>H</span> Объяснение (необязательно)</li>";
+$output .= "<li><span class=\"ts-import-col-badge\">A</span><div>Текст вопроса</div></li>";
+$output .= "<li><span class=\"ts-import-col-badge\">B</span><div>Тип: <span class=\"ts-import-inline-example\">single</span> или <span class=\"ts-import-inline-example\">multiple</span></div></li>";
+$output .= "<li><span class=\"ts-import-col-badge\">C–F</span><div>Варианты ответов</div></li>";
+$output .= "<li><span class=\"ts-import-col-badge\">G</span><div>Правильные ответы: <span class=\"ts-import-inline-example\">2</span> или <span class=\"ts-import-inline-example\">1,3</span></div></li>";
+$output .= "<li><span class=\"ts-import-col-badge\">H</span><div>Объяснение (необязательно)</div></li>";
 $output .= "</ul>";
+$output .= "<p class=\"ts-import-format-panel-note mb-0\">Рекомендуется использовать шаблон с заголовком в первой строке.</p>";
 $output .= "</div>";
 $output .= "</div>";
 $output .= "</div>";
