@@ -174,8 +174,13 @@ if ($knowledgeAreaId > 0) {
     $manageAreasPageId = Config::getPageId('manage_areas', 125);
     $manageAreasPageUrl = rtrim($modx->makeUrl($manageAreasPageId, 'web', []), '/');
     
+    $isKnowledgeAreaOwner = ((int)$knowledgeArea['user_id'] === $userId);
+    $knowledgeIsAdmin = $modx->user->isMember(Config::getGroup('admins'));
+    $knowledgeIsExpert = $modx->user->isMember(Config::getGroup('experts'));
+    $canManageKnowledgeAreaQuestions = $isKnowledgeAreaOwner || $knowledgeIsAdmin || $knowledgeIsExpert;
+
     // Формируем вывод для области знаний
-    $output = '<div id="test-container" data-test-id="0" data-knowledge-area-id="' . (int)$knowledgeAreaId . '" data-can-edit="0" data-test-mode="training">';
+    $output = '<div id="test-container" data-test-id="0" data-knowledge-area-id="' . (int)$knowledgeAreaId . '" data-can-edit="' . ($canManageKnowledgeAreaQuestions ? '1' : '0') . '" data-can-delete="' . ($canManageKnowledgeAreaQuestions ? '1' : '0') . '" data-test-mode="training">';
     $output .= '<div id="test-info" class="card mb-4">';
     $output .= '<div class="card-header">';
     $output .= '<div class="d-flex justify-content-between align-items-center">';
@@ -249,6 +254,7 @@ if ($knowledgeAreaId > 0) {
     $output .= '</button>';
     $output .= '</div>';
     $output .= '</div>';
+    $output .= '<div id="edit-buttons-row" class="border-top pt-2" style="display: none;"></div>';
     $output .= '</div></div></div>';
     
     // Контейнер для результатов

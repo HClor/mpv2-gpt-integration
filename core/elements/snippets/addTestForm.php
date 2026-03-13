@@ -11,9 +11,12 @@
 // Подключаем bootstrap для CSRF защиты
 require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
 
-// Подключаем QuestionImportHelper для импорта вопросов
-require_once MODX_CORE_PATH . 'components/testsystem/helpers/QuestionImportHelper.php';
-use MPV2\TestSystem\Helpers\QuestionImportHelper;
+// Гарантируем подключение стилей интерфейса импорта на любых страницах/шаблонах
+$assetsUrl = rtrim($modx->getOption('assets_url', null, MODX_ASSETS_URL), '/') . '/';
+$modx->regClientCSS($assetsUrl . 'components/testsystem/css/ts-variables.css');
+$modx->regClientCSS($assetsUrl . 'components/testsystem/css/ts-layout.css');
+$modx->regClientCSS($assetsUrl . 'components/testsystem/css/ts-components.css');
+$modx->regClientCSS($assetsUrl . 'components/testsystem/css/testsystem-extended.css');
 
 // ============================================
 // НАСТРОЙКИ (ID ресурсов из конфигурации)
@@ -145,123 +148,25 @@ if ($_POST && isset($_POST["add_test"])) {
 
                 $modx->log(modX::LOG_LEVEL_INFO, "[addTestForm] Test created: ID={$newTestId}, Category={$parentId}");
 
-                // ГИБРИДНЫЙ ПОДХОД: Если загружен файл → импортируем сразу, иначе → редирект
-                if ($uploadedFilePath) {
-                    // ============================================
-                    // ИМПОРТ ВОПРОСОВ ИЗ ФАЙЛА
-                    // ============================================
-                    $uploadDir = MODX_ASSETS_PATH . 'uploads/test_imports/';
-                    $fullFilePath = $uploadDir . $uploadedFilePath;
-                    $fileExtension = strtolower(pathinfo($uploadedFilePath, PATHINFO_EXTENSION));
-
-                    // Проверяем наличие PhpSpreadsheet
-                    $hasPhpSpreadsheet = QuestionImportHelper::hasPhpSpreadsheet();
-
-                    $modx->log(modX::LOG_LEVEL_INFO, "[addTestForm] Starting import: file={$fullFilePath}, extension={$fileExtension}");
-
-                    // Используем QuestionImportHelper для импорта
-                    $importResult = QuestionImportHelper::importFromFile(
-                        $fullFilePath,
-                        $fileExtension,
-                        $newTestId,
-                        $modx,
-                        $prefix,
-                        $hasPhpSpreadsheet
-                    );
-
-                    // Удаляем временный файл после импорта
-                    @unlink($fullFilePath);
-
-                    // Формируем URL теста для кнопки "Перейти к тесту"
-                    $testRunPageId = Config::getPageId('test_run', 155);
-                    $testUrl = $modx->makeUrl($testRunPageId, '', ['testId' => $newTestId], 'full');
-                    if (empty($testUrl)) {
-                        $siteUrl = rtrim($modx->getOption('site_url'), '/');
-                        $testUrl = $siteUrl . '/test-run?testId=' . $newTestId;
-                    }
-
-                    // Результаты импорта
-                    if ($importResult['success'] && $importResult['imported'] > 0) {
-                        // УСПЕХ: Показываем сообщение об успешном создании и импорте
-                        $output = '<div class="container my-4">';
-                        $output .= '<div class="ts-alert ts-alert-success">';
-                        $output .= '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
-                        $output .= '<h4 class="alert-heading"><i class="bi bi-check-circle"></i> Тест успешно создан!</h4>';
-                        $output .= '<p class="mb-3"><strong>ID теста:</strong> ' . $newTestId . '</p>';
-                        $output .= '<p class="mb-3"><strong>Название:</strong> ' . htmlspecialchars($title, ENT_QUOTES, 'UTF-8') . '</p>';
-                        $output .= '<hr>';
-                        $output .= '<h5><i class="bi bi-check-circle"></i> Импортировано вопросов: ' . $importResult['imported'] . '</h5>';
-
-                        // Показываем первые 5 сообщений об успехе
-                        if (!empty($importResult['success_messages']) && count($importResult['success_messages']) <= 5) {
-                            $output .= '<ul class="mb-3">';
-                            foreach ($importResult['success_messages'] as $msg) {
-                                $output .= '<li>' . htmlspecialchars($msg, ENT_QUOTES, 'UTF-8') . '</li>';
-                            }
-                            $output .= '</ul>';
-                        } elseif (!empty($importResult['success_messages'])) {
-                            $output .= '<p class="text-muted">Показаны детали для первых 5 вопросов:</p>';
-                            $output .= '<ul class="mb-3">';
-                            foreach (array_slice($importResult['success_messages'], 0, 5) as $msg) {
-                                $output .= '<li>' . htmlspecialchars($msg, ENT_QUOTES, 'UTF-8') . '</li>';
-                            }
-                            $output .= '</ul>';
-                            $output .= '<p class="text-muted">...и ещё ' . (count($importResult['success_messages']) - 5) . ' вопросов</p>';
-                        }
-
-                        // Показываем ошибки, если были (частичный успех)
-                        if (!empty($importResult['errors'])) {
-                            $output .= '<div class="ts-alert ts-alert-warning mt-3">';
-                            $output .= '<h6><i class="bi bi-exclamation-triangle"></i> Предупреждения при импорте:</h6>';
-                            $output .= '<ul class="mb-0">';
-                            foreach (array_slice($importResult['errors'], 0, 10) as $error) {
-                                $output .= '<li>' . htmlspecialchars($error, ENT_QUOTES, 'UTF-8') . '</li>';
-                            }
-                            $output .= '</ul>';
-                            if (count($importResult['errors']) > 10) {
-                                $output .= '<p class="mb-0 mt-2 text-muted">...и ещё ' . (count($importResult['errors']) - 10) . ' предупреждений</p>';
-                            }
-                            $output .= '</div>';
-                        }
-
-                        $output .= '<hr>';
-                        $output .= '<div class="d-flex gap-2">';
-                        $output .= '<a href="' . htmlspecialchars($testUrl, ENT_QUOTES, 'UTF-8') . '" class="ts-btn ts-btn-primary ts-btn-lg">';
-                        $output .= '<i class="bi bi-play-circle"></i> Перейти к тесту';
-                        $output .= '</a>';
-                        $output .= '<a href="' . $modx->makeUrl($modx->resource->id) . '" class="ts-btn ts-btn-secondary ts-btn-lg">';
-                        $output .= '<i class="bi bi-plus-circle"></i> Создать ещё один тест';
-                        $output .= '</a>';
-                        $output .= '</div>';
-                        $output .= '</div>';
-                        $output .= '</div>';
-
-                        return $output;
-                    } else {
-                        // ЧАСТИЧНАЯ ОШИБКА: Тест создан, но импорт не удался
-                        $errors[] = "Тест создан (ID: {$newTestId}), но импорт вопросов не удался:";
-                        $errors = array_merge($errors, $importResult['errors']);
-
-                        // Добавляем ссылку на ручной импорт
-                        $importUrl = $modx->makeUrl($IMPORT_PAGE_ID, '', ['test_id' => $newTestId]);
-                        $errors[] = "Вы можете <a href=\"{$importUrl}\">добавить вопросы вручную</a> или загрузить другой файл.";
-
-                        $modx->log(modX::LOG_LEVEL_ERROR, "[addTestForm] Import failed for test {$newTestId}: " . implode('; ', $importResult['errors']));
-                    }
-                } else {
-                    // НЕТ ФАЙЛА: Редиректим на csvImportForm для ручного добавления
-                    $importUrl = $modx->makeUrl($IMPORT_PAGE_ID, '', ['test_id' => $newTestId]);
-
-                    if (empty($importUrl)) {
-                        $baseUrl = rtrim($modx->getOption('site_url'), '/');
-                        $importUrl = $baseUrl . '/import-csv?test_id=' . $newTestId;
-                    }
-
-                    $modx->log(modX::LOG_LEVEL_INFO, "[addTestForm] No file uploaded, redirecting to: {$importUrl}");
-
-                    $modx->sendRedirect($importUrl);
-                    exit;
+                // ЕДИНЫЙ ПОТОК ИМПОРТА: addTestForm только создаёт тест и (опционально) загружает файл,
+                // а csvImportForm выполняет сам импорт и рендерит актуальный UI результатов.
+                $importParams = ['test_id' => $newTestId];
+                if (!empty($uploadedFilePath)) {
+                    $importParams['file'] = $uploadedFilePath;
+                    $modx->log(modX::LOG_LEVEL_INFO, "[addTestForm] Uploaded file queued for csvImportForm: {$uploadedFilePath}");
                 }
+
+                $importUrl = $modx->makeUrl($IMPORT_PAGE_ID, '', $importParams);
+
+                if (empty($importUrl)) {
+                    $baseUrl = rtrim($modx->getOption('site_url'), '/');
+                    $query = http_build_query($importParams);
+                    $importUrl = $baseUrl . '/import-csv?' . $query;
+                }
+
+                $modx->log(modX::LOG_LEVEL_INFO, "[addTestForm] Redirecting to csvImportForm: {$importUrl}");
+                $modx->sendRedirect($importUrl);
+                exit;
             } else {
                 $errorInfo = $stmt->errorInfo();
                 $errors[] = "Ошибка при создании теста в БД: " . $errorInfo[2];
@@ -402,7 +307,11 @@ $output .= "<h5 class=\"ts-import-step-title\"><i class=\"bi bi-upload\"></i> Д
 $output .= "<p class=\"ts-import-step-subtitle\">Выберите удобный сценарий: загрузка файла сейчас или ручное добавление вопросов после создания теста.</p>";
 $output .= "</section>";
 
-$output .= "<div class=\"ts-card ts-import-upload-card\">";
+$output .= "<div class=\"ts-card ts-import-upload-main\">";
+$output .= "<div class=\"ts-card-header\">";
+$output .= "<h2 class=\"ts-card-title\">Загрузить файл с вопросами</h2>";
+$output .= "<p class=\"ts-card-description\">Поддерживаются CSV, XLSX и XLS. После создания теста вы перейдёте в единый интерфейс импорта, где система проверит структуру и покажет результат.</p>";
+$output .= "</div>";
 $output .= "<div class=\"ts-card-body\">";
 $output .= "<div class=\"ts-import-upload-toggle\">";
 $output .= "<div class=\"form-check form-switch mb-0\">";
@@ -420,19 +329,20 @@ $output .= "<div class=\"col-lg-6\">";
 $output .= "<label class=\"form-label fw-semibold\" for=\"questions_file_input\">Выберите файл *</label>";
 $output .= "<input type=\"file\" name=\"questions_file\" class=\"form-control\" accept=\".csv,.xlsx,.xls\" id=\"questions_file_input\"" . ($isUploadChecked ? " required" : "") . ">";
 $output .= "<small class=\"form-text text-muted\">Поддерживаемые форматы: CSV, XLSX, XLS. Максимальный размер: 10MB.</small>";
-$output .= "<p class=\"ts-import-upload-hint\">После создания теста файл обработается автоматически, а результаты импорта откроются на отдельной странице.</p>";
+$output .= "<p class=\"ts-import-upload-hint\">После создания теста вы перейдёте в единый интерфейс импорта (csvImportForm), где выполняется загрузка и отображается результат.</p>";
 $output .= "</div>";
 
 $output .= "<div class=\"col-lg-6\">";
-$output .= "<div class=\"ts-import-format-card\">";
-$output .= "<h6 class=\"ts-import-format-title\">Структура файла</h6>";
+$output .= "<div class=\"ts-import-format-panel\">";
+$output .= "<h6 class=\"ts-import-format-panel-title\"><i class=\"bi bi-table\"></i> Структура файла</h6>";
 $output .= "<ul class=\"ts-import-format-list\">";
-$output .= "<li><span>A</span> Текст вопроса</li>";
-$output .= "<li><span>B</span> Тип: <code>single</code> или <code>multiple</code></li>";
-$output .= "<li><span>C–F</span> Варианты ответов</li>";
-$output .= "<li><span>G</span> Правильные ответы (например: <code>2</code> или <code>1,3</code>)</li>";
-$output .= "<li><span>H</span> Объяснение (необязательно)</li>";
+$output .= "<li><span class=\"ts-import-col-badge\">A</span><div>Текст вопроса</div></li>";
+$output .= "<li><span class=\"ts-import-col-badge\">B</span><div>Тип: <span class=\"ts-import-inline-example\">single</span> или <span class=\"ts-import-inline-example\">multiple</span></div></li>";
+$output .= "<li><span class=\"ts-import-col-badge\">C–F</span><div>Варианты ответов</div></li>";
+$output .= "<li><span class=\"ts-import-col-badge\">G</span><div>Правильные ответы: <span class=\"ts-import-inline-example\">2</span> или <span class=\"ts-import-inline-example\">1,3</span></div></li>";
+$output .= "<li><span class=\"ts-import-col-badge\">H</span><div>Объяснение (необязательно)</div></li>";
 $output .= "</ul>";
+$output .= "<p class=\"ts-import-format-panel-note mb-0\">Рекомендуется использовать шаблон с заголовком в первой строке.</p>";
 $output .= "</div>";
 $output .= "</div>";
 $output .= "</div>";
@@ -443,7 +353,7 @@ $output .= "</div>";
 
 $output .= "<div class=\"alert alert-info border-0 mt-4\">";
 $output .= "<i class=\"bi bi-info-circle-fill\"></i> <strong>Обратите внимание:</strong> ";
-$output .= "После создания теста вы будете перенаправлены на страницу добавления вопросов.";
+$output .= "После создания теста вы будете перенаправлены в интерфейс импорта/добавления вопросов.";
 $output .= "</div>";
 
 $output .= "<div class=\"d-flex justify-content-between align-items-center mt-4\">";
