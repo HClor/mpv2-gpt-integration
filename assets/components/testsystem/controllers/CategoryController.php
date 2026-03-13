@@ -414,16 +414,15 @@ class CategoryController extends BaseController
 
         // Создаём категорию
         $stmt = $this->modx->prepare("
-            INSERT INTO {$this->prefix}test_categories (name, description, parent_id, sort_order, created_by, created_at)
-            VALUES (?, ?, ?, ?, ?, NOW())
+            INSERT INTO {$this->prefix}test_categories (name, description, parent_id, sort_order, created_at)
+            VALUES (?, ?, ?, ?, NOW())
         ");
 
         $result = $stmt->execute([
             $name,
             $description,
             $parentId,
-            $sortOrder,
-            $currentUserId
+            $sortOrder
         ]);
 
         if (!$result) {
