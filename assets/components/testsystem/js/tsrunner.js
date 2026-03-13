@@ -32,6 +32,7 @@
     const container = document.getElementById("test-container");
     const testId = container ? container.dataset.testId : null;
     const importQuestionsUrl = container ? (container.dataset.importUrl || '') : '';
+    canEdit = container ? container.dataset.canEdit === '1' : false;
     canDelete = container ? container.dataset.canDelete === '1' : false;
 
     // ПОДДЕРЖКА ОБЛАСТЕЙ ЗНАНИЙ
@@ -292,7 +293,11 @@
         try {
             const result = await apiCall("checkEditRights", {});
             if (result.success) {
-                canEdit = result.data.canEdit;
+                // Серверный ответ приоритетный, но не понижаем уже выданные серверным HTML права (например, для knowledge_area).
+                canEdit = canEdit || !!result.data.canEdit;
+                if (typeof result.data.canDelete !== 'undefined') {
+                    canDelete = canDelete || !!result.data.canDelete;
+                }
             }
         } catch (error) {
             console.log("No edit rights");
