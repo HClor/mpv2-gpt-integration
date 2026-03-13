@@ -11,6 +11,13 @@
 // Подключаем bootstrap для CSRF защиты
 require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
 
+// Гарантируем подключение стилей интерфейса импорта на любых страницах/шаблонах
+$assetsUrl = rtrim($modx->getOption('assets_url', null, MODX_ASSETS_URL), '/') . '/';
+$modx->regClientCSS($assetsUrl . 'components/testsystem/css/ts-variables.css');
+$modx->regClientCSS($assetsUrl . 'components/testsystem/css/ts-layout.css');
+$modx->regClientCSS($assetsUrl . 'components/testsystem/css/ts-components.css');
+$modx->regClientCSS($assetsUrl . 'components/testsystem/css/testsystem-extended.css');
+
 // ============================================
 // НАСТРОЙКИ (ID ресурсов из конфигурации)
 // ============================================
@@ -341,7 +348,7 @@ $output .= "</div>";
 
 $output .= "<div class=\"alert alert-info border-0 mt-4\">";
 $output .= "<i class=\"bi bi-info-circle-fill\"></i> <strong>Обратите внимание:</strong> ";
-$output .= "После создания теста вы будете перенаправлены на страницу добавления вопросов.";
+$output .= "После создания теста вы будете перенаправлены в интерфейс импорта/добавления вопросов.";
 $output .= "</div>";
 
 $output .= "<div class=\"d-flex justify-content-between align-items-center mt-4\">";

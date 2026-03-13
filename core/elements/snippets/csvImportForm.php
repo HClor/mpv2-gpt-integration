@@ -11,6 +11,13 @@
 // Подключаем bootstrap для CSRF защиты
 require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
 
+// Гарантируем подключение стилей интерфейса импорта на любых страницах/шаблонах
+$assetsUrl = rtrim($modx->getOption('assets_url', null, MODX_ASSETS_URL), '/') . '/';
+$modx->regClientCSS($assetsUrl . 'components/testsystem/css/ts-variables.css');
+$modx->regClientCSS($assetsUrl . 'components/testsystem/css/ts-layout.css');
+$modx->regClientCSS($assetsUrl . 'components/testsystem/css/ts-components.css');
+$modx->regClientCSS($assetsUrl . 'components/testsystem/css/testsystem-extended.css');
+
 if (!$modx->user->hasSessionContext("web")) {
     $authUrl = $modx->makeUrl($modx->getOption("lms.auth_page", null, 0));
     return "<div class=\"alert alert-warning\"><a href=\"{$authUrl}\">Войдите</a> для импорта вопросов</div>";
