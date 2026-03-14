@@ -203,11 +203,57 @@ if ($autoLoadFile && empty($errors)) {
     @unlink($autoLoadFile);
 }
 
+
+if (!function_exists('isQuestionImportHeaderRow')) {
+    /**
+     * Определяет, является ли строка заголовком CSV/Excel импорта вопросов.
+     * Поддерживает варианты с кавычками и без.
+     */
+    function isQuestionImportHeaderRow(array $row): bool {
+        if (count($row) < 7) {
+            return false;
+        }
+
+        $normalize = static function ($value): string {
+            $value = (string)$value;
+            $value = preg_replace('/^ï»¿/u', '', $value); // UTF-8 BOM
+            $value = trim($value);
+            $value = trim($value, "\"'`");
+            $value = strtolower($value);
+            return preg_replace('/\s+/', '', $value);
+        };
+
+        $expected = [
+            'question_text',
+            'answer_type',
+            'answer_1',
+            'answer_2',
+            'answer_3',
+            'answer_4',
+            'correct_answer',
+            'explanation',
+        ];
+
+        for ($i = 0; $i < 7; $i++) {
+            if ($normalize($row[$i] ?? '') !== $expected[$i]) {
+                return false;
+            }
+        }
+
+        if (isset($row[7]) && trim((string)$row[7]) !== '') {
+            return $normalize($row[7]) === $expected[7];
+        }
+
+        return true;
+    }
+}
+
 // ФУНКЦИЯ ОБРАБОТКИ ФАЙЛА
 function processImportFile($filePath, $fileExtension, $testId, $modx, $prefix, $hasPhpSpreadsheet) {
     $errors = [];
     $success = [];
     $imported = 0;
+    $hasHeader = false;
     
     try {
         $rows = [];
@@ -221,14 +267,21 @@ function processImportFile($filePath, $fileExtension, $testId, $modx, $prefix, $
                 $encoding = mb_detect_encoding($firstLine, ['UTF-8', 'Windows-1251', 'ISO-8859-1'], true);
                 
                 $lineNumber = 0;
+                $hasHeader = false;
                 while (($data = fgetcsv($handle, 10000, ',')) !== false) {
                     $lineNumber++;
-                    if ($lineNumber === 1) continue;
-                    
+
                     if ($encoding !== 'UTF-8') {
                         $data = array_map(function($item) use ($encoding) {
                             return mb_convert_encoding($item, 'UTF-8', $encoding);
                         }, $data);
+                    }
+
+                    if ($lineNumber === 1) {
+                        $hasHeader = isQuestionImportHeaderRow($data);
+                        if ($hasHeader) {
+                            continue;
+                        }
                     }
                     
                     $rows[] = $data;
@@ -251,11 +304,18 @@ function processImportFile($filePath, $fileExtension, $testId, $modx, $prefix, $
                 $worksheet = $spreadsheet->getActiveSheet();
                 $highestRow = $worksheet->getHighestRow();
                 
-                for ($row = 2; $row <= $highestRow; $row++) {
+                for ($row = 1; $row <= $highestRow; $row++) {
                     $rowData = [];
                     for ($col = 'A'; $col <= 'H'; $col++) {
                         $cellValue = $worksheet->getCell($col . $row)->getValue();
                         $rowData[] = $cellValue !== null ? (string)$cellValue : '';
+                    }
+
+                    if ($row === 1) {
+                        $hasHeader = isQuestionImportHeaderRow($rowData);
+                        if ($hasHeader) {
+                            continue;
+                        }
                     }
                     
                     if (!empty(trim($rowData[0]))) {
@@ -275,8 +335,9 @@ function processImportFile($filePath, $fileExtension, $testId, $modx, $prefix, $
         }
         
         // Обработка строк
+        $lineNumberOffset = $hasHeader ? 2 : 1;
         foreach ($rows as $index => $row) {
-            $lineNumber = $index + 2;
+            $lineNumber = $index + $lineNumberOffset;
             
             if (count($row) < 7) {
                 $errors[] = "Строка {$lineNumber}: недостаточно столбцов (минимум 7)";
