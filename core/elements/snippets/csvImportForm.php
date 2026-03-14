@@ -131,6 +131,51 @@ $errors = [];
 $success = [];
 $importedCount = 0;
 
+
+if (!function_exists('isQuestionImportHeaderRow')) {
+    /**
+     * Определяет, является ли строка заголовком CSV/Excel импорта вопросов.
+     * Поддерживает варианты с кавычками и без.
+     */
+    function isQuestionImportHeaderRow(array $row): bool {
+        if (count($row) < 7) {
+            return false;
+        }
+
+        $normalize = static function ($value): string {
+            $value = (string)$value;
+            $value = preg_replace('/^\xEF\xBB\xBF/u', '', $value); // UTF-8 BOM
+            $value = trim($value);
+            $value = trim($value, "\"'`");
+            $value = strtolower($value);
+            return preg_replace('/\s+/', '', $value);
+        };
+
+        $expected = [
+            'question_text',
+            'answer_type',
+            'answer_1',
+            'answer_2',
+            'answer_3',
+            'answer_4',
+            'correct_answer',
+            'explanation',
+        ];
+
+        for ($i = 0; $i < 7; $i++) {
+            if ($normalize($row[$i] ?? '') !== $expected[$i]) {
+                return false;
+            }
+        }
+
+        if (isset($row[7]) && trim((string)$row[7]) !== '') {
+            return $normalize($row[7]) === $expected[7];
+        }
+
+        return true;
+    }
+}
+
 // Автозагрузка файла из параметра ?file=
 $preloadedFile = $_GET['file'] ?? null;
 $autoLoadFile = null;
@@ -213,49 +258,7 @@ if ($autoLoadFile && empty($errors)) {
 }
 
 
-if (!function_exists('isQuestionImportHeaderRow')) {
-    /**
-     * Определяет, является ли строка заголовком CSV/Excel импорта вопросов.
-     * Поддерживает варианты с кавычками и без.
-     */
-    function isQuestionImportHeaderRow(array $row): bool {
-        if (count($row) < 7) {
-            return false;
-        }
 
-        $normalize = static function ($value): string {
-            $value = (string)$value;
-            $value = preg_replace('/^\xEF\xBB\xBF/u', '', $value); // UTF-8 BOM
-            $value = trim($value);
-            $value = trim($value, "\"'`");
-            $value = strtolower($value);
-            return preg_replace('/\s+/', '', $value);
-        };
-
-        $expected = [
-            'question_text',
-            'answer_type',
-            'answer_1',
-            'answer_2',
-            'answer_3',
-            'answer_4',
-            'correct_answer',
-            'explanation',
-        ];
-
-        for ($i = 0; $i < 7; $i++) {
-            if ($normalize($row[$i] ?? '') !== $expected[$i]) {
-                return false;
-            }
-        }
-
-        if (isset($row[7]) && trim((string)$row[7]) !== '') {
-            return $normalize($row[7]) === $expected[7];
-        }
-
-        return true;
-    }
-}
 
 // ФУНКЦИЯ ОБРАБОТКИ ФАЙЛА
 function processImportFile($filePath, $fileExtension, $testId, $modx, $prefix, $hasPhpSpreadsheet) {
@@ -401,6 +404,12 @@ function processImportFile($filePath, $fileExtension, $testId, $modx, $prefix, $
                 (test_id, question_text, question_type, explanation, published, created_at)
                 VALUES (?, ?, ?, ?, 1, NOW())
             ");
+
+            if (!$stmt) {
+                $errors[] = "Строка {$lineNumber}: ошибка подготовки запроса вставки вопроса";
+                $modx->log(modX::LOG_LEVEL_ERROR, "[importCSV] Question INSERT prepare failed on line {$lineNumber}");
+                continue;
+            }
             
             if (!$stmt->execute([$testId, $questionText, $questionType, $explanation])) {
                 $errors[] = "Строка {$lineNumber}: ошибка вставки вопроса в БД";
@@ -422,6 +431,12 @@ function processImportFile($filePath, $fileExtension, $testId, $modx, $prefix, $
                     (question_id, answer_text, is_correct, sort_order)
                     VALUES (?, ?, ?, ?)
                 ");
+
+                if (!$stmt) {
+                    $modx->log(modX::LOG_LEVEL_ERROR, "[importCSV] Answer INSERT prepare failed for question_id={$questionId}, line {$lineNumber}");
+                    $allAnswersInserted = false;
+                    break;
+                }
                 
                 if (!$stmt->execute([$questionId, $answerText, $isCorrect, $answerNumber])) {
                     $allAnswersInserted = false;
@@ -433,7 +448,9 @@ function processImportFile($filePath, $fileExtension, $testId, $modx, $prefix, $
                 $errors[] = "Строка {$lineNumber}: ошибка вставки ответов";
                 // ИСПРАВЛЕНО: используем prepared statement
                 $stmt = $modx->prepare("DELETE FROM `{$prefix}test_questions` WHERE id = ?");
-                $stmt->execute([$questionId]);
+                if ($stmt) {
+                    $stmt->execute([$questionId]);
+                }
                 continue;
             }
             
@@ -441,7 +458,7 @@ function processImportFile($filePath, $fileExtension, $testId, $modx, $prefix, $
             $imported++;
         }
         
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         $errors[] = "Критическая ошибка: " . $e->getMessage();
         $modx->log(modX::LOG_LEVEL_ERROR, "[importCSV] Exception: " . $e->getMessage());
     }
