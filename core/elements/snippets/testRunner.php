@@ -495,8 +495,10 @@ if ($totalQuestions === 0) {
     
     if ($canEdit) {
         // Показываем кнопку импорта CSV
-        $importPageId = Config::getPageId('import_csv', 29);
-        $importUrl = $modx->makeUrl($importPageId, 'web', ['test_id' => $testId], 'full');
+        $importPageId = (int)Config::getPageId('import_csv', 29);
+        $importUrl = $importPageId > 0
+            ? $modx->makeUrl($importPageId, 'web', ['test_id' => $testId], 'full')
+            : '';
         
         if (!empty($importUrl)) {
             return '<div class="ts-alert ts-alert-warning">
@@ -547,8 +549,10 @@ if (!$canEditTest && $publicationStatus === 'private') {
         $canEditTest = true;
     }
 }
-$importPageId = Config::getPageId('import_csv', 29);
-$importUrl = $modx->makeUrl($importPageId, 'web', ['test_id' => $testId], 'full');
+$importPageId = (int)Config::getPageId('import_csv', 29);
+$importUrl = $importPageId > 0
+    ? $modx->makeUrl($importPageId, 'web', ['test_id' => $testId], 'full')
+    : '';
 
 $testCardMenu = '';
 if ($canManage) {

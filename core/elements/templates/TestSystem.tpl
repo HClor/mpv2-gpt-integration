@@ -1,5 +1,5 @@
 {* Обработка выхода из системы (некэшируемый вызов для обработки POST) *}
-[[!logoutHandler]]
+{$_modx->runSnippet('logoutHandler')}
 <!DOCTYPE html>
 <html lang="ru">
 {include 'tsHead'}
@@ -10,11 +10,11 @@
     <main class="py-4">
         <div class="container">
             <!-- Хлебные крошки -->
-            [[pdoCrumbs?
-                &showHome=`1`
-                &showCurrent=`1`
-                &tplWrapper=`@INLINE <nav aria-label="breadcrumb"><ol class="breadcrumb">[[+output]]</ol></nav>`
-            ]]
+            {$_modx->runSnippet('pdoCrumbs', [
+                'showHome' => 1,
+                'showCurrent' => 1,
+                'tplWrapper' => '@INLINE <nav aria-label="breadcrumb"><ol class="breadcrumb">[[+output]]</ol></nav>'
+            ])}
 
             <!-- Основной контент -->
             {$_modx->resource.content}

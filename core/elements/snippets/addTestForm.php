@@ -156,7 +156,10 @@ if ($_POST && isset($_POST["add_test"])) {
                     $modx->log(modX::LOG_LEVEL_INFO, "[addTestForm] Uploaded file queued for csvImportForm: {$uploadedFilePath}");
                 }
 
-                $importUrl = $modx->makeUrl($IMPORT_PAGE_ID, '', $importParams);
+                $importPageId = (int)$IMPORT_PAGE_ID;
+                $importUrl = $importPageId > 0
+                    ? $modx->makeUrl($importPageId, '', $importParams)
+                    : '';
 
                 if (empty($importUrl)) {
                     $baseUrl = rtrim($modx->getOption('site_url'), '/');

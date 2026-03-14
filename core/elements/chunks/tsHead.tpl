@@ -1,5 +1,5 @@
 {* Чанк: tsHead - Заголовок HTML для системы тестирования
-   Вызывается из: TestSystem.tpl, learning-materials-template*.html
+   Вызывается из: TestSystem.tpl
    Содержит: meta-теги, CSS (Bootstrap 5, Font Awesome, кастомные стили), CSRF токен
 *}
 <head>
@@ -39,8 +39,5 @@
     <link href="/assets/components/testsystem/css/testsystem-extended.css" rel="stylesheet">
 
     <!-- CSRF токен для безопасности -->
-    [[!csrfToken]]
-
-    <!-- Дополнительный CSS из TV поля -->
-    {$_modx->resource.cssTV}
+    {$_modx->runSnippet('csrfToken')}
 </head>
