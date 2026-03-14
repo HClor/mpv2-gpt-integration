@@ -39,8 +39,5 @@
     <link href="/assets/components/testsystem/css/testsystem-extended.css" rel="stylesheet">
 
     <!-- CSRF токен для безопасности -->
-    [[!csrfToken]]
-
-    <!-- Дополнительный CSS из TV поля -->
-    {$_modx->resource.cssTV}
+    {$_modx->runSnippet('csrfToken')}
 </head>
