@@ -19,7 +19,13 @@ $modx->regClientCSS($assetsUrl . 'components/testsystem/css/ts-components.css');
 $modx->regClientCSS($assetsUrl . 'components/testsystem/css/testsystem-extended.css');
 
 if (!$modx->user->hasSessionContext("web")) {
-    $authUrl = $modx->makeUrl($modx->getOption("lms.auth_page", null, 0));
+    $authPageId = (int)$modx->getOption("lms.auth_page", null, 0);
+    if ($authPageId <= 0) {
+        $authPageId = (int)$modx->getOption('site_start', null, 1);
+    }
+    $authUrl = $authPageId > 0
+        ? $modx->makeUrl($authPageId)
+        : rtrim((string)$modx->getOption('site_url'), '/');
     return "<div class=\"alert alert-warning\"><a href=\"{$authUrl}\">Войдите</a> для импорта вопросов</div>";
 }
 
@@ -48,7 +54,10 @@ if (!$test) {
 // ИСПРАВЛЕНО: Генерация URL теста через /test-run?testId=X
 // resource_id теперь хранит category_id, а не ID страницы MODX
 $testRunPageId = Config::getPageId('test_run', 155);
-$testUrl = $modx->makeUrl($testRunPageId, '', ['testId' => $testId], 'full');
+$testUrl = '';
+if ((int)$testRunPageId > 0) {
+    $testUrl = $modx->makeUrl((int)$testRunPageId, '', ['testId' => $testId], 'full');
+}
 
 // Fallback: если страница test-run не найдена
 if (empty($testUrl)) {
@@ -216,7 +225,7 @@ if (!function_exists('isQuestionImportHeaderRow')) {
 
         $normalize = static function ($value): string {
             $value = (string)$value;
-            $value = preg_replace('/^ï»¿/u', '', $value); // UTF-8 BOM
+            $value = preg_replace('/^\xEF\xBB\xBF/u', '', $value); // UTF-8 BOM
             $value = trim($value);
             $value = trim($value, "\"'`");
             $value = strtolower($value);
