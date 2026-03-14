@@ -1,7 +1,7 @@
 # Архитектура LMS Test System
 
 > Консолидированная документация по архитектуре, схеме БД, API и принятым решениям.
-> Обновлено: 2026-02-23
+> Обновлено: 2026-03-14
 
 ---
 
@@ -11,8 +11,8 @@
 
 **Стек технологий:**
 - **CMS:** MODX Revolution 2.8.0+ с шаблонизатором Fenom
-- **Backend:** PHP 7.4+, Service Layer + Repository Pattern
-- **Frontend:** Vanilla JS (без jQuery), Bootstrap 5, Fetch API
+- **Backend:** PHP 8.2+, Service Layer + Repository Pattern
+- **Frontend:** Vanilla JS, Bootstrap 5, Fetch API
 - **БД:** MySQL 5.7+ / MariaDB
 - **Безопасность:** CSRF-токены, RBAC (6 уровней), XSS-фильтрация
 
@@ -26,7 +26,7 @@
 /
 ├── assets/components/testsystem/        # Frontend (публичная часть)
 │   ├── ajax/                            # HTTP-точки входа
-│   │   ├── testsystem.php               # Главный API-роутер (540 строк, 5 inline cases)
+│   │   ├── testsystem.php               # Главный API-роутер (549 строк, 6 inline cases)
 │   │   ├── .htaccess                    # Защита директории
 │   │   ├── upload-image.php             # Загрузка изображений (FormData)
 │   │   └── upload-document.php          # Загрузка документов (FormData)
@@ -48,10 +48,10 @@
 │   │   ├── FavoriteController.php       # Избранное
 │   │   ├── SpecialQuestionController.php # Спец. вопросы
 │   │   └── UploadController.php         # Загрузка файлов
-│   ├── js/                              # JS-модули (15 файлов, 12680 строк)
-│   │   ├── tsrunner.js                  # Тест-раннер (4003 строк)
-│   │   ├── learning-paths.js            # Траектории (1685 строк)
-│   │   ├── test-cards.js                # Карточки тестов (1357 строк)
+│   ├── js/                              # JS-модули (16 файлов)
+│   │   ├── tsrunner.js                  # Тест-раннер
+│   │   ├── learning-paths.js            # Траектории
+│   │   ├── test-cards.js                # Карточки тестов
 │   │   ├── mytests.js                   # Мои тесты
 │   │   ├── knowledge-areas.js           # Области знаний
 │   │   ├── gamification.js              # Геймификация
@@ -63,8 +63,12 @@
 │   │   ├── test-permissions.js          # Права тестов
 │   │   ├── certificates.js              # Сертификаты
 │   │   ├── analytics.js                 # Аналитика
-│   │   └── tests-search.js             # Поиск (заглушка, 42 строки)
-│   ├── css/                             # Стили (3 файла, 3395 строк)
+│   │   ├── question-list-shared.js      # Общие утилиты списка вопросов
+│   │   └── tests-search.js              # Поиск
+│   ├── css/                             # Стили (6 файлов)
+│   │   ├── ts-variables.css             # Дизайн-токены
+│   │   ├── ts-layout.css                # Layout
+│   │   ├── ts-components.css            # UI-компоненты
 │   │   ├── tsrunner.css                 # Стили тест-раннера
 │   │   ├── testsystem-extended.css      # Расширенные стили
 │   │   └── categories-and-tests.css     # Стили каталога
@@ -286,17 +290,17 @@ ORDER BY s.end_time DESC;
 
 ### 5.1. Маршрутизация запросов
 
-Все API-запросы идут через `assets/components/testsystem/ajax/testsystem.php` (540 строк).
+Все API-запросы идут через `assets/components/testsystem/ajax/testsystem.php` (549 строк).
 
 **Двухуровневый роутинг:**
 ```
 Запрос → testsystem.php
   → ControllerFactory.canHandle(action)?
     → ДА: controller.handle(action, data)  // ~151 actions через 17 контроллеров
-    → НЕТ: switch(action) { case... }      // 5 inline cases (утилиты + Materials)
+    → НЕТ: switch(action) { case... }      // 6 inline cases (утилиты + Materials)
 ```
 
-`ControllerFactory` содержит маппинг action → Controller для ~151 действий. Только 5 case-ов остаются inline: `getApiVersion`, `getParentUri` (утилиты) и `getMaterialsList`, `getMaterial`, `saveMaterial` (работают с MODX Resources напрямую — архитектурное решение).
+`ControllerFactory` содержит маппинг action → Controller для ~151 действий. Только 6 case-ов остаются inline: `getApiVersion`, `getCsrfToken`, `getParentUri` (утилиты) и `getMaterialsList`, `getMaterial`, `saveMaterial` (работают с MODX Resources напрямую — архитектурное решение).
 
 **Загрузка файлов** обрабатывается отдельно:
 - `upload-image.php` — загрузка изображений к вопросам
@@ -365,7 +369,7 @@ ORDER BY s.end_time DESC;
 ### 6.2. Зависимости
 - Bootstrap 5 (CSS + JS)
 - Bootstrap Icons
-- Vanilla JavaScript (без jQuery)
+- Vanilla JavaScript (jQuery не используется)
 
 ### 6.3. Интеграция с MODX
 JS и CSS подключаются через сниппеты:
@@ -373,6 +377,12 @@ JS и CSS подключаются через сниппеты:
 $modx->regClientCSS('/assets/components/testsystem/css/styles.css');
 $modx->regClientScript('/assets/components/testsystem/js/module.js');
 ```
+
+
+### 6.4. Шаблонный слой (актуализация на 2026-03-14)
+- Базовый шаблон TestSystem использует Fenom-вызовы сниппетов через `$_modx->runSnippet(...)`.
+- Прямой вывод TV-полей `cssTV/jsTV` в чанках TestSystem удалён (кастомные ассеты через TV не используются).
+- Внутри строковых шаблонов pdoTools (`@INLINE`) остаются `[[+...]]`-плейсхолдеры — это корректный синтаксис pdoTools, а не отдельный слой MODX-тегов в layout.
 
 ---
 
@@ -409,7 +419,7 @@ $modx->regClientScript('/assets/components/testsystem/js/module.js');
 ## 9. Требования к серверу
 
 - MODX Revolution 2.8.0+
-- PHP 7.4+
+- PHP 8.2+
 - MySQL 5.7+ / MariaDB 10.3+
 - Composer (для PhpSpreadsheet)
 - SSL/HTTPS (обязательно для production)
@@ -421,10 +431,10 @@ $modx->regClientScript('/assets/components/testsystem/js/module.js');
 ### 10.1. ~~testsystem.php — рефакторинг~~ ВЫПОЛНЕНО (2026-02-23)
 
 **Было:** 3729 строк, 69 inline case-ов, 24 мёртвых case-а.
-**Стало:** 540 строк, 5 inline case-ов, 0 мёртвого кода.
+**Стало:** 549 строк, 6 inline case-ов, 0 мёртвого кода.
 
-Оставшиеся 5 inline case-ов — осознанное решение:
-- `getApiVersion`, `getParentUri` — утилиты, не стоит выносить в контроллеры
+Оставшиеся 6 inline case-ов — осознанное решение:
+- `getApiVersion`, `getCsrfToken`, `getParentUri` — утилиты, не стоит выносить в контроллеры
 - `getMaterialsList`, `getMaterial`, `saveMaterial` — работают с MODX Resources (site_content) напрямую
 
 ### 10.2. LearningPathController (1617 строк) — потенциально разбить

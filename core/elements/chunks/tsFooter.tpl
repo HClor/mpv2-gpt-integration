@@ -1,5 +1,5 @@
 {* Чанк: tsFooter - Подвал страницы для системы тестирования
-   Вызывается из: TestSystem.tpl, learning-materials-template*.html
+   Вызывается из: TestSystem.tpl
    Содержит: краткое описание, быстрые и служебные ссылки, копирайт
 *}
 <footer class="ts-footer-simple py-4">
