@@ -36,12 +36,6 @@
 
 <!-- Sprint 16: Сертификаты -->
 <script src="/assets/components/testsystem/js/certificates.js"></script>
-
-
-
-<!-- Дополнительный JS из TV поля -->
-{$_modx->resource.jsTV}
-
 <script>
 // ========== ГЛОБАЛЬНЫЙ ХЕЛПЕР ДЛЯ API ЗАПРОСОВ С CSRF ==========
 window.TS_API_URL = '/assets/components/testsystem/ajax/testsystem.php';
