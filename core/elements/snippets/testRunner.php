@@ -15,6 +15,10 @@ if (!$modx instanceof modX) {
     return '<div class="ts-alert ts-alert-danger">MODX context required</div>';
 }
 
+// ВАЖНО: активируем request/session для корректной CSRF-защиты (DEVELOPMENT_RULES.md)
+$modx->getRequest();
+$csrfMeta = CsrfProtection::getTokenMeta();
+
 // НОВАЯ ЛОГИКА: Проверяем наличие sessionId и view параметра
 $sessionId = isset($_GET['sessionId']) ? (int)$_GET['sessionId'] : 0;
 $viewParam = isset($_GET['view']) ? $_GET['view'] : '';
@@ -180,7 +184,8 @@ if ($knowledgeAreaId > 0) {
     $canManageKnowledgeAreaQuestions = $isKnowledgeAreaOwner || $knowledgeIsAdmin || $knowledgeIsExpert;
 
     // Формируем вывод для области знаний
-    $output = '<div id="test-container" data-test-id="0" data-knowledge-area-id="' . (int)$knowledgeAreaId . '" data-can-edit="' . ($canManageKnowledgeAreaQuestions ? '1' : '0') . '" data-can-delete="' . ($canManageKnowledgeAreaQuestions ? '1' : '0') . '" data-test-mode="training">';
+    $output = $csrfMeta;
+$output .= '<div id="test-container" data-test-id="0" data-knowledge-area-id="' . (int)$knowledgeAreaId . '" data-can-edit="' . ($canManageKnowledgeAreaQuestions ? '1' : '0') . '" data-can-delete="' . ($canManageKnowledgeAreaQuestions ? '1' : '0') . '" data-test-mode="training">';
     $output .= '<div id="test-info" class="card mb-4">';
     $output .= '<div class="card-header">';
     $output .= '<div class="d-flex justify-content-between align-items-center">';
@@ -596,7 +601,8 @@ if (!empty($importUrl)) {
     $importUrlAttr = ' data-import-url="' . htmlspecialchars($importUrl, ENT_QUOTES, 'UTF-8') . '"';
 }
 
-$output = '<div id="test-container" data-test-id="' . (int)$testId . '" data-can-edit="' . ($canEditTest ? '1' : '0') . '" data-can-delete="' . ($canDelete ? '1' : '0') . '" data-test-mode="' . htmlspecialchars($testMode, ENT_QUOTES, 'UTF-8') . '"' . $importUrlAttr . $viewDataAttr . '>';
+$output = $csrfMeta;
+$output .= '<div id="test-container" data-test-id="' . (int)$testId . '" data-can-edit="' . ($canEditTest ? '1' : '0') . '" data-can-delete="' . ($canDelete ? '1' : '0') . '" data-test-mode="' . htmlspecialchars($testMode, ENT_QUOTES, 'UTF-8') . '"' . $importUrlAttr . $viewDataAttr . '>';
 $output .= '<div class="tests-grid test-runner-launch-grid">';
 
 // Скрываем test-info если view=questions или view=manage (для быстрой загрузки)

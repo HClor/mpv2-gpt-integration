@@ -14,6 +14,13 @@
  * @version 1.0
  */
 
+// Подключаем bootstrap для CSRF защиты
+require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
+
+// ВАЖНО: активируем request/session для корректной CSRF-защиты
+$modx->getRequest();
+$csrfMeta = CsrfProtection::getTokenMeta();
+
 // Подключаем сервисы
 require_once MODX_CORE_PATH . 'components/testsystem/services/LearningPathService.php';
 require_once MODX_CORE_PATH . 'components/testsystem/services/CategoryPermissionService.php';
@@ -100,7 +107,7 @@ switch ($mode) {
         $output = '<div class="ts-alert ts-alert-warning">Неизвестный режим</div>';
 }
 
-return $output;
+return $csrfMeta . $output;
 
 // ============================================
 // ФУНКЦИИ РЕНДЕРИНГА
