@@ -1,5 +1,5 @@
 {* Чанк: tsHeader - Навигационная панель для системы тестирования
-   Вызывается из: TestSystem.tpl, learning-materials-template*.html
+   Вызывается из: TestSystem.tpl
    Содержит: логотип, основное меню, меню пользователя (вход/профиль), уведомления
    Использует сниппеты: getUserRights, csrfToken, getNotifications
 

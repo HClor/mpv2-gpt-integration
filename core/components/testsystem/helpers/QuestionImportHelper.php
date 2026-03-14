@@ -12,6 +12,49 @@ use PDO;
 class QuestionImportHelper
 {
     /**
+     * Определяет, является ли строка заголовком импорта.
+     * Поддерживает варианты с кавычками и без.
+     */
+    private static function isHeaderRow(array $row): bool
+    {
+        if (count($row) < 7) {
+            return false;
+        }
+
+        $normalize = static function ($value): string {
+            $value = (string)$value;
+            $value = preg_replace('/^\xEF\xBB\xBF/u', '', $value); // UTF-8 BOM
+            $value = trim($value);
+            $value = trim($value, "\"'`");
+            $value = strtolower($value);
+            return preg_replace('/\s+/', '', $value);
+        };
+
+        $expected = [
+            'question_text',
+            'answer_type',
+            'answer_1',
+            'answer_2',
+            'answer_3',
+            'answer_4',
+            'correct_answer',
+            'explanation',
+        ];
+
+        for ($i = 0; $i < 7; $i++) {
+            if ($normalize($row[$i] ?? '') !== $expected[$i]) {
+                return false;
+            }
+        }
+
+        if (isset($row[7]) && trim((string)$row[7]) !== '') {
+            return $normalize($row[7]) === $expected[7];
+        }
+
+        return true;
+    }
+
+    /**
      * Import questions from a file
      *
      * @param string $filePath Full path to the file
@@ -52,6 +95,7 @@ class QuestionImportHelper
             $modx->exec("START TRANSACTION");
 
             $rows = [];
+            $hasHeader = false;
 
             // ============ CSV PROCESSING ============
             if ($fileExtension === 'csv') {
@@ -65,7 +109,13 @@ class QuestionImportHelper
                     $lineNumber = 0;
                     while (($data = fgetcsv($handle, 10000, ',')) !== false) {
                         $lineNumber++;
-                        if ($lineNumber === 1) continue; // Skip header
+
+                        if ($lineNumber === 1) {
+                            $hasHeader = self::isHeaderRow($data);
+                            if ($hasHeader) {
+                                continue;
+                            }
+                        }
 
                         // Convert encoding if needed
                         if ($encoding !== 'UTF-8') {
@@ -106,11 +156,18 @@ class QuestionImportHelper
                     $worksheet = $spreadsheet->getActiveSheet();
                     $highestRow = $worksheet->getHighestRow();
 
-                    for ($row = 2; $row <= $highestRow; $row++) {
+                    for ($row = 1; $row <= $highestRow; $row++) {
                         $rowData = [];
                         for ($col = 'A'; $col <= 'H'; $col++) {
                             $cellValue = $worksheet->getCell($col . $row)->getValue();
                             $rowData[] = $cellValue !== null ? (string)$cellValue : '';
+                        }
+
+                        if ($row === 1) {
+                            $hasHeader = self::isHeaderRow($rowData);
+                            if ($hasHeader) {
+                                continue;
+                            }
                         }
 
                         // Only add non-empty rows
@@ -153,8 +210,9 @@ class QuestionImportHelper
             }
 
             // ============ PROCESS ROWS ============
+            $lineNumberOffset = $hasHeader ? 2 : 1;
             foreach ($rows as $index => $row) {
-                $lineNumber = $index + 2; // +2 because: +1 for array index, +1 for skipped header
+                $lineNumber = $index + $lineNumberOffset;
 
                 // Validate row structure
                 if (count($row) < 7) {
