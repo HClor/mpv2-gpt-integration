@@ -2369,35 +2369,25 @@ async function addFavoritesViewToggle(questionId) {
 
         if (submitBtn) submitBtn.style.display = "none";
 
-        // ИСПРАВЛЕНИЕ: Проверяем, был ли это последний вопрос
-        if (currentQuestionNumber >= totalQuestions) {
-            // Последний вопрос - автоматически завершаем тест
-            console.log("✅ Last question answered, auto-finishing test");
-            console.log(`   currentQuestionNumber=${currentQuestionNumber}, totalQuestions=${totalQuestions}`);
-            if (nextBtn) nextBtn.style.display = "none";
+        // В режиме тренировки не делаем автопереход на последнем вопросе,
+        // чтобы пользователь успел прочитать объяснение.
+        const isLastQuestion = currentQuestionNumber >= totalQuestions;
 
-            // Даем пользователю время посмотреть результат последнего вопроса
-            setTimeout(() => {
-                console.log("⏱️ Timeout triggered after 2s, calling loadNextQuestion()");
-                loadNextQuestion(); // Это вызовет finishTest() так как вопросов больше нет
-            }, 2000); // 2 секунды на просмотр feedback
-        } else {
-            // Не последний вопрос - показываем кнопку "Следующий"
-            if (nextBtn) {
-                nextBtn.style.display = "inline-block";
-                nextBtn.disabled = false;
+        if (nextBtn) {
+            nextBtn.style.display = "inline-block";
+            nextBtn.disabled = false;
+            nextBtn.textContent = isLastQuestion ? "Завершить" : "Следующий вопрос";
 
-                // Клонируем кнопку для удаления старых обработчиков
-                const newNextBtn = nextBtn.cloneNode(true);
-                nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
+            // Клонируем кнопку для удаления старых обработчиков
+            const newNextBtn = nextBtn.cloneNode(true);
+            nextBtn.parentNode.replaceChild(newNextBtn, nextBtn);
 
-                newNextBtn.onclick = function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    loadNextQuestion();
-                    return false;
-                };
-            }
+            newNextBtn.onclick = function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                loadNextQuestion();
+                return false;
+            };
         }
     }
     

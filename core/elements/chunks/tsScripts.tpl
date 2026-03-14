@@ -1,10 +1,7 @@
 {* Чанк: tsScripts - JavaScript для системы тестирования
-   Вызывается из: TestSystem.tpl, learning-materials-template*.html
-   Содержит: jQuery, Bootstrap JS, все JS модули системы тестирования
+   Вызывается из: TestSystem.tpl
+   Содержит: Bootstrap JS, все JS модули системы тестирования
 *}
-<!-- jQuery (если нужен) -->
-<script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-
 <!-- Bootstrap 5 JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
@@ -36,12 +33,6 @@
 
 <!-- Sprint 16: Сертификаты -->
 <script src="/assets/components/testsystem/js/certificates.js"></script>
-
-
-
-<!-- Дополнительный JS из TV поля -->
-{$_modx->resource.jsTV}
-
 <script>
 // ========== ГЛОБАЛЬНЫЙ ХЕЛПЕР ДЛЯ API ЗАПРОСОВ С CSRF ==========
 window.TS_API_URL = '/assets/components/testsystem/ajax/testsystem.php';
