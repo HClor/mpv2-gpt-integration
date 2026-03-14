@@ -131,6 +131,51 @@ $errors = [];
 $success = [];
 $importedCount = 0;
 
+
+if (!function_exists('isQuestionImportHeaderRow')) {
+    /**
+     * Определяет, является ли строка заголовком CSV/Excel импорта вопросов.
+     * Поддерживает варианты с кавычками и без.
+     */
+    function isQuestionImportHeaderRow(array $row): bool {
+        if (count($row) < 7) {
+            return false;
+        }
+
+        $normalize = static function ($value): string {
+            $value = (string)$value;
+            $value = preg_replace('/^\xEF\xBB\xBF/u', '', $value); // UTF-8 BOM
+            $value = trim($value);
+            $value = trim($value, "\"'`");
+            $value = strtolower($value);
+            return preg_replace('/\s+/', '', $value);
+        };
+
+        $expected = [
+            'question_text',
+            'answer_type',
+            'answer_1',
+            'answer_2',
+            'answer_3',
+            'answer_4',
+            'correct_answer',
+            'explanation',
+        ];
+
+        for ($i = 0; $i < 7; $i++) {
+            if ($normalize($row[$i] ?? '') !== $expected[$i]) {
+                return false;
+            }
+        }
+
+        if (isset($row[7]) && trim((string)$row[7]) !== '') {
+            return $normalize($row[7]) === $expected[7];
+        }
+
+        return true;
+    }
+}
+
 // Автозагрузка файла из параметра ?file=
 $preloadedFile = $_GET['file'] ?? null;
 $autoLoadFile = null;
@@ -213,49 +258,7 @@ if ($autoLoadFile && empty($errors)) {
 }
 
 
-if (!function_exists('isQuestionImportHeaderRow')) {
-    /**
-     * Определяет, является ли строка заголовком CSV/Excel импорта вопросов.
-     * Поддерживает варианты с кавычками и без.
-     */
-    function isQuestionImportHeaderRow(array $row): bool {
-        if (count($row) < 7) {
-            return false;
-        }
 
-        $normalize = static function ($value): string {
-            $value = (string)$value;
-            $value = preg_replace('/^\xEF\xBB\xBF/u', '', $value); // UTF-8 BOM
-            $value = trim($value);
-            $value = trim($value, "\"'`");
-            $value = strtolower($value);
-            return preg_replace('/\s+/', '', $value);
-        };
-
-        $expected = [
-            'question_text',
-            'answer_type',
-            'answer_1',
-            'answer_2',
-            'answer_3',
-            'answer_4',
-            'correct_answer',
-            'explanation',
-        ];
-
-        for ($i = 0; $i < 7; $i++) {
-            if ($normalize($row[$i] ?? '') !== $expected[$i]) {
-                return false;
-            }
-        }
-
-        if (isset($row[7]) && trim((string)$row[7]) !== '') {
-            return $normalize($row[7]) === $expected[7];
-        }
-
-        return true;
-    }
-}
 
 // ФУНКЦИЯ ОБРАБОТКИ ФАЙЛА
 function processImportFile($filePath, $fileExtension, $testId, $modx, $prefix, $hasPhpSpreadsheet) {
