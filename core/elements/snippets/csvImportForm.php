@@ -401,6 +401,12 @@ function processImportFile($filePath, $fileExtension, $testId, $modx, $prefix, $
                 (test_id, question_text, question_type, explanation, published, created_at)
                 VALUES (?, ?, ?, ?, 1, NOW())
             ");
+
+            if (!$stmt) {
+                $errors[] = "Строка {$lineNumber}: ошибка подготовки запроса вставки вопроса";
+                $modx->log(modX::LOG_LEVEL_ERROR, "[importCSV] Question INSERT prepare failed on line {$lineNumber}");
+                continue;
+            }
             
             if (!$stmt->execute([$testId, $questionText, $questionType, $explanation])) {
                 $errors[] = "Строка {$lineNumber}: ошибка вставки вопроса в БД";
@@ -422,6 +428,12 @@ function processImportFile($filePath, $fileExtension, $testId, $modx, $prefix, $
                     (question_id, answer_text, is_correct, sort_order)
                     VALUES (?, ?, ?, ?)
                 ");
+
+                if (!$stmt) {
+                    $modx->log(modX::LOG_LEVEL_ERROR, "[importCSV] Answer INSERT prepare failed for question_id={$questionId}, line {$lineNumber}");
+                    $allAnswersInserted = false;
+                    break;
+                }
                 
                 if (!$stmt->execute([$questionId, $answerText, $isCorrect, $answerNumber])) {
                     $allAnswersInserted = false;
@@ -433,7 +445,9 @@ function processImportFile($filePath, $fileExtension, $testId, $modx, $prefix, $
                 $errors[] = "Строка {$lineNumber}: ошибка вставки ответов";
                 // ИСПРАВЛЕНО: используем prepared statement
                 $stmt = $modx->prepare("DELETE FROM `{$prefix}test_questions` WHERE id = ?");
-                $stmt->execute([$questionId]);
+                if ($stmt) {
+                    $stmt->execute([$questionId]);
+                }
                 continue;
             }
             
@@ -441,7 +455,7 @@ function processImportFile($filePath, $fileExtension, $testId, $modx, $prefix, $
             $imported++;
         }
         
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         $errors[] = "Критическая ошибка: " . $e->getMessage();
         $modx->log(modX::LOG_LEVEL_ERROR, "[importCSV] Exception: " . $e->getMessage());
     }
