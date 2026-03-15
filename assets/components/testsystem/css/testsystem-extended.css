@@ -78,6 +78,57 @@
     transform: translateY(-1px);
 }
 
+
+.ts-learning-paths-summary {
+    margin-bottom: var(--spacing-lg);
+    padding: var(--spacing-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    background-color: var(--color-bg-card);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+}
+
+.ts-learning-paths-summary-title {
+    margin: 0;
+    font-size: var(--font-size-base);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+}
+
+.ts-learning-paths-summary-subtitle {
+    margin: var(--spacing-xs) 0 0;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+    max-width: 760px;
+}
+
+.ts-learning-paths-filters-card {
+    margin-bottom: var(--spacing-md);
+}
+
+.ts-learning-paths-list-card-body {
+    padding-top: var(--spacing-md);
+    padding-bottom: var(--spacing-md);
+}
+
+.ts-learning-paths-empty-state {
+    text-align: center;
+    justify-items: center;
+    padding: var(--spacing-lg) var(--spacing-md);
+}
+
+.ts-empty-state-icon {
+    font-size: var(--font-size-h2);
+    color: var(--color-text-muted);
+}
+
+.ts-learning-path-progress-text {
+    color: var(--color-text-secondary);
+}
+
 .ts-learning-path-card {
     border: 1px solid var(--color-border);
     border-radius: var(--radius-card);
@@ -1588,5 +1639,12 @@
 
     .ts-import-result-action {
         align-self: start;
+    }
+}
+
+
+@media (max-width: 767.98px) {
+    .ts-learning-paths-summary {
+        flex-direction: column;
     }
 }

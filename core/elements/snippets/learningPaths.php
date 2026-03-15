@@ -118,52 +118,68 @@ return $csrfMeta . $output;
  */
 function renderPathsList($modx, $prefix, $userId, $canCreate) {
     $html = '
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2><i class="bi bi-signpost"></i> Траектории обучения</h2>
+    <section class="ts-leaderboard-page-header">
+        <p class="ts-leaderboard-page-header-kicker">Персональные образовательные маршруты</p>
+        <h1 class="ts-leaderboard-page-header-title">Траектории обучения</h1>
+        <p class="ts-leaderboard-page-header-subtitle">Собирайте структурированные программы обучения, отслеживайте прогресс и назначайте траектории студентам.</p>
+    </section>
+
+    <div class="ts-learning-paths-summary">
+        <div>
+            <h2 class="ts-learning-paths-summary-title">Каталог траекторий</h2>
+            <p class="ts-learning-paths-summary-subtitle">Фильтруйте по сложности, статусу публикации и типу, чтобы быстрее найти нужный маршрут.</p>
+        </div>
         ' . ($canCreate ? '
         <button class="ts-btn ts-btn-primary" id="create-path-btn">
             <i class="bi bi-plus-circle"></i> Создать траекторию
-        </button>' : '') . '
-    </div>
-
-    <!-- Фильтры -->
-    <div class="row mb-3 g-2">
-        <div class="col-md-3">
-            <select class="form-select" id="filter-difficulty">
-                <option value="">Все уровни сложности</option>
-                <option value="beginner">Начальный</option>
-                <option value="intermediate">Средний</option>
-                <option value="advanced">Продвинутый</option>
-                <option value="expert">Эксперт</option>
-            </select>
-        </div>
-        ' . ($canCreate ? '
-        <div class="col-md-3">
-            <select class="form-select" id="filter-status">
-                <option value="">Все статусы</option>
-                <option value="published">Опубликованные</option>
-                <option value="draft">Черновики</option>
-                <option value="archived">Архивные</option>
-            </select>
-        </div>
-        <div class="col-md-3">
-            <select class="form-select" id="filter-template">
-                <option value="">Все траектории</option>
-                <option value="1">Только шаблоны</option>
-                <option value="0">Только обычные</option>
-            </select>
-        </div>
+        </button>
         ' : '') . '
-        <div class="col-md-' . ($canCreate ? '3' : '9') . '">
-            <input type="text" class="form-control" id="filter-search" placeholder="Поиск по названию...">
+    </div>
+
+    <div class="ts-card ts-learning-paths-filters-card">
+        <div class="ts-card-body">
+            <div class="row g-2">
+                <div class="col-md-3">
+                    <select class="form-select" id="filter-difficulty">
+                        <option value="">Все уровни сложности</option>
+                        <option value="beginner">Начальный</option>
+                        <option value="intermediate">Средний</option>
+                        <option value="advanced">Продвинутый</option>
+                        <option value="expert">Эксперт</option>
+                    </select>
+                </div>
+                ' . ($canCreate ? '
+                <div class="col-md-3">
+                    <select class="form-select" id="filter-status">
+                        <option value="">Все статусы</option>
+                        <option value="published">Опубликованные</option>
+                        <option value="draft">Черновики</option>
+                        <option value="archived">Архивные</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select" id="filter-template">
+                        <option value="">Все траектории</option>
+                        <option value="1">Только шаблоны</option>
+                        <option value="0">Только обычные</option>
+                    </select>
+                </div>
+                ' : '') . '
+                <div class="col-md-' . ($canCreate ? '3' : '9') . '">
+                    <input type="text" class="form-control" id="filter-search" placeholder="Поиск по названию...">
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Контейнер для траекторий (заполняется через JS) -->
-    <div class="row g-4" id="learning-paths-container">
-        <div class="col-12 text-center">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Загрузка...</span>
+    <div class="ts-card ts-learning-paths-list-card">
+        <div class="ts-card-body ts-learning-paths-list-card-body">
+            <div class="row g-4" id="learning-paths-container">
+                <div class="col-12 text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Загрузка...</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
