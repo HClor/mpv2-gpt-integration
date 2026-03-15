@@ -86,25 +86,16 @@
               <li><a class="dropdown-item" href="{$_modx->makeUrl(180)}"><i class="bi bi-patch-check me-2"></i> Сертификаты</a></li>
               <li><hr class="dropdown-divider"></li>
               <li>
-                <form method="post" action="" id="logout-form">
+                <form method="post" action="{$_modx->makeUrl(24)}">
                   {$_modx->runSnippet('csrfTokenField')}
                   <input type="hidden" name="login_logout" value="1">
-                  <button type="submit" class="dropdown-item text-danger" id="logout-btn">
+                  <button type="submit" class="dropdown-item text-danger">
                     <i class="bi bi-box-arrow-right me-2"></i> Выход
                   </button>
                 </form>
               </li>
             </ul>
           </li>
-
-          <script>
-          // Обработчик logout - предотвращаем закрытие dropdown до отправки
-          document.getElementById('logout-btn')?.addEventListener('click', function(e) {
-              e.preventDefault();
-              e.stopPropagation();
-              document.getElementById('logout-form').submit();
-          });
-          </script>
 
         {else}
           <!-- Гость: кнопка входа -->
