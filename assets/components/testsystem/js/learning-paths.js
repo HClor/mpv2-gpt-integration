@@ -164,9 +164,7 @@
         } catch (error) {
             console.error('Load paths error:', error);
             container.innerHTML = `
-                <div class="alert alert-danger">
-                    Ошибка загрузки траекторий: ${escapeHtml(error.message)}
-                </div>
+                <div class="ts-alert ts-alert-danger">Ошибка загрузки траекторий: ${escapeHtml(error.message)}</div>
             `;
         }
     }
@@ -191,10 +189,10 @@
         if (!paths || paths.length === 0) {
             container.innerHTML = `
                 <div class="col-12">
-                    <div class="alert alert-info text-center py-5">
-                        <i class="bi bi-signpost fs-1 d-block mb-3"></i>
-                        <h5>Траектории обучения не найдены</h5>
-                        <p class="mb-0">Создайте первую траекторию для структурированного обучения</p>
+                    <div class="ts-empty-state ts-learning-paths-empty-state">
+                        <i class="bi bi-signpost ts-empty-state-icon"></i>
+                        <h3 class="ts-empty-state-title">Траектории обучения не найдены</h3>
+                        <p class="ts-empty-state-text">Создайте первую траекторию для структурированного обучения.</p>
                     </div>
                 </div>
             `;
@@ -253,7 +251,7 @@
             }
 
             html += `
-                <div class="col-md-6 col-lg-4 path-card"
+                <div class="col-md-6 col-xl-4 path-card"
                      data-category="${path.category_id || ''}"
                      data-difficulty="${path.difficulty_level || ''}"
                      data-is-template="${path.is_template || 0}">
@@ -282,7 +280,7 @@
 
                             ${assignmentInfo}
 
-                            <div class="d-flex justify-content-between text-muted small mb-2 ts-learning-path-meta">
+                            <div class="d-flex justify-content-between small mb-2 ts-learning-path-meta">
                                 <span><i class="bi bi-list-ol"></i> ${path.steps_count || 0} шагов</span>
                                 <span><i class="bi bi-clock"></i> ~${path.estimated_hours || 0} ч</span>
                             </div>
@@ -294,7 +292,7 @@
                                          style="width: ${progress}%">
                                     </div>
                                 </div>
-                                <p class="small text-muted mb-0">Прогресс: ${progress}%</p>
+                                <p class="small ts-learning-path-progress-text mb-0">Прогресс: ${progress}%</p>
                             ` : ''}
                         </div>
                         <div class="card-footer ts-learning-path-footer">
