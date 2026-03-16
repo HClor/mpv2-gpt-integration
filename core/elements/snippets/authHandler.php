@@ -62,6 +62,8 @@ if ($modx->user->hasSessionContext('web') && $modx->user->id > 0) {
 }
 
 $restoreDbConnection = static function (modX $modx, string $context): void {
+    // После SMTP-операций некоторые окружения теряют PDO-соединение (MySQL server has gone away).
+    // Поэтому выполняем ping и мягкий reconnect, чтобы не ломать следующие DB-операции в том же запросе.
     try {
         if ($modx->query('SELECT 1') !== false) {
             return;
@@ -136,9 +138,11 @@ $sendMailSafely = static function (modX $modx, string $context) use ($restoreDbC
 $sendActivationEmail = static function (modX $modx, string $email, string $username, string $activationToken) use ($prepareMailTransport, $sendMailSafely): bool {
     $activationResourceId = (int)$modx->getOption('auth_activation_resource_id', null, 0);
     if ($activationResourceId <= 0) {
-        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] auth_activation_resource_id is not configured');
+        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Config error: auth_activation_resource_id is empty or invalid. Activation email skipped.');
         return false;
     }
+
+    $activationTtlHours = max(1, (int)$modx->getOption('auth_activation_ttl_hours', null, 24));
 
     $activationUrl = $modx->makeUrl($activationResourceId, '', [
         'mode' => 'activate',
@@ -158,6 +162,7 @@ $sendActivationEmail = static function (modX $modx, string $email, string $usern
         <p>Здравствуйте, ' . htmlspecialchars($username, ENT_QUOTES, 'UTF-8') . '!</p>
         <p>Для завершения регистрации подтвердите email по ссылке:</p>
         <p><a href="' . htmlspecialchars($activationUrl, ENT_QUOTES, 'UTF-8') . '">Активировать аккаунт</a></p>
+        <p>Ссылка действует ' . $activationTtlHours . ' часа(ов).</p>
         <p>Если вы не регистрировались, просто проигнорируйте это письмо.</p>
     ');
     $modx->mail->set(modMail::MAIL_FROM, $modx->getOption('emailsender'));
@@ -170,6 +175,7 @@ $sendActivationEmail = static function (modX $modx, string $email, string $usern
 };
 
 $registerUser = static function (modX $modx, array $post) use ($sendActivationEmail): array {
+    $modx->log(modX::LOG_LEVEL_INFO, '[authHandler] start register');
     $errors = [];
     $success = [];
 
@@ -224,6 +230,7 @@ $registerUser = static function (modX $modx, array $post) use ($sendActivationEm
     }
 
     $activationToken = bin2hex(random_bytes(32));
+    $modx->log(modX::LOG_LEVEL_INFO, '[authHandler] token generated for registration');
     $activationTtlHours = (int)$modx->getOption('auth_activation_ttl_hours', null, 24);
     $sentAt = date('Y-m-d H:i:s');
     $expiresAt = date('Y-m-d H:i:s', strtotime('+' . max(1, $activationTtlHours) . ' hours'));
@@ -249,6 +256,7 @@ $registerUser = static function (modX $modx, array $post) use ($sendActivationEm
         if (!$user->save()) {
             throw new RuntimeException('user save failed');
         }
+        $modx->log(modX::LOG_LEVEL_INFO, '[authHandler] user saved, userId=' . (int)$user->id);
 
         $studentGroup = $modx->getObject('modUserGroup', ['name' => 'LMS Students']);
         if (!$studentGroup) {
@@ -263,6 +271,7 @@ $registerUser = static function (modX $modx, array $post) use ($sendActivationEm
         if (!$membership->save()) {
             throw new RuntimeException('membership save failed');
         }
+        $modx->log(modX::LOG_LEVEL_INFO, '[authHandler] group assigned, userId=' . (int)$user->id . ', groupId=' . (int)$studentGroup->id);
 
         $modx->commit();
     } catch (Throwable $e) {
@@ -271,19 +280,27 @@ $registerUser = static function (modX $modx, array $post) use ($sendActivationEm
         return ['errors' => ['Ошибка создания пользователя'], 'success' => $success];
     }
 
+    $modx->log(modX::LOG_LEVEL_INFO, '[authHandler] activation mail send start, userId=' . (int)$user->id);
     $mailSent = $sendActivationEmail($modx, $email, $username, $activationToken);
     if ($mailSent) {
+        $modx->log(modX::LOG_LEVEL_INFO, '[authHandler] activation mail sent ok, userId=' . (int)$user->id);
         $success[] = 'Аккаунт создан. Ссылка для активации отправлена на ваш email.';
     } else {
+        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] activation mail send failed, userId=' . (int)$user->id);
         $errors[] = 'Аккаунт создан, но письмо активации не отправлено. Пожалуйста, свяжитесь с администратором сайта.';
     }
 
     $modx->log(modX::LOG_LEVEL_INFO, '[authHandler] registerUser completed for user #' . (int)$user->id . ', mailSent=' . ($mailSent ? '1' : '0'));
 
+    $checkEmailResourceId = (int)$modx->getOption('auth_check_email_resource_id', null, 0);
+    $prgRedirect = $checkEmailResourceId > 0
+        ? $modx->makeUrl($checkEmailResourceId)
+        : $modx->makeUrl((int)$modx->resource->id, '', ['mode' => 'login']);
+
     return [
         'errors' => $errors,
         'success' => $success,
-        'prg_redirect' => $modx->makeUrl((int)$modx->resource->id, '', ['mode' => 'login']),
+        'prg_redirect' => $prgRedirect,
     ];
 };
 
@@ -328,6 +345,7 @@ $activateUserByToken = static function (modX $modx, string $activationToken): ar
     }
 
     if ($expiresAt === '' || strtotime($expiresAt) < time()) {
+        $modx->log(modX::LOG_LEVEL_WARN, '[authHandler] activation token expired, userId=' . $userId);
         return ['errors' => ['Срок действия ссылки активации истёк. Запросите новую ссылку.'], 'success' => $success];
     }
 
@@ -350,6 +368,7 @@ $activateUserByToken = static function (modX $modx, string $activationToken): ar
 
 $resendActivationEmail = static function (modX $modx, string $email) use ($sendActivationEmail): array {
     $genericSuccess = 'Если аккаунт существует и не активирован, письмо будет отправлено.';
+    $modx->log(modX::LOG_LEVEL_INFO, '[authHandler] resend requested');
 
     if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         return ['errors' => ['Введите корректный email.'], 'success' => []];
@@ -388,7 +407,14 @@ $resendActivationEmail = static function (modX $modx, string $email) use ($sendA
     $profile->set('extended', $extended);
 
     if ($profile->save()) {
-        $sendActivationEmail($modx, $email, (string)$user->get('username'), $activationToken);
+        $mailSent = $sendActivationEmail($modx, $email, (string)$user->get('username'), $activationToken);
+        if ($mailSent) {
+            $modx->log(modX::LOG_LEVEL_INFO, '[authHandler] resend mail ok, emailHash=' . sha1($email));
+        } else {
+            $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] resend mail failed, emailHash=' . sha1($email));
+        }
+    } else {
+        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] resend token save failed, emailHash=' . sha1($email));
     }
 
     $modx->log(modX::LOG_LEVEL_INFO, '[authHandler] resendActivationEmail processed for email hash=' . sha1($email));
