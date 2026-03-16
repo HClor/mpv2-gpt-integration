@@ -54,13 +54,110 @@ $mode = $_GET["mode"] ?? ($_POST["mode"] ?? "login");
 /**
  * Отправка письма с ссылкой активации
  */
-$sendActivationEmail = static function ($modx, string $email, string $username, string $activationToken) {
+$prepareMailTransport = static function ($modx, string $context) {
+    $mailService = $modx->getService('mail', 'mail.modPHPMailer');
+    if (!$mailService || !isset($modx->mail)) {
+        $modx->log(modX::LOG_LEVEL_ERROR, "[authHandler] Mail service unavailable ({$context})");
+        return false;
+    }
+
+    $mailer = $modx->mail->mailer ?? null;
+    if ($mailer) {
+        // Не даем SMTP-запросам зависать до 504 на фронте.
+        if (property_exists($mailer, 'Timeout')) {
+            $mailer->Timeout = 8;
+        }
+        if (property_exists($mailer, 'SMTPKeepAlive')) {
+            $mailer->SMTPKeepAlive = false;
+        }
+        if (property_exists($mailer, 'SMTPAutoTLS')) {
+            $mailer->SMTPAutoTLS = true;
+        }
+    }
+
+    return true;
+};
+
+$isSmtpReachable = static function ($modx, int $timeoutSeconds = 3): bool {
+    $hostsRaw = (string)$modx->getOption('mail_smtp_hosts', null, '');
+    $port = (int)$modx->getOption('mail_smtp_port', null, 25);
+
+    if ($hostsRaw === '') {
+        return true;
+    }
+
+    $hosts = preg_split('/[;,]/', $hostsRaw) ?: [];
+    foreach ($hosts as $hostEntry) {
+        $hostEntry = trim($hostEntry);
+        if ($hostEntry === '') {
+            continue;
+        }
+
+        $scheme = 'tcp';
+        $host = $hostEntry;
+
+        if (stripos($hostEntry, 'ssl://') === 0) {
+            $scheme = 'ssl';
+            $host = substr($hostEntry, 6);
+        } elseif (stripos($hostEntry, 'tls://') === 0) {
+            $host = substr($hostEntry, 6);
+        }
+
+        $errno = 0;
+        $errstr = '';
+        $socket = @stream_socket_client(
+            sprintf('%s://%s:%d', $scheme, $host, $port),
+            $errno,
+            $errstr,
+            $timeoutSeconds,
+            STREAM_CLIENT_CONNECT
+        );
+
+        if (is_resource($socket)) {
+            fclose($socket);
+            return true;
+        }
+
+        $modx->log(modX::LOG_LEVEL_ERROR, "[authHandler] SMTP precheck failed for {$host}:{$port} ({$errno}) {$errstr}");
+    }
+
+    return false;
+};
+
+$restoreDbConnection = static function ($modx): void {
+    try {
+        $check = $modx->query('SELECT 1');
+        if ($check === false) {
+            $modx->log(modX::LOG_LEVEL_WARN, '[authHandler] DB ping failed, trying reconnect()');
+            if (method_exists($modx, 'connect')) {
+                $modx->connect();
+            }
+        }
+    } catch (Throwable $e) {
+        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] DB reconnect failed: ' . $e->getMessage());
+    }
+};
+
+$sendActivationEmail = static function ($modx, string $email, string $username, string $activationToken) use ($prepareMailTransport, $isSmtpReachable, $restoreDbConnection) {
     $activationUrl = $modx->makeUrl($modx->resource->id, '', [
         'mode' => 'activate',
         'token' => $activationToken
     ], 'full');
 
-    $modx->getService('mail', 'mail.modPHPMailer');
+    if (!$prepareMailTransport($modx, 'activation')) {
+        return false;
+    }
+
+    if (!$isSmtpReachable($modx)) {
+        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Activation email skipped: SMTP host is unreachable');
+        $restoreDbConnection($modx);
+        return false;
+    }
+
+    if (function_exists('session_write_close') && session_status() === PHP_SESSION_ACTIVE) {
+        @session_write_close();
+    }
+
     $modx->mail->set(modMail::MAIL_BODY, "
         <h2>Подтверждение регистрации</h2>
         <p>Здравствуйте, " . htmlspecialchars($username, ENT_QUOTES, 'UTF-8') . "!</p>
@@ -76,9 +173,11 @@ $sendActivationEmail = static function ($modx, string $email, string $username, 
 
     $sent = $modx->mail->send();
     if (!$sent) {
-        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Failed to send activation email: ' . $modx->mail->mailer->ErrorInfo);
+        $errorInfo = isset($modx->mail->mailer->ErrorInfo) ? (string)$modx->mail->mailer->ErrorInfo : 'unknown error';
+        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Failed to send activation email: ' . $errorInfo);
     }
     $modx->mail->reset();
+    $restoreDbConnection($modx);
 
     return $sent;
 };
@@ -343,27 +442,39 @@ if ($_POST && $mode === "forgot") {
                         ], 'full');
 
                         // Отправляем email
-                        $modx->getService('mail', 'mail.modPHPMailer');
-                        $modx->mail->set(modMail::MAIL_FROM, $modx->getOption('emailsender'));
-                        $modx->mail->set(modMail::MAIL_FROM_NAME, $modx->getOption('site_name'));
-                        $modx->mail->set(modMail::MAIL_SUBJECT, 'Восстановление пароля');
-                        $modx->mail->set(modMail::MAIL_BODY, "
-                            <h3>Восстановление пароля</h3>
-                            <p>Вы запросили восстановление пароля на сайте {$modx->getOption('site_name')}.</p>
-                            <p><a href='{$resetUrl}'>Нажмите здесь для установки нового пароля</a></p>
-                            <p>Ссылка действительна 1 час.</p>
-                            <p>Если вы не запрашивали восстановление пароля, проигнорируйте это письмо.</p>
-                        ");
-                        $modx->mail->address('to', $email);
-                        $modx->mail->setHTML(true);
-
-                        if ($modx->mail->send()) {
-                            $success[] = "Ссылка для восстановления пароля отправлена на ваш email";
+                        if (!$prepareMailTransport($modx, 'forgot_password')) {
+                            $errors[] = 'Ошибка отправки email. Почтовый сервис временно недоступен.';
+                        } elseif (!$isSmtpReachable($modx)) {
+                            $errors[] = 'SMTP-сервер временно недоступен. Попробуйте позже.';
+                            $restoreDbConnection($modx);
                         } else {
-                            $errors[] = "Ошибка отправки email. Обратитесь к администратору.";
-                            $modx->log(modX::LOG_LEVEL_ERROR, "[authHandler] Failed to send reset email: " . $modx->mail->mailer->ErrorInfo);
+                            if (function_exists('session_write_close') && session_status() === PHP_SESSION_ACTIVE) {
+                                @session_write_close();
+                            }
+
+                            $modx->mail->set(modMail::MAIL_FROM, $modx->getOption('emailsender'));
+                            $modx->mail->set(modMail::MAIL_FROM_NAME, $modx->getOption('site_name'));
+                            $modx->mail->set(modMail::MAIL_SUBJECT, 'Восстановление пароля');
+                            $modx->mail->set(modMail::MAIL_BODY, "
+                                <h3>Восстановление пароля</h3>
+                                <p>Вы запросили восстановление пароля на сайте {$modx->getOption('site_name')}.</p>
+                                <p><a href='{$resetUrl}'>Нажмите здесь для установки нового пароля</a></p>
+                                <p>Ссылка действительна 1 час.</p>
+                                <p>Если вы не запрашивали восстановление пароля, проигнорируйте это письмо.</p>
+                            ");
+                            $modx->mail->address('to', $email);
+                            $modx->mail->setHTML(true);
+
+                            if ($modx->mail->send()) {
+                                $success[] = "Ссылка для восстановления пароля отправлена на ваш email";
+                            } else {
+                                $errors[] = "Ошибка отправки email. Обратитесь к администратору.";
+                                $errorInfo = isset($modx->mail->mailer->ErrorInfo) ? (string)$modx->mail->mailer->ErrorInfo : 'unknown error';
+                                $modx->log(modX::LOG_LEVEL_ERROR, "[authHandler] Failed to send reset email: " . $errorInfo);
+                            }
+                            $modx->mail->reset();
+                            $restoreDbConnection($modx);
                         }
-                        $modx->mail->reset();
                     }
                 }
             } else {
