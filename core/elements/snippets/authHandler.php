@@ -75,6 +75,63 @@ $checkSmtpReachable = static function (modX $modx) use ($authLog): bool {
     return false;
 };
 
+$authLog = static function (modX $modx, string $message, int $level = modX::LOG_LEVEL_ERROR): void {
+    // Пишем всё как ERROR, чтобы шаги были видны даже при log_level=ERROR в MODX.
+    $levelName = match ($level) {
+        modX::LOG_LEVEL_INFO => 'INFO',
+        modX::LOG_LEVEL_WARN => 'WARN',
+        modX::LOG_LEVEL_ERROR => 'ERROR',
+        default => 'LOG'
+    };
+    $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler][diag][' . $levelName . '] ' . $message);
+};
+
+$checkSmtpReachable = static function (modX $modx) use ($authLog): bool {
+    $useSmtp = (bool)$modx->getOption('mail_use_smtp', null, false);
+    if (!$useSmtp) {
+        $authLog($modx, 'MAIL PREFLIGHT: mail_use_smtp=0, skip SMTP socket check', modX::LOG_LEVEL_INFO);
+        return true;
+    }
+
+    $hostsRaw = trim((string)$modx->getOption('mail_smtp_hosts', null, ''));
+    if ($hostsRaw === '') {
+        $hostsRaw = trim((string)$modx->getOption('mail_smtp_host', null, ''));
+    }
+    $port = (int)$modx->getOption('mail_smtp_port', null, 25);
+    $timeout = 3.0;
+
+    if ($hostsRaw === '') {
+        $authLog($modx, 'MAIL PREFLIGHT WARNING: SMTP enabled but host is empty', modX::LOG_LEVEL_WARN);
+        return false;
+    }
+
+    $hosts = preg_split('/[;,]+/', $hostsRaw) ?: [];
+    foreach ($hosts as $host) {
+        $host = trim($host);
+        if ($host === '') {
+            continue;
+        }
+
+        $authLog($modx, 'MAIL PREFLIGHT: socket check ' . $host . ':' . $port, modX::LOG_LEVEL_INFO);
+        $errno = 0;
+        $errstr = '';
+        $conn = @stream_socket_client('tcp://' . $host . ':' . $port, $errno, $errstr, $timeout);
+        if (is_resource($conn)) {
+            fclose($conn);
+            $authLog($modx, 'MAIL PREFLIGHT OK: SMTP host reachable ' . $host . ':' . $port, modX::LOG_LEVEL_INFO);
+            return true;
+        }
+
+        $authLog($modx, 'MAIL PREFLIGHT FAIL: ' . $host . ':' . $port . ' errno=' . $errno . ' err=' . $errstr, modX::LOG_LEVEL_WARN);
+    }
+
+    return false;
+};
+
+$authLog = static function (modX $modx, string $message, int $level = modX::LOG_LEVEL_ERROR): void {
+    $modx->log($level, '[authHandler][diag] ' . $message);
+};
+
 // FLASH-СООБЩЕНИЯ (PRG-паттерн)
 $flash = $_SESSION['auth_handler_flash'] ?? null;
 if (is_array($flash)) {
@@ -162,6 +219,20 @@ $sendActivationEmail = static function (modX $modx, string $email, string $usern
         $authLog($modx, 'ACTIVATION MAIL STEP 2 WARNING: invalid system emailsender, fallback=' . $fromEmail, modX::LOG_LEVEL_WARN);
     }
 
+    $fromEmail = trim((string)$modx->getOption('emailsender'));
+    if (!filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
+        $fallbackDomain = trim((string)($_SERVER['HTTP_HOST'] ?? 'localhost'));
+        $fromEmail = 'noreply@' . preg_replace('/:\\d+$/', '', $fallbackDomain);
+        $authLog($modx, 'ACTIVATION MAIL STEP 2 WARNING: invalid system emailsender, fallback=' . $fromEmail, modX::LOG_LEVEL_WARN);
+    }
+
+    $fromEmail = trim((string)$modx->getOption('emailsender'));
+    if (!filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
+        $fallbackDomain = trim((string)($_SERVER['HTTP_HOST'] ?? 'localhost'));
+        $fromEmail = 'noreply@' . preg_replace('/:\\d+$/', '', $fallbackDomain);
+        $authLog($modx, 'ACTIVATION MAIL STEP 2 WARNING: invalid system emailsender, fallback=' . $fromEmail, modX::LOG_LEVEL_WARN);
+    }
+
     $body = '
         <h2>Подтверждение регистрации</h2>
         <p>Здравствуйте, ' . htmlspecialchars($username, ENT_QUOTES, 'UTF-8') . '!</p>
@@ -238,6 +309,10 @@ $sendForgotPasswordEmail = static function (modX $modx, string $email, string $r
 $registerUser = static function (modX $modx, array $post) use ($sendActivationEmail, $authLog): array {
     $errors = [];
     $success = [];
+
+    $authLog($modx, 'REGISTER STEP 1: start registration flow', modX::LOG_LEVEL_INFO);
+
+    $authLog($modx, 'REGISTER STEP 1: start registration flow', modX::LOG_LEVEL_INFO);
 
     $authLog($modx, 'REGISTER STEP 1: start registration flow', modX::LOG_LEVEL_INFO);
 
