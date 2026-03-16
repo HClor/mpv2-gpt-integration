@@ -50,17 +50,49 @@ if ($modx->user->hasSessionContext("web") && $modx->user->id > 0) {
 $errors = [];
 $success = [];
 $mode = $_GET["mode"] ?? ($_POST["mode"] ?? "login");
+$prefillResendEmail = "";
 
 /**
  * Отправка письма с ссылкой активации
  */
-$sendActivationEmail = static function ($modx, string $email, string $username, string $activationToken) {
+$prepareMailTransport = static function ($modx, string $context) {
+    $mailService = $modx->getService('mail', 'mail.modPHPMailer');
+    if (!$mailService || !isset($modx->mail)) {
+        $modx->log(modX::LOG_LEVEL_ERROR, "[authHandler] Mail service unavailable ({$context})");
+        return false;
+    }
+
+    $mailer = $modx->mail->mailer ?? null;
+    if ($mailer) {
+        // Не даем SMTP-запросам зависать до 504 на фронте.
+        if (property_exists($mailer, 'Timeout')) {
+            $mailer->Timeout = 10;
+        }
+        if (property_exists($mailer, 'SMTPKeepAlive')) {
+            $mailer->SMTPKeepAlive = false;
+        }
+        if (property_exists($mailer, 'SMTPAutoTLS')) {
+            $mailer->SMTPAutoTLS = true;
+        }
+    }
+
+    return true;
+};
+
+$sendActivationEmail = static function ($modx, string $email, string $username, string $activationToken) use ($prepareMailTransport) {
     $activationUrl = $modx->makeUrl($modx->resource->id, '', [
         'mode' => 'activate',
         'token' => $activationToken
     ], 'full');
 
-    $modx->getService('mail', 'mail.modPHPMailer');
+    if (!$prepareMailTransport($modx, 'activation')) {
+        return false;
+    }
+
+    if (function_exists('set_time_limit')) {
+        @set_time_limit(30);
+    }
+
     $modx->mail->set(modMail::MAIL_BODY, "
         <h2>Подтверждение регистрации</h2>
         <p>Здравствуйте, " . htmlspecialchars($username, ENT_QUOTES, 'UTF-8') . "!</p>
@@ -76,9 +108,11 @@ $sendActivationEmail = static function ($modx, string $email, string $username, 
 
     $sent = $modx->mail->send();
     if (!$sent) {
-        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Failed to send activation email: ' . $modx->mail->mailer->ErrorInfo);
+        $errorInfo = isset($modx->mail->mailer->ErrorInfo) ? (string)$modx->mail->mailer->ErrorInfo : 'unknown error';
+        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Failed to send activation email: ' . $errorInfo);
     }
     $modx->mail->reset();
+
 
     return $sent;
 };
@@ -92,14 +126,23 @@ if ($mode === 'activate') {
         $errors[] = 'Неверная ссылка активации.';
         $mode = 'login';
     } else {
-        $profiles = $modx->getCollection('modUserProfile');
+        $prefix = $modx->getOption('table_prefix');
+        $stmt = $modx->prepare("SELECT internalKey FROM {$prefix}user_attributes WHERE JSON_UNQUOTE(JSON_EXTRACT(extended, '$.activation_token')) = :token LIMIT 1");
         $targetProfile = null;
 
-        foreach ($profiles as $profile) {
-            $extended = $profile->get('extended') ?: [];
-            if (isset($extended['activation_token']) && hash_equals((string)$extended['activation_token'], $activationToken)) {
-                $targetProfile = $profile;
-                break;
+        if ($stmt === false) {
+            $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Activation token prepare failed');
+            $errors[] = 'Временная ошибка базы данных. Попробуйте позже.';
+        } else {
+            $stmt->bindValue(':token', $activationToken, PDO::PARAM_STR);
+            if (!$stmt->execute()) {
+                $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Activation token execute failed: ' . implode(' | ', $stmt->errorInfo()));
+                $errors[] = 'Временная ошибка базы данных. Попробуйте позже.';
+            } else {
+                $userId = (int)$stmt->fetchColumn();
+                if ($userId > 0) {
+                    $targetProfile = $modx->getObject('modUserProfile', ['internalKey' => $userId]);
+                }
             }
         }
 
@@ -137,7 +180,7 @@ if ($_POST && $mode === "login") {
         $errors[] = "Ошибка безопасности. Обновите страницу и попробуйте снова.";
     } else {
         $username = trim($_POST["username"] ?? "");
-        $password = trim($_POST["password"] ?? "");
+        $password = $_POST["password"] ?? "";
         $rememberme = !empty($_POST["rememberme"]);
 
         if (empty($username)) $errors[] = "Введите логин";
@@ -155,7 +198,7 @@ if ($_POST && $mode === "login") {
                     "login_context" => "web"
                 ]);
 
-                if ($response->isError()) {
+                if (!$response || $response->isError()) {
                     $errors[] = "Неверный логин или пароль";
                 } else {
                     $testsUrl = $modx->makeUrl(35);
@@ -175,8 +218,8 @@ if ($_POST && $mode === "register") {
     } else {
         $username = trim($_POST["username"] ?? "");
         $email = trim($_POST["email"] ?? "");
-        $password = trim($_POST["password"] ?? "");
-        $passwordConfirm = trim($_POST["password_confirm"] ?? "");
+        $password = $_POST["password"] ?? "";
+        $passwordConfirm = $_POST["password_confirm"] ?? "";
 
         if (empty($username)) $errors[] = "Введите логин";
         if (empty($email)) $errors[] = "Введите email";
@@ -190,34 +233,48 @@ if ($_POST && $mode === "register") {
                 $errors[] = "Логин уже занят";
             } else {
                 $prefix = $modx->getOption('table_prefix');
-                $stmt = $modx->prepare("SELECT COUNT(*) FROM {$prefix}user_attributes WHERE email = ?");
-                $stmt->execute([$email]);
-                if ($stmt->fetchColumn() > 0) {
-                    $errors[] = "Email уже используется";
+                $stmt = $modx->prepare("SELECT COUNT(*) FROM {$prefix}user_attributes WHERE email = :email");
+                if ($stmt === false) {
+                    $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Email uniqueness prepare failed');
+                    $errors[] = 'Временная ошибка базы данных. Попробуйте позже.';
                 } else {
-                    $user = $modx->newObject("modUser");
-                    $user->set("username", $username);
-                    $user->set("password", $password);
-                    $user->set("active", 0);
+                    $stmt->bindValue(':email', $email, PDO::PARAM_STR);
+                    if (!$stmt->execute()) {
+                        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Email uniqueness execute failed: ' . implode(' | ', $stmt->errorInfo()));
+                        $errors[] = 'Временная ошибка базы данных. Попробуйте позже.';
+                    } elseif ((int)$stmt->fetchColumn() > 0) {
+                        $errors[] = "Email уже используется";
+                    } else {
+                        $user = $modx->newObject("modUser");
+                        $user->set("username", $username);
+                        $user->set("password", $password);
+                        $user->set("active", 0);
 
-                    $activationToken = bin2hex(random_bytes(32));
+                        $activationToken = bin2hex(random_bytes(32));
 
-                    $profile = $modx->newObject("modUserProfile");
-                    $profile->set("email", $email);
-                    $profile->set("fullname", $username);
-                    $profile->set("blocked", 0);
-                    $profile->set('extended', [
-                        'activation_token' => $activationToken,
-                        'activation_sent_at' => date('Y-m-d H:i:s')
-                    ]);
+                        $profile = $modx->newObject("modUserProfile");
+                        $profile->set("email", $email);
+                        $profile->set("fullname", $username);
+                        $profile->set("blocked", 0);
+                        $profile->set('extended', [
+                            'activation_token' => $activationToken,
+                            'activation_sent_at' => date('Y-m-d H:i:s')
+                        ]);
 
-                    $user->addOne($profile);
+                        $user->addOne($profile);
 
-                    if ($user->save()) {
-                        // ДОБАВЛЕНИЕ В ГРУППУ LMS Students
-                        $studentGroup = $modx->getObject("modUserGroup", ["name" => "LMS Students"]);
+                        $created = false;
+                        $modx->beginTransaction();
+                        try {
+                            if (!$user->save()) {
+                                throw new RuntimeException('user save failed');
+                            }
 
-                        if ($studentGroup) {
+                            $studentGroup = $modx->getObject("modUserGroup", ["name" => "LMS Students"]);
+                            if (!$studentGroup) {
+                                throw new RuntimeException('LMS Students group not found');
+                            }
+
                             $existingMembership = $modx->getObject("modUserGroupMember", [
                                 "user_group" => $studentGroup->id,
                                 "member" => $user->id
@@ -230,23 +287,31 @@ if ($_POST && $mode === "register") {
                                 $membership->set("role", 1);
                                 $membership->set("rank", 0);
                                 if (!$membership->save()) {
-                                    $modx->log(modX::LOG_LEVEL_ERROR, "[authHandler] Failed to add user {$user->id} to LMS Students group");
+                                    throw new RuntimeException('membership save failed');
                                 }
                             }
-                        } else {
-                            $modx->log(modX::LOG_LEVEL_ERROR, "[authHandler] LMS Students group not found!");
+
+                            $modx->commit();
+                            $created = true;
+                        } catch (Throwable $e) {
+                            $modx->rollBack();
+                            $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Registration transaction failed: ' . $e->getMessage());
                         }
 
-                        $mailSent = $sendActivationEmail($modx, $email, $username, $activationToken);
-                        if ($mailSent) {
-                            $success[] = "✅ Регистрация почти завершена. Мы отправили ссылку активации на ваш email.";
-                            $success[] = "Подтвердите email, чтобы активировать аккаунт и войти.";
+                        if ($created) {
+                            $mailSent = $sendActivationEmail($modx, $email, $username, $activationToken);
+
+                            $success[] = "✅ Аккаунт создан.";
+                            if ($mailSent) {
+                                $success[] = "Письмо с активацией отправлено на ваш email.";
+                            } else {
+                                $errors[] = "Аккаунт создан, но письмо активации не отправлено. Используйте повторную отправку по кнопке ниже.";
+                                $mode = 'resend_activation';
+                                $prefillResendEmail = $email;
+                            }
                         } else {
-                            $errors[] = "Аккаунт создан, но письмо активации не отправлено. Запросите ссылку повторно ниже.";
-                            $mode = 'resend_activation';
+                            $errors[] = "Ошибка создания пользователя";
                         }
-                    } else {
-                        $errors[] = "Ошибка создания пользователя";
                     }
                 }
             }
@@ -267,11 +332,19 @@ if ($_POST && $mode === 'resend_activation') {
             $errors[] = 'Неверный формат email';
         } else {
             $prefix = $modx->getOption('table_prefix');
-            $stmt = $modx->prepare("SELECT internalKey FROM {$prefix}user_attributes WHERE email = ? LIMIT 1");
-            $stmt->execute([$email]);
-            $userId = (int)$stmt->fetchColumn();
+            $stmt = $modx->prepare("SELECT internalKey FROM {$prefix}user_attributes WHERE email = :email LIMIT 1");
+            if ($stmt === false) {
+                $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Resend activation prepare failed');
+                $errors[] = 'Временная ошибка базы данных. Попробуйте позже.';
+            } else {
+                $stmt->bindValue(':email', $email, PDO::PARAM_STR);
+                if (!$stmt->execute()) {
+                    $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Resend activation execute failed: ' . implode(' | ', $stmt->errorInfo()));
+                    $errors[] = 'Временная ошибка базы данных. Попробуйте позже.';
+                } else {
+                    $userId = (int)$stmt->fetchColumn();
 
-            if ($userId > 0) {
+                    if ($userId > 0) {
                 $user = $modx->getObject('modUser', $userId);
                 $profile = $user ? $user->getOne('Profile') : null;
 
@@ -295,8 +368,10 @@ if ($_POST && $mode === 'resend_activation') {
                 } else {
                     $success[] = 'Если аккаунт существует и не активирован, письмо будет отправлено.';
                 }
-            } else {
-                $success[] = 'Если аккаунт существует и не активирован, письмо будет отправлено.';
+                    } else {
+                        $success[] = 'Если аккаунт существует и не активирован, письмо будет отправлено.';
+                    }
+                }
             }
         }
     }
@@ -316,9 +391,21 @@ if ($_POST && $mode === "forgot") {
         } else {
             // Ищем пользователя по email
             $prefix = $modx->getOption('table_prefix');
-            $stmt = $modx->prepare("SELECT internalKey FROM {$prefix}user_attributes WHERE email = ?");
-            $stmt->execute([$email]);
-            $userId = $stmt->fetchColumn();
+            $stmt = $modx->prepare("SELECT internalKey FROM {$prefix}user_attributes WHERE email = :email");
+            if ($stmt === false) {
+                $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Forgot password prepare failed');
+                $errors[] = 'Временная ошибка базы данных. Попробуйте позже.';
+                $userId = 0;
+            } else {
+                $stmt->bindValue(':email', $email, PDO::PARAM_STR);
+                if (!$stmt->execute()) {
+                    $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Forgot password execute failed: ' . implode(' | ', $stmt->errorInfo()));
+                    $errors[] = 'Временная ошибка базы данных. Попробуйте позже.';
+                    $userId = 0;
+                } else {
+                    $userId = (int)$stmt->fetchColumn();
+                }
+            }
 
             if ($userId) {
                 $user = $modx->getObject('modUser', $userId);
@@ -343,27 +430,31 @@ if ($_POST && $mode === "forgot") {
                         ], 'full');
 
                         // Отправляем email
-                        $modx->getService('mail', 'mail.modPHPMailer');
-                        $modx->mail->set(modMail::MAIL_FROM, $modx->getOption('emailsender'));
-                        $modx->mail->set(modMail::MAIL_FROM_NAME, $modx->getOption('site_name'));
-                        $modx->mail->set(modMail::MAIL_SUBJECT, 'Восстановление пароля');
-                        $modx->mail->set(modMail::MAIL_BODY, "
-                            <h3>Восстановление пароля</h3>
-                            <p>Вы запросили восстановление пароля на сайте {$modx->getOption('site_name')}.</p>
-                            <p><a href='{$resetUrl}'>Нажмите здесь для установки нового пароля</a></p>
-                            <p>Ссылка действительна 1 час.</p>
-                            <p>Если вы не запрашивали восстановление пароля, проигнорируйте это письмо.</p>
-                        ");
-                        $modx->mail->address('to', $email);
-                        $modx->mail->setHTML(true);
-
-                        if ($modx->mail->send()) {
-                            $success[] = "Ссылка для восстановления пароля отправлена на ваш email";
+                        if (!$prepareMailTransport($modx, 'forgot_password')) {
+                            $errors[] = 'Ошибка отправки email. Почтовый сервис временно недоступен.';
                         } else {
-                            $errors[] = "Ошибка отправки email. Обратитесь к администратору.";
-                            $modx->log(modX::LOG_LEVEL_ERROR, "[authHandler] Failed to send reset email: " . $modx->mail->mailer->ErrorInfo);
+                            $modx->mail->set(modMail::MAIL_FROM, $modx->getOption('emailsender'));
+                            $modx->mail->set(modMail::MAIL_FROM_NAME, $modx->getOption('site_name'));
+                            $modx->mail->set(modMail::MAIL_SUBJECT, 'Восстановление пароля');
+                            $modx->mail->set(modMail::MAIL_BODY, "
+                                <h3>Восстановление пароля</h3>
+                                <p>Вы запросили восстановление пароля на сайте {$modx->getOption('site_name')}.</p>
+                                <p><a href='{$resetUrl}'>Нажмите здесь для установки нового пароля</a></p>
+                                <p>Ссылка действительна 1 час.</p>
+                                <p>Если вы не запрашивали восстановление пароля, проигнорируйте это письмо.</p>
+                            ");
+                            $modx->mail->address('to', $email);
+                            $modx->mail->setHTML(true);
+
+                            if ($modx->mail->send()) {
+                                $success[] = "Ссылка для восстановления пароля отправлена на ваш email";
+                            } else {
+                                $errors[] = "Ошибка отправки email. Обратитесь к администратору.";
+                                $errorInfo = isset($modx->mail->mailer->ErrorInfo) ? (string)$modx->mail->mailer->ErrorInfo : 'unknown error';
+                                $modx->log(modX::LOG_LEVEL_ERROR, "[authHandler] Failed to send reset email: " . $errorInfo);
+                            }
+                            $modx->mail->reset();
                         }
-                        $modx->mail->reset();
                     }
                 }
             } else {
@@ -382,8 +473,8 @@ if ($mode === "reset") {
         if (!CsrfProtection::validateRequest($_POST)) {
             $errors[] = "Ошибка безопасности. Обновите страницу и попробуйте снова.";
         } else {
-            $newPassword = trim($_POST["new_password"] ?? "");
-            $confirmPassword = trim($_POST["confirm_password"] ?? "");
+            $newPassword = $_POST["new_password"] ?? "";
+            $confirmPassword = $_POST["confirm_password"] ?? "";
 
             if (empty($newPassword)) {
                 $errors[] = "Введите новый пароль";
@@ -394,20 +485,33 @@ if ($mode === "reset") {
             } else {
                 // Ищем пользователя по токену
                 $prefix = $modx->getOption('table_prefix');
-                $profiles = $modx->getCollection('modUserProfile');
+                $stmt = $modx->prepare("SELECT internalKey FROM {$prefix}user_attributes WHERE JSON_UNQUOTE(JSON_EXTRACT(extended, '$.reset_token')) = :token LIMIT 1");
                 $foundUser = null;
 
-                foreach ($profiles as $profile) {
-                    $extended = $profile->get('extended') ?: [];
-                    if (isset($extended['reset_token']) && $extended['reset_token'] === $token) {
-                        if (isset($extended['reset_expiry']) && strtotime($extended['reset_expiry']) > time()) {
-                            $foundUser = $modx->getObject('modUser', $profile->get('internalKey'));
-                            // Очищаем токен
-                            unset($extended['reset_token']);
-                            unset($extended['reset_expiry']);
-                            $profile->set('extended', $extended);
-                            $profile->save();
-                            break;
+                if ($stmt === false) {
+                    $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Reset token prepare failed');
+                    $errors[] = 'Временная ошибка базы данных. Попробуйте позже.';
+                } else {
+                    $stmt->bindValue(':token', $token, PDO::PARAM_STR);
+                    if (!$stmt->execute()) {
+                        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Reset token execute failed: ' . implode(' | ', $stmt->errorInfo()));
+                        $errors[] = 'Временная ошибка базы данных. Попробуйте позже.';
+                    } else {
+                        $userId = (int)$stmt->fetchColumn();
+                        if ($userId > 0) {
+                            $profile = $modx->getObject('modUserProfile', ['internalKey' => $userId]);
+                            $extended = $profile ? ($profile->get('extended') ?: []) : [];
+                            $isValidExpiry = isset($extended['reset_expiry']) && strtotime((string)$extended['reset_expiry']) > time();
+
+                            if ($profile && isset($extended['reset_token']) && hash_equals((string)$extended['reset_token'], $token) && $isValidExpiry) {
+                                $foundUser = $modx->getObject('modUser', $userId);
+                                unset($extended['reset_token'], $extended['reset_expiry']);
+                                $profile->set('extended', $extended);
+                                if (!$profile->save()) {
+                                    $errors[] = 'Ошибка обновления токена. Попробуйте снова.';
+                                    $foundUser = null;
+                                }
+                            }
                         }
                     }
                 }
@@ -480,7 +584,8 @@ if ($mode === 'resend_activation' && empty($success)) {
 
     $output .= '<div class="mb-3">';
     $output .= '<label class="form-label">Email</label>';
-    $output .= '<input type="email" name="email" class="form-control" required>';
+    $resendEmailValue = $_POST['email'] ?? $prefillResendEmail;
+    $output .= '<input type="email" name="email" class="form-control" value="' . htmlspecialchars((string)$resendEmailValue, ENT_QUOTES, 'UTF-8') . '" required>';
     $output .= '</div>';
 
     $output .= '<button type="submit" class="btn btn-primary">Отправить ссылку активации</button>';
