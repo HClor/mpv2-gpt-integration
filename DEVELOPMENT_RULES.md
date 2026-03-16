@@ -815,3 +815,39 @@ $modx->user->addSessionContext('web');
 Если один и тот же визуальный блок используется в нескольких сниппетах (`addTestForm`, `csvImportForm`), выносить HTML-разметку в общий chunk/partial (или единый helper), чтобы не дублировать верстку.
 
 > ⚠️ Требуется проверка аудитором: утвердить целевой способ переиспользования (chunk в MODX БД или PHP-helper в репозитории) для текущего pipeline деплоя.
+
+---
+
+## 13. Logout + CSRF: практическое правило для фронтенда
+
+### 13.1. Симптом
+
+Если при клике «Выход» пользователь получает `CSRF token validation failed`, это обычно означает устаревший токен (кешированная страница/долгая открытая вкладка/ротация сессии).
+
+### 13.2. Обязательное правило
+
+Для **logout-действия во фронтенде (`web`)** не допускается показывать фатальную ошибку пользователю (`die(...)`) при невалидном CSRF.
+
+Нужно:
+
+1. записать warning в лог;
+2. завершить только сессию контекста `web`;
+3. сделать redirect на `site_start`.
+
+Это предотвращает lock-out сценарий «пользователь не может выйти». При этом для остальных мутаций данных CSRF остаётся строго обязательным.
+
+### 13.3. Шаблон
+
+```php
+if (!CsrfProtection::validateRequest($_POST)) {
+    $modx->log(modX::LOG_LEVEL_WARN, '[component] Logout with invalid CSRF token, proceeding with web context logout');
+}
+
+if ($modx->user->hasSessionContext('web')) {
+    $modx->user->removeSessionContext('web');
+}
+$modx->sendRedirect($modx->makeUrl($modx->getOption('site_start')));
+exit;
+```
+
+> ⚠️ Требуется проверка аудитором: подтвердить допустимость «graceful logout при невалидном CSRF» в рамках принятой модели угроз и требований безопасности проекта.

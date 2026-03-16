@@ -19,7 +19,8 @@ if (session_status() === PHP_SESSION_NONE) {
 if (isset($_POST["login_logout"])) {
     // CSRF Protection для выхода
     if (!CsrfProtection::validateRequest($_POST)) {
-        die('CSRF token validation failed');
+        // Для logout не блокируем выход полностью: токен может быть устаревшим из кешированной страницы
+        $modx->log(modX::LOG_LEVEL_WARN, '[authHandler] Logout with invalid CSRF token, proceeding with web context logout');
     }
     // Завершаем только сессию в контексте web, не затрагивая mgr (админку)
     if ($modx->user->hasSessionContext('web')) {
