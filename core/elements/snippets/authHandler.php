@@ -22,6 +22,10 @@ $success = [];
 $mode = $_GET['mode'] ?? ($_POST['mode'] ?? 'login');
 $prefillResendEmail = '';
 
+$authLog = static function (modX $modx, string $message, int $level = modX::LOG_LEVEL_ERROR): void {
+    $modx->log($level, '[authHandler][diag] ' . $message);
+};
+
 // FLASH-СООБЩЕНИЯ (PRG-паттерн)
 $flash = $_SESSION['auth_handler_flash'] ?? null;
 if (is_array($flash)) {
@@ -64,29 +68,44 @@ if ($modx->user->hasSessionContext('web') && $modx->user->id > 0) {
 }
 
 // ====================== ПОДГОТОВКА И ОТПРАВКА ПИСЕМ ======================
-$prepareMailTransport = static function (modX $modx) {
+$prepareMailTransport = static function (modX $modx) use ($authLog) {
+    $authLog($modx, 'MAIL STEP 1: init mail service', modX::LOG_LEVEL_INFO);
     $mailService = $modx->getService('mail', 'mail.modPHPMailer');
     if (!$mailService || !isset($modx->mail)) {
-        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Mail service unavailable');
+        $authLog($modx, 'MAIL STEP 1 FAILED: mail service unavailable');
         return false;
     }
 
     if ($modx->mail->mailer) {
+        $authLog($modx, 'MAIL STEP 2: configure transport (Timeout=10, KeepAlive=off, AutoTLS=on)', modX::LOG_LEVEL_INFO);
         $modx->mail->mailer->Timeout = 10;
         $modx->mail->mailer->SMTPKeepAlive = false;
         $modx->mail->mailer->SMTPAutoTLS = true;
+    } else {
+        $authLog($modx, 'MAIL STEP 2 WARNING: mailer object is empty', modX::LOG_LEVEL_WARN);
     }
+
+    $authLog($modx, 'MAIL STEP 3: transport ready', modX::LOG_LEVEL_INFO);
     return true;
 };
 
-$sendActivationEmail = static function (modX $modx, string $email, string $username, string $activationToken) use ($prepareMailTransport): bool {
+$sendActivationEmail = static function (modX $modx, string $email, string $username, string $activationToken) use ($prepareMailTransport, $authLog): bool {
+    $authLog($modx, 'ACTIVATION MAIL STEP 1: build activation URL for ' . $email, modX::LOG_LEVEL_INFO);
     $activationUrl = $modx->makeUrl($modx->resource->id, '', [
         'mode' => 'activate',
         'token' => $activationToken
     ], 'full');
 
     if (!$prepareMailTransport($modx)) {
+        $authLog($modx, 'ACTIVATION MAIL STOP: transport is not ready');
         return false;
+    }
+
+    $fromEmail = trim((string)$modx->getOption('emailsender'));
+    if (!filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
+        $fallbackDomain = trim((string)($_SERVER['HTTP_HOST'] ?? 'localhost'));
+        $fromEmail = 'noreply@' . preg_replace('/:\\d+$/', '', $fallbackDomain);
+        $authLog($modx, 'ACTIVATION MAIL STEP 2 WARNING: invalid system emailsender, fallback=' . $fromEmail, modX::LOG_LEVEL_WARN);
     }
 
     $body = '
@@ -99,17 +118,23 @@ $sendActivationEmail = static function (modX $modx, string $email, string $usern
     ';
 
     $modx->mail->set(modMail::MAIL_BODY, $body);
-    $modx->mail->set(modMail::MAIL_FROM, $modx->getOption('emailsender'));
+    $authLog($modx, 'ACTIVATION MAIL STEP 3: set envelope/headers', modX::LOG_LEVEL_INFO);
+    $modx->mail->set(modMail::MAIL_FROM, $fromEmail);
     $modx->mail->set(modMail::MAIL_FROM_NAME, $modx->getOption('site_name'));
     $modx->mail->set(modMail::MAIL_SUBJECT, 'Активация аккаунта - ' . $modx->getOption('site_name'));
     $modx->mail->address('to', $email);
     $modx->mail->setHTML(true);
 
+    $authLog($modx, 'ACTIVATION MAIL STEP 4: send()', modX::LOG_LEVEL_INFO);
     $sent = $modx->mail->send();
     if (!$sent) {
         $errorInfo = $modx->mail->mailer->ErrorInfo ?? 'unknown error';
-        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Failed to send activation email: ' . $errorInfo);
+        $authLog($modx, 'ACTIVATION MAIL STEP 4 FAILED: ' . $errorInfo);
+    } else {
+        $authLog($modx, 'ACTIVATION MAIL STEP 4 OK: email sent to ' . $email, modX::LOG_LEVEL_INFO);
     }
+
+    $authLog($modx, 'ACTIVATION MAIL STEP 5: mail reset()', modX::LOG_LEVEL_INFO);
     $modx->mail->reset();
 
     return $sent;
@@ -146,9 +171,11 @@ $sendForgotPasswordEmail = static function (modX $modx, string $email, string $r
 };
 
 // ====================== РЕГИСТРАЦИЯ ======================
-$registerUser = static function (modX $modx, array $post) use ($sendActivationEmail): array {
+$registerUser = static function (modX $modx, array $post) use ($sendActivationEmail, $authLog): array {
     $errors = [];
     $success = [];
+
+    $authLog($modx, 'REGISTER STEP 1: start registration flow', modX::LOG_LEVEL_INFO);
 
     $username = trim((string)($post['username'] ?? ''));
     $email = trim((string)($post['email'] ?? ''));
@@ -161,22 +188,37 @@ $registerUser = static function (modX $modx, array $post) use ($sendActivationEm
     if ($password !== $passwordConfirm) $errors[] = 'Пароли не совпадают';
 
     if (!empty($errors)) {
+        $authLog($modx, 'REGISTER STEP 2 FAILED: input validation', modX::LOG_LEVEL_WARN);
         return ['errors' => $errors, 'success' => $success];
     }
+    $authLog($modx, 'REGISTER STEP 2 OK: input validation', modX::LOG_LEVEL_INFO);
 
     if ($modx->getObject('modUser', ['username' => $username])) {
+        $authLog($modx, 'REGISTER STEP 3 FAILED: username exists=' . $username, modX::LOG_LEVEL_WARN);
         $errors[] = 'Логин уже занят';
         return ['errors' => $errors, 'success' => $success];
     }
+    $authLog($modx, 'REGISTER STEP 3 OK: username available=' . $username, modX::LOG_LEVEL_INFO);
 
     $prefix = $modx->getOption('table_prefix');
     $stmt = $modx->prepare("SELECT COUNT(*) FROM {$prefix}user_attributes WHERE email = :email");
+    if ($stmt === false) {
+        $authLog($modx, 'REGISTER STEP 4 FAILED: SQL prepare user_attributes by email');
+        $errors[] = 'Ошибка проверки email';
+        return ['errors' => $errors, 'success' => $success];
+    }
     $stmt->bindValue(':email', $email, PDO::PARAM_STR);
-    $stmt->execute();
+    if (!$stmt->execute()) {
+        $authLog($modx, 'REGISTER STEP 4 FAILED: SQL execute user_attributes by email ' . implode(' ', $stmt->errorInfo()));
+        $errors[] = 'Ошибка проверки email';
+        return ['errors' => $errors, 'success' => $success];
+    }
     if ((int)$stmt->fetchColumn() > 0) {
+        $authLog($modx, 'REGISTER STEP 4 FAILED: email already used=' . $email, modX::LOG_LEVEL_WARN);
         $errors[] = 'Email уже используется';
         return ['errors' => $errors, 'success' => $success];
     }
+    $authLog($modx, 'REGISTER STEP 4 OK: email available=' . $email, modX::LOG_LEVEL_INFO);
 
     $activationToken = bin2hex(random_bytes(32));
     $expiresAt = date('Y-m-d H:i:s', strtotime('+24 hours'));
@@ -198,29 +240,26 @@ $registerUser = static function (modX $modx, array $post) use ($sendActivationEm
     $user->addOne($profile);
 
     $modx->beginTransaction();
+    $authLog($modx, 'REGISTER STEP 5: transaction begin', modX::LOG_LEVEL_INFO);
     try {
         if (!$user->save()) {
             throw new RuntimeException('user save failed');
         }
+        $authLog($modx, 'REGISTER STEP 6: user saved id=' . (int)$user->id, modX::LOG_LEVEL_INFO);
 
-        $studentGroup = $modx->getObject('modUserGroup', ['name' => 'LMS Students']);
-        if ($studentGroup) {
-            $membership = $modx->newObject('modUserGroupMember');
-            $membership->set('user_group', $studentGroup->id);
-            $membership->set('member', $user->id);
-            $membership->set('role', 1);
-            $membership->set('rank', 0);
-            $membership->save();
-        }
+        // Compatibility mode: skip auto-membership to avoid modAccess/modUserGroup failures on some legacy installs.
+        $authLog($modx, 'REGISTER STEP 7: skip LMS Students auto-membership for compatibility', modX::LOG_LEVEL_WARN);
 
         $modx->commit();
+        $authLog($modx, 'REGISTER STEP 8: transaction commit', modX::LOG_LEVEL_INFO);
     } catch (Throwable $e) {
         $modx->rollBack();
-        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Registration transaction failed: ' . $e->getMessage());
+        $authLog($modx, 'REGISTER STEP 8 FAILED: transaction rollback ' . $e->getMessage());
         $errors[] = 'Ошибка создания пользователя';
         return ['errors' => $errors, 'success' => $success];
     }
 
+    $authLog($modx, 'REGISTER STEP 9: send activation email', modX::LOG_LEVEL_INFO);
     $mailSent = $sendActivationEmail($modx, $email, $username, $activationToken);
 
     if ($mailSent) {
