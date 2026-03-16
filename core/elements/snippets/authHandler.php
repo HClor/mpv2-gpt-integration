@@ -50,6 +50,7 @@ if ($modx->user->hasSessionContext("web") && $modx->user->id > 0) {
 $errors = [];
 $success = [];
 $mode = $_GET["mode"] ?? ($_POST["mode"] ?? "login");
+$prefillResendEmail = "";
 
 /**
  * Отправка письма с ссылкой активации
@@ -65,7 +66,7 @@ $prepareMailTransport = static function ($modx, string $context) {
     if ($mailer) {
         // Не даем SMTP-запросам зависать до 504 на фронте.
         if (property_exists($mailer, 'Timeout')) {
-            $mailer->Timeout = 8;
+            $mailer->Timeout = 10;
         }
         if (property_exists($mailer, 'SMTPKeepAlive')) {
             $mailer->SMTPKeepAlive = false;
@@ -88,6 +89,10 @@ $sendActivationEmail = static function ($modx, string $email, string $username, 
         return false;
     }
 
+    if (function_exists('set_time_limit')) {
+        @set_time_limit(30);
+    }
+
     $modx->mail->set(modMail::MAIL_BODY, "
         <h2>Подтверждение регистрации</h2>
         <p>Здравствуйте, " . htmlspecialchars($username, ENT_QUOTES, 'UTF-8') . "!</p>
@@ -108,6 +113,7 @@ $sendActivationEmail = static function ($modx, string $email, string $username, 
     }
     $modx->mail->reset();
     $restoreDbConnection($modx);
+
 
 
     return $sent;
@@ -239,70 +245,75 @@ if ($_POST && $mode === "register") {
                         $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Email uniqueness execute failed: ' . implode(' | ', $stmt->errorInfo()));
                         $errors[] = 'Временная ошибка базы данных. Попробуйте позже.';
                     } elseif ((int)$stmt->fetchColumn() > 0) {
-                    $errors[] = "Email уже используется";
-                } else {
-                    $user = $modx->newObject("modUser");
-                    $user->set("username", $username);
-                    $user->set("password", $password);
-                    $user->set("active", 0);
+                        $errors[] = "Email уже используется";
+                    } else {
+                        $user = $modx->newObject("modUser");
+                        $user->set("username", $username);
+                        $user->set("password", $password);
+                        $user->set("active", 0);
 
-                    $activationToken = bin2hex(random_bytes(32));
+                        $activationToken = bin2hex(random_bytes(32));
 
-                    $profile = $modx->newObject("modUserProfile");
-                    $profile->set("email", $email);
-                    $profile->set("fullname", $username);
-                    $profile->set("blocked", 0);
-                    $profile->set('extended', [
-                        'activation_token' => $activationToken,
-                        'activation_sent_at' => date('Y-m-d H:i:s')
-                    ]);
-
-                    $user->addOne($profile);
-
-                    $created = false;
-                    $modx->beginTransaction();
-                    try {
-                        if (!$user->save()) {
-                            throw new RuntimeException('user save failed');
-                        }
-
-                        // ДОБАВЛЕНИЕ В ГРУППУ LMS Students
-                        $studentGroup = $modx->getObject("modUserGroup", ["name" => "LMS Students"]);
-                        if (!$studentGroup) {
-                            throw new RuntimeException('LMS Students group not found');
-                        }
-
-                        $existingMembership = $modx->getObject("modUserGroupMember", [
-                            "user_group" => $studentGroup->id,
-                            "member" => $user->id
+                        $profile = $modx->newObject("modUserProfile");
+                        $profile->set("email", $email);
+                        $profile->set("fullname", $username);
+                        $profile->set("blocked", 0);
+                        $profile->set('extended', [
+                            'activation_token' => $activationToken,
+                            'activation_sent_at' => date('Y-m-d H:i:s')
                         ]);
 
-                        if (!$existingMembership) {
-                            $membership = $modx->newObject("modUserGroupMember");
-                            $membership->set("user_group", $studentGroup->id);
-                            $membership->set("member", $user->id);
-                            $membership->set("role", 1);
-                            $membership->set("rank", 0);
-                            if (!$membership->save()) {
-                                throw new RuntimeException('membership save failed');
+                        $user->addOne($profile);
+
+                        $created = false;
+                        $modx->beginTransaction();
+                        try {
+                            if (!$user->save()) {
+                                throw new RuntimeException('user save failed');
                             }
+
+                            $studentGroup = $modx->getObject("modUserGroup", ["name" => "LMS Students"]);
+                            if (!$studentGroup) {
+                                throw new RuntimeException('LMS Students group not found');
+                            }
+
+                            $existingMembership = $modx->getObject("modUserGroupMember", [
+                                "user_group" => $studentGroup->id,
+                                "member" => $user->id
+                            ]);
+
+                            if (!$existingMembership) {
+                                $membership = $modx->newObject("modUserGroupMember");
+                                $membership->set("user_group", $studentGroup->id);
+                                $membership->set("member", $user->id);
+                                $membership->set("role", 1);
+                                $membership->set("rank", 0);
+                                if (!$membership->save()) {
+                                    throw new RuntimeException('membership save failed');
+                                }
+                            }
+
+                            $modx->commit();
+                            $created = true;
+                        } catch (Throwable $e) {
+                            $modx->rollBack();
+                            $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Registration transaction failed: ' . $e->getMessage());
                         }
 
-                        $modx->commit();
-                        $created = true;
-                    } catch (Throwable $e) {
-                        $modx->rollBack();
-                        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Registration transaction failed: ' . $e->getMessage());
-                    }
+                        if ($created) {
+                            $mailSent = $sendActivationEmail($modx, $email, $username, $activationToken);
 
-                    if ($created) {
-
-                        $success[] = "✅ Аккаунт создан.";
-                        $success[] = "Для активации аккаунта отправьте письмо по кнопке ниже.";
-                        $mode = 'resend_activation';
-                        $_POST['email'] = $email;
-                    } else {
-                        $errors[] = "Ошибка создания пользователя";
+                            $success[] = "✅ Аккаунт создан.";
+                            if ($mailSent) {
+                                $success[] = "Письмо с активацией отправлено на ваш email.";
+                            } else {
+                                $errors[] = "Аккаунт создан, но письмо активации не отправлено. Используйте повторную отправку по кнопке ниже.";
+                                $mode = 'resend_activation';
+                                $prefillResendEmail = $email;
+                            }
+                        } else {
+                            $errors[] = "Ошибка создания пользователя";
+                        }
                     }
                 }
             }
@@ -578,7 +589,8 @@ if ($mode === 'resend_activation' && empty($success)) {
 
     $output .= '<div class="mb-3">';
     $output .= '<label class="form-label">Email</label>';
-    $output .= '<input type="email" name="email" class="form-control" required>';
+    $resendEmailValue = $_POST['email'] ?? $prefillResendEmail;
+    $output .= '<input type="email" name="email" class="form-control" value="' . htmlspecialchars((string)$resendEmailValue, ENT_QUOTES, 'UTF-8') . '" required>';
     $output .= '</div>';
 
     $output .= '<button type="submit" class="btn btn-primary">Отправить ссылку активации</button>';
