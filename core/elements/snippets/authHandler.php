@@ -23,6 +23,59 @@ $mode = $_GET['mode'] ?? ($_POST['mode'] ?? 'login');
 $prefillResendEmail = '';
 
 $authLog = static function (modX $modx, string $message, int $level = modX::LOG_LEVEL_ERROR): void {
+    // Пишем всё как ERROR, чтобы шаги были видны даже при log_level=ERROR в MODX.
+    $levelName = match ($level) {
+        modX::LOG_LEVEL_INFO => 'INFO',
+        modX::LOG_LEVEL_WARN => 'WARN',
+        modX::LOG_LEVEL_ERROR => 'ERROR',
+        default => 'LOG'
+    };
+    $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler][diag][' . $levelName . '] ' . $message);
+};
+
+$checkSmtpReachable = static function (modX $modx) use ($authLog): bool {
+    $useSmtp = (bool)$modx->getOption('mail_use_smtp', null, false);
+    if (!$useSmtp) {
+        $authLog($modx, 'MAIL PREFLIGHT: mail_use_smtp=0, skip SMTP socket check', modX::LOG_LEVEL_INFO);
+        return true;
+    }
+
+    $hostsRaw = trim((string)$modx->getOption('mail_smtp_hosts', null, ''));
+    if ($hostsRaw === '') {
+        $hostsRaw = trim((string)$modx->getOption('mail_smtp_host', null, ''));
+    }
+    $port = (int)$modx->getOption('mail_smtp_port', null, 25);
+    $timeout = 3.0;
+
+    if ($hostsRaw === '') {
+        $authLog($modx, 'MAIL PREFLIGHT WARNING: SMTP enabled but host is empty', modX::LOG_LEVEL_WARN);
+        return false;
+    }
+
+    $hosts = preg_split('/[;,]+/', $hostsRaw) ?: [];
+    foreach ($hosts as $host) {
+        $host = trim($host);
+        if ($host === '') {
+            continue;
+        }
+
+        $authLog($modx, 'MAIL PREFLIGHT: socket check ' . $host . ':' . $port, modX::LOG_LEVEL_INFO);
+        $errno = 0;
+        $errstr = '';
+        $conn = @stream_socket_client('tcp://' . $host . ':' . $port, $errno, $errstr, $timeout);
+        if (is_resource($conn)) {
+            fclose($conn);
+            $authLog($modx, 'MAIL PREFLIGHT OK: SMTP host reachable ' . $host . ':' . $port, modX::LOG_LEVEL_INFO);
+            return true;
+        }
+
+        $authLog($modx, 'MAIL PREFLIGHT FAIL: ' . $host . ':' . $port . ' errno=' . $errno . ' err=' . $errstr, modX::LOG_LEVEL_WARN);
+    }
+
+    return false;
+};
+
+$authLog = static function (modX $modx, string $message, int $level = modX::LOG_LEVEL_ERROR): void {
     $modx->log($level, '[authHandler][diag] ' . $message);
 };
 
@@ -89,7 +142,7 @@ $prepareMailTransport = static function (modX $modx) use ($authLog) {
     return true;
 };
 
-$sendActivationEmail = static function (modX $modx, string $email, string $username, string $activationToken) use ($prepareMailTransport, $authLog): bool {
+$sendActivationEmail = static function (modX $modx, string $email, string $username, string $activationToken) use ($prepareMailTransport, $checkSmtpReachable, $authLog): bool {
     $authLog($modx, 'ACTIVATION MAIL STEP 1: build activation URL for ' . $email, modX::LOG_LEVEL_INFO);
     $activationUrl = $modx->makeUrl($modx->resource->id, '', [
         'mode' => 'activate',
@@ -99,6 +152,18 @@ $sendActivationEmail = static function (modX $modx, string $email, string $usern
     if (!$prepareMailTransport($modx)) {
         $authLog($modx, 'ACTIVATION MAIL STOP: transport is not ready');
         return false;
+    }
+
+    if (!$checkSmtpReachable($modx)) {
+        $authLog($modx, 'ACTIVATION MAIL STOP: SMTP preflight failed');
+        return false;
+    }
+
+    $fromEmail = trim((string)$modx->getOption('emailsender'));
+    if (!filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
+        $fallbackDomain = trim((string)($_SERVER['HTTP_HOST'] ?? 'localhost'));
+        $fromEmail = 'noreply@' . preg_replace('/:\\d+$/', '', $fallbackDomain);
+        $authLog($modx, 'ACTIVATION MAIL STEP 2 WARNING: invalid system emailsender, fallback=' . $fromEmail, modX::LOG_LEVEL_WARN);
     }
 
     $fromEmail = trim((string)$modx->getOption('emailsender'));
@@ -137,6 +202,20 @@ $sendActivationEmail = static function (modX $modx, string $email, string $usern
     $authLog($modx, 'ACTIVATION MAIL STEP 5: mail reset()', modX::LOG_LEVEL_INFO);
     $modx->mail->reset();
 
+    // После долгого SMTP-таймаута соединение с MySQL может быть закрыто на хостинге.
+    $pingStmt = $modx->query('SELECT 1');
+    if ($pingStmt === false) {
+        $authLog($modx, 'ACTIVATION MAIL STEP 6 WARNING: DB ping failed, trying reconnect', modX::LOG_LEVEL_WARN);
+        $reconnectOk = $modx->connect();
+        if (!$reconnectOk) {
+            $authLog($modx, 'ACTIVATION MAIL STEP 6 FAILED: DB reconnect failed');
+        } else {
+            $authLog($modx, 'ACTIVATION MAIL STEP 6 OK: DB reconnected', modX::LOG_LEVEL_INFO);
+        }
+    } else {
+        $authLog($modx, 'ACTIVATION MAIL STEP 6 OK: DB ping', modX::LOG_LEVEL_INFO);
+    }
+
     return $sent;
 };
 
@@ -174,6 +253,8 @@ $sendForgotPasswordEmail = static function (modX $modx, string $email, string $r
 $registerUser = static function (modX $modx, array $post) use ($sendActivationEmail, $authLog): array {
     $errors = [];
     $success = [];
+
+    $authLog($modx, 'REGISTER STEP 1: start registration flow', modX::LOG_LEVEL_INFO);
 
     $authLog($modx, 'REGISTER STEP 1: start registration flow', modX::LOG_LEVEL_INFO);
 
