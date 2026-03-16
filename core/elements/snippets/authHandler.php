@@ -61,120 +61,143 @@ if ($modx->user->hasSessionContext('web') && $modx->user->id > 0) {
     return $output;
 }
 
-$restoreDbConnection = static function (modX $modx, string $context): void {
-    // После SMTP-операций некоторые окружения теряют PDO-соединение (MySQL server has gone away).
-    // Поэтому выполняем ping и мягкий reconnect, чтобы не ломать следующие DB-операции в том же запросе.
+$ensurePendingEmailsTable = static function (modX $modx): bool {
+    static $checked = false;
+    static $ok = false;
+
+    if ($checked) {
+        return $ok;
+    }
+
+    $checked = true;
+    $prefix = $modx->getOption('table_prefix');
+    $sql = "CREATE TABLE IF NOT EXISTS {$prefix}pending_emails (
+"
+        . "  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+"
+        . "  email_type VARCHAR(64) NOT NULL,
+"
+        . "  recipient_email VARCHAR(191) NOT NULL,
+"
+        . "  subject VARCHAR(255) NOT NULL,
+"
+        . "  body_html MEDIUMTEXT NOT NULL,
+"
+        . "  status ENUM('pending','processing','sent','failed') NOT NULL DEFAULT 'pending',
+"
+        . "  attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
+"
+        . "  max_attempts TINYINT UNSIGNED NOT NULL DEFAULT 5,
+"
+        . "  available_at DATETIME NOT NULL,
+"
+        . "  sent_at DATETIME NULL,
+"
+        . "  last_error TEXT NULL,
+"
+        . "  created_at DATETIME NOT NULL,
+"
+        . "  updated_at DATETIME NOT NULL,
+"
+        . "  PRIMARY KEY (id),
+"
+        . "  KEY idx_pending_status_available (status, available_at),
+"
+        . "  KEY idx_pending_recipient (recipient_email),
+"
+        . "  KEY idx_pending_type (email_type)
+"
+        . ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+
     try {
-        if ($modx->query('SELECT 1') !== false) {
-            return;
-        }
+        $ok = $modx->exec($sql) !== false;
     } catch (Throwable $e) {
-        $modx->log(modX::LOG_LEVEL_WARN, '[authHandler] DB ping failed after ' . $context . ': ' . $e->getMessage());
+        $ok = false;
+        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Failed to ensure pending_emails table: ' . $e->getMessage());
     }
 
-    if (isset($modx->connection) && is_object($modx->connection) && property_exists($modx->connection, 'pdo')) {
-        $modx->connection->pdo = null;
-    }
-    if (property_exists($modx, 'pdo')) {
-        $modx->pdo = null;
+    if (!$ok) {
+        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] pending_emails table is unavailable.');
     }
 
-    if (!$modx->connect()) {
-        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Failed to reconnect DB after ' . $context);
-    }
+    return $ok;
 };
 
-$prepareMailTransport = static function (modX $modx, string $context) {
-    $mailService = $modx->getService('mail', 'mail.modPHPMailer');
-    if (!$mailService || !isset($modx->mail)) {
-        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Mail service unavailable (' . $context . ')');
+$queueEmail = static function (modX $modx, string $emailType, string $recipientEmail, string $subject, string $bodyHtml, int $maxAttempts = 5) use ($ensurePendingEmailsTable): bool {
+    if (!$ensurePendingEmailsTable($modx)) {
         return false;
     }
 
-    $timeout = (int)$modx->getOption('auth_mail_timeout', null, 8);
-    $smtpTimeout = (int)$modx->getOption('auth_smtp_timeout', null, 8);
-    $mailer = $modx->mail->mailer ?? null;
+    $prefix = $modx->getOption('table_prefix');
+    $stmt = $modx->prepare(
+        "INSERT INTO {$prefix}pending_emails (email_type, recipient_email, subject, body_html, status, attempts, max_attempts, available_at, created_at, updated_at)
+"
+        . "VALUES (:email_type, :recipient_email, :subject, :body_html, 'pending', 0, :max_attempts, :available_at, :created_at, :updated_at)"
+    );
 
-    if ($mailer) {
-        if (property_exists($mailer, 'Timeout')) {
-            $mailer->Timeout = max(1, $timeout);
-        }
-        if (property_exists($mailer, 'SMTPTimeout')) {
-            $mailer->SMTPTimeout = max(1, $smtpTimeout);
-        }
-        if (property_exists($mailer, 'Timelimit')) {
-            $mailer->Timelimit = max(2, $timeout + 2);
-        }
-        if (property_exists($mailer, 'SMTPKeepAlive')) {
-            $mailer->SMTPKeepAlive = false;
-        }
-        if (property_exists($mailer, 'SMTPAutoTLS')) {
-            $mailer->SMTPAutoTLS = true;
-        }
+    if ($stmt === false) {
+        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] queueEmail prepare failed');
+        return false;
+    }
+
+    $now = date('Y-m-d H:i:s');
+    $stmt->bindValue(':email_type', $emailType, PDO::PARAM_STR);
+    $stmt->bindValue(':recipient_email', $recipientEmail, PDO::PARAM_STR);
+    $stmt->bindValue(':subject', $subject, PDO::PARAM_STR);
+    $stmt->bindValue(':body_html', $bodyHtml, PDO::PARAM_STR);
+    $stmt->bindValue(':max_attempts', max(1, $maxAttempts), PDO::PARAM_INT);
+    $stmt->bindValue(':available_at', $now, PDO::PARAM_STR);
+    $stmt->bindValue(':created_at', $now, PDO::PARAM_STR);
+    $stmt->bindValue(':updated_at', $now, PDO::PARAM_STR);
+
+    if (!$stmt->execute()) {
+        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] queueEmail execute failed: ' . implode(' | ', $stmt->errorInfo()));
+        return false;
     }
 
     return true;
 };
 
-$sendMailSafely = static function (modX $modx, string $context) use ($restoreDbConnection): bool {
-    $sent = false;
-    try {
-        $sent = (bool)$modx->mail->send();
-    } catch (Throwable $e) {
-        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Mail send exception (' . $context . '): ' . $e->getMessage());
-    }
-
-    if (!$sent) {
-        $errorInfo = isset($modx->mail->mailer->ErrorInfo) ? (string)$modx->mail->mailer->ErrorInfo : 'unknown error';
-        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Failed to send email (' . $context . '): ' . $errorInfo);
-    }
-
-    $modx->mail->reset();
-    $restoreDbConnection($modx, $context);
-
-    return $sent;
-};
-
-$sendActivationEmail = static function (modX $modx, string $email, string $username, string $activationToken) use ($prepareMailTransport, $sendMailSafely): bool {
+$queueActivationEmail = static function (modX $modx, string $email, string $username, string $activationToken) use ($queueEmail): bool {
     $activationResourceId = (int)$modx->getOption('auth_activation_resource_id', null, 0);
     if ($activationResourceId <= 0) {
-        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Config error: auth_activation_resource_id is empty or invalid. Activation email skipped.');
+        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Config error: auth_activation_resource_id is empty or invalid. Activation email queue skipped.');
         return false;
     }
 
     $activationTtlHours = max(1, (int)$modx->getOption('auth_activation_ttl_hours', null, 24));
-
     $activationUrl = $modx->makeUrl($activationResourceId, '', [
         'mode' => 'activate',
         'token' => $activationToken,
     ], 'full');
 
-    if (!$prepareMailTransport($modx, 'activation')) {
-        return false;
-    }
-
-    if (function_exists('set_time_limit')) {
-        @set_time_limit(15);
-    }
-
-    $modx->mail->set(modMail::MAIL_BODY, '
+    $subject = 'Активация аккаунта - ' . $modx->getOption('site_name');
+    $body = '
         <h2>Подтверждение регистрации</h2>
         <p>Здравствуйте, ' . htmlspecialchars($username, ENT_QUOTES, 'UTF-8') . '!</p>
         <p>Для завершения регистрации подтвердите email по ссылке:</p>
         <p><a href="' . htmlspecialchars($activationUrl, ENT_QUOTES, 'UTF-8') . '">Активировать аккаунт</a></p>
         <p>Ссылка действует ' . $activationTtlHours . ' часа.</p>
         <p>Если вы не регистрировались, просто проигнорируйте это письмо.</p>
-    ');
-    $modx->mail->set(modMail::MAIL_FROM, $modx->getOption('emailsender'));
-    $modx->mail->set(modMail::MAIL_FROM_NAME, $modx->getOption('site_name'));
-    $modx->mail->set(modMail::MAIL_SUBJECT, 'Активация аккаунта - ' . $modx->getOption('site_name'));
-    $modx->mail->address('to', $email);
-    $modx->mail->setHTML(true);
+    ';
 
-    return $sendMailSafely($modx, 'activation');
+    return $queueEmail($modx, 'activation', $email, $subject, $body);
 };
 
-$registerUser = static function (modX $modx, array $post) use ($sendActivationEmail): array {
+$queueForgotPasswordEmail = static function (modX $modx, string $email, string $resetUrl) use ($queueEmail): bool {
+    $subject = 'Восстановление пароля';
+    $body = '
+        <h3>Восстановление пароля</h3>
+        <p>Вы запросили восстановление пароля на сайте ' . htmlspecialchars((string)$modx->getOption('site_name'), ENT_QUOTES, 'UTF-8') . '.</p>
+        <p><a href="' . htmlspecialchars($resetUrl, ENT_QUOTES, 'UTF-8') . '">Нажмите здесь для установки нового пароля</a></p>
+        <p>Ссылка действительна 1 час.</p>
+        <p>Если вы не запрашивали восстановление пароля, проигнорируйте это письмо.</p>
+    ';
+
+    return $queueEmail($modx, 'forgot_password', $email, $subject, $body);
+};
+
+$registerUser = static function (modX $modx, array $post) use ($queueActivationEmail): array {
     $modx->log(modX::LOG_LEVEL_INFO, '[authHandler] start register');
     $errors = [];
     $success = [];
@@ -280,17 +303,16 @@ $registerUser = static function (modX $modx, array $post) use ($sendActivationEm
         return ['errors' => ['Ошибка создания пользователя'], 'success' => $success];
     }
 
-    $modx->log(modX::LOG_LEVEL_INFO, '[authHandler] activation mail send start, userId=' . (int)$user->id);
-    $mailSent = $sendActivationEmail($modx, $email, $username, $activationToken);
-    if ($mailSent) {
-        $modx->log(modX::LOG_LEVEL_INFO, '[authHandler] activation mail sent ok, userId=' . (int)$user->id);
-        $success[] = 'Аккаунт создан. Ссылка для активации отправлена на ваш email.';
+    $queued = $queueActivationEmail($modx, $email, $username, $activationToken);
+    if ($queued) {
+        $modx->log(modX::LOG_LEVEL_INFO, '[authHandler] activation email queued, userId=' . (int)$user->id);
+        $success[] = 'Аккаунт создан. Проверьте email: письмо активации будет отправлено в ближайшее время.';
     } else {
-        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] activation mail send failed, userId=' . (int)$user->id);
-        $errors[] = 'Аккаунт создан, но письмо активации не отправлено. Пожалуйста, свяжитесь с администратором сайта.';
+        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] activation email queue failed, userId=' . (int)$user->id);
+        $errors[] = 'Аккаунт создан, но письмо активации не поставлено в очередь. Пожалуйста, свяжитесь с администратором сайта.';
     }
 
-    $modx->log(modX::LOG_LEVEL_INFO, '[authHandler] registerUser completed for user #' . (int)$user->id . ', mailSent=' . ($mailSent ? '1' : '0'));
+    $modx->log(modX::LOG_LEVEL_INFO, '[authHandler] registerUser completed for user #' . (int)$user->id . ', queued=' . ($queued ? '1' : '0'));
 
     $checkEmailResourceId = (int)$modx->getOption('auth_check_email_resource_id', null, 0);
     $prgRedirect = $checkEmailResourceId > 0
@@ -366,7 +388,7 @@ $activateUserByToken = static function (modX $modx, string $activationToken): ar
     return ['errors' => [], 'success' => ['Email подтверждён. Аккаунт активирован, теперь можете войти.']];
 };
 
-$resendActivationEmail = static function (modX $modx, string $email) use ($sendActivationEmail): array {
+$resendActivationEmail = static function (modX $modx, string $email) use ($queueActivationEmail): array {
     $genericSuccess = 'Если аккаунт существует и не активирован, письмо будет отправлено.';
     $modx->log(modX::LOG_LEVEL_INFO, '[authHandler] resend requested');
 
@@ -418,11 +440,11 @@ $resendActivationEmail = static function (modX $modx, string $email) use ($sendA
     $profile->set('extended', $extended);
 
     if ($profile->save()) {
-        $mailSent = $sendActivationEmail($modx, $email, (string)$user->get('username'), $activationToken);
-        if ($mailSent) {
-            $modx->log(modX::LOG_LEVEL_INFO, '[authHandler] resend mail ok, emailHash=' . sha1($email));
+        $queued = $queueActivationEmail($modx, $email, (string)$user->get('username'), $activationToken);
+        if ($queued) {
+            $modx->log(modX::LOG_LEVEL_INFO, '[authHandler] resend activation email queued, emailHash=' . sha1($email));
         } else {
-            $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] resend mail failed, emailHash=' . sha1($email));
+            $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] resend activation email queue failed, emailHash=' . sha1($email));
         }
     } else {
         $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] resend token save failed, emailHash=' . sha1($email));
@@ -571,28 +593,14 @@ if ($_POST && $mode === 'forgot') {
                             'token' => $token,
                         ], 'full');
 
-                        if (!$prepareMailTransport($modx, 'forgot_password')) {
-                            $errors[] = 'Ошибка отправки email. Почтовый сервис временно недоступен.';
+                        $queued = $queueForgotPasswordEmail($modx, $email, $resetUrl);
+                        if ($queued) {
+                            $modx->log(modX::LOG_LEVEL_INFO, '[authHandler] forgot password email queued, userId=' . $userId);
                         } else {
-                            $modx->mail->set(modMail::MAIL_FROM, $modx->getOption('emailsender'));
-                            $modx->mail->set(modMail::MAIL_FROM_NAME, $modx->getOption('site_name'));
-                            $modx->mail->set(modMail::MAIL_SUBJECT, 'Восстановление пароля');
-                            $modx->mail->set(modMail::MAIL_BODY, '
-                                <h3>Восстановление пароля</h3>
-                                <p>Вы запросили восстановление пароля на сайте ' . htmlspecialchars((string)$modx->getOption('site_name'), ENT_QUOTES, 'UTF-8') . '.</p>
-                                <p><a href="' . htmlspecialchars($resetUrl, ENT_QUOTES, 'UTF-8') . '">Нажмите здесь для установки нового пароля</a></p>
-                                <p>Ссылка действительна 1 час.</p>
-                                <p>Если вы не запрашивали восстановление пароля, проигнорируйте это письмо.</p>
-                            ');
-                            $modx->mail->address('to', $email);
-                            $modx->mail->setHTML(true);
-
-                            if ($sendMailSafely($modx, 'forgot_password')) {
-                                $success[] = 'Ссылка для восстановления пароля отправлена на ваш email';
-                            } else {
-                                $errors[] = 'Ошибка отправки email. Обратитесь к администратору.';
-                            }
+                            $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] forgot password email queue failed, userId=' . $userId);
                         }
+
+                        $success[] = 'Если email зарегистрирован, ссылка для восстановления будет отправлена';
                     }
                 } else {
                     $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] forgot missing user/profile for userId=' . $userId);
