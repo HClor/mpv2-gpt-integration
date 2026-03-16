@@ -306,11 +306,12 @@ $registerUser = static function (modX $modx, array $post) use ($queueActivationE
     $queued = $queueActivationEmail($modx, $email, $username, $activationToken);
     if ($queued) {
         $modx->log(modX::LOG_LEVEL_INFO, '[authHandler] activation email queued, userId=' . (int)$user->id);
+        $success[] = 'Аккаунт создан. Проверьте email: письмо активации будет отправлено в ближайшее время.';
     } else {
         $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] activation email queue failed, userId=' . (int)$user->id);
+        $errors[] = 'Аккаунт создан, но письмо активации не поставлено в очередь. Пожалуйста, свяжитесь с администратором сайта.';
     }
 
-    $success[] = 'Аккаунт создан. Проверьте email: письмо активации будет отправлено в ближайшее время.';
     $modx->log(modX::LOG_LEVEL_INFO, '[authHandler] registerUser completed for user #' . (int)$user->id . ', queued=' . ($queued ? '1' : '0'));
 
     $checkEmailResourceId = (int)$modx->getOption('auth_check_email_resource_id', null, 0);

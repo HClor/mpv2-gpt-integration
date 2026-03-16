@@ -3,7 +3,7 @@
  * Auth pending emails queue processor.
  *
  * Example crontab:
- * * * * * /usr/bin/php /path/to/core/components/testsystem/cron/process-pending-emails.php --limit=30
+ * * * * * /usr/bin/php /path/to/core/components/testsystem/cron/process-pending-emails.php --limit=20
  */
 
 if (php_sapi_name() !== 'cli') {
@@ -23,11 +23,13 @@ $modx->initialize('web');
 $modx->getService('error', 'error.modError');
 
 $prefix = $modx->getOption('table_prefix');
-$limit = 20;
 $options = getopt('', ['limit::']);
-if (isset($options['limit'])) {
-    $limit = max(1, min(200, (int)$options['limit']));
-}
+$limit = isset($options['limit']) ? (int)$options['limit'] : 20;
+$limit = max(1, min(20, $limit));
+
+$logPrefix = '[pending-emails]';
+$modx->log(modX::LOG_LEVEL_INFO, $logPrefix . ' queue processing started, limit=' . $limit);
+echo '[' . date('Y-m-d H:i:s') . '] queue processing started, limit=' . $limit . "\n";
 
 $ensureSql = "CREATE TABLE IF NOT EXISTS {$prefix}pending_emails (\n"
     . "  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,\n"
@@ -48,7 +50,11 @@ $ensureSql = "CREATE TABLE IF NOT EXISTS {$prefix}pending_emails (\n"
     . "  KEY idx_pending_recipient (recipient_email),\n"
     . "  KEY idx_pending_type (email_type)\n"
     . ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
-$modx->exec($ensureSql);
+
+if ($modx->exec($ensureSql) === false) {
+    $modx->log(modX::LOG_LEVEL_ERROR, $logPrefix . ' failed to ensure pending_emails table');
+    exit(1);
+}
 
 $stmt = $modx->prepare(
     "SELECT id, email_type, recipient_email, subject, body_html, attempts, max_attempts\n"
@@ -57,19 +63,47 @@ $stmt = $modx->prepare(
     . "ORDER BY id ASC\n"
     . "LIMIT :limit"
 );
-$stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-$stmt->execute();
-$rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
+if ($stmt === false) {
+    $modx->log(modX::LOG_LEVEL_ERROR, $logPrefix . ' failed to prepare pending query');
+    exit(1);
+}
+
+$stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+if (!$stmt->execute()) {
+    $modx->log(modX::LOG_LEVEL_ERROR, $logPrefix . ' failed to execute pending query: ' . implode(' | ', $stmt->errorInfo()));
+    exit(1);
+}
+
+$rows = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 if (empty($rows)) {
-    echo "[" . date('Y-m-d H:i:s') . "] no pending emails\n";
+    $modx->log(modX::LOG_LEVEL_INFO, $logPrefix . ' no pending emails to process');
+    echo '[' . date('Y-m-d H:i:s') . "] no pending emails\n";
     exit(0);
 }
 
 $mailService = $modx->getService('mail', 'mail.modPHPMailer');
 if (!$mailService || !isset($modx->mail)) {
-    $modx->log(modX::LOG_LEVEL_ERROR, '[pending-emails] Mail service unavailable');
+    $modx->log(modX::LOG_LEVEL_ERROR, $logPrefix . ' Mail service unavailable');
     exit(1);
+}
+
+$timeout = (int)$modx->getOption('auth_mail_timeout', null, 8);
+$smtpTimeout = (int)$modx->getOption('auth_smtp_timeout', null, 8);
+$mailer = $modx->mail->mailer ?? null;
+if ($mailer) {
+    if (property_exists($mailer, 'Timeout')) {
+        $mailer->Timeout = max(1, $timeout);
+    }
+    if (property_exists($mailer, 'SMTPTimeout')) {
+        $mailer->SMTPTimeout = max(1, $smtpTimeout);
+    }
+    if (property_exists($mailer, 'Timelimit')) {
+        $mailer->Timelimit = max(2, $timeout + 2);
+    }
+    if (property_exists($mailer, 'SMTPKeepAlive')) {
+        $mailer->SMTPKeepAlive = false;
+    }
 }
 
 $sentCount = 0;
@@ -83,14 +117,19 @@ foreach ($rows as $row) {
         . "SET status = 'processing', updated_at = NOW()\n"
         . "WHERE id = :id AND status = 'pending'"
     );
-    $lockStmt->bindValue(':id', $id, PDO::PARAM_INT);
-    $lockStmt->execute();
-    if ($lockStmt->rowCount() !== 1) {
+    if ($lockStmt === false) {
+        $modx->log(modX::LOG_LEVEL_ERROR, $logPrefix . ' lock prepare failed for #' . $id);
+        $failedCount++;
         continue;
     }
 
-    $modx->mail->set(modMail::MAIL_FROM, $modx->getOption('emailsender'));
-    $modx->mail->set(modMail::MAIL_FROM_NAME, $modx->getOption('site_name'));
+    $lockStmt->bindValue(':id', $id, PDO::PARAM_INT);
+    if (!$lockStmt->execute() || $lockStmt->rowCount() !== 1) {
+        continue;
+    }
+
+    $modx->mail->set(modMail::MAIL_FROM, (string)$modx->getOption('emailsender'));
+    $modx->mail->set(modMail::MAIL_FROM_NAME, (string)$modx->getOption('site_name'));
     $modx->mail->set(modMail::MAIL_SUBJECT, (string)$row['subject']);
     $modx->mail->set(modMail::MAIL_BODY, (string)$row['body_html']);
     $modx->mail->address('to', (string)$row['recipient_email']);
@@ -113,17 +152,20 @@ foreach ($rows as $row) {
     if ($isSent) {
         $doneStmt = $modx->prepare(
             "UPDATE {$prefix}pending_emails\n"
-            . "SET status = 'sent', sent_at = NOW(), last_error = NULL, updated_at = NOW()\n"
+            . "SET status = 'sent', sent_at = NOW(), updated_at = NOW(), last_error = NULL\n"
             . "WHERE id = :id"
         );
-        $doneStmt->bindValue(':id', $id, PDO::PARAM_INT);
-        $doneStmt->execute();
+        if ($doneStmt) {
+            $doneStmt->bindValue(':id', $id, PDO::PARAM_INT);
+            $doneStmt->execute();
+        }
+        $modx->log(modX::LOG_LEVEL_INFO, $logPrefix . ' email sent, queueId=' . $id . ', type=' . $row['email_type']);
         $sentCount++;
         continue;
     }
 
     $attempts = (int)$row['attempts'] + 1;
-    $maxAttempts = (int)$row['max_attempts'];
+    $maxAttempts = max(1, (int)$row['max_attempts']);
     $isFinalFail = $attempts >= $maxAttempts;
 
     if ($isFinalFail) {
@@ -142,14 +184,22 @@ foreach ($rows as $row) {
         );
     }
 
-    $failStmt->bindValue(':id', $id, PDO::PARAM_INT);
-    $failStmt->bindValue(':attempts', $attempts, PDO::PARAM_INT);
-    $failStmt->bindValue(':last_error', mb_substr($errorText, 0, 65535), PDO::PARAM_STR);
-    $failStmt->execute();
+    if ($failStmt) {
+        $failStmt->bindValue(':id', $id, PDO::PARAM_INT);
+        $failStmt->bindValue(':attempts', $attempts, PDO::PARAM_INT);
+        $failStmt->bindValue(':last_error', mb_substr($errorText, 0, 65535), PDO::PARAM_STR);
+        $failStmt->execute();
+    }
 
-    $modx->log(modX::LOG_LEVEL_ERROR, '[pending-emails] send failed for queue #' . $id . ': ' . $errorText);
+    $modx->log(modX::LOG_LEVEL_ERROR, $logPrefix . ' email send failed, queueId=' . $id . ', attempts=' . $attempts . '/' . $maxAttempts . ', last_error=' . $errorText);
+    if ($isFinalFail) {
+        $modx->log(modX::LOG_LEVEL_ERROR, $logPrefix . ' moved to failed, queueId=' . $id);
+    }
+
     $failedCount++;
 }
 
-echo "[" . date('Y-m-d H:i:s') . "] processed=" . count($rows) . ", sent={$sentCount}, failed={$failedCount}\n";
+$modx->log(modX::LOG_LEVEL_INFO, $logPrefix . ' queue processing finished: processed=' . count($rows) . ', sent=' . $sentCount . ', failed=' . $failedCount);
+echo '[' . date('Y-m-d H:i:s') . '] processed=' . count($rows) . ', sent=' . $sentCount . ', failed=' . $failedCount . "\n";
+
 exit(0);
