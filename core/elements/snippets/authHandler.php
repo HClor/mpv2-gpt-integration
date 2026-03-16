@@ -247,18 +247,8 @@ $registerUser = static function (modX $modx, array $post) use ($sendActivationEm
         }
         $authLog($modx, 'REGISTER STEP 6: user saved id=' . (int)$user->id, modX::LOG_LEVEL_INFO);
 
-        $studentGroup = $modx->getObject('modUserGroup', ['name' => 'LMS Students']);
-        if ($studentGroup) {
-            $membership = $modx->newObject('modUserGroupMember');
-            $membership->set('user_group', $studentGroup->id);
-            $membership->set('member', $user->id);
-            $membership->set('role', 1);
-            $membership->set('rank', 0);
-            $membership->save();
-            $authLog($modx, 'REGISTER STEP 7: added to LMS Students', modX::LOG_LEVEL_INFO);
-        } else {
-            $authLog($modx, 'REGISTER STEP 7 WARNING: group LMS Students not found', modX::LOG_LEVEL_WARN);
-        }
+        // Compatibility mode: skip auto-membership to avoid modAccess/modUserGroup failures on some legacy installs.
+        $authLog($modx, 'REGISTER STEP 7: skip LMS Students auto-membership for compatibility', modX::LOG_LEVEL_WARN);
 
         $modx->commit();
         $authLog($modx, 'REGISTER STEP 8: transaction commit', modX::LOG_LEVEL_INFO);
