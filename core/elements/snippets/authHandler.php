@@ -162,7 +162,7 @@ $sendActivationEmail = static function (modX $modx, string $email, string $usern
         <p>Здравствуйте, ' . htmlspecialchars($username, ENT_QUOTES, 'UTF-8') . '!</p>
         <p>Для завершения регистрации подтвердите email по ссылке:</p>
         <p><a href="' . htmlspecialchars($activationUrl, ENT_QUOTES, 'UTF-8') . '">Активировать аккаунт</a></p>
-        <p>Ссылка действует ' . $activationTtlHours . ' часа(ов).</p>
+        <p>Ссылка действует ' . $activationTtlHours . ' часа.</p>
         <p>Если вы не регистрировались, просто проигнорируйте это письмо.</p>
     ');
     $modx->mail->set(modMail::MAIL_FROM, $modx->getOption('emailsender'));
@@ -394,11 +394,22 @@ $resendActivationEmail = static function (modX $modx, string $email) use ($sendA
 
     $user = $modx->getObject('modUser', $userId);
     $profile = $user ? $user->getOne('Profile') : null;
-    if (!$user || !$profile || (int)$user->get('active') === 1) {
+    if (!$user || !$profile) {
+        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] resend missing user/profile for userId=' . $userId);
+        return ['errors' => [], 'success' => [$genericSuccess]];
+    }
+
+    if ((int)$user->get('active') === 1) {
         return ['errors' => [], 'success' => [$genericSuccess]];
     }
 
     $extended = $profile->get('extended') ?: [];
+    $lastSentAt = isset($extended['activation_sent_at']) ? strtotime((string)$extended['activation_sent_at']) : false;
+    if ($lastSentAt !== false && (time() - $lastSentAt) < 300) {
+        $modx->log(modX::LOG_LEVEL_WARN, '[authHandler] resend rate limited, userId=' . $userId);
+        return ['errors' => [], 'success' => [$genericSuccess]];
+    }
+
     $activationToken = bin2hex(random_bytes(32));
     $activationTtlHours = (int)$modx->getOption('auth_activation_ttl_hours', null, 24);
     $extended['activation_token'] = $activationToken;
@@ -454,7 +465,8 @@ $loginUser = static function (modX $modx, array $post): array {
         return ['errors' => ['Неверный логин или пароль'], 'success' => []];
     }
 
-    return ['errors' => [], 'success' => [], 'redirect' => $modx->makeUrl(35)];
+    $afterLoginResourceId = (int)$modx->getOption('auth_after_login_resource_id', null, 35);
+    return ['errors' => [], 'success' => [], 'redirect' => $modx->makeUrl($afterLoginResourceId > 0 ? $afterLoginResourceId : 35)];
 };
 
 // Action handlers
@@ -549,35 +561,42 @@ if ($_POST && $mode === 'forgot') {
                     $extended['reset_token'] = $token;
                     $extended['reset_expiry'] = $expiry;
                     $profile->set('extended', $extended);
-                    $profile->save();
-
-                    $resetUrl = $modx->makeUrl((int)$modx->resource->id, '', [
-                        'mode' => 'reset',
-                        'token' => $token,
-                    ], 'full');
-
-                    if (!$prepareMailTransport($modx, 'forgot_password')) {
-                        $errors[] = 'Ошибка отправки email. Почтовый сервис временно недоступен.';
+                    if (!$profile->save()) {
+                        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] forgot token save failed, userId=' . $userId);
+                        $errors[] = 'Не удалось подготовить восстановление пароля. Попробуйте позже.';
                     } else {
-                        $modx->mail->set(modMail::MAIL_FROM, $modx->getOption('emailsender'));
-                        $modx->mail->set(modMail::MAIL_FROM_NAME, $modx->getOption('site_name'));
-                        $modx->mail->set(modMail::MAIL_SUBJECT, 'Восстановление пароля');
-                        $modx->mail->set(modMail::MAIL_BODY, '
-                            <h3>Восстановление пароля</h3>
-                            <p>Вы запросили восстановление пароля на сайте ' . htmlspecialchars((string)$modx->getOption('site_name'), ENT_QUOTES, 'UTF-8') . '.</p>
-                            <p><a href="' . htmlspecialchars($resetUrl, ENT_QUOTES, 'UTF-8') . '">Нажмите здесь для установки нового пароля</a></p>
-                            <p>Ссылка действительна 1 час.</p>
-                            <p>Если вы не запрашивали восстановление пароля, проигнорируйте это письмо.</p>
-                        ');
-                        $modx->mail->address('to', $email);
-                        $modx->mail->setHTML(true);
 
-                        if ($sendMailSafely($modx, 'forgot_password')) {
-                            $success[] = 'Ссылка для восстановления пароля отправлена на ваш email';
+                        $resetUrl = $modx->makeUrl((int)$modx->resource->id, '', [
+                            'mode' => 'reset',
+                            'token' => $token,
+                        ], 'full');
+
+                        if (!$prepareMailTransport($modx, 'forgot_password')) {
+                            $errors[] = 'Ошибка отправки email. Почтовый сервис временно недоступен.';
                         } else {
-                            $errors[] = 'Ошибка отправки email. Обратитесь к администратору.';
+                            $modx->mail->set(modMail::MAIL_FROM, $modx->getOption('emailsender'));
+                            $modx->mail->set(modMail::MAIL_FROM_NAME, $modx->getOption('site_name'));
+                            $modx->mail->set(modMail::MAIL_SUBJECT, 'Восстановление пароля');
+                            $modx->mail->set(modMail::MAIL_BODY, '
+                                <h3>Восстановление пароля</h3>
+                                <p>Вы запросили восстановление пароля на сайте ' . htmlspecialchars((string)$modx->getOption('site_name'), ENT_QUOTES, 'UTF-8') . '.</p>
+                                <p><a href="' . htmlspecialchars($resetUrl, ENT_QUOTES, 'UTF-8') . '">Нажмите здесь для установки нового пароля</a></p>
+                                <p>Ссылка действительна 1 час.</p>
+                                <p>Если вы не запрашивали восстановление пароля, проигнорируйте это письмо.</p>
+                            ');
+                            $modx->mail->address('to', $email);
+                            $modx->mail->setHTML(true);
+
+                            if ($sendMailSafely($modx, 'forgot_password')) {
+                                $success[] = 'Ссылка для восстановления пароля отправлена на ваш email';
+                            } else {
+                                $errors[] = 'Ошибка отправки email. Обратитесь к администратору.';
+                            }
                         }
                     }
+                } else {
+                    $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] forgot missing user/profile for userId=' . $userId);
+                    $success[] = 'Если email зарегистрирован, ссылка для восстановления будет отправлена';
                 }
             } else {
                 $success[] = 'Если email зарегистрирован, ссылка для восстановления будет отправлена';
