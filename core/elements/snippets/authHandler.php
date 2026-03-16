@@ -112,9 +112,6 @@ $sendActivationEmail = static function ($modx, string $email, string $username, 
         $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Failed to send activation email: ' . $errorInfo);
     }
     $modx->mail->reset();
-    $restoreDbConnection($modx);
-
-
 
     return $sent;
 };
@@ -303,13 +300,10 @@ if ($_POST && $mode === "register") {
                         if ($created) {
                             $mailSent = $sendActivationEmail($modx, $email, $username, $activationToken);
 
-                            $success[] = "✅ Аккаунт создан.";
                             if ($mailSent) {
-                                $success[] = "Письмо с активацией отправлено на ваш email.";
+                                $success[] = "✅ Аккаунт создан. Ссылка для активации отправлена на ваш email.";
                             } else {
-                                $errors[] = "Аккаунт создан, но письмо активации не отправлено. Используйте повторную отправку по кнопке ниже.";
-                                $mode = 'resend_activation';
-                                $prefillResendEmail = $email;
+                                $errors[] = "Аккаунт создан, но письмо активации не отправлено. Пожалуйста, свяжитесь с администратором сайта.";
                             }
                         } else {
                             $errors[] = "Ошибка создания пользователя";
@@ -319,9 +313,6 @@ if ($_POST && $mode === "register") {
             }
         }
     }
-}
-
-
 }
 
 // ПОВТОРНАЯ ОТПРАВКА АКТИВАЦИИ
