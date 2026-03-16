@@ -112,6 +112,8 @@ $sendActivationEmail = static function ($modx, string $email, string $username, 
         $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Failed to send activation email: ' . $errorInfo);
     }
     $modx->mail->reset();
+    $restoreDbConnection($modx);
+
 
 
     return $sent;
@@ -317,6 +319,9 @@ if ($_POST && $mode === "register") {
             }
         }
     }
+}
+
+
 }
 
 // ПОВТОРНАЯ ОТПРАВКА АКТИВАЦИИ
