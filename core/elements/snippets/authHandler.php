@@ -75,6 +75,10 @@ $checkSmtpReachable = static function (modX $modx) use ($authLog): bool {
     return false;
 };
 
+$authLog = static function (modX $modx, string $message, int $level = modX::LOG_LEVEL_ERROR): void {
+    $modx->log($level, '[authHandler][diag] ' . $message);
+};
+
 // FLASH-СООБЩЕНИЯ (PRG-паттерн)
 $flash = $_SESSION['auth_handler_flash'] ?? null;
 if (is_array($flash)) {
@@ -153,6 +157,13 @@ $sendActivationEmail = static function (modX $modx, string $email, string $usern
     if (!$checkSmtpReachable($modx)) {
         $authLog($modx, 'ACTIVATION MAIL STOP: SMTP preflight failed');
         return false;
+    }
+
+    $fromEmail = trim((string)$modx->getOption('emailsender'));
+    if (!filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
+        $fallbackDomain = trim((string)($_SERVER['HTTP_HOST'] ?? 'localhost'));
+        $fromEmail = 'noreply@' . preg_replace('/:\\d+$/', '', $fallbackDomain);
+        $authLog($modx, 'ACTIVATION MAIL STEP 2 WARNING: invalid system emailsender, fallback=' . $fromEmail, modX::LOG_LEVEL_WARN);
     }
 
     $fromEmail = trim((string)$modx->getOption('emailsender'));
@@ -242,6 +253,8 @@ $sendForgotPasswordEmail = static function (modX $modx, string $email, string $r
 $registerUser = static function (modX $modx, array $post) use ($sendActivationEmail, $authLog): array {
     $errors = [];
     $success = [];
+
+    $authLog($modx, 'REGISTER STEP 1: start registration flow', modX::LOG_LEVEL_INFO);
 
     $authLog($modx, 'REGISTER STEP 1: start registration flow', modX::LOG_LEVEL_INFO);
 
