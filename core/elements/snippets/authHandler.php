@@ -53,8 +53,30 @@ $mode = $_GET["mode"] ?? ($_POST["mode"] ?? "login");
 $prefillResendEmail = "";
 
 /**
- * Отправка письма с ссылкой активации
+ * Настройка и безопасная отправка email
  */
+$restoreDbConnection = static function ($modx, string $context): void {
+    try {
+        $pingStmt = $modx->query('SELECT 1');
+        if ($pingStmt !== false) {
+            return;
+        }
+    } catch (Throwable $e) {
+        $modx->log(modX::LOG_LEVEL_WARN, '[authHandler] DB ping failed after ' . $context . ': ' . $e->getMessage());
+    }
+
+    if (isset($modx->connection) && is_object($modx->connection) && property_exists($modx->connection, 'pdo')) {
+        $modx->connection->pdo = null;
+    }
+    if (property_exists($modx, 'pdo')) {
+        $modx->pdo = null;
+    }
+
+    if (!$modx->connect()) {
+        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Failed to reconnect DB after ' . $context);
+    }
+};
+
 $prepareMailTransport = static function ($modx, string $context) {
     $mailService = $modx->getService('mail', 'mail.modPHPMailer');
     if (!$mailService || !isset($modx->mail)) {
@@ -66,7 +88,13 @@ $prepareMailTransport = static function ($modx, string $context) {
     if ($mailer) {
         // Не даем SMTP-запросам зависать до 504 на фронте.
         if (property_exists($mailer, 'Timeout')) {
-            $mailer->Timeout = 10;
+            $mailer->Timeout = 8;
+        }
+        if (property_exists($mailer, 'SMTPTimeout')) {
+            $mailer->SMTPTimeout = 8;
+        }
+        if (property_exists($mailer, 'Timelimit')) {
+            $mailer->Timelimit = 10;
         }
         if (property_exists($mailer, 'SMTPKeepAlive')) {
             $mailer->SMTPKeepAlive = false;
@@ -79,7 +107,26 @@ $prepareMailTransport = static function ($modx, string $context) {
     return true;
 };
 
-$sendActivationEmail = static function ($modx, string $email, string $username, string $activationToken) use ($prepareMailTransport) {
+$sendMailSafely = static function ($modx, string $context) use ($restoreDbConnection): bool {
+    $sent = false;
+    try {
+        $sent = $modx->mail->send();
+    } catch (Throwable $e) {
+        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Mail send exception (' . $context . '): ' . $e->getMessage());
+    }
+
+    if (!$sent) {
+        $errorInfo = isset($modx->mail->mailer->ErrorInfo) ? (string)$modx->mail->mailer->ErrorInfo : 'unknown error';
+        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Failed to send email (' . $context . '): ' . $errorInfo);
+    }
+
+    $modx->mail->reset();
+    $restoreDbConnection($modx, $context);
+
+    return $sent;
+};
+
+$sendActivationEmail = static function ($modx, string $email, string $username, string $activationToken) use ($prepareMailTransport, $sendMailSafely) {
     $activationUrl = $modx->makeUrl($modx->resource->id, '', [
         'mode' => 'activate',
         'token' => $activationToken
@@ -106,14 +153,7 @@ $sendActivationEmail = static function ($modx, string $email, string $username, 
     $modx->mail->address('to', $email);
     $modx->mail->setHTML(true);
 
-    $sent = $modx->mail->send();
-    if (!$sent) {
-        $errorInfo = isset($modx->mail->mailer->ErrorInfo) ? (string)$modx->mail->mailer->ErrorInfo : 'unknown error';
-        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Failed to send activation email: ' . $errorInfo);
-    }
-    $modx->mail->reset();
-
-    return $sent;
+    return $sendMailSafely($modx, 'activation');
 };
 
 
@@ -442,14 +482,11 @@ if ($_POST && $mode === "forgot") {
                             $modx->mail->address('to', $email);
                             $modx->mail->setHTML(true);
 
-                            if ($modx->mail->send()) {
+                            if ($sendMailSafely($modx, 'forgot_password')) {
                                 $success[] = "Ссылка для восстановления пароля отправлена на ваш email";
                             } else {
                                 $errors[] = "Ошибка отправки email. Обратитесь к администратору.";
-                                $errorInfo = isset($modx->mail->mailer->ErrorInfo) ? (string)$modx->mail->mailer->ErrorInfo : 'unknown error';
-                                $modx->log(modX::LOG_LEVEL_ERROR, "[authHandler] Failed to send reset email: " . $errorInfo);
                             }
-                            $modx->mail->reset();
                         }
                     }
                 }
