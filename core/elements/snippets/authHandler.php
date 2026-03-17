@@ -23,112 +23,6 @@ $mode = $_GET['mode'] ?? ($_POST['mode'] ?? 'login');
 $prefillResendEmail = '';
 
 $authLog = static function (modX $modx, string $message, int $level = modX::LOG_LEVEL_ERROR): void {
-    // Пишем всё как ERROR, чтобы шаги были видны даже при log_level=ERROR в MODX.
-    $levelName = match ($level) {
-        modX::LOG_LEVEL_INFO => 'INFO',
-        modX::LOG_LEVEL_WARN => 'WARN',
-        modX::LOG_LEVEL_ERROR => 'ERROR',
-        default => 'LOG'
-    };
-    $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler][diag][' . $levelName . '] ' . $message);
-};
-
-$checkSmtpReachable = static function (modX $modx) use ($authLog): bool {
-    $useSmtp = (bool)$modx->getOption('mail_use_smtp', null, false);
-    if (!$useSmtp) {
-        $authLog($modx, 'MAIL PREFLIGHT: mail_use_smtp=0, skip SMTP socket check', modX::LOG_LEVEL_INFO);
-        return true;
-    }
-
-    $hostsRaw = trim((string)$modx->getOption('mail_smtp_hosts', null, ''));
-    if ($hostsRaw === '') {
-        $hostsRaw = trim((string)$modx->getOption('mail_smtp_host', null, ''));
-    }
-    $port = (int)$modx->getOption('mail_smtp_port', null, 25);
-    $timeout = 3.0;
-
-    if ($hostsRaw === '') {
-        $authLog($modx, 'MAIL PREFLIGHT WARNING: SMTP enabled but host is empty', modX::LOG_LEVEL_WARN);
-        return false;
-    }
-
-    $hosts = preg_split('/[;,]+/', $hostsRaw) ?: [];
-    foreach ($hosts as $host) {
-        $host = trim($host);
-        if ($host === '') {
-            continue;
-        }
-
-        $authLog($modx, 'MAIL PREFLIGHT: socket check ' . $host . ':' . $port, modX::LOG_LEVEL_INFO);
-        $errno = 0;
-        $errstr = '';
-        $conn = @stream_socket_client('tcp://' . $host . ':' . $port, $errno, $errstr, $timeout);
-        if (is_resource($conn)) {
-            fclose($conn);
-            $authLog($modx, 'MAIL PREFLIGHT OK: SMTP host reachable ' . $host . ':' . $port, modX::LOG_LEVEL_INFO);
-            return true;
-        }
-
-        $authLog($modx, 'MAIL PREFLIGHT FAIL: ' . $host . ':' . $port . ' errno=' . $errno . ' err=' . $errstr, modX::LOG_LEVEL_WARN);
-    }
-
-    return false;
-};
-
-$authLog = static function (modX $modx, string $message, int $level = modX::LOG_LEVEL_ERROR): void {
-    // Пишем всё как ERROR, чтобы шаги были видны даже при log_level=ERROR в MODX.
-    $levelName = match ($level) {
-        modX::LOG_LEVEL_INFO => 'INFO',
-        modX::LOG_LEVEL_WARN => 'WARN',
-        modX::LOG_LEVEL_ERROR => 'ERROR',
-        default => 'LOG'
-    };
-    $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler][diag][' . $levelName . '] ' . $message);
-};
-
-$checkSmtpReachable = static function (modX $modx) use ($authLog): bool {
-    $useSmtp = (bool)$modx->getOption('mail_use_smtp', null, false);
-    if (!$useSmtp) {
-        $authLog($modx, 'MAIL PREFLIGHT: mail_use_smtp=0, skip SMTP socket check', modX::LOG_LEVEL_INFO);
-        return true;
-    }
-
-    $hostsRaw = trim((string)$modx->getOption('mail_smtp_hosts', null, ''));
-    if ($hostsRaw === '') {
-        $hostsRaw = trim((string)$modx->getOption('mail_smtp_host', null, ''));
-    }
-    $port = (int)$modx->getOption('mail_smtp_port', null, 25);
-    $timeout = 3.0;
-
-    if ($hostsRaw === '') {
-        $authLog($modx, 'MAIL PREFLIGHT WARNING: SMTP enabled but host is empty', modX::LOG_LEVEL_WARN);
-        return false;
-    }
-
-    $hosts = preg_split('/[;,]+/', $hostsRaw) ?: [];
-    foreach ($hosts as $host) {
-        $host = trim($host);
-        if ($host === '') {
-            continue;
-        }
-
-        $authLog($modx, 'MAIL PREFLIGHT: socket check ' . $host . ':' . $port, modX::LOG_LEVEL_INFO);
-        $errno = 0;
-        $errstr = '';
-        $conn = @stream_socket_client('tcp://' . $host . ':' . $port, $errno, $errstr, $timeout);
-        if (is_resource($conn)) {
-            fclose($conn);
-            $authLog($modx, 'MAIL PREFLIGHT OK: SMTP host reachable ' . $host . ':' . $port, modX::LOG_LEVEL_INFO);
-            return true;
-        }
-
-        $authLog($modx, 'MAIL PREFLIGHT FAIL: ' . $host . ':' . $port . ' errno=' . $errno . ' err=' . $errstr, modX::LOG_LEVEL_WARN);
-    }
-
-    return false;
-};
-
-$authLog = static function (modX $modx, string $message, int $level = modX::LOG_LEVEL_ERROR): void {
     $modx->log($level, '[authHandler][diag] ' . $message);
 };
 
@@ -176,6 +70,7 @@ if ($modx->user->hasSessionContext('web') && $modx->user->id > 0) {
 // ====================== ПОДГОТОВКА И ОТПРАВКА ПИСЕМ ======================
 $prepareMailTransport = static function (modX $modx) use ($authLog) {
     $authLog($modx, 'MAIL STEP 1: init mail service', modX::LOG_LEVEL_INFO);
+
     $mailService = $modx->getService('mail', 'mail.modPHPMailer');
     if (!$mailService || !isset($modx->mail)) {
         $authLog($modx, 'MAIL STEP 1 FAILED: mail service unavailable');
@@ -183,10 +78,26 @@ $prepareMailTransport = static function (modX $modx) use ($authLog) {
     }
 
     if ($modx->mail->mailer) {
-        $authLog($modx, 'MAIL STEP 2: configure transport (Timeout=10, KeepAlive=off, AutoTLS=on)', modX::LOG_LEVEL_INFO);
-        $modx->mail->mailer->Timeout = 10;
+        $mailTimeout = max(2, min(15, (int)$modx->getOption('auth_mail_timeout', null, 6)));
+        $autoTls = (bool)$modx->getOption('mail_smtp_autotls', null, false);
+
+        $authLog(
+            $modx,
+            'MAIL STEP 2: configure transport (Timeout=' . $mailTimeout
+            . ', KeepAlive=off, AutoTLS=' . ($autoTls ? 'on' : 'off') . ')',
+            modX::LOG_LEVEL_INFO
+        );
+
+        $modx->mail->mailer->Timeout = $mailTimeout;
+        $modx->mail->mailer->Timelimit = $mailTimeout;
         $modx->mail->mailer->SMTPKeepAlive = false;
-        $modx->mail->mailer->SMTPAutoTLS = true;
+        $modx->mail->mailer->SMTPAutoTLS = $autoTls;
+
+        // Временная детальная SMTP-диагностика
+        $modx->mail->mailer->SMTPDebug = 2;
+        $modx->mail->mailer->Debugoutput = static function ($str, $level) use ($modx): void {
+            $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler][smtp][' . $level . '] ' . $str);
+        };
     } else {
         $authLog($modx, 'MAIL STEP 2 WARNING: mailer object is empty', modX::LOG_LEVEL_WARN);
     }
@@ -195,8 +106,9 @@ $prepareMailTransport = static function (modX $modx) use ($authLog) {
     return true;
 };
 
-$sendActivationEmail = static function (modX $modx, string $email, string $username, string $activationToken) use ($prepareMailTransport, $checkSmtpReachable, $authLog): bool {
+$sendActivationEmail = static function (modX $modx, string $email, string $username, string $activationToken) use ($prepareMailTransport, $authLog): bool {
     $authLog($modx, 'ACTIVATION MAIL STEP 1: build activation URL for ' . $email, modX::LOG_LEVEL_INFO);
+
     $activationUrl = $modx->makeUrl($modx->resource->id, '', [
         'mode' => 'activate',
         'token' => $activationToken
@@ -207,29 +119,17 @@ $sendActivationEmail = static function (modX $modx, string $email, string $usern
         return false;
     }
 
-    if (!$checkSmtpReachable($modx)) {
-        $authLog($modx, 'ACTIVATION MAIL STOP: SMTP preflight failed');
-        return false;
-    }
-
     $fromEmail = trim((string)$modx->getOption('emailsender'));
     if (!filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
         $fallbackDomain = trim((string)($_SERVER['HTTP_HOST'] ?? 'localhost'));
-        $fromEmail = 'noreply@' . preg_replace('/:\\d+$/', '', $fallbackDomain);
-        $authLog($modx, 'ACTIVATION MAIL STEP 2 WARNING: invalid system emailsender, fallback=' . $fromEmail, modX::LOG_LEVEL_WARN);
-    }
+        $fallbackDomain = preg_replace('/:\d+$/', '', $fallbackDomain);
+        $fallbackDomain = preg_replace('/^www\./i', '', $fallbackDomain);
 
-    $fromEmail = trim((string)$modx->getOption('emailsender'));
-    if (!filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
-        $fallbackDomain = trim((string)($_SERVER['HTTP_HOST'] ?? 'localhost'));
-        $fromEmail = 'noreply@' . preg_replace('/:\\d+$/', '', $fallbackDomain);
-        $authLog($modx, 'ACTIVATION MAIL STEP 2 WARNING: invalid system emailsender, fallback=' . $fromEmail, modX::LOG_LEVEL_WARN);
-    }
+        if ($fallbackDomain === '' || $fallbackDomain === 'localhost') {
+            $fallbackDomain = 'lmix.ru';
+        }
 
-    $fromEmail = trim((string)$modx->getOption('emailsender'));
-    if (!filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
-        $fallbackDomain = trim((string)($_SERVER['HTTP_HOST'] ?? 'localhost'));
-        $fromEmail = 'noreply@' . preg_replace('/:\\d+$/', '', $fallbackDomain);
+        $fromEmail = 'noreply@' . $fallbackDomain;
         $authLog($modx, 'ACTIVATION MAIL STEP 2 WARNING: invalid system emailsender, fallback=' . $fromEmail, modX::LOG_LEVEL_WARN);
     }
 
@@ -244,14 +144,23 @@ $sendActivationEmail = static function (modX $modx, string $email, string $usern
 
     $modx->mail->set(modMail::MAIL_BODY, $body);
     $authLog($modx, 'ACTIVATION MAIL STEP 3: set envelope/headers', modX::LOG_LEVEL_INFO);
+
     $modx->mail->set(modMail::MAIL_FROM, $fromEmail);
-    $modx->mail->set(modMail::MAIL_FROM_NAME, $modx->getOption('site_name'));
+    $modx->mail->set(modMail::MAIL_FROM_NAME, (string)$modx->getOption('site_name'));
     $modx->mail->set(modMail::MAIL_SUBJECT, 'Активация аккаунта - ' . $modx->getOption('site_name'));
     $modx->mail->address('to', $email);
     $modx->mail->setHTML(true);
 
     $authLog($modx, 'ACTIVATION MAIL STEP 4: send()', modX::LOG_LEVEL_INFO);
-    $sent = $modx->mail->send();
+
+    try {
+        $sent = $modx->mail->send();
+    } catch (Throwable $e) {
+        $authLog($modx, 'ACTIVATION MAIL STEP 4 EXCEPTION: ' . $e->getMessage());
+        $modx->mail->reset();
+        return false;
+    }
+
     if (!$sent) {
         $errorInfo = $modx->mail->mailer->ErrorInfo ?? 'unknown error';
         $authLog($modx, 'ACTIVATION MAIL STEP 4 FAILED: ' . $errorInfo);
@@ -262,10 +171,9 @@ $sendActivationEmail = static function (modX $modx, string $email, string $usern
     $authLog($modx, 'ACTIVATION MAIL STEP 5: mail reset()', modX::LOG_LEVEL_INFO);
     $modx->mail->reset();
 
-    // После долгой SMTP-операции на shared-хостинге соединение с MySQL может быть разорвано.
-    // Делаем reconnect без предварительного ping, чтобы не провоцировать лишний SQL-error в логах.
     $authLog($modx, 'ACTIVATION MAIL STEP 6: force DB reconnect after mail flow', modX::LOG_LEVEL_INFO);
     $reconnectOk = $modx->connect();
+
     if (!$reconnectOk) {
         $authLog($modx, 'ACTIVATION MAIL STEP 6 FAILED: DB reconnect failed');
     } else {
@@ -275,9 +183,24 @@ $sendActivationEmail = static function (modX $modx, string $email, string $usern
     return $sent;
 };
 
-$sendForgotPasswordEmail = static function (modX $modx, string $email, string $resetUrl) use ($prepareMailTransport): bool {
+$sendForgotPasswordEmail = static function (modX $modx, string $email, string $resetUrl) use ($prepareMailTransport, $authLog): bool {
     if (!$prepareMailTransport($modx)) {
+        $authLog($modx, 'RESET MAIL STOP: transport is not ready');
         return false;
+    }
+
+    $fromEmail = trim((string)$modx->getOption('emailsender'));
+    if (!filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
+        $fallbackDomain = trim((string)($_SERVER['HTTP_HOST'] ?? 'localhost'));
+        $fallbackDomain = preg_replace('/:\d+$/', '', $fallbackDomain);
+        $fallbackDomain = preg_replace('/^www\./i', '', $fallbackDomain);
+
+        if ($fallbackDomain === '' || $fallbackDomain === 'localhost') {
+            $fallbackDomain = 'lmix.ru';
+        }
+
+        $fromEmail = 'noreply@' . $fallbackDomain;
+        $authLog($modx, 'RESET MAIL WARNING: invalid system emailsender, fallback=' . $fromEmail, modX::LOG_LEVEL_WARN);
     }
 
     $body = '
@@ -289,19 +212,28 @@ $sendForgotPasswordEmail = static function (modX $modx, string $email, string $r
     ';
 
     $modx->mail->set(modMail::MAIL_BODY, $body);
-    $modx->mail->set(modMail::MAIL_FROM, $modx->getOption('emailsender'));
-    $modx->mail->set(modMail::MAIL_FROM_NAME, $modx->getOption('site_name'));
+    $modx->mail->set(modMail::MAIL_FROM, $fromEmail);
+    $modx->mail->set(modMail::MAIL_FROM_NAME, (string)$modx->getOption('site_name'));
     $modx->mail->set(modMail::MAIL_SUBJECT, 'Восстановление пароля');
     $modx->mail->address('to', $email);
     $modx->mail->setHTML(true);
 
-    $sent = $modx->mail->send();
+    try {
+        $sent = $modx->mail->send();
+    } catch (Throwable $e) {
+        $authLog($modx, 'RESET MAIL EXCEPTION: ' . $e->getMessage());
+        $modx->mail->reset();
+        return false;
+    }
+
     if (!$sent) {
         $errorInfo = $modx->mail->mailer->ErrorInfo ?? 'unknown error';
-        $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler] Failed to send reset email: ' . $errorInfo);
+        $authLog($modx, 'RESET MAIL FAILED: ' . $errorInfo);
+    } else {
+        $authLog($modx, 'RESET MAIL OK: email sent to ' . $email, modX::LOG_LEVEL_INFO);
     }
-    $modx->mail->reset();
 
+    $modx->mail->reset();
     return $sent;
 };
 
@@ -309,10 +241,6 @@ $sendForgotPasswordEmail = static function (modX $modx, string $email, string $r
 $registerUser = static function (modX $modx, array $post) use ($sendActivationEmail, $authLog): array {
     $errors = [];
     $success = [];
-
-    $authLog($modx, 'REGISTER STEP 1: start registration flow', modX::LOG_LEVEL_INFO);
-
-    $authLog($modx, 'REGISTER STEP 1: start registration flow', modX::LOG_LEVEL_INFO);
 
     $authLog($modx, 'REGISTER STEP 1: start registration flow', modX::LOG_LEVEL_INFO);
 
@@ -332,7 +260,34 @@ $registerUser = static function (modX $modx, array $post) use ($sendActivationEm
     }
     $authLog($modx, 'REGISTER STEP 2 OK: input validation', modX::LOG_LEVEL_INFO);
 
-    if ($modx->getObject('modUser', ['username' => $username])) {
+    $existingUserByUsername = $modx->getObject('modUser', ['username' => $username]);
+    if ($existingUserByUsername) {
+        $existingProfile = $existingUserByUsername->getOne('Profile');
+        $existingEmail = $existingProfile ? trim((string)$existingProfile->get('email')) : '';
+        if ((int)$existingUserByUsername->get('active') !== 1 && $existingEmail !== '' && strcasecmp($existingEmail, $email) === 0) {
+            $authLog($modx, 'REGISTER STEP 3 IDEMPOTENT: inactive user exists with same username/email=' . $username, modX::LOG_LEVEL_WARN);
+
+            $activationToken = bin2hex(random_bytes(32));
+            $existingExtended = $existingProfile->get('extended') ?: [];
+            $existingExtended['activation_token'] = $activationToken;
+            $existingExtended['activation_sent_at'] = date('Y-m-d H:i:s');
+            $existingExtended['activation_expires_at'] = date('Y-m-d H:i:s', strtotime('+24 hours'));
+            $existingProfile->set('extended', $existingExtended);
+            $existingProfile->save();
+
+            $success[] = 'Аккаунт уже создан и ожидает активации. Отправим письмо с активацией повторно.';
+            return [
+                'errors' => $errors,
+                'success' => $success,
+                'prg_redirect' => $modx->makeUrl($modx->resource->id, '', ['mode' => 'login']),
+                'deferred_mail' => [
+                    'email' => $email,
+                    'username' => $username,
+                    'token' => $activationToken
+                ]
+            ];
+        }
+
         $authLog($modx, 'REGISTER STEP 3 FAILED: username exists=' . $username, modX::LOG_LEVEL_WARN);
         $errors[] = 'Логин уже занят';
         return ['errors' => $errors, 'success' => $success];
@@ -398,19 +353,18 @@ $registerUser = static function (modX $modx, array $post) use ($sendActivationEm
         return ['errors' => $errors, 'success' => $success];
     }
 
-    $authLog($modx, 'REGISTER STEP 9: send activation email', modX::LOG_LEVEL_INFO);
-    $mailSent = $sendActivationEmail($modx, $email, $username, $activationToken);
-
-    if ($mailSent) {
-        $success[] = '✅ Аккаунт создан. Письмо с ссылкой активации отправлено на ' . htmlspecialchars($email);
-    } else {
-        $errors[] = 'Аккаунт создан, но письмо не отправлено. Используйте повторную отправку.';
-    }
+    $authLog($modx, 'REGISTER STEP 9: schedule activation email after response', modX::LOG_LEVEL_INFO);
+    $success[] = '✅ Аккаунт создан. Письмо активации будет отправлено в фоновом режиме. Если не придёт — используйте повторную отправку.';
 
     return [
         'errors' => $errors,
         'success' => $success,
-        'prg_redirect' => $modx->makeUrl($modx->resource->id, '', ['mode' => 'login'])
+        'prg_redirect' => $modx->makeUrl($modx->resource->id, '', ['mode' => 'login']),
+        'deferred_mail' => [
+            'email' => $email,
+            'username' => $username,
+            'token' => $activationToken
+        ]
     ];
 };
 
@@ -581,7 +535,22 @@ if ($_POST && $mode === 'register') {
                 'errors' => $result['errors'] ?? [],
                 'success' => $result['success'] ?? []
             ];
+            $deferredMail = $result['deferred_mail'] ?? null;
             $modx->sendRedirect($result['prg_redirect']);
+
+            if ($deferredMail && is_array($deferredMail)) {
+                if (function_exists('fastcgi_finish_request')) {
+                    fastcgi_finish_request();
+                }
+                $authLog($modx, 'REGISTER STEP 10: deferred activation email send start', modX::LOG_LEVEL_INFO);
+                $sendActivationEmail(
+                    $modx,
+                    (string)($deferredMail['email'] ?? ''),
+                    (string)($deferredMail['username'] ?? ''),
+                    (string)($deferredMail['token'] ?? '')
+                );
+                $authLog($modx, 'REGISTER STEP 11: deferred activation email send finish', modX::LOG_LEVEL_INFO);
+            }
             exit;
         }
         $errors = array_merge($errors, $result['errors'] ?? []);
