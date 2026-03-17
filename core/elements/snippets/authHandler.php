@@ -238,7 +238,7 @@ $sendForgotPasswordEmail = static function (modX $modx, string $email, string $r
 };
 
 // ====================== РЕГИСТРАЦИЯ ======================
-$registerUser = static function (modX $modx, array $post) use ($sendActivationEmail, $authLog): array {
+$registerUser = static function (modX $modx, array $post) use ($authLog): array {
     $errors = [];
     $success = [];
 
@@ -353,7 +353,7 @@ $registerUser = static function (modX $modx, array $post) use ($sendActivationEm
         return ['errors' => $errors, 'success' => $success];
     }
 
-    $authLog($modx, 'REGISTER STEP 9: schedule activation email after response', modX::LOG_LEVEL_INFO);
+    $authLog($modx, 'REGISTER STEP 9: registration done, activation email prepared', modX::LOG_LEVEL_INFO);
     $success[] = '✅ Аккаунт создан. Проверьте почту и перейдите по ссылке активации. Если письмо не придёт в течение нескольких минут, воспользуйтесь повторной отправкой.';
 
     return [
