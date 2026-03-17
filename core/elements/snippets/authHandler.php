@@ -23,113 +23,50 @@ $mode = $_GET['mode'] ?? ($_POST['mode'] ?? 'login');
 $prefillResendEmail = '';
 
 $authLog = static function (modX $modx, string $message, int $level = modX::LOG_LEVEL_ERROR): void {
-    // Пишем всё как ERROR, чтобы шаги были видны даже при log_level=ERROR в MODX.
-    $levelName = match ($level) {
-        modX::LOG_LEVEL_INFO => 'INFO',
-        modX::LOG_LEVEL_WARN => 'WARN',
-        modX::LOG_LEVEL_ERROR => 'ERROR',
-        default => 'LOG'
-    };
-    $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler][diag][' . $levelName . '] ' . $message);
-};
-
-$checkSmtpReachable = static function (modX $modx) use ($authLog): bool {
-    $useSmtp = (bool)$modx->getOption('mail_use_smtp', null, false);
-    if (!$useSmtp) {
-        $authLog($modx, 'MAIL PREFLIGHT: mail_use_smtp=0, skip SMTP socket check', modX::LOG_LEVEL_INFO);
-        return true;
-    }
-
-    $hostsRaw = trim((string)$modx->getOption('mail_smtp_hosts', null, ''));
-    if ($hostsRaw === '') {
-        $hostsRaw = trim((string)$modx->getOption('mail_smtp_host', null, ''));
-    }
-    $port = (int)$modx->getOption('mail_smtp_port', null, 25);
-    $timeout = 3.0;
-
-    if ($hostsRaw === '') {
-        $authLog($modx, 'MAIL PREFLIGHT WARNING: SMTP enabled but host is empty', modX::LOG_LEVEL_WARN);
-        return false;
-    }
-
-    $hosts = preg_split('/[;,]+/', $hostsRaw) ?: [];
-    foreach ($hosts as $host) {
-        $host = trim($host);
-        if ($host === '') {
-            continue;
-        }
-
-        $authLog($modx, 'MAIL PREFLIGHT: socket check ' . $host . ':' . $port, modX::LOG_LEVEL_INFO);
-        $errno = 0;
-        $errstr = '';
-        $conn = @stream_socket_client('tcp://' . $host . ':' . $port, $errno, $errstr, $timeout);
-        if (is_resource($conn)) {
-            fclose($conn);
-            $authLog($modx, 'MAIL PREFLIGHT OK: SMTP host reachable ' . $host . ':' . $port, modX::LOG_LEVEL_INFO);
-            return true;
-        }
-
-        $authLog($modx, 'MAIL PREFLIGHT FAIL: ' . $host . ':' . $port . ' errno=' . $errno . ' err=' . $errstr, modX::LOG_LEVEL_WARN);
-    }
-
-    return false;
-};
-
-$authLog = static function (modX $modx, string $message, int $level = modX::LOG_LEVEL_ERROR): void {
-    // Пишем всё как ERROR, чтобы шаги были видны даже при log_level=ERROR в MODX.
-    $levelName = match ($level) {
-        modX::LOG_LEVEL_INFO => 'INFO',
-        modX::LOG_LEVEL_WARN => 'WARN',
-        modX::LOG_LEVEL_ERROR => 'ERROR',
-        default => 'LOG'
-    };
-    $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler][diag][' . $levelName . '] ' . $message);
-};
-
-$checkSmtpReachable = static function (modX $modx) use ($authLog): bool {
-    $useSmtp = (bool)$modx->getOption('mail_use_smtp', null, false);
-    if (!$useSmtp) {
-        $authLog($modx, 'MAIL PREFLIGHT: mail_use_smtp=0, skip SMTP socket check', modX::LOG_LEVEL_INFO);
-        return true;
-    }
-
-    $hostsRaw = trim((string)$modx->getOption('mail_smtp_hosts', null, ''));
-    if ($hostsRaw === '') {
-        $hostsRaw = trim((string)$modx->getOption('mail_smtp_host', null, ''));
-    }
-    $port = (int)$modx->getOption('mail_smtp_port', null, 25);
-    $timeout = 3.0;
-
-    if ($hostsRaw === '') {
-        $authLog($modx, 'MAIL PREFLIGHT WARNING: SMTP enabled but host is empty', modX::LOG_LEVEL_WARN);
-        return false;
-    }
-
-    $hosts = preg_split('/[;,]+/', $hostsRaw) ?: [];
-    foreach ($hosts as $host) {
-        $host = trim($host);
-        if ($host === '') {
-            continue;
-        }
-
-        $authLog($modx, 'MAIL PREFLIGHT: socket check ' . $host . ':' . $port, modX::LOG_LEVEL_INFO);
-        $errno = 0;
-        $errstr = '';
-        $conn = @stream_socket_client('tcp://' . $host . ':' . $port, $errno, $errstr, $timeout);
-        if (is_resource($conn)) {
-            fclose($conn);
-            $authLog($modx, 'MAIL PREFLIGHT OK: SMTP host reachable ' . $host . ':' . $port, modX::LOG_LEVEL_INFO);
-            return true;
-        }
-
-        $authLog($modx, 'MAIL PREFLIGHT FAIL: ' . $host . ':' . $port . ' errno=' . $errno . ' err=' . $errstr, modX::LOG_LEVEL_WARN);
-    }
-
-    return false;
-};
-
-$authLog = static function (modX $modx, string $message, int $level = modX::LOG_LEVEL_ERROR): void {
     $modx->log($level, '[authHandler][diag] ' . $message);
+};
+
+$checkSmtpReachable = static function (modX $modx) use ($authLog): bool {
+    $useSmtp = (bool)$modx->getOption('mail_use_smtp', null, false);
+    if (!$useSmtp) {
+        $authLog($modx, 'MAIL PREFLIGHT: mail_use_smtp=0, skip SMTP socket check', modX::LOG_LEVEL_INFO);
+        return true;
+    }
+
+    $hostsRaw = trim((string)$modx->getOption('mail_smtp_hosts', null, ''));
+    if ($hostsRaw === '') {
+        $hostsRaw = trim((string)$modx->getOption('mail_smtp_host', null, ''));
+    }
+    $port = (int)$modx->getOption('mail_smtp_port', null, 25);
+    $timeout = max(1.0, min(5.0, (float)$modx->getOption('auth_mail_preflight_timeout', null, 2.0)));
+
+    if ($hostsRaw === '') {
+        $authLog($modx, 'MAIL PREFLIGHT WARNING: SMTP enabled but host is empty', modX::LOG_LEVEL_WARN);
+        return false;
+    }
+
+    $hosts = preg_split('/[;,]+/', $hostsRaw) ?: [];
+    foreach ($hosts as $host) {
+        $host = trim($host);
+        if ($host === '') {
+            continue;
+        }
+
+        $authLog($modx, 'MAIL PREFLIGHT: socket check ' . $host . ':' . $port, modX::LOG_LEVEL_INFO);
+        $errno = 0;
+        $errstr = '';
+        $conn = @stream_socket_client('tcp://' . $host . ':' . $port, $errno, $errstr, $timeout);
+        if (is_resource($conn)) {
+            fclose($conn);
+            $authLog($modx, 'MAIL PREFLIGHT OK: SMTP host reachable ' . $host . ':' . $port, modX::LOG_LEVEL_INFO);
+            return true;
+        }
+
+        $authLog($modx, 'MAIL PREFLIGHT FAIL: ' . $host . ':' . $port . ' errno=' . $errno . ' err=' . $errstr, modX::LOG_LEVEL_WARN);
+    }
+
+    $authLog($modx, 'MAIL PREFLIGHT STOP: no SMTP hosts are reachable', modX::LOG_LEVEL_WARN);
+    return false;
 };
 
 // FLASH-СООБЩЕНИЯ (PRG-паттерн)
@@ -183,8 +120,10 @@ $prepareMailTransport = static function (modX $modx) use ($authLog) {
     }
 
     if ($modx->mail->mailer) {
-        $authLog($modx, 'MAIL STEP 2: configure transport (Timeout=10, KeepAlive=off, AutoTLS=on)', modX::LOG_LEVEL_INFO);
-        $modx->mail->mailer->Timeout = 10;
+        $mailTimeout = max(2, min(15, (int)$modx->getOption('auth_mail_timeout', null, 6)));
+        $authLog($modx, 'MAIL STEP 2: configure transport (Timeout=' . $mailTimeout . ', KeepAlive=off, AutoTLS=on)', modX::LOG_LEVEL_INFO);
+        $modx->mail->mailer->Timeout = $mailTimeout;
+        $modx->mail->mailer->Timelimit = $mailTimeout;
         $modx->mail->mailer->SMTPKeepAlive = false;
         $modx->mail->mailer->SMTPAutoTLS = true;
     } else {
@@ -210,20 +149,6 @@ $sendActivationEmail = static function (modX $modx, string $email, string $usern
     if (!$checkSmtpReachable($modx)) {
         $authLog($modx, 'ACTIVATION MAIL STOP: SMTP preflight failed');
         return false;
-    }
-
-    $fromEmail = trim((string)$modx->getOption('emailsender'));
-    if (!filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
-        $fallbackDomain = trim((string)($_SERVER['HTTP_HOST'] ?? 'localhost'));
-        $fromEmail = 'noreply@' . preg_replace('/:\\d+$/', '', $fallbackDomain);
-        $authLog($modx, 'ACTIVATION MAIL STEP 2 WARNING: invalid system emailsender, fallback=' . $fromEmail, modX::LOG_LEVEL_WARN);
-    }
-
-    $fromEmail = trim((string)$modx->getOption('emailsender'));
-    if (!filter_var($fromEmail, FILTER_VALIDATE_EMAIL)) {
-        $fallbackDomain = trim((string)($_SERVER['HTTP_HOST'] ?? 'localhost'));
-        $fromEmail = 'noreply@' . preg_replace('/:\\d+$/', '', $fallbackDomain);
-        $authLog($modx, 'ACTIVATION MAIL STEP 2 WARNING: invalid system emailsender, fallback=' . $fromEmail, modX::LOG_LEVEL_WARN);
     }
 
     $fromEmail = trim((string)$modx->getOption('emailsender'));
@@ -309,10 +234,6 @@ $sendForgotPasswordEmail = static function (modX $modx, string $email, string $r
 $registerUser = static function (modX $modx, array $post) use ($sendActivationEmail, $authLog): array {
     $errors = [];
     $success = [];
-
-    $authLog($modx, 'REGISTER STEP 1: start registration flow', modX::LOG_LEVEL_INFO);
-
-    $authLog($modx, 'REGISTER STEP 1: start registration flow', modX::LOG_LEVEL_INFO);
 
     $authLog($modx, 'REGISTER STEP 1: start registration flow', modX::LOG_LEVEL_INFO);
 
