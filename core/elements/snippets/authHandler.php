@@ -98,7 +98,7 @@ $prepareMailTransport = static function (modX $modx) use ($authLog) {
         $modx->mail->mailer->SMTPAutoTLS = $autoTls;
 
         // Подробный SMTP debug отключён для production
-        $modx->mail->mailer->SMTPDebug = 2;
+        $modx->mail->mailer->SMTPDebug = 0;
         $modx->mail->mailer->Debugoutput = static function ($str, $level) use ($modx): void {
             $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler][smtp][' . $level . '] ' . $str);
         };
@@ -110,7 +110,7 @@ $prepareMailTransport = static function (modX $modx) use ($authLog) {
     return true;
 };
 
-$sendActivationEmail = static function (modX $modx, string $email, string $username, string $activationToken) use ($prepareMailTransport, $authLog): bool {
+$sendActivationEmail = static function (modX $modx, string $email, string $username, string $activationToken) use ($prepareMailTransport, $authLog, $normalizeMailUrl): bool {
     $authLog($modx, 'ACTIVATION MAIL STEP 1: build activation URL for ' . $email, modX::LOG_LEVEL_INFO);
 
 
@@ -201,7 +201,7 @@ $authLog(
     return $sent;
 };
 
-$sendForgotPasswordEmail = static function (modX $modx, string $email, string $resetUrl) use ($prepareMailTransport, $authLog): bool {
+$sendForgotPasswordEmail = static function (modX $modx, string $email, string $resetUrl) use ($prepareMailTransport, $authLog, $normalizeMailUrl): bool {
     if (!$prepareMailTransport($modx)) {
         $authLog($modx, 'RESET MAIL STOP: transport is not ready');
         return false;
@@ -221,6 +221,8 @@ $sendForgotPasswordEmail = static function (modX $modx, string $email, string $r
         $authLog($modx, 'RESET MAIL WARNING: invalid system emailsender, fallback=' . $fromEmail, modX::LOG_LEVEL_WARN);
     }
 
+    $resetUrl = $normalizeMailUrl($resetUrl);
+
     $body = '
         <h3>Восстановление пароля</h3>
         <p>Вы запросили восстановление пароля на сайте ' . htmlspecialchars((string)$modx->getOption('site_name'), ENT_QUOTES, 'UTF-8') . '.</p>
@@ -237,25 +239,14 @@ $sendForgotPasswordEmail = static function (modX $modx, string $email, string $r
     $modx->mail->setHTML(true);
 
     try {
-
-
-$sendStartedAt = microtime(true);
-
-$authLog(
-    $modx,
-    'RESET MAIL STEP 4 RETURNED after ' . round(microtime(true) - $sendStartedAt, 3) . ' sec',
-    modX::LOG_LEVEL_INFO
-);
-
+        $sendStartedAt = microtime(true);
         $sent = $modx->mail->send();
 
         $authLog(
             $modx,
-            'ACTIVATION MAIL STEP 4 RETURNED after ' . round(microtime(true) - $sendStartedAt, 3) . ' sec',
+            'RESET MAIL STEP 4 RETURNED after ' . round(microtime(true) - $sendStartedAt, 3) . ' sec',
             modX::LOG_LEVEL_INFO
         );
-        
-        
     } catch (Throwable $e) {
         $authLog($modx, 'RESET MAIL EXCEPTION: ' . $e->getMessage());
         $modx->mail->reset();
