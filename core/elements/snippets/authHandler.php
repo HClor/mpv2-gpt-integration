@@ -26,6 +26,10 @@ $authLog = static function (modX $modx, string $message, int $level = modX::LOG_
     $modx->log($level, '[authHandler][diag] ' . $message);
 };
 
+$normalizeMailUrl = static function (string $url): string {
+    return html_entity_decode($url, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+};
+
 // FLASH-СООБЩЕНИЯ (PRG-паттерн)
 $flash = $_SESSION['auth_handler_flash'] ?? null;
 if (is_array($flash)) {
@@ -109,12 +113,14 @@ $prepareMailTransport = static function (modX $modx) use ($authLog) {
 $sendActivationEmail = static function (modX $modx, string $email, string $username, string $activationToken) use ($prepareMailTransport, $authLog): bool {
     $authLog($modx, 'ACTIVATION MAIL STEP 1: build activation URL for ' . $email, modX::LOG_LEVEL_INFO);
 
+
+
     $activationUrl = $modx->makeUrl($modx->resource->id, '', [
         'mode' => 'activate',
         'token' => $activationToken
     ], 'full');
-    
-    $activationUrl = html_entity_decode($activationUrl, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+    $activationUrl = $normalizeMailUrl($activationUrl);
 
     if (!$prepareMailTransport($modx)) {
         $authLog($modx, 'ACTIVATION MAIL STOP: transport is not ready');
@@ -232,12 +238,12 @@ $sendForgotPasswordEmail = static function (modX $modx, string $email, string $r
 
     try {
 
+
+$sendStartedAt = microtime(true);
+
 $authLog(
     $modx,
-    'MAIL RUNTIME: Host=' . (string)$modx->mail->mailer->Host
-    . ', Port=' . (string)$modx->mail->mailer->Port
-    . ', SMTPSecure=' . (string)$modx->mail->mailer->SMTPSecure
-    . ', SMTPAuth=' . ((int)$modx->mail->mailer->SMTPAuth ? 'on' : 'off'),
+    'RESET MAIL STEP 4 RETURNED after ' . round(microtime(true) - $sendStartedAt, 3) . ' sec',
     modX::LOG_LEVEL_INFO
 );
 
@@ -643,6 +649,9 @@ if ($_POST && $mode === 'forgot') {
                         'token' => $token
                     ], 'full');
 
+
+                    $resetUrl = $normalizeMailUrl($resetUrl);
+
                     $sent = $sendForgotPasswordEmail($modx, $email, $resetUrl);
                     if ($sent) {
                         $success[] = 'Ссылка для восстановления пароля отправлена на ваш email';
@@ -661,7 +670,8 @@ if ($_POST && $mode === 'forgot') {
 
 // ====================== ВОССТАНОВЛЕНИЕ ПАРОЛЯ — УСТАНОВКА ======================
 if ($mode === 'reset') {
-    $token = (string)($_GET['token'] ?? '');
+    //$token = (string)($_GET['token'] ?? '');
+    $token = sanitizeInput((string)($_POST['token'] ?? $_GET['token'] ?? ''));
 
     if ($_POST && isset($_POST['new_password'])) {
         if (!CsrfProtection::validateRequest($_POST)) {
@@ -729,6 +739,7 @@ if ($mode === 'reset' && empty($success)) {
     $output .= '<form method="POST">';
     $output .= CsrfProtection::getTokenField();
     $output .= '<input type="hidden" name="mode" value="reset">';
+    $output .= '<input type="hidden" name="token" value="' . htmlspecialchars((string)$token, ENT_QUOTES, 'UTF-8') . '">';
     $output .= '<div class="mb-3"><label class="form-label">Новый пароль *</label><input type="password" name="new_password" class="form-control" required minlength="6"></div>';
     $output .= '<div class="mb-3"><label class="form-label">Подтверждение пароля *</label><input type="password" name="confirm_password" class="form-control" required minlength="6"></div>';
     $output .= '<button type="submit" class="btn btn-primary">Сохранить пароль</button>';
