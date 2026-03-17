@@ -93,8 +93,8 @@ $prepareMailTransport = static function (modX $modx) use ($authLog) {
         $modx->mail->mailer->SMTPKeepAlive = false;
         $modx->mail->mailer->SMTPAutoTLS = $autoTls;
 
-        // Временная детальная SMTP-диагностика
-        $modx->mail->mailer->SMTPDebug = 2;
+        // Подробный SMTP debug отключён для production
+        $modx->mail->mailer->SMTPDebug = 0;
         $modx->mail->mailer->Debugoutput = static function ($str, $level) use ($modx): void {
             $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler][smtp][' . $level . '] ' . $str);
         };
@@ -170,15 +170,6 @@ $sendActivationEmail = static function (modX $modx, string $email, string $usern
 
     $authLog($modx, 'ACTIVATION MAIL STEP 5: mail reset()', modX::LOG_LEVEL_INFO);
     $modx->mail->reset();
-
-    $authLog($modx, 'ACTIVATION MAIL STEP 6: force DB reconnect after mail flow', modX::LOG_LEVEL_INFO);
-    $reconnectOk = $modx->connect();
-
-    if (!$reconnectOk) {
-        $authLog($modx, 'ACTIVATION MAIL STEP 6 FAILED: DB reconnect failed');
-    } else {
-        $authLog($modx, 'ACTIVATION MAIL STEP 6 OK: DB ready', modX::LOG_LEVEL_INFO);
-    }
 
     return $sent;
 };
