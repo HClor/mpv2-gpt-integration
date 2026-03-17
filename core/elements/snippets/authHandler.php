@@ -94,7 +94,7 @@ $prepareMailTransport = static function (modX $modx) use ($authLog) {
         $modx->mail->mailer->SMTPAutoTLS = $autoTls;
 
         // Подробный SMTP debug отключён для production
-        $modx->mail->mailer->SMTPDebug = 0;
+        $modx->mail->mailer->SMTPDebug = 2;
         $modx->mail->mailer->Debugoutput = static function ($str, $level) use ($modx): void {
             $modx->log(modX::LOG_LEVEL_ERROR, '[authHandler][smtp][' . $level . '] ' . $str);
         };
@@ -113,6 +113,8 @@ $sendActivationEmail = static function (modX $modx, string $email, string $usern
         'mode' => 'activate',
         'token' => $activationToken
     ], 'full');
+    
+    $activationUrl = html_entity_decode($activationUrl, ENT_QUOTES | ENT_HTML5, 'UTF-8');
 
     if (!$prepareMailTransport($modx)) {
         $authLog($modx, 'ACTIVATION MAIL STOP: transport is not ready');
@@ -152,9 +154,28 @@ $sendActivationEmail = static function (modX $modx, string $email, string $usern
     $modx->mail->setHTML(true);
 
     $authLog($modx, 'ACTIVATION MAIL STEP 4: send()', modX::LOG_LEVEL_INFO);
+    
+    $sendStartedAt = microtime(true);
 
     try {
+
+$authLog(
+    $modx,
+    'MAIL RUNTIME: Host=' . (string)$modx->mail->mailer->Host
+    . ', Port=' . (string)$modx->mail->mailer->Port
+    . ', SMTPSecure=' . (string)$modx->mail->mailer->SMTPSecure
+    . ', SMTPAuth=' . ((int)$modx->mail->mailer->SMTPAuth ? 'on' : 'off'),
+    modX::LOG_LEVEL_INFO
+);
+
         $sent = $modx->mail->send();
+        
+        $authLog(
+            $modx,
+            'ACTIVATION MAIL STEP 4 RETURNED after ' . round(microtime(true) - $sendStartedAt, 3) . ' sec',
+            modX::LOG_LEVEL_INFO
+        );        
+        
     } catch (Throwable $e) {
         $authLog($modx, 'ACTIVATION MAIL STEP 4 EXCEPTION: ' . $e->getMessage());
         $modx->mail->reset();
@@ -210,7 +231,25 @@ $sendForgotPasswordEmail = static function (modX $modx, string $email, string $r
     $modx->mail->setHTML(true);
 
     try {
+
+$authLog(
+    $modx,
+    'MAIL RUNTIME: Host=' . (string)$modx->mail->mailer->Host
+    . ', Port=' . (string)$modx->mail->mailer->Port
+    . ', SMTPSecure=' . (string)$modx->mail->mailer->SMTPSecure
+    . ', SMTPAuth=' . ((int)$modx->mail->mailer->SMTPAuth ? 'on' : 'off'),
+    modX::LOG_LEVEL_INFO
+);
+
         $sent = $modx->mail->send();
+
+        $authLog(
+            $modx,
+            'ACTIVATION MAIL STEP 4 RETURNED after ' . round(microtime(true) - $sendStartedAt, 3) . ' sec',
+            modX::LOG_LEVEL_INFO
+        );
+        
+        
     } catch (Throwable $e) {
         $authLog($modx, 'RESET MAIL EXCEPTION: ' . $e->getMessage());
         $modx->mail->reset();
