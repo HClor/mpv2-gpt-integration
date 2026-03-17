@@ -354,7 +354,7 @@ $registerUser = static function (modX $modx, array $post) use ($sendActivationEm
     }
 
     $authLog($modx, 'REGISTER STEP 9: schedule activation email after response', modX::LOG_LEVEL_INFO);
-    $success[] = '✅ Аккаунт создан. Письмо активации будет отправлено в фоновом режиме. Если не придёт — используйте повторную отправку.';
+    $success[] = '✅ Аккаунт создан. Проверьте почту и перейдите по ссылке активации. Если письмо не придёт в течение нескольких минут, воспользуйтесь повторной отправкой.';
 
     return [
         'errors' => $errors,
@@ -530,12 +530,34 @@ if ($_POST && $mode === 'register') {
         $errors[] = 'Ошибка безопасности. Обновите страницу и попробуйте снова.';
     } else {
         $result = $registerUser($modx, $_POST);
+
         if (!empty($result['prg_redirect'])) {
             $_SESSION['auth_handler_flash'] = [
                 'errors' => $result['errors'] ?? [],
                 'success' => $result['success'] ?? []
             ];
-            $deferredMail = $result['deferred_mail'] ?? null;
+
+            $activationMail = $result['deferred_mail'] ?? null;
+
+            if ($activationMail && is_array($activationMail)) {
+                $authLog($modx, 'REGISTER STEP 10: activation email send start', modX::LOG_LEVEL_INFO);
+
+                $mailSent = $sendActivationEmail(
+                    $modx,
+                    (string)($activationMail['email'] ?? ''),
+                    (string)($activationMail['username'] ?? ''),
+                    (string)($activationMail['token'] ?? '')
+                );
+
+                if ($mailSent) {
+                    $authLog($modx, 'REGISTER STEP 11 OK: activation email sent', modX::LOG_LEVEL_INFO);
+                } else {
+                    $authLog($modx, 'REGISTER STEP 11 FAILED: activation email was not sent', modX::LOG_LEVEL_ERROR);
+                }
+            } else {
+                $authLog($modx, 'REGISTER STEP 10 SKIP: no activation mail payload', modX::LOG_LEVEL_WARN);
+            }
+
             $modx->sendRedirect($result['prg_redirect']);
 
             if ($deferredMail && is_array($deferredMail)) {
@@ -553,6 +575,7 @@ if ($_POST && $mode === 'register') {
             }
             exit;
         }
+
         $errors = array_merge($errors, $result['errors'] ?? []);
         $success = array_merge($success, $result['success'] ?? []);
     }
