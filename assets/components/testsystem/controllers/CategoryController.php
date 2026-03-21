@@ -459,6 +459,7 @@ class CategoryController extends BaseController
      */
     private function assignCategoryExpert($data)
     {
+        $this->requirePost('POST request required for assigning category experts');
         $this->requireAuth();
 
         if (!PermissionHelper::isAdmin($this->modx)) {
@@ -525,6 +526,7 @@ class CategoryController extends BaseController
      */
     private function removeCategoryExpert($data)
     {
+        $this->requirePost('POST request required for removing category experts');
         $this->requireAuth();
 
         if (!PermissionHelper::isAdmin($this->modx)) {

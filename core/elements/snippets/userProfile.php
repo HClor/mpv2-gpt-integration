@@ -9,6 +9,8 @@
  */
 if (!$modx instanceof modX) return 'MODX context required';
 
+require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
+
 // Подключаем сервис траекторий
 require_once MODX_CORE_PATH . 'components/testsystem/services/LearningPathService.php';
 
@@ -24,16 +26,13 @@ $userId = (int)$modx->user->get('id');
 $username = (string)$modx->user->get('username');
 $errors = [];
 $success = '';
-if (session_status() === PHP_SESSION_NONE) { session_start(); }
-if (empty($_SESSION['csrf'])) { $_SESSION['csrf'] = bin2hex(random_bytes(16)); }
-$csrf = $_SESSION['csrf'];
 
 $h = function($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); };
 $getp = function($key){ return trim((string)($_POST[$key] ?? '')); };
 
 // 2) Update profile (fullname/email)
 if (!empty($_POST) && isset($_POST['update_profile'])) {
-    if (!hash_equals($csrf, $_POST['csrf'] ?? '')) {
+    if (!CsrfProtection::validateRequest($_POST)) {
         $errors[] = 'Неверный CSRF-токен, обновите страницу.';
     } else {
         $fullname = $getp('fullname');
@@ -66,7 +65,7 @@ if (!empty($_POST) && isset($_POST['update_profile'])) {
 
 // 3) Change password
 if (!empty($_POST) && isset($_POST['change_password'])) {
-    if (!hash_equals($csrf, $_POST['csrf'] ?? '')) {
+    if (!CsrfProtection::validateRequest($_POST)) {
         $errors[] = 'Неверный CSRF-токен, обновите страницу.';
     } else {
         $pass_old = $getp('password_old');
@@ -312,7 +311,7 @@ $out[] .= '
     <div class="card mb-3"><div class="card-body">
       <h5 class="card-title">Профиль</h5>
       <form method="post" autocomplete="off">
-        <input type="hidden" name="csrf" value="'.$h($csrf).'">
+        '.CsrfProtection::getTokenField().'
         <div class="mb-3">
           <label class="form-label">Имя</label>
           <input class="form-control" name="fullname" value="'.$h($fullname).'">
@@ -328,7 +327,7 @@ $out[] .= '
     <div class="card"><div class="card-body">
       <h5 class="card-title">Смена пароля</h5>
       <form method="post" autocomplete="off">
-        <input type="hidden" name="csrf" value="'.$h($csrf).'">
+        '.CsrfProtection::getTokenField().'
         <div class="mb-3">
           <label class="form-label">Текущий пароль</label>
           <input type="password" class="form-control" name="password_old" required>

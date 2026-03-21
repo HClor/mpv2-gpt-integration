@@ -95,4 +95,17 @@ abstract class BaseController
     {
         PermissionHelper::requireEditRights($this->modx, $message);
     }
+
+    /**
+     * Требует POST-запрос
+     *
+     * @param string|null $message Сообщение об ошибке
+     * @throws ValidationException
+     */
+    protected function requirePost($message = null)
+    {
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+            throw new ValidationException($message ?? 'POST request required');
+        }
+    }
 }

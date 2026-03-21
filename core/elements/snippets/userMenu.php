@@ -13,6 +13,11 @@ require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
 
 // Обработка выхода
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login_logout'])) {
+    if (!CsrfProtection::validateRequest($_POST)) {
+        $modx->sendRedirect($modx->makeUrl($modx->getOption('site_start')));
+        exit;
+    }
+
     // Завершаем только сессию в контексте web, не затрагивая mgr (админку)
     if ($modx->user->hasSessionContext('web')) {
         $modx->user->removeSessionContext('web');
@@ -64,6 +69,7 @@ if ($modx->user->hasSessionContext('web') && $modx->user->id > 0) {
     $output .= '<li><hr class="dropdown-divider"></li>';
     $output .= '<li class="px-3 py-2">';
     $output .= '<form method="post" action="">';
+    $output .= CsrfProtection::getTokenField();
     $output .= '<input type="hidden" name="login_logout" value="1">';
     $output .= '<button type="submit" class="ts-btn ts-btn-sm ts-btn-danger w-100">Выйти</button>';
     $output .= '</form>';
