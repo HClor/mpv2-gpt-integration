@@ -18,6 +18,8 @@
 
 if (!$modx instanceof modX) return 'MODX context required';
 
+require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
+
 // Подключаем сервисы
 require_once MODX_CORE_PATH . 'components/testsystem/services/CategoryPermissionService.php';
 
@@ -37,7 +39,7 @@ if (!$isAdmin && !$isExpert) {
 $h = function($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); };
 $prefix = $modx->getOption('table_prefix');
 $viewUserId = isset($_GET['user_id']) ? (int)$_GET['user_id'] : null;
-$pageUrl = $modx->makeUrl($modx->resource->get('id'), '', '', 'abs');
+$pageUrl = $modx->resource ? $modx->makeUrl($modx->resource->get('id'), '', '', 'abs') : '';
 
 $T_sessions = $prefix . 'test_sessions';
 $T_users = $prefix . 'users';
@@ -47,16 +49,26 @@ $T_progress = $prefix . 'test_learning_path_progress';
 $T_paths = $prefix . 'test_learning_paths';
 
 $out = [];
+try {
+    $prepare = static function(modX $modx, string $sql) {
+        $stmt = $modx->prepare($sql);
+        if ($stmt === false) {
+            throw new RuntimeException('SQL prepare failed');
+        }
+        return $stmt;
+    };
 
 if ($viewUserId) {
     // Детальная статистика конкретного пользователя
-    $stmt = $modx->prepare("
+    $stmt = $prepare($modx, "
         SELECT u.id, u.username, ua.fullname, ua.email, u.createdon as registered_at
         FROM {$T_users} u
         LEFT JOIN {$T_attrs} ua ON ua.internalKey = u.id
         WHERE u.id = ?
     ");
-    $stmt->execute([$viewUserId]);
+    if (!$stmt->execute([$viewUserId])) {
+        throw new RuntimeException('Failed to load user stats header');
+    }
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$user) {
@@ -64,7 +76,7 @@ if ($viewUserId) {
     }
 
     // Статистика тестов
-    $stmt = $modx->prepare("
+    $stmt = $prepare($modx, "
         SELECT
             COUNT(*) as total_tests,
             SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed_tests,
@@ -75,11 +87,13 @@ if ($viewUserId) {
         FROM {$T_sessions}
         WHERE user_id = ?
     ");
-    $stmt->execute([$viewUserId]);
+    if (!$stmt->execute([$viewUserId])) {
+        throw new RuntimeException('Failed to load user test statistics');
+    }
     $testStats = $stmt->fetch(PDO::FETCH_ASSOC);
 
     // Статистика траекторий
-    $stmt = $modx->prepare("
+    $stmt = $prepare($modx, "
         SELECT
             COUNT(*) as total_paths,
             SUM(CASE WHEN lpp.status = 'completed' THEN 1 ELSE 0 END) as completed_paths,
@@ -89,11 +103,13 @@ if ($viewUserId) {
         LEFT JOIN {$T_progress} lpp ON lpp.enrollment_id = e.id
         WHERE e.user_id = ? AND e.is_active = 1
     ");
-    $stmt->execute([$viewUserId]);
+    if (!$stmt->execute([$viewUserId])) {
+        throw new RuntimeException('Failed to load user learning path statistics');
+    }
     $pathStats = $stmt->fetch(PDO::FETCH_ASSOC);
 
     // История последних тестов
-    $stmt = $modx->prepare("
+    $stmt = $prepare($modx, "
         SELECT s.id, s.test_id, s.score, s.status, s.started_at, t.title as test_name
         FROM {$T_sessions} s
         LEFT JOIN {$prefix}test_tests t ON t.id = s.test_id
@@ -101,11 +117,13 @@ if ($viewUserId) {
         ORDER BY s.started_at DESC
         LIMIT 10
     ");
-    $stmt->execute([$viewUserId]);
+    if (!$stmt->execute([$viewUserId])) {
+        throw new RuntimeException('Failed to load recent user tests');
+    }
     $recentTests = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Траектории пользователя
-    $stmt = $modx->prepare("
+    $stmt = $prepare($modx, "
         SELECT lp.id, lp.name, e.enrolled_at, lpp.status, lpp.completion_pct, lpp.last_activity_at
         FROM {$T_enrollments} e
         JOIN {$T_paths} lp ON lp.id = e.path_id
@@ -113,7 +131,9 @@ if ($viewUserId) {
         WHERE e.user_id = ? AND e.is_active = 1
         ORDER BY e.enrolled_at DESC
     ");
-    $stmt->execute([$viewUserId]);
+    if (!$stmt->execute([$viewUserId])) {
+        throw new RuntimeException('Failed to load user learning paths');
+    }
     $userPaths = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     $out[] = '
@@ -250,7 +270,7 @@ if ($viewUserId) {
     // Общая статистика всех пользователей
 
     // Сводка
-    $stmt = $modx->prepare("
+    $stmt = $prepare($modx, "
         SELECT
             (SELECT COUNT(*) FROM {$T_users} WHERE active = 1) as total_users,
             (SELECT COUNT(DISTINCT user_id) FROM {$T_sessions}) as users_with_tests,
@@ -259,7 +279,9 @@ if ($viewUserId) {
             (SELECT COUNT(*) FROM {$T_sessions} WHERE status = 'completed' AND score >= 70) as passed_tests,
             (SELECT AVG(score) FROM {$T_sessions} WHERE status = 'completed') as avg_score
     ");
-    $stmt->execute();
+    if (!$stmt->execute()) {
+        throw new RuntimeException('Failed to load users summary');
+    }
     $summary = $stmt->fetch(PDO::FETCH_ASSOC);
 
     $out[] = '
@@ -296,7 +318,7 @@ if ($viewUserId) {
     </div>';
 
     // Топ пользователей по баллам
-    $stmt = $modx->prepare("
+    $stmt = $prepare($modx, "
         SELECT
             u.id, u.username, ua.fullname,
             COUNT(DISTINCT s.id) as tests_count,
@@ -312,7 +334,9 @@ if ($viewUserId) {
         ORDER BY total_score DESC
         LIMIT 20
     ");
-    $stmt->execute();
+    if (!$stmt->execute()) {
+        throw new RuntimeException('Failed to load top users');
+    }
     $topUsers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     if (!empty($topUsers)) {
@@ -363,7 +387,7 @@ if ($viewUserId) {
     }
 
     // Последняя активность
-    $stmt = $modx->prepare("
+    $stmt = $prepare($modx, "
         SELECT
             s.id, s.user_id, s.test_id, s.score, s.status, s.started_at,
             u.username, ua.fullname, t.title as test_name
@@ -374,7 +398,9 @@ if ($viewUserId) {
         ORDER BY s.started_at DESC
         LIMIT 15
     ");
-    $stmt->execute();
+    if (!$stmt->execute()) {
+        throw new RuntimeException('Failed to load recent users activity');
+    }
     $recentActivity = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     if (!empty($recentActivity)) {
@@ -414,6 +440,10 @@ if ($viewUserId) {
 
         $out[] = '</tbody></table></div></div></div>';
     }
+}
+} catch (Throwable $e) {
+    $modx->log(modX::LOG_LEVEL_ERROR, '[usersStats] ' . $e->getMessage());
+    return '<div class="ts-alert ts-alert-danger">Не удалось загрузить статистику пользователей. Проверьте логи и структуру БД.</div>';
 }
 
 return implode('', $out);

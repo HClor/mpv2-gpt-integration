@@ -124,6 +124,33 @@ formData.append('csrf_token', csrfToken);
 $output .= '<span>' . htmlspecialchars($userName, ENT_QUOTES, 'UTF-8') . '</span>';
 ```
 
+### 2.4. Сниппеты, использующие сервисы `Config` / ACL / CSRF, обязаны подключать bootstrap
+
+Если PHP-сниппет обращается к `Config`, `PermissionHelper`, `CategoryPermissionService`, `CsrfProtection` или другим классам компонента, он не должен полагаться на “магическую” автозагрузку из внешнего контекста.
+
+```php
+// ВЕРНО
+require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
+```
+
+Иначе возможны фатальные ошибки вида `Class "Config" not found` и HTTP 500.
+
+> ⚠️ Требуется проверка аудитором: правило добавлено по итогам повторной проверки `usersStats.php` и смежных snippets; нужно подтвердить полный список классов, для которых bootstrap обязателен во всех окружениях.
+
+### 2.5. Нельзя использовать `$modx->resource->get(...)` без guard-проверки
+
+Сниппет может быть вызван вне стандартного page-render context. Прямой вызов `$modx->resource->get('id')` без проверки способен дать fatal error и HTTP 500.
+
+```php
+// НЕВЕРНО
+$pageUrl = $modx->makeUrl($modx->resource->get('id'), '', '', 'abs');
+
+// ВЕРНО
+$pageUrl = $modx->resource ? $modx->makeUrl($modx->resource->get('id'), '', '', 'abs') : '';
+```
+
+> ⚠️ Требуется проверка аудитором: подтвердить все сценарии вызова snippets вне page context и согласовать единый fallback (`''`, `site_start`, explicit error block).
+
 ---
 
 ## 3. Работа с базой данных через MODX API
@@ -228,6 +255,27 @@ if ($stmt === false) {
     return false;
 }
 ```
+
+### 3.5.1. Сниппеты админ-статистики не должны отдавать 500 при проблемах БД
+
+Для reporting/admin snippets (`usersStats`, `learningPathsStats` и аналогичных) SQL-ошибки, отсутствие миграций или несовместимость схемы не должны приводить к “белой странице”.
+
+```php
+try {
+    $stmt = $modx->prepare($sql);
+    if ($stmt === false) {
+        throw new RuntimeException('SQL prepare failed');
+    }
+    if (!$stmt->execute($params)) {
+        throw new RuntimeException('SQL execute failed');
+    }
+} catch (Throwable $e) {
+    $modx->log(modX::LOG_LEVEL_ERROR, '[snippetName] ' . $e->getMessage());
+    return '<div class="ts-alert ts-alert-danger">Не удалось загрузить данные. Проверьте логи и структуру БД.</div>';
+}
+```
+
+> ⚠️ Требуется проверка аудитором: нужно согласовать, какие именно snippets обязаны деградировать “мягко”, а где допустимо выбрасывать исключение для быстрого обнаружения ошибки на staging.
 
 ### 3.6. Транзакции — обязательны при изменении 2+ таблиц
 

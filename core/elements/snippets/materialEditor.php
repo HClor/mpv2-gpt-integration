@@ -8,6 +8,12 @@
  * @package TestSystem
  */
 
+require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
+
+if (!$modx->resource) {
+    return '<div class="ts-alert ts-alert-danger">Материал недоступен вне контекста ресурса</div>';
+}
+
 // Проверка авторизации
 if (!$modx->user->hasSessionContext('web')) {
     return '<div class="ts-alert ts-alert-warning">Требуется авторизация для редактирования</div>';

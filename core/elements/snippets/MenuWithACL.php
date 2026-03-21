@@ -24,7 +24,7 @@ $showHidden = isset($showHidden) ? (int)$showHidden : 0;
 $activeClass = isset($activeClass) ? $activeClass : 'active';
 
 // Текущий ресурс для подсветки активного пункта
-$currentId = $modx->resource->get('id');
+$currentId = $modx->resource ? (int)$modx->resource->get('id') : 0;
 
 // Проверка авторизации в контексте web
 $isAuthenticated = $modx->user->isAuthenticated('web');
@@ -59,8 +59,14 @@ if (!$showHidden) {
 $sql .= " ORDER BY " . $sortby . " " . $sortdir;
 
 $stmt = $modx->prepare($sql);
+if ($stmt === false) {
+    return '';
+}
 $stmt->bindParam(':parent', $parents, PDO::PARAM_INT);
-$stmt->execute();
+$executed = $stmt->execute();
+if (!$executed) {
+    return '';
+}
 $resourcesData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Формируем меню
