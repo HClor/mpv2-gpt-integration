@@ -101,17 +101,8 @@ if (empty($data)) {
     if ($action === 'getQuestion' && isset($_GET['question_id'])) {
         $data['question_id'] = $_GET['question_id'];
     }
-    if ($action === 'deleteQuestion' && isset($_GET['question_id'])) {
-        $data['question_id'] = $_GET['question_id'];
-    }
     if ($action === 'getTestSettings' && isset($_GET['test_id'])) {
         $data['test_id'] = $_GET['test_id'];
-    }
-    // Диагностика траекторий (временно)
-    if ($action === 'debugPathProgress' || $action === 'testCompleteStep') {
-        if (isset($_GET['path_id'])) $data['path_id'] = (int)$_GET['path_id'];
-        if (isset($_GET['step_id'])) $data['step_id'] = (int)$_GET['step_id'];
-        if (isset($_GET['progress_id'])) $data['progress_id'] = (int)$_GET['progress_id'];
     }
 }
 
@@ -156,15 +147,107 @@ $csrfExemptActions = [
     'getQuestionAnswers',        // Ответы на вопрос (для просмотра)
     'getMaterialsList',          // Список учебных материалов (только чтение)
     'getMaterial',               // Получение одного материала (только чтение)
-    'assignCategoryExpert',      // Назначить эксперта на категорию
-    'removeCategoryExpert',      // Убрать эксперта из категории
     'getCategoryExperts',        // Получить экспертов категории
     'getUserCategories',         // Категории пользователя (где он эксперт)
     'checkCategoryPermission',   // Проверить права на категорию
-    'getAvailableExperts',       // Список доступных экспертов
-    'debugPathProgress',         // Диагностика прогресса траектории (временно)
-    'testCompleteStep'           // Тест UPDATE SQL (временно)
+    'getAvailableExperts'        // Список доступных экспертов
 ];
+
+$postOnlyActions = [
+    'startSession',
+    'cleanupOldSessions',
+    'submitAnswer',
+    'finishTest',
+    'toggleFavorite',
+    'createQuestion',
+    'updateQuestion',
+    'deleteQuestion',
+    'togglePublished',
+    'toggleLearning',
+    'updateTestSettings',
+    'updateTest',
+    'deleteTest',
+    'publishTest',
+    'createTestWithPage',
+    'createTest',
+    'createTestPage',
+    'grantTestAccess',
+    'revokeTestAccess',
+    'grantAccess',
+    'revokeAccess',
+    'checkIntegrity',
+    'cleanOrphanedData',
+    'cleanOrphanedTests',
+    'cleanOrphanedQuestions',
+    'cleanOrphanedAnswers',
+    'cleanOrphanedSessions',
+    'cleanOldSessions',
+    'cleanupResourceFiles',
+    'diagnoseMaterialsAuth',
+    'createMaterial',
+    'updateMaterial',
+    'deleteMaterial',
+    'addContentBlock',
+    'updateContentBlock',
+    'deleteContentBlock',
+    'addAttachment',
+    'deleteAttachment',
+    'updateProgress',
+    'setTags',
+    'linkTest',
+    'unlinkTest',
+    'grantCategoryPermission',
+    'revokeCategoryPermission',
+    'bulkGrantPermissions',
+    'bulkRevokePermissions',
+    'createCategory',
+    'assignCategoryExpert',
+    'removeCategoryExpert',
+    'createPath',
+    'updatePath',
+    'deletePath',
+    'addStep',
+    'updateStep',
+    'deleteStep',
+    'reorderSteps',
+    'enrollOnPath',
+    'unenrollFromPath',
+    'completePathStep',
+    'bulkEnrollOnPath',
+    'startStep',
+    'clonePath',
+    'debugPathProgress',
+    'testCompleteStep',
+    'reviewEssay',
+    'awardXP',
+    'checkAchievements',
+    'updateLeaderboard',
+    'markAsRead',
+    'markAllAsRead',
+    'deleteNotification',
+    'createNotification',
+    'sendEmail',
+    'updatePreference',
+    'processQueue',
+    'cleanupOld',
+    'saveNotificationSettings',
+    'createKnowledgeArea',
+    'updateKnowledgeArea',
+    'deleteKnowledgeArea',
+    'startKnowledgeAreaSession',
+    'generateReport',
+    'cleanupCache',
+    'issueCertificate',
+    'revokeCertificate',
+    'cleanupExpired'
+];
+
+if (in_array($action, $postOnlyActions, true) && $_SERVER['REQUEST_METHOD'] !== 'POST') {
+    die(json_encode([
+        'success' => false,
+        'message' => 'Method not allowed for this action. Use POST.'
+    ]));
+}
 
 // Если это POST запрос и action требует CSRF проверки
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !in_array($action, $csrfExemptActions, true)) {

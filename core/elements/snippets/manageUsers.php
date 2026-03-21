@@ -25,6 +25,10 @@ try {
     $errors = [];
     $success = '';
 
+    if ($_SERVER['REQUEST_METHOD'] === 'POST' && !CsrfProtection::validateRequest($_POST)) {
+        throw new ValidationException('Неверный CSRF-токен. Обновите страницу и повторите попытку.');
+    }
+
     $groupMap = [
         'student' => Config::getGroup('students'),
         'expert' => Config::getGroup('experts'),
@@ -203,6 +207,7 @@ try {
 
         if ($uid !== 1) {
             $output .= '<form method="POST" class="d-inline">';
+            $output .= CsrfProtection::getTokenField();
             $output .= '<input type="hidden" name="toggle_block" value="1">';
             $output .= '<input type="hidden" name="user_id" value="' . $uid . '">';
             $output .= '<button type="submit" class="ts-btn ts-btn-sm ts-btn-warning" onclick="return confirm(\'Уверены?\')">' . ($blocked ? 'Разблок.' : 'Блок.') . '</button>';
@@ -217,6 +222,7 @@ try {
         $output .= '<div class="modal-header"><h5 class="modal-title">Изменить роль: ' . htmlspecialchars($user->get('username'), ENT_QUOTES, 'UTF-8') . '</h5>';
         $output .= '<button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>';
         $output .= '<form method="POST"><div class="modal-body">';
+        $output .= CsrfProtection::getTokenField();
         $output .= '<input type="hidden" name="change_role" value="1">';
         $output .= '<input type="hidden" name="user_id" value="' . $uid . '">';
         $output .= '<label class="form-label">Новая роль:</label>';
@@ -244,6 +250,7 @@ try {
     $output .= '<div class="modal-header"><h5 class="modal-title">Создать пользователя</h5>';
     $output .= '<button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>';
     $output .= '<form method="POST"><div class="modal-body">';
+    $output .= CsrfProtection::getTokenField();
     $output .= '<input type="hidden" name="create_user" value="1">';
     $output .= '<div class="mb-3"><label class="form-label">Логин:</label>';
     $output .= '<input type="text" name="username" class="form-control" required></div>';

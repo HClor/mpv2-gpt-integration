@@ -1405,6 +1405,7 @@ class LearningPathController extends BaseController
     private function debugPathProgress($data)
     {
         try {
+            $this->requirePost('POST request required for path diagnostics');
             $this->requireAuth();
 
             $currentUserId = $this->getCurrentUserId();
@@ -1484,10 +1485,10 @@ class LearningPathController extends BaseController
 
     /**
      * Тест SQL запроса для завершения шага
-     * Можно вызвать через GET: testsystem.php?action=testCompleteStep&path_id=18&step_id=29
      */
     private function testCompleteStep($data)
     {
+        $this->requirePost('POST request required for step completion diagnostics');
         $this->requireAuth();
 
         $currentUserId = $this->getCurrentUserId();

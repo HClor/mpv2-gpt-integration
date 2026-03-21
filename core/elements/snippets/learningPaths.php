@@ -328,7 +328,7 @@ function renderPathView($modx, $prefix, $pathId, $userId, $isLoggedIn) {
  */
 function renderPathEditor($modx, $prefix, $pathId, $userId) {
     // Получаем текущий URL для корректных ссылок
-    $currentUrl = $modx->makeUrl($modx->resource->get('id'));
+    $currentUrl = $modx->resource ? $modx->makeUrl($modx->resource->get('id')) : '#';
 
     $html = '
     <div id="path-editor-container" data-path-id="' . $pathId . '">

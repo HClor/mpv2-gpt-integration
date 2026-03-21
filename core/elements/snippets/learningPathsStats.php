@@ -18,6 +18,8 @@
 
 if (!$modx instanceof modX) return 'MODX context required';
 
+require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
+
 // Подключаем сервисы
 require_once MODX_CORE_PATH . 'components/testsystem/services/LearningPathService.php';
 require_once MODX_CORE_PATH . 'components/testsystem/services/CategoryPermissionService.php';
@@ -37,7 +39,7 @@ if (!$isAdmin && !$isExpert) {
 
 $h = function($s) { return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); };
 $pathId = isset($_GET['path_id']) ? (int)$_GET['path_id'] : null;
-$pathsUrl = $modx->makeUrl($modx->resource->get('id'), '', '', 'abs');
+$pathsUrl = $modx->resource ? $modx->makeUrl($modx->resource->get('id'), '', '', 'abs') : '';
 
 $difficultyLabels = [
     'beginner' => 'Начальный',
@@ -47,6 +49,8 @@ $difficultyLabels = [
 ];
 
 $out = [];
+
+try {
 
 if ($pathId) {
     // Детальная статистика траектории
@@ -334,6 +338,10 @@ if ($pathId) {
 
         $out[] .= '</tbody></table></div></div></div>';
     }
+}
+} catch (Throwable $e) {
+    $modx->log(modX::LOG_LEVEL_ERROR, '[learningPathsStats] ' . $e->getMessage());
+    return '<div class="ts-alert ts-alert-danger">Не удалось загрузить статистику траекторий. Проверьте логи и структуру БД.</div>';
 }
 
 return implode('', $out);
