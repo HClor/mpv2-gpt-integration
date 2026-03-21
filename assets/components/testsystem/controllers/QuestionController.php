@@ -298,6 +298,7 @@ class QuestionController extends BaseController
      */
     private function deleteQuestion($data)
     {
+        $this->requirePost('POST request required for deleting questions');
         $this->requireEditRights('No permission to delete questions');
 
         $questionId = ValidationHelper::requireQuestionId($data['question_id'] ?? 0, 'Question ID required');

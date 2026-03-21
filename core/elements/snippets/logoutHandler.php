@@ -13,8 +13,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login_logout'])) {
 
     // CSRF Protection
     if (!CsrfProtection::validateRequest($_POST)) {
-        // Для logout не блокируем выход полностью: токен может быть устаревшим из кешированной страницы
-        $modx->log(modX::LOG_LEVEL_WARN, '[logoutHandler] Logout with invalid CSRF token, proceeding with web context logout');
+        $modx->log(modX::LOG_LEVEL_WARN, '[logoutHandler] Logout blocked due to invalid CSRF token');
+        return '';
     }
 
     // Завершаем сессию пользователя в контексте web
