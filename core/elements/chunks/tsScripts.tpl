@@ -114,11 +114,11 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateNotificationBadge(count) {
         let badge = document.querySelector('.notification-badge');
         if (!badge && count > 0) {
-            const userMenu = document.getElementById('userMenu');
-            if (userMenu) {
+            const badgeHost = document.getElementById('userMenuNotificationBadgeHost');
+            if (badgeHost) {
                 badge = document.createElement('span');
-                badge.className = 'badge bg-danger ms-1 notification-badge';
-                userMenu.appendChild(badge);
+                badge.className = 'badge bg-danger notification-badge';
+                badgeHost.appendChild(badge);
             }
         }
         if (badge) {
@@ -186,7 +186,7 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Test System initialized successfully');
 
     // ========== LEARNING PATH STEP COMPLETION ==========
-    // Показываем панель завершения шага если есть параметры path и step в URL
+    // Fallback-панель нужна только на страницах контента шага, не на /learning-paths
     initLearningPathStepPanel();
 });
 
@@ -195,53 +195,53 @@ function initLearningPathStepPanel() {
     const urlParams = new URLSearchParams(window.location.search);
     const pathId = urlParams.get('path');
     const stepId = urlParams.get('step');
+    const currentPath = window.location.pathname || '';
+    const isLearningPathsPage = /\/learning-paths\/?$/.test(currentPath);
+    const hasStepContentContext = !document.getElementById('learning-paths-container')
+        && !document.getElementById('path-view-container');
+    const requiresExamPass = urlParams.get('lp_exam_required') === '1';
 
-    // Если нет параметров траектории - выходим
-    if (!pathId || !stepId) return;
+    // Если нет параметров траектории или это не страница контента шага - выходим
+    if (!pathId || !stepId || isLearningPathsPage || !hasStepContentContext) return;
 
-    // Не показываем панель на странице самой траектории
-    if (window.location.pathname.includes('learning-paths')) return;
-
-    // Создаём плавающую панель
+    // Создаём fallback-панель внизу страницы
     const panel = document.createElement('div');
+    const panelMessage = requiresExamPass
+        ? 'Следующий шаг откроется только после успешного завершения теста в режиме экзамена.'
+        : 'Вы изучаете этот материал в рамках траектории обучения.';
+    const completeButtonHtml = requiresExamPass
+        ? ''
+        : '<button class="ts-btn ts-btn-success" id="lp-complete-step">' +
+            '<i class="bi bi-check-circle me-1"></i> Завершить и продолжить' +
+          '</button>';
+
     panel.id = 'learning-path-step-panel';
-    panel.className = 'position-fixed bottom-0 end-0 m-3';
-    panel.innerHTML = `
-        <div class="lp-step-panel ts-card shadow-lg">
-            <div class="lp-step-header d-flex align-items-center px-4 py-3">
-                <i class="bi bi-signpost-2 me-2"></i>
-                <span>Шаг траектории</span>
-                <button type="button" class="btn-close btn-close-white btn-sm ms-auto" id="lp-panel-close"></button>
-            </div>
-            <div class="lp-step-body p-4 pt-3">
-                <p class="mb-3">Вы изучаете этот материал в рамках траектории обучения</p>
-                <div class="d-grid gap-2">
-                    <button class="ts-btn ts-btn-success" id="lp-complete-step">
-                        <i class="bi bi-check-circle me-1"></i> Завершить и продолжить
-                    </button>
-                    <button class="ts-btn ts-btn-secondary ts-btn-sm" id="lp-back-to-path">
-                        <i class="bi bi-arrow-left me-1"></i> Вернуться к траектории
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
+    panel.className = 'lp-step-panel-wrapper';
+    panel.innerHTML = '' +
+        '<div class="lp-step-panel ts-card shadow-sm border-0 rounded-0">' +
+            '<div class="lp-step-body px-4 py-3 d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">' +
+                '<div>' +
+                    '<div class="d-flex align-items-center gap-2 mb-1">' +
+                        '<i class="bi bi-signpost-2"></i>' +
+                        '<strong>Шаг траектории</strong>' +
+                    '</div>' +
+                    '<p class="mb-0 text-muted">' + panelMessage + '</p>' +
+                '</div>' +
+                '<div class="d-flex flex-wrap gap-2">' +
+                    completeButtonHtml +
+                    '<button class="ts-btn ts-btn-secondary ts-btn-sm" id="lp-back-to-path">' +
+                        '<i class="bi bi-arrow-left me-1"></i> Вернуться к траектории' +
+                    '</button>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
 
     document.body.appendChild(panel);
 
-    // Обработчики
-    document.getElementById('lp-panel-close').addEventListener('click', function() {
-        panel.classList.toggle('minimized');
-        if (panel.classList.contains('minimized')) {
-            this.innerHTML = '<i class="bi bi-chevron-up"></i>';
-            document.querySelector('.lp-step-header').addEventListener('click', function() {
-                panel.classList.remove('minimized');
-                document.getElementById('lp-panel-close').innerHTML = '';
-            }, { once: true });
-        }
-    });
+    const completeStepButton = document.getElementById('lp-complete-step');
 
-    document.getElementById('lp-complete-step').addEventListener('click', async function() {
+    if (completeStepButton) {
+        completeStepButton.addEventListener('click', async function() {
         const isConfirmed = window.confirm('Вы подтверждаете, что изучили материал?');
         if (!isConfirmed) {
             return;
@@ -292,7 +292,8 @@ function initLearningPathStepPanel() {
             btn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Завершить и продолжить';
             showLpNotification('Ошибка: ' + error.message, 'danger');
         }
-    });
+        });
+    }
 
     document.getElementById('lp-back-to-path').addEventListener('click', function() {
         window.location.href = '/learning-paths?mode=view&id=' + pathId;
