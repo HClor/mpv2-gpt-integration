@@ -697,6 +697,11 @@ class LearningPathController extends BaseController
             'material_progress_id' => ValidationHelper::optionalInt($data, 'material_progress_id')
         ];
 
+        $validation = LearningPathService::validateStepCompletion($this->modx, $progress['id'], $stepId, $completionData);
+        if (!$validation['valid']) {
+            throw new ValidationException($validation['message']);
+        }
+
         $success = LearningPathService::completeStep($this->modx, $progress['id'], $stepId, $completionData);
 
         if ($success) {
@@ -1100,7 +1105,11 @@ class LearningPathController extends BaseController
                 if (!$stmt->fetch()) {
                     throw new Exception('Тест не найден (ID=' . $itemId . '). Обратитесь к администратору.');
                 }
-                return $siteUrl . '/test-run?testId=' . $itemId . '&path=' . $pathId . '&step=' . $stepId;
+                $step = LearningPathService::getStepById($this->modx, $stepId);
+                $requireExamPass = $step ? LearningPathService::requiresExamPass($step) : false;
+
+                return $siteUrl . '/test-run?testId=' . $itemId . '&path=' . $pathId . '&step=' . $stepId
+                    . ($requireExamPass ? '&lp_exam_required=1' : '');
 
             case 'assignment':
                 // Для заданий - пока используем общую страницу

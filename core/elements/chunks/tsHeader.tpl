@@ -71,10 +71,30 @@
           </li>
           {/if}
 
+          <!-- Уведомления -->
+          <li class="nav-item dropdown me-2">
+            <a class="nav-link position-relative" href="#" id="notifications-bell" role="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Уведомления">
+              <i class="bi bi-bell fs-5"></i>
+              <span id="notifications-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display:none;">
+                0
+              </span>
+            </a>
+            <div class="dropdown-menu dropdown-menu-end p-0" aria-labelledby="notifications-bell" style="width: 360px; max-width: calc(100vw - 2rem);">
+              <div class="px-3 py-2 border-bottom d-flex align-items-center justify-content-between">
+                <strong>Уведомления</strong>
+                <small class="text-muted">Последние события</small>
+              </div>
+              <div id="notifications-dropdown">
+                <div class="text-center p-3 text-muted">Загрузка...</div>
+              </div>
+            </div>
+          </li>
+
           <!-- Меню пользователя -->
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="userMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <i class="bi bi-person-circle me-1"></i> {$_modx->user.username | escape}
+            <a class="nav-link dropdown-toggle d-inline-flex align-items-center" href="#" id="userMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-person-circle me-1"></i>
+              <span class="user-menu-name">{$_modx->user.username | escape}</span>
             </a>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
               <li><a class="dropdown-item" href="{$_modx->makeUrl(28)}"><i class="bi bi-person-circle me-2"></i> Мой профиль</a></li>
