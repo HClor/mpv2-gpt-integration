@@ -114,11 +114,11 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateNotificationBadge(count) {
         let badge = document.querySelector('.notification-badge');
         if (!badge && count > 0) {
-            const userMenu = document.getElementById('userMenu');
-            if (userMenu) {
+            const badgeHost = document.getElementById('userMenuNotificationBadgeHost');
+            if (badgeHost) {
                 badge = document.createElement('span');
-                badge.className = 'badge bg-danger ms-1 notification-badge';
-                userMenu.appendChild(badge);
+                badge.className = 'badge bg-danger notification-badge';
+                badgeHost.appendChild(badge);
             }
         }
         if (badge) {

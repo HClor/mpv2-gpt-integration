@@ -73,8 +73,10 @@
 
           <!-- Меню пользователя -->
           <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" id="userMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              <i class="bi bi-person-circle me-1"></i> {$_modx->user.username | escape}
+            <a class="nav-link dropdown-toggle d-inline-flex align-items-center" href="#" id="userMenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+              <i class="bi bi-person-circle me-1"></i>
+              <span class="user-menu-name">{$_modx->user.username | escape}</span>
+              <span id="userMenuNotificationBadgeHost" class="ms-1 d-inline-flex align-items-center"></span>
             </a>
             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userMenu">
               <li><a class="dropdown-item" href="{$_modx->makeUrl(28)}"><i class="bi bi-person-circle me-2"></i> Мой профиль</a></li>
