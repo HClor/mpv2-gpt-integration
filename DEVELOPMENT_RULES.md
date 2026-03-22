@@ -101,6 +101,33 @@ const formData = new FormData();
 formData.append('csrf_token', csrfToken);
 ```
 
+### 2.2.1. Для `fetch()` к `testsystem.php` обязательно использовать общий helper
+
+Для всех новых и изменяемых фронтенд-модулей TestSystem запрещено дублировать локальные реализации:
+- `getCsrfToken()`
+- `refreshCsrfToken()`
+- `apiCall()` с retry после `CSRF token validation failed`
+
+Вместо этого **обязательно** подключать `/assets/components/testsystem/js/csrf-helper.js` **раньше** модуля и вызывать `window.TestSystemCSRF.apiCall(...)`.
+
+```html
+<script src="/assets/components/testsystem/js/csrf-helper.js"></script>
+<script src="/assets/components/testsystem/js/learning-paths.js"></script>
+```
+
+```javascript
+async function apiCall(action, data = {}) {
+    return window.TestSystemCSRF.apiCall(action, data);
+}
+```
+
+Причины:
+1. единое поведение для long-running UI;
+2. автоматическое обновление CSRF-токена после истечения;
+3. отсутствие расхождений между сниппетами `learningPaths`, `testRunner`, `categoriesAndTests` и другими фронтенд-модулями.
+
+Если модуль работает с `FormData` или нестандартным endpoint, helper всё равно должен использоваться как единый источник функций `getToken()` / `refreshToken()`, а не копироваться вручную.
+
 ### 2.3. XSS-защита в Fenom-шаблонах
 
 В Fenom **всегда** экранировать пользовательские данные через `| escape`:
