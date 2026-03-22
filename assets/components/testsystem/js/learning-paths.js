@@ -16,8 +16,7 @@
 
     // CSRF Protection
     function getCsrfToken() {
-        const metaTag = document.querySelector('meta[name="csrf-token"]');
-        return metaTag ? metaTag.content : null;
+        return window.TestSystemCSRF ? window.TestSystemCSRF.getToken() : null;
     }
 
     // XSS Protection
@@ -61,25 +60,10 @@
     // API Call Helper
     async function apiCall(action, data = {}) {
         try {
-            const csrfToken = getCsrfToken();
-            if (csrfToken) {
-                data.csrf_token = csrfToken;
-            }
-
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action, data })
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            return await response.json();
+            return await window.TestSystemCSRF.apiCall(action, data, { apiUrl: API_URL });
         } catch (error) {
             console.error('API Error:', error);
-            showNotification('Ошибка соединения с сервером', 'danger');
+            showNotification(error.message || 'Ошибка соединения с сервером', 'danger');
             throw error;
         }
     }
