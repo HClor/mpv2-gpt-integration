@@ -453,6 +453,7 @@ $output .= '<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purif
 $output .= '<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">';
 $output .= '<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>';
 
+$modx->regClientScript('/assets/components/testsystem/js/csrf-helper.js');
 $modx->regClientScript('/assets/components/testsystem/js/question-list-shared.js');
 $modx->regClientScript('/assets/components/testsystem/js/test-cards.js');
 $modx->regClientScript('/assets/components/testsystem/js/tests-search.js');

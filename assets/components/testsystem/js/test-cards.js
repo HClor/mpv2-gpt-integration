@@ -24,54 +24,8 @@
     // API Helper
     // ============================================
 
-    async function refreshCsrfToken() {
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'getCsrfToken', data: {} })
-        });
-
-        const result = await response.json();
-        if (!result.success || !result.data || !result.data.csrf_token) {
-            throw new Error(result.message || 'Failed to refresh CSRF token');
-        }
-
-        let meta = document.querySelector('meta[name="csrf-token"]');
-        if (!meta) {
-            meta = document.createElement('meta');
-            meta.setAttribute('name', 'csrf-token');
-            document.head.appendChild(meta);
-        }
-        meta.setAttribute('content', result.data.csrf_token);
-    }
-
-    async function apiCall(action, data, retryOnCsrfFail = true) {
-        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-        if (csrfToken) {
-            data = data || {};
-            data.csrf_token = csrfToken;
-        }
-
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: action, data: data })
-        });
-
-        const result = await response.json();
-
-        if (
-            retryOnCsrfFail &&
-            result &&
-            result.success === false &&
-            typeof result.message === 'string' &&
-            result.message.toLowerCase().includes('csrf token validation failed')
-        ) {
-            await refreshCsrfToken();
-            return apiCall(action, data, false);
-        }
-
-        return result;
+    async function apiCall(action, data) {
+        return window.TestSystemCSRF.apiCall(action, data, { apiUrl: API_URL });
     }
 
     // ============================================
