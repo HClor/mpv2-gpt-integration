@@ -112,21 +112,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Функция обновления badge уведомлений
     function updateNotificationBadge(count) {
-        let badge = document.querySelector('.notification-badge');
-        if (!badge && count > 0) {
-            const badgeHost = document.getElementById('userMenuNotificationBadgeHost');
-            if (badgeHost) {
-                badge = document.createElement('span');
-                badge.className = 'badge bg-danger notification-badge';
-                badgeHost.appendChild(badge);
-            }
+        const badge = document.getElementById('notifications-badge');
+        if (!badge) {
+            return;
         }
-        if (badge) {
-            badge.textContent = count;
-            if (count === 0) {
-                badge.remove();
-            }
+
+        if (count > 0) {
+            badge.textContent = count > 99 ? '99+' : count;
+            badge.style.display = '';
+            return;
         }
+
+        badge.style.display = 'none';
     }
 
     // Tooltips Bootstrap
