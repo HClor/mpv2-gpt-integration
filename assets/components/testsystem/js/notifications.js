@@ -133,10 +133,12 @@
         dropdown.innerHTML = '<div class="text-center p-3"><div class="spinner-border spinner-border-sm"></div></div>';
 
         try {
-            const result = await apiCall('getRecentNotifications', { limit: 10 });
+            const result = await apiCall('getRecentNotifications', { limit: 10, is_read: 0 });
 
             if (result.success) {
                 notifications = result.data?.notifications || result.data || [];
+                unreadCount = Array.isArray(notifications) ? notifications.length : 0;
+                updateBellIcon();
                 renderNotificationsDropdown();
             }
         } catch (error) {
@@ -187,8 +189,9 @@
 
         html += '</div>';
         html += `
-            <div class="text-center p-2 border-top">
-                <a href="/my-notifications" class="btn btn-sm btn-link">Все уведомления</a>
+            <div class="d-flex justify-content-between align-items-center p-2 border-top">
+                <small class="text-muted">${notifications.length} непрочитанных</small>
+                <button type="button" class="btn btn-sm btn-link" onclick="Notifications.markAllAsRead()">Отметить всё прочитанным</button>
             </div>
         `;
 
@@ -215,6 +218,25 @@
             }
         } catch (error) {
             console.error('Mark as read error:', error);
+        }
+    }
+
+    async function markAllAsRead() {
+        try {
+            const result = await apiCall('markAllAsRead', {});
+
+            if (result.success) {
+                notifications = notifications.map(notification => ({
+                    ...notification,
+                    is_read: 1
+                }));
+                unreadCount = 0;
+                updateBellIcon();
+                renderNotificationsDropdown();
+            }
+        } catch (error) {
+            console.error('Mark all as read error:', error);
+            showNotification('Ошибка при массовой отметке уведомлений', 'danger');
         }
     }
 

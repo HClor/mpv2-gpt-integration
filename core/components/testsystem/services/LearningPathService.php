@@ -1220,6 +1220,66 @@ class LearningPathService
         return $step ?: null;
     }
 
+    public static function requiresExamPass(array $step)
+    {
+        $unlockCondition = $step['unlock_condition'] ?? [];
+
+        if (is_string($unlockCondition) && $unlockCondition !== '') {
+            $unlockCondition = json_decode($unlockCondition, true) ?: [];
+        }
+
+        return in_array($step['step_type'] ?? '', ['test', 'quiz'], true)
+            && !empty($unlockCondition['require_exam_pass']);
+    }
+
+    public static function validateStepCompletion($modx, $progressId, $stepId, $completionData = [])
+    {
+        $prefix = $modx->getOption('table_prefix', null, 'modx_');
+        $step = self::getStepById($modx, $stepId);
+
+        if (!$step) {
+            return ['valid' => false, 'message' => 'Шаг траектории не найден'];
+        }
+
+        if (!self::requiresExamPass($step)) {
+            return ['valid' => true, 'step' => $step];
+        }
+
+        $sessionId = (int)($completionData['session_id'] ?? 0);
+        if ($sessionId <= 0) {
+            return [
+                'valid' => false,
+                'message' => 'Этот шаг можно завершить только после успешного прохождения теста в режиме экзамена.'
+            ];
+        }
+
+        $sql = "SELECT sc.user_id, sc.path_id, ts.test_id, ts.mode, ts.status, ts.passed
+                FROM {$prefix}test_learning_path_progress sc
+                JOIN {$prefix}test_sessions ts ON ts.id = ? AND ts.user_id = sc.user_id
+                WHERE sc.id = ?";
+        $stmt = $modx->prepare($sql);
+        $stmt->execute([$sessionId, $progressId]);
+        $session = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$session) {
+            return ['valid' => false, 'message' => 'Сессия экзамена не найдена'];
+        }
+
+        if ((int)$session['test_id'] !== (int)$step['item_id']) {
+            return ['valid' => false, 'message' => 'Сессия не относится к тесту этого шага'];
+        }
+
+        if ($session['mode'] !== 'exam') {
+            return ['valid' => false, 'message' => 'Следующий шаг открывается только после режима экзамена'];
+        }
+
+        if ($session['status'] !== 'completed' || (int)$session['passed'] !== 1) {
+            return ['valid' => false, 'message' => 'Экзамен должен быть завершён успешно, прежде чем шаг будет засчитан'];
+        }
+
+        return ['valid' => true, 'step' => $step, 'session' => $session];
+    }
+
     /**
      * Обновление статуса шага
      *
