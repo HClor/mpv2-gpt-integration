@@ -75,7 +75,7 @@
           <li class="nav-item dropdown me-2">
             <a class="nav-link position-relative" href="#" id="notifications-bell" role="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Уведомления">
               <i class="bi bi-bell fs-5"></i>
-              <span id="notifications-badge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="display:none;">
+              <span id="notifications-badge" class="position-absolute badge rounded-pill bg-danger" style="display:none; top: 0.35rem; left: calc(100% - 4px); transform: translate(-50%, -50%);">
                 0
               </span>
             </a>
