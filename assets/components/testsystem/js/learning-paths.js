@@ -804,80 +804,132 @@
         }
     }
 
+    function renderPathActions(data) {
+        const completedSteps = userProgress.completed_steps_count || 0;
+        const totalSteps = pathSteps.length;
+        const enrolled = Boolean(data.is_enrolled || isEnrolled);
+        const rawProgress = totalSteps > 0
+            ? Math.round((completedSteps / totalSteps) * 100)
+            : (userProgress.percentage || 0);
+        const progress = Math.max(0, Math.min(100, rawProgress));
+        const nextStep = pathSteps.find(step => {
+            const isCompleted = userProgress.completed_steps?.includes(step.id);
+            const isLocked = step.is_locked && !isCompleted;
+            const hasContent = step.has_content === true || step.content_available !== false;
+
+            return !isCompleted && !isLocked && hasContent;
+        });
+
+        const statusBadge = enrolled
+            ? '<span class="ts-learning-path-tag ts-learning-path-tag-success">Вы записаны</span>'
+            : '<span class="ts-learning-path-tag ts-learning-path-tag-neutral">Вы не записаны</span>';
+
+        const continueButton = enrolled && nextStep ? `
+            <button class="btn btn-primary" onclick="LearningPaths.startStep(${nextStep.id})">
+                <i class="bi bi-play-fill me-1"></i> Продолжить
+            </button>
+        ` : '';
+
+        const progressBlock = enrolled ? `
+            <div class="ts-learning-path-action-block__progress">
+                <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+                    <span class="small text-muted">Прогресс по траектории</span>
+                    <strong>${completedSteps}/${totalSteps}</strong>
+                </div>
+                <div class="progress ts-learning-path-progress" role="progressbar" aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100">
+                    <div class="progress-bar ${progress === 100 ? 'ts-learning-path-progress-bar-success' : 'ts-learning-path-progress-bar-active'} ${progress > 0 && progress < 100 ? 'progress-bar-striped progress-bar-animated' : ''}"
+                         style="width: ${progress}%">
+                        ${progress}%
+                    </div>
+                </div>
+            </div>
+        ` : `
+            <p class="mb-0 text-muted">
+                Запишитесь на траекторию, чтобы отслеживать прогресс и быстро переходить к следующему доступному шагу.
+            </p>
+        `;
+
+        return `
+            <section class="ts-card ts-learning-path-action-block mb-4">
+                <div class="ts-learning-path-action-block__status">
+                    <div>
+                        <h3 class="h5 mb-1">Управление траекторией</h3>
+                        <p class="text-muted mb-0">${enrolled ? 'Продолжайте обучение в удобном темпе и отслеживайте завершённые шаги.' : 'Запись откроет доступ к прохождению шагов и сохранению прогресса.'}</p>
+                    </div>
+                    ${statusBadge}
+                </div>
+                ${progressBlock}
+                <div class="ts-learning-path-action-block__actions">
+                    ${continueButton}
+                    ${enrolled ? `
+                        <button class="btn btn-outline-secondary" onclick="LearningPaths.unenrollFromPath(${data.id})">
+                            <i class="bi bi-x-circle me-1"></i> Отписаться
+                        </button>
+                    ` : `
+                        <button class="btn btn-primary" onclick="LearningPaths.enrollOnPath(${data.id})">
+                            <i class="bi bi-plus-circle me-1"></i> Записаться
+                        </button>
+                    `}
+                </div>
+            </section>
+        `;
+    }
+
     function renderPathView(data) {
         const container = document.getElementById('path-view-container');
 
-        const progress = userProgress.percentage || 0;
         const completedSteps = userProgress.completed_steps_count || 0;
         const totalSteps = pathSteps.length;
+        const progress = totalSteps > 0
+            ? Math.round((completedSteps / totalSteps) * 100)
+            : (userProgress.percentage || 0);
 
         let html = `
             <div class="path-header mb-4">
                 <h1>${escapeHtml(data.name)}</h1>
-                ${data.description ? `<p class="lead text-muted">${escapeHtml(data.description)}</p>` : ''}
+                ${data.description ? `<p class="lead text-muted mb-0">${escapeHtml(data.description)}</p>` : ''}
+            </div>
 
-                <div class="row g-3 mb-4">
-                    <div class="col-md-3">
-                        <div class="card text-center">
-                            <div class="card-body">
-                                <i class="bi bi-list-ol fs-2 text-primary"></i>
-                                <h5 class="mt-2">${totalSteps}</h5>
-                                <p class="small text-muted mb-0">Всего шагов</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card text-center">
-                            <div class="card-body">
-                                <i class="bi bi-check-circle fs-2 text-success"></i>
-                                <h5 class="mt-2">${completedSteps}</h5>
-                                <p class="small text-muted mb-0">Завершено</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card text-center">
-                            <div class="card-body">
-                                <i class="bi bi-clock fs-2 text-warning"></i>
-                                <h5 class="mt-2">~${data.estimated_hours}ч</h5>
-                                <p class="small text-muted mb-0">Время</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="card text-center">
-                            <div class="card-body">
-                                <i class="bi bi-trophy fs-2 text-danger"></i>
-                                <h5 class="mt-2">${progress}%</h5>
-                                <p class="small text-muted mb-0">Прогресс</p>
-                            </div>
+            <div class="row g-3 mb-4">
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <i class="bi bi-list-ol fs-2 text-primary"></i>
+                            <h5 class="mt-2">${totalSteps}</h5>
+                            <p class="small text-muted mb-0">Всего шагов</p>
                         </div>
                     </div>
                 </div>
-
-                ${isEnrolled ? `
-                    <div class="d-flex align-items-center mb-4">
-                        <div class="progress flex-grow-1 me-3" style="height: 25px;">
-                            <div class="progress-bar bg-success progress-bar-striped ${progress < 100 ? 'progress-bar-animated' : ''}"
-                                 role="progressbar"
-                                 style="width: ${progress}%">
-                                ${progress}%
-                            </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <i class="bi bi-check-circle fs-2 text-success"></i>
+                            <h5 class="mt-2">${completedSteps}</h5>
+                            <p class="small text-muted mb-0">Завершено</p>
                         </div>
-                        <button class="btn btn-outline-secondary btn-sm" onclick="LearningPaths.unenrollFromPath(${data.id})">
-                            <i class="bi bi-x-circle me-1"></i> Отписаться
-                        </button>
                     </div>
-                ` : `
-                    <div class="alert alert-info mb-4">
-                        <i class="bi bi-info-circle me-2"></i>
-                        Вы ещё не записаны на эту траекторию обучения.
-                        <button class="btn btn-primary btn-sm ms-3" onclick="LearningPaths.enrollOnPath(${data.id})">
-                            <i class="bi bi-plus-circle me-1"></i> Записаться
-                        </button>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <i class="bi bi-clock fs-2 text-warning"></i>
+                            <h5 class="mt-2">~${data.estimated_hours}ч</h5>
+                            <p class="small text-muted mb-0">Время</p>
+                        </div>
                     </div>
-                `}
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <i class="bi bi-trophy fs-2 text-danger"></i>
+                            <h5 class="mt-2">${progress}%</h5>
+                            <p class="small text-muted mb-0">Прогресс</p>
+                        </div>
+                    </div>
+                </div>
             </div>
+
+            ${renderPathActions(data)}
 
             <div class="path-steps">
         `;
@@ -911,6 +963,15 @@
         const typeLabel = STEP_TYPE_LABELS[step.step_type] || step.step_type;
 
         let unlockRequirements = '';
+        if (step.unlock_condition?.require_exam_pass) {
+            unlockRequirements += `
+                <div class="alert alert-warning small mb-2">
+                    <i class="bi bi-clipboard2-check"></i>
+                    Следующий шаг откроется только после успешного прохождения этого теста в режиме экзамена.
+                </div>
+            `;
+        }
+
         if (isLocked && step.unlock_requirements) {
             const reqs = JSON.parse(step.unlock_requirements || '{}');
             unlockRequirements = `
@@ -1172,10 +1233,20 @@
             const warningBadge = isContentUnavailable
                 ? '<span class="badge bg-danger ms-2"><i class="bi bi-exclamation-triangle-fill"></i> Контент недоступен</span>'
                 : '';
+            const unlockCondition = step.unlock_condition || {};
+            const examRequirementBadge = unlockCondition.require_exam_pass
+                ? '<span class="badge bg-danger-subtle text-danger ms-2"><i class="bi bi-clipboard2-check"></i> Только экзамен</span>'
+                : '';
             const warningMessage = isContentUnavailable
                 ? `<div class="alert alert-danger mb-2 mt-2 small">
                     <i class="bi bi-exclamation-triangle-fill"></i>
                     ${escapeHtml(step.content_error || 'Контент был удален или не опубликован')}
+                   </div>`
+                : '';
+            const examRequirementMessage = unlockCondition.require_exam_pass
+                ? `<div class="alert alert-warning mb-2 mt-2 small">
+                    <i class="bi bi-clipboard2-check"></i>
+                    Следующий шаг откроется только после успешного прохождения этого теста в режиме экзамена.
                    </div>`
                 : '';
 
@@ -1186,6 +1257,7 @@
                             <i class="bi bi-grip-vertical handle" style="cursor: move;"></i>
                             <strong>Шаг ${index + 1}: ${escapeHtml(step.name)}</strong>
                             <span class="badge bg-secondary ms-2">${STEP_TYPE_LABELS[step.step_type]}</span>
+                            ${examRequirementBadge}
                             ${warningBadge}
                         </div>
                         <div class="btn-group btn-group-sm">
@@ -1203,6 +1275,7 @@
                     </div>
                     <div class="card-body">
                         ${warningMessage}
+                        ${examRequirementMessage}
                         <p class="text-muted mb-0">${escapeHtml(step.description || 'Нет описания')}</p>
                     </div>
                 </div>
@@ -1309,6 +1382,22 @@
     let selectedContentName = '';
     let availableContent = { tests: [], materials: [] };
 
+    function updateStepExamRequirementVisibility(stepType) {
+        const wrapper = document.getElementById('step-exam-requirement-wrapper');
+        const checkbox = document.getElementById('step-require-exam-pass');
+        const isTestStep = stepType === 'test' || stepType === 'quiz';
+
+        if (!wrapper || !checkbox) {
+            return;
+        }
+
+        wrapper.classList.toggle('d-none', !isTestStep);
+
+        if (!isTestStep) {
+            checkbox.checked = false;
+        }
+    }
+
     function showAddStepModal() {
         document.getElementById('step-modal-title').textContent = 'Добавить шаг';
         document.getElementById('step-title').value = '';
@@ -1318,6 +1407,7 @@
         document.getElementById('step-content-search').value = '';
         document.getElementById('step-unlock-previous').checked = true;
         document.getElementById('step-unlock-min-score').value = '';
+        document.getElementById('step-require-exam-pass').checked = false;
 
         // Reset content selection
         selectedContentId = null;
@@ -1334,7 +1424,12 @@
         const searchBtn = document.getElementById('step-content-search-btn');
         const searchInput = document.getElementById('step-content-search');
 
-        stepType.onchange = () => loadAvailableContent();
+        updateStepExamRequirementVisibility(stepType.value);
+
+        stepType.onchange = () => {
+            updateStepExamRequirementVisibility(stepType.value);
+            loadAvailableContent();
+        };
         searchBtn.onclick = () => loadAvailableContent();
         searchInput.onkeypress = (e) => { if (e.key === 'Enter') loadAvailableContent(); };
 
@@ -1437,6 +1532,7 @@
         const contentId = document.getElementById('step-content-id').value;
         const unlockPrevious = document.getElementById('step-unlock-previous').checked;
         const unlockMinScore = parseInt(document.getElementById('step-unlock-min-score').value) || null;
+        const requireExamPass = document.getElementById('step-require-exam-pass').checked;
 
         if (!title) {
             showNotification('Введите название шага', 'warning');
@@ -1455,7 +1551,8 @@
         try {
             const unlockRequirements = {
                 previous_step: unlockPrevious,
-                min_score: unlockMinScore
+                min_score: unlockMinScore,
+                require_exam_pass: requireExamPass && (stepType === 'test' || stepType === 'quiz')
             };
 
             const result = await apiCall('addStep', {
@@ -1502,6 +1599,8 @@
         const unlockCondition = step.unlock_condition || {};
         document.getElementById('step-unlock-previous').checked = unlockCondition.previous_step !== false;
         document.getElementById('step-unlock-min-score').value = unlockCondition.min_score || '';
+        document.getElementById('step-require-exam-pass').checked = !!unlockCondition.require_exam_pass;
+        updateStepExamRequirementVisibility(step.step_type || 'material');
 
         // Показываем кнопку обновления вместо добавления
         const saveBtn = document.getElementById('save-step-btn');
@@ -1522,6 +1621,7 @@
         const contentId = document.getElementById('step-content-id').value;
         const unlockPrevious = document.getElementById('step-unlock-previous').checked;
         const unlockMinScore = parseInt(document.getElementById('step-unlock-min-score').value) || null;
+        const requireExamPass = document.getElementById('step-require-exam-pass').checked;
 
         if (!title) {
             showNotification('Введите название шага', 'warning');
@@ -1540,7 +1640,8 @@
         try {
             const unlockCondition = {
                 previous_step: unlockPrevious,
-                min_score: unlockMinScore
+                min_score: unlockMinScore,
+                require_exam_pass: requireExamPass && (stepType === 'test' || stepType === 'quiz')
             };
 
             const result = await apiCall('updateStep', {

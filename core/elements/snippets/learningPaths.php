@@ -530,6 +530,15 @@ function renderStepModal() {
                         <input type="number" class="form-control" id="step-unlock-min-score"
                                min="0" max="100" placeholder="Оставьте пустым если не требуется">
                     </div>
+                    <div class="form-check mb-2" id="step-exam-requirement-wrapper">
+                        <input class="form-check-input" type="checkbox" id="step-require-exam-pass">
+                        <label class="form-check-label" for="step-require-exam-pass">
+                            Для завершения шага требовать успешное прохождение теста в режиме экзамена
+                        </label>
+                        <div class="form-text">
+                            Используйте для тестовых шагов, если следующий шаг должен открываться только после успешного экзамена.
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="ts-btn ts-btn-secondary" data-bs-dismiss="modal">Отмена</button>
