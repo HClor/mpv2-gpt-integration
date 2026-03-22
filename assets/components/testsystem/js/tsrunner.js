@@ -28,6 +28,9 @@
     const isFavoritesView = viewParam === 'favorites';
     const isQuestionsView = viewParam === 'questions';
     const isManageView = viewParam === 'manage';
+    const learningPathId = urlParams.get('path');
+    const learningPathStepId = urlParams.get('step');
+    const requiresExamPassForPath = urlParams.get('lp_exam_required') === '1';
 
     const container = document.getElementById("test-container");
     const testId = container ? container.dataset.testId : null;
@@ -2331,6 +2334,30 @@ async function addFavoritesViewToggle(questionId) {
     }
     
 
+
+    async function completeLearningPathTestStep(sessionResult) {
+        if (!learningPathId || !learningPathStepId || !sessionResult?.passed || testMode !== 'exam') {
+            return sessionResult;
+        }
+
+        if (!requiresExamPassForPath) {
+            return sessionResult;
+        }
+
+        const completionResult = await apiCall('completePathStep', {
+            path_id: parseInt(learningPathId, 10),
+            step_id: parseInt(learningPathStepId, 10),
+            session_id: currentSessionId,
+            score: sessionResult.score
+        });
+
+        if (!completionResult.success) {
+            throw new Error(completionResult.message || 'Не удалось зачесть шаг траектории после экзамена');
+        }
+
+        return sessionResult;
+    }
+
     async function finishTest() {
         console.log("🎯 finishTest() called, session_id:", currentSessionId);
         // Stop timer if running
@@ -2346,7 +2373,7 @@ async function addFavoritesViewToggle(questionId) {
 
             if (result.success) {
                 console.log("✅ finishTest succeeded, showing results");
-                const data = result.data;
+                const data = await completeLearningPathTestStep(result.data);
 
                 document.getElementById("question-container").style.display = "none";
                 document.getElementById("results-container").style.display = "block";
@@ -2361,9 +2388,13 @@ async function addFavoritesViewToggle(questionId) {
                 if (messageElement) {
                     if (testMode === "exam") {
                         if (data.passed) {
-                            messageElement.innerHTML = '<span class="text-success">✅ Тест пройден успешно!</span>';
+                            messageElement.innerHTML = requiresExamPassForPath
+                                ? '<span class="text-success">✅ Тест пройден успешно! Шаг траектории засчитан.</span>'
+                                : '<span class="text-success">✅ Тест пройден успешно!</span>';
                         } else {
-                            messageElement.innerHTML = '<span class="text-danger">❌ Тест не пройден. Попробуйте еще раз.</span>';
+                            messageElement.innerHTML = requiresExamPassForPath
+                                ? '<span class="text-danger">❌ Экзамен не пройден. Следующий шаг траектории останется заблокирован.</span>'
+                                : '<span class="text-danger">❌ Тест не пройден. Попробуйте еще раз.</span>';
                         }
                     } else {
                         messageElement.innerHTML = '<span class="text-info">📚 Режим обучения завершен</span>';
