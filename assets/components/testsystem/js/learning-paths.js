@@ -963,6 +963,15 @@
         const typeLabel = STEP_TYPE_LABELS[step.step_type] || step.step_type;
 
         let unlockRequirements = '';
+        if (step.unlock_condition?.require_exam_pass) {
+            unlockRequirements += `
+                <div class="alert alert-warning small mb-2">
+                    <i class="bi bi-clipboard2-check"></i>
+                    Следующий шаг откроется только после успешного прохождения этого теста в режиме экзамена.
+                </div>
+            `;
+        }
+
         if (isLocked && step.unlock_requirements) {
             const reqs = JSON.parse(step.unlock_requirements || '{}');
             unlockRequirements = `
@@ -1224,10 +1233,20 @@
             const warningBadge = isContentUnavailable
                 ? '<span class="badge bg-danger ms-2"><i class="bi bi-exclamation-triangle-fill"></i> Контент недоступен</span>'
                 : '';
+            const unlockCondition = step.unlock_condition || {};
+            const examRequirementBadge = unlockCondition.require_exam_pass
+                ? '<span class="badge bg-danger-subtle text-danger ms-2"><i class="bi bi-clipboard2-check"></i> Только экзамен</span>'
+                : '';
             const warningMessage = isContentUnavailable
                 ? `<div class="alert alert-danger mb-2 mt-2 small">
                     <i class="bi bi-exclamation-triangle-fill"></i>
                     ${escapeHtml(step.content_error || 'Контент был удален или не опубликован')}
+                   </div>`
+                : '';
+            const examRequirementMessage = unlockCondition.require_exam_pass
+                ? `<div class="alert alert-warning mb-2 mt-2 small">
+                    <i class="bi bi-clipboard2-check"></i>
+                    Следующий шаг откроется только после успешного прохождения этого теста в режиме экзамена.
                    </div>`
                 : '';
 
@@ -1238,6 +1257,7 @@
                             <i class="bi bi-grip-vertical handle" style="cursor: move;"></i>
                             <strong>Шаг ${index + 1}: ${escapeHtml(step.name)}</strong>
                             <span class="badge bg-secondary ms-2">${STEP_TYPE_LABELS[step.step_type]}</span>
+                            ${examRequirementBadge}
                             ${warningBadge}
                         </div>
                         <div class="btn-group btn-group-sm">
@@ -1255,6 +1275,7 @@
                     </div>
                     <div class="card-body">
                         ${warningMessage}
+                        ${examRequirementMessage}
                         <p class="text-muted mb-0">${escapeHtml(step.description || 'Нет описания')}</p>
                     </div>
                 </div>
@@ -1361,6 +1382,22 @@
     let selectedContentName = '';
     let availableContent = { tests: [], materials: [] };
 
+    function updateStepExamRequirementVisibility(stepType) {
+        const wrapper = document.getElementById('step-exam-requirement-wrapper');
+        const checkbox = document.getElementById('step-require-exam-pass');
+        const isTestStep = stepType === 'test' || stepType === 'quiz';
+
+        if (!wrapper || !checkbox) {
+            return;
+        }
+
+        wrapper.classList.toggle('d-none', !isTestStep);
+
+        if (!isTestStep) {
+            checkbox.checked = false;
+        }
+    }
+
     function showAddStepModal() {
         document.getElementById('step-modal-title').textContent = 'Добавить шаг';
         document.getElementById('step-title').value = '';
@@ -1370,6 +1407,7 @@
         document.getElementById('step-content-search').value = '';
         document.getElementById('step-unlock-previous').checked = true;
         document.getElementById('step-unlock-min-score').value = '';
+        document.getElementById('step-require-exam-pass').checked = false;
 
         // Reset content selection
         selectedContentId = null;
@@ -1386,7 +1424,12 @@
         const searchBtn = document.getElementById('step-content-search-btn');
         const searchInput = document.getElementById('step-content-search');
 
-        stepType.onchange = () => loadAvailableContent();
+        updateStepExamRequirementVisibility(stepType.value);
+
+        stepType.onchange = () => {
+            updateStepExamRequirementVisibility(stepType.value);
+            loadAvailableContent();
+        };
         searchBtn.onclick = () => loadAvailableContent();
         searchInput.onkeypress = (e) => { if (e.key === 'Enter') loadAvailableContent(); };
 
@@ -1489,6 +1532,7 @@
         const contentId = document.getElementById('step-content-id').value;
         const unlockPrevious = document.getElementById('step-unlock-previous').checked;
         const unlockMinScore = parseInt(document.getElementById('step-unlock-min-score').value) || null;
+        const requireExamPass = document.getElementById('step-require-exam-pass').checked;
 
         if (!title) {
             showNotification('Введите название шага', 'warning');
@@ -1507,7 +1551,8 @@
         try {
             const unlockRequirements = {
                 previous_step: unlockPrevious,
-                min_score: unlockMinScore
+                min_score: unlockMinScore,
+                require_exam_pass: requireExamPass && (stepType === 'test' || stepType === 'quiz')
             };
 
             const result = await apiCall('addStep', {
@@ -1554,6 +1599,8 @@
         const unlockCondition = step.unlock_condition || {};
         document.getElementById('step-unlock-previous').checked = unlockCondition.previous_step !== false;
         document.getElementById('step-unlock-min-score').value = unlockCondition.min_score || '';
+        document.getElementById('step-require-exam-pass').checked = !!unlockCondition.require_exam_pass;
+        updateStepExamRequirementVisibility(step.step_type || 'material');
 
         // Показываем кнопку обновления вместо добавления
         const saveBtn = document.getElementById('save-step-btn');
@@ -1574,6 +1621,7 @@
         const contentId = document.getElementById('step-content-id').value;
         const unlockPrevious = document.getElementById('step-unlock-previous').checked;
         const unlockMinScore = parseInt(document.getElementById('step-unlock-min-score').value) || null;
+        const requireExamPass = document.getElementById('step-require-exam-pass').checked;
 
         if (!title) {
             showNotification('Введите название шага', 'warning');
@@ -1592,7 +1640,8 @@
         try {
             const unlockCondition = {
                 previous_step: unlockPrevious,
-                min_score: unlockMinScore
+                min_score: unlockMinScore,
+                require_exam_pass: requireExamPass && (stepType === 'test' || stepType === 'quiz')
             };
 
             const result = await apiCall('updateStep', {

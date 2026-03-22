@@ -199,6 +199,7 @@ function initLearningPathStepPanel() {
     const isLearningPathsPage = /\/learning-paths\/?$/.test(currentPath);
     const hasStepContentContext = !document.getElementById('learning-paths-container')
         && !document.getElementById('path-view-container');
+    const requiresExamPass = urlParams.get('lp_exam_required') === '1';
 
     // Если нет параметров траектории или это не страница контента шага - выходим
     if (!pathId || !stepId || isLearningPathsPage || !hasStepContentContext) return;
@@ -215,12 +216,14 @@ function initLearningPathStepPanel() {
                         <i class="bi bi-signpost-2"></i>
                         <strong>Шаг траектории</strong>
                     </div>
-                    <p class="mb-0 text-muted">Вы изучаете этот материал в рамках траектории обучения.</p>
+                    <p class="mb-0 text-muted">${requiresExamPass ? 'Следующий шаг откроется только после успешного завершения теста в режиме экзамена.' : 'Вы изучаете этот материал в рамках траектории обучения.'}</p>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
+                    ${requiresExamPass ? '' : `
                     <button class="ts-btn ts-btn-success" id="lp-complete-step">
                         <i class="bi bi-check-circle me-1"></i> Завершить и продолжить
                     </button>
+                    `}
                     <button class="ts-btn ts-btn-secondary ts-btn-sm" id="lp-back-to-path">
                         <i class="bi bi-arrow-left me-1"></i> Вернуться к траектории
                     </button>
@@ -231,7 +234,10 @@ function initLearningPathStepPanel() {
 
     document.body.appendChild(panel);
 
-    document.getElementById('lp-complete-step').addEventListener('click', async function() {
+    const completeStepButton = document.getElementById('lp-complete-step');
+
+    if (completeStepButton) {
+        completeStepButton.addEventListener('click', async function() {
         const isConfirmed = window.confirm('Вы подтверждаете, что изучили материал?');
         if (!isConfirmed) {
             return;
@@ -282,7 +288,8 @@ function initLearningPathStepPanel() {
             btn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Завершить и продолжить';
             showLpNotification('Ошибка: ' + error.message, 'danger');
         }
-    });
+        });
+    }
 
     document.getElementById('lp-back-to-path').addEventListener('click', function() {
         window.location.href = '/learning-paths?mode=view&id=' + pathId;
