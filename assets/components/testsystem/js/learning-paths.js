@@ -1131,7 +1131,7 @@
 
         // Event listeners
         document.getElementById('add-step-btn')?.addEventListener('click', showAddStepModal);
-        document.getElementById('save-step-btn')?.addEventListener('click', saveStep);
+        configureStepSaveButton();
         document.getElementById('save-steps-order-btn')?.addEventListener('click', saveStepsOrder);
     }
 
@@ -1398,6 +1398,23 @@
         }
     }
 
+    function configureStepSaveButton(mode = 'create') {
+        const saveBtn = document.getElementById('save-step-btn');
+
+        if (!saveBtn) {
+            return;
+        }
+
+        if (mode === 'edit') {
+            saveBtn.innerHTML = '<i class="bi bi-check-circle"></i> Обновить';
+            saveBtn.onclick = updateStepFromModal;
+            return;
+        }
+
+        saveBtn.innerHTML = '<i class="bi bi-check-circle"></i> Добавить';
+        saveBtn.onclick = saveStep;
+    }
+
     function showAddStepModal() {
         document.getElementById('step-modal-title').textContent = 'Добавить шаг';
         document.getElementById('step-title').value = '';
@@ -1432,6 +1449,8 @@
         };
         searchBtn.onclick = () => loadAvailableContent();
         searchInput.onkeypress = (e) => { if (e.key === 'Enter') loadAvailableContent(); };
+
+        configureStepSaveButton('create');
 
         const modal = new bootstrap.Modal(document.getElementById('stepModal'));
         modal.show();
@@ -1603,9 +1622,7 @@
         updateStepExamRequirementVisibility(step.step_type || 'material');
 
         // Показываем кнопку обновления вместо добавления
-        const saveBtn = document.getElementById('save-step-btn');
-        saveBtn.textContent = 'Обновить';
-        saveBtn.onclick = () => updateStepFromModal();
+        configureStepSaveButton('edit');
 
         const modal = new bootstrap.Modal(document.getElementById('stepModal'));
         modal.show();
@@ -1679,11 +1696,7 @@
         if (stepModal) {
             stepModal.addEventListener('hidden.bs.modal', function() {
                 editingStepIndex = null;
-                const saveBtn = document.getElementById('save-step-btn');
-                if (saveBtn) {
-                    saveBtn.textContent = 'Добавить';
-                    saveBtn.onclick = saveStep;
-                }
+                configureStepSaveButton('create');
             });
         }
     });
