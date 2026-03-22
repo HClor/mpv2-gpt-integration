@@ -206,31 +206,35 @@ function initLearningPathStepPanel() {
 
     // Создаём fallback-панель внизу страницы
     const panel = document.createElement('div');
+    const panelMessage = requiresExamPass
+        ? 'Следующий шаг откроется только после успешного завершения теста в режиме экзамена.'
+        : 'Вы изучаете этот материал в рамках траектории обучения.';
+    const completeButtonHtml = requiresExamPass
+        ? ''
+        : '<button class="ts-btn ts-btn-success" id="lp-complete-step">' +
+            '<i class="bi bi-check-circle me-1"></i> Завершить и продолжить' +
+          '</button>';
+
     panel.id = 'learning-path-step-panel';
     panel.className = 'lp-step-panel-wrapper';
-    panel.innerHTML = `
-        <div class="lp-step-panel ts-card shadow-sm border-0 rounded-0">
-            <div class="lp-step-body px-4 py-3 d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">
-                <div>
-                    <div class="d-flex align-items-center gap-2 mb-1">
-                        <i class="bi bi-signpost-2"></i>
-                        <strong>Шаг траектории</strong>
-                    </div>
-                    <p class="mb-0 text-muted">${requiresExamPass ? 'Следующий шаг откроется только после успешного завершения теста в режиме экзамена.' : 'Вы изучаете этот материал в рамках траектории обучения.'}</p>
-                </div>
-                <div class="d-flex flex-wrap gap-2">
-                    ${requiresExamPass ? '' : `
-                    <button class="ts-btn ts-btn-success" id="lp-complete-step">
-                        <i class="bi bi-check-circle me-1"></i> Завершить и продолжить
-                    </button>
-                    `}
-                    <button class="ts-btn ts-btn-secondary ts-btn-sm" id="lp-back-to-path">
-                        <i class="bi bi-arrow-left me-1"></i> Вернуться к траектории
-                    </button>
-                </div>
-            </div>
-        </div>
-    `;
+    panel.innerHTML = '' +
+        '<div class="lp-step-panel ts-card shadow-sm border-0 rounded-0">' +
+            '<div class="lp-step-body px-4 py-3 d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">' +
+                '<div>' +
+                    '<div class="d-flex align-items-center gap-2 mb-1">' +
+                        '<i class="bi bi-signpost-2"></i>' +
+                        '<strong>Шаг траектории</strong>' +
+                    '</div>' +
+                    '<p class="mb-0 text-muted">' + panelMessage + '</p>' +
+                '</div>' +
+                '<div class="d-flex flex-wrap gap-2">' +
+                    completeButtonHtml +
+                    '<button class="ts-btn ts-btn-secondary ts-btn-sm" id="lp-back-to-path">' +
+                        '<i class="bi bi-arrow-left me-1"></i> Вернуться к траектории' +
+                    '</button>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
 
     document.body.appendChild(panel);
 
