@@ -2,6 +2,7 @@
     'use strict';
 
     const DEFAULT_API_URL = '/assets/components/testsystem/ajax/testsystem.php';
+    const CSRF_RECOVERY_MESSAGE = 'Не удалось подтвердить действие из-за истекшего защитного токена. Обновите страницу и повторите попытку.';
 
     function getApiUrl() {
         return window.TS_API_URL || DEFAULT_API_URL;
@@ -32,6 +33,13 @@
         );
     }
 
+    function withCsrfRecoveryMessage(result) {
+        return {
+            ...result,
+            message: CSRF_RECOVERY_MESSAGE
+        };
+    }
+
     async function parseJsonResponse(response) {
         const text = await response.text();
 
@@ -57,7 +65,7 @@
         const result = await parseJsonResponse(response);
 
         if (!result.success || !result.data || !result.data.csrf_token) {
-            throw new Error(result.message || 'Failed to refresh CSRF token');
+            throw new Error(CSRF_RECOVERY_MESSAGE);
         }
 
         setToken(result.data.csrf_token);
@@ -86,8 +94,17 @@
         const result = await parseJsonResponse(response);
 
         if (retryOnCsrfFail && isCsrfFailure(result)) {
-            await refreshToken();
+            try {
+                await refreshToken();
+            } catch (error) {
+                return withCsrfRecoveryMessage(result);
+            }
+
             return apiCall(action, data, { ...options, retryOnCsrfFail: false });
+        }
+
+        if (isCsrfFailure(result)) {
+            return withCsrfRecoveryMessage(result);
         }
 
         return result;

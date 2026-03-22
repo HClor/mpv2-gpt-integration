@@ -63,7 +63,7 @@
             return await window.TestSystemCSRF.apiCall(action, data, { apiUrl: API_URL });
         } catch (error) {
             console.error('API Error:', error);
-            showNotification('Ошибка соединения с сервером', 'danger');
+            showNotification(error.message || 'Ошибка соединения с сервером', 'danger');
             throw error;
         }
     }

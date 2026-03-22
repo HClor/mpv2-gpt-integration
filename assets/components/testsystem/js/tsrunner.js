@@ -122,7 +122,7 @@
             return await window.TestSystemCSRF.apiCall(action, data, { apiUrl: API_URL });
         } catch (error) {
             console.error("API Error:", error);
-            alert("Ошибка соединения с сервером");
+            alert(error.message || "Ошибка соединения с сервером");
             throw error;
         }
     }
