@@ -258,6 +258,53 @@
     background-color: var(--color-text-muted);
 }
 
+.ts-learning-path-action-block {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-card);
+    background-color: var(--color-bg-card);
+    box-shadow: var(--shadow-card);
+}
+
+.ts-learning-path-action-block__status {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+}
+
+.ts-learning-path-action-block__progress {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.ts-learning-path-action-block__actions {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+}
+
+.lp-step-panel-wrapper {
+    position: sticky;
+    bottom: 0;
+    z-index: 1020;
+    width: 100%;
+    margin-top: var(--spacing-lg);
+}
+
+.lp-step-panel {
+    width: 100%;
+    border-top: 1px solid var(--color-border);
+    background-color: var(--color-bg-card);
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.08);
+}
+
 .ts-learning-path-footer {
     background-color: var(--color-bg-subtle);
     border-top: 1px solid var(--color-border);
