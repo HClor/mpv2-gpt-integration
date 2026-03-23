@@ -628,12 +628,37 @@ class NotificationService
     public static function cleanupOldNotifications($modx, $daysToKeep = 30)
     {
         $prefix = $modx->getOption('table_prefix');
+        $deleted = 0;
 
-        $stmt = $modx->prepare("CALL cleanup_old_notifications(?)");
-        $stmt->execute([$daysToKeep]);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt = $modx->prepare("
+            DELETE FROM {$prefix}test_notifications
+            WHERE is_read = 1
+              AND read_at < DATE_SUB(NOW(), INTERVAL ? DAY)
+        ");
+        $stmt->execute([(int)$daysToKeep]);
+        $deleted += $stmt->rowCount();
 
-        return $result ? (int)$result['deleted_notifications'] : 0;
+        $stmt = $modx->prepare("
+            DELETE FROM {$prefix}test_notifications
+            WHERE expires_at IS NOT NULL AND expires_at < NOW()
+        ");
+        $stmt->execute();
+        $deleted += $stmt->rowCount();
+
+        $stmt = $modx->prepare("
+            DELETE FROM {$prefix}test_notification_delivery
+            WHERE created_at < DATE_SUB(NOW(), INTERVAL ? DAY)
+        ");
+        $stmt->execute([(int)$daysToKeep * 2]);
+
+        $stmt = $modx->prepare("
+            DELETE FROM {$prefix}test_notification_queue
+            WHERE status = 'completed'
+              AND processed_at < DATE_SUB(NOW(), INTERVAL 7 DAY)
+        ");
+        $stmt->execute();
+
+        return $deleted;
     }
 
     /**

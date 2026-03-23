@@ -201,9 +201,30 @@ class ReportService
         $whereClause = implode(' AND ', $conditions);
 
         $stmt = $pdo->prepare("
-            SELECT *
-            FROM {$prefix}test_test_statistics
+            SELECT
+                t.id as test_id,
+                t.title,
+                t.category_id,
+                c.name as category_name,
+                COUNT(DISTINCT s.user_id) as unique_users,
+                COUNT(s.id) as total_attempts,
+                COUNT(CASE WHEN s.status = 'completed' THEN 1 END) as completed_attempts,
+                AVG(CASE WHEN s.status = 'completed' THEN s.score END) as avg_score,
+                MAX(s.score) as max_score,
+                MIN(s.score) as min_score,
+                STDDEV(s.score) as score_stddev,
+                COUNT(CASE WHEN s.score >= 70 THEN 1 END) as passed_count,
+                COUNT(CASE WHEN s.score < 70 THEN 1 END) as failed_count,
+                ROUND(COUNT(CASE WHEN s.score >= 70 THEN 1 END) * 100.0 / NULLIF(COUNT(CASE WHEN s.status = 'completed' THEN 1 END), 0), 2) as pass_rate,
+                AVG(CASE WHEN s.status = 'completed' THEN s.time_spent END) as avg_time_spent,
+                COUNT(CASE WHEN s.status = 'completed' AND s.score = 100 THEN 1 END) as perfect_scores_count,
+                (SELECT COUNT(*) FROM {$prefix}test_questions WHERE test_id = t.id) as questions_count,
+                MAX(s.completed_at) as last_attempt_date
+            FROM {$prefix}test_tests t
+            LEFT JOIN {$prefix}test_categories c ON c.id = t.category_id
+            LEFT JOIN {$prefix}test_sessions s ON s.test_id = t.id
             WHERE $whereClause
+            GROUP BY t.id
             ORDER BY avg_score DESC
         ");
         $stmt->execute($params);
@@ -243,12 +264,18 @@ class ReportService
         $params = [];
 
         if (!empty($filters['test_id'])) {
-            $conditions[] = "test_id = ?";
+            $conditions[] = "q.test_id = ?";
             $params[] = $filters['test_id'];
         }
 
         if (!empty($filters['difficulty'])) {
-            $conditions[] = "difficulty_level = ?";
+            $conditions[] = "(CASE
+                WHEN ROUND(SUM(CASE WHEN ua.is_correct = 1 THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(ua.id), 0), 2) < 30 THEN 'very_hard'
+                WHEN ROUND(SUM(CASE WHEN ua.is_correct = 1 THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(ua.id), 0), 2) < 50 THEN 'hard'
+                WHEN ROUND(SUM(CASE WHEN ua.is_correct = 1 THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(ua.id), 0), 2) < 70 THEN 'medium'
+                WHEN ROUND(SUM(CASE WHEN ua.is_correct = 1 THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(ua.id), 0), 2) < 90 THEN 'easy'
+                ELSE 'very_easy'
+            END) = ?";
             $params[] = $filters['difficulty'];
         }
 
@@ -265,8 +292,11 @@ class ReportService
                 incorrect_answers,
                 correct_rate,
                 difficulty_level
-            FROM {$prefix}test_question_statistics
-            WHERE $whereClause AND total_answers > 0
+            FROM {$prefix}test_questions q
+            LEFT JOIN {$prefix}test_user_answers ua ON ua.question_id = q.id
+            WHERE $whereClause
+            GROUP BY q.id
+            HAVING total_answers > 0
             ORDER BY correct_rate ASC, total_answers DESC
         ");
         $stmt->execute($params);
@@ -301,8 +331,27 @@ class ReportService
         $pdo = $modx->getPDO();
 
         $stmt = $pdo->query("
-            SELECT *
-            FROM {$prefix}test_category_statistics
+            SELECT
+                c.id as category_id,
+                c.name as category_name,
+                COUNT(DISTINCT t.id) as tests_count,
+                (
+                    SELECT COUNT(*)
+                    FROM {$prefix}test_questions q
+                    JOIN {$prefix}test_tests t2 ON t2.id = q.test_id
+                    WHERE t2.category_id = c.id
+                ) as total_questions,
+                COUNT(DISTINCT s.user_id) as unique_users,
+                COUNT(DISTINCT s.id) as total_attempts,
+                AVG(CASE WHEN s.status = 'completed' THEN s.score END) as avg_score,
+                ROUND(
+                    COUNT(CASE WHEN s.status = 'completed' AND s.score >= 70 THEN 1 END) * 100.0 /
+                    NULLIF(COUNT(CASE WHEN s.status = 'completed' THEN 1 END), 0), 2
+                ) as pass_rate
+            FROM {$prefix}test_categories c
+            LEFT JOIN {$prefix}test_tests t ON t.category_id = c.id
+            LEFT JOIN {$prefix}test_sessions s ON s.test_id = t.id
+            GROUP BY c.id
             ORDER BY category_name
         ");
 
