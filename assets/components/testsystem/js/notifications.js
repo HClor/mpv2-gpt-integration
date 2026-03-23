@@ -11,11 +11,6 @@
     let notifications = [];
     let unreadCount = 0;
 
-    function getCsrfToken() {
-        const metaTag = document.querySelector('meta[name="csrf-token"]');
-        return metaTag ? metaTag.content : null;
-    }
-
     function escapeHtml(text) {
         const div = document.createElement('div');
         div.textContent = text || '';
@@ -36,32 +31,22 @@
     };
 
     async function apiCall(action, data = {}) {
-        try {
-            const csrfToken = getCsrfToken();
-            if (csrfToken) {
-                data.csrf_token = csrfToken;
-            }
-
-            const response = await fetch(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action, data })
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-
-            const contentType = response.headers.get('content-type') || '';
-            if (!contentType.includes('application/json')) {
-                throw new Error('Invalid response format (expected JSON)');
-            }
-
-            return await response.json();
-        } catch (error) {
-            console.error('API Error:', error);
-            throw error;
+        if (!window.TestSystemCSRF || typeof window.TestSystemCSRF.apiCall !== 'function') {
+            throw new Error('CSRF helper is not available');
         }
+
+        return window.TestSystemCSRF.apiCall(action, data, { apiUrl: API_URL });
+    }
+
+    function normalizeNotifications(list) {
+        if (!Array.isArray(list)) {
+            return [];
+        }
+
+        return list.map(notification => ({
+            ...notification,
+            type: notification.type || notification.notification_type || 'custom'
+        }));
     }
 
     // ==================== INITIALIZATION ====================
@@ -136,8 +121,14 @@
             const result = await apiCall('getRecentNotifications', { limit: 10, is_read: 0 });
 
             if (result.success) {
-                notifications = result.data?.notifications || result.data || [];
-                unreadCount = Array.isArray(notifications) ? notifications.length : 0;
+                notifications = normalizeNotifications(result.data?.notifications || result.data || []);
+
+                if (notifications.length === 0 && unreadCount > 0) {
+                    await syncEmptyDropdownState();
+                    return;
+                }
+
+                unreadCount = notifications.length;
                 updateBellIcon();
                 renderNotificationsDropdown();
             }
@@ -145,6 +136,24 @@
             console.error('Load notifications error:', error);
             dropdown.innerHTML = '<div class="text-center p-3 text-danger">Ошибка загрузки</div>';
         }
+    }
+
+
+    async function syncEmptyDropdownState() {
+        try {
+            const result = await apiCall('markAllAsRead', {});
+
+            if (!result.success) {
+                throw new Error(result.message || 'Failed to sync notifications state');
+            }
+        } catch (error) {
+            console.warn('Notification state sync warning:', error);
+        }
+
+        notifications = [];
+        unreadCount = 0;
+        updateBellIcon();
+        renderNotificationsDropdown();
     }
 
     function renderNotificationsDropdown() {
@@ -249,7 +258,7 @@
             const result = await apiCall('getAllNotifications', {});
 
             if (result.success) {
-                renderAllNotifications(result.data || []);
+                renderAllNotifications(normalizeNotifications(result.data || []));
             } else {
                 throw new Error(result.message);
             }
@@ -480,6 +489,7 @@
     window.Notifications = {
         loadUnreadCount,
         markAsRead,
+        markAllAsRead,
         loadAllNotifications,
         loadNotificationSettings,
         saveSettings
