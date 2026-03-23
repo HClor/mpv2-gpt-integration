@@ -67,7 +67,8 @@ class CertificateService
             $modx->log(modX::LOG_LEVEL_INFO, "[CertificateService] Template found: " . $template['name']);
 
             // Добавляем базовые данные
-            $certificateData['certificate_number'] = ''; // Будет сгенерирован триггером
+            $generatedFields = DatabaseLogicService::prepareCertificatePayload($modx, $templateId, $userId, $certificateData);
+            $certificateData['certificate_number'] = $generatedFields['certificate_number'];
             $certificateData['issue_date'] = date('d.m.Y');
             $certificateData['verification_url'] = $modx->getOption('site_url') . 'verify-certificate/';
 
@@ -81,8 +82,8 @@ class CertificateService
             // Создаем запись сертификата
             $stmt = $modx->prepare("
                 INSERT INTO {$prefix}test_certificates
-                (template_id, user_id, entity_type, entity_id, certificate_data, score, issued_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                (template_id, user_id, entity_type, entity_id, certificate_number, verification_code, expires_at, certificate_data, score, issued_by)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ");
 
             $score = $certificateData['score'] ?? null;
@@ -91,12 +92,26 @@ class CertificateService
                 $userId,
                 $entityType,
                 $entityId,
+                $generatedFields['certificate_number'],
+                $generatedFields['verification_code'],
+                $generatedFields['expires_at'],
                 json_encode($certificateData),
                 $score,
                 $issuedBy
             ]);
 
             $certificateId = $modx->lastInsertId();
+            $certificateRow = [
+                'id' => $certificateId,
+                'user_id' => $userId,
+                'entity_type' => $entityType,
+                'entity_id' => $entityId,
+                'certificate_number' => $generatedFields['certificate_number'],
+                'verification_code' => $generatedFields['verification_code'],
+                'template_name' => $template['name'],
+            ];
+
+            DatabaseLogicService::notifyCertificateIssued($modx, $certificateRow);
 
             // Генерируем HTML/PDF сертификат
             self::generateCertificateFile($modx, $certificateId);
@@ -191,19 +206,44 @@ class CertificateService
      */
     public static function verifyCertificate($modx, $verificationCode)
     {
-        $prefix = $modx->getOption('table_prefix');
-
         $ipAddress = $_SERVER['REMOTE_ADDR'] ?? null;
         $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+        $prefix = $modx->getOption('table_prefix');
 
-        // Вызываем stored procedure
-        $stmt = $modx->prepare("CALL verify_certificate(?, ?, ?)");
-        $stmt->execute([$verificationCode, $ipAddress, $userAgent]);
-
+        $stmt = $modx->prepare("
+            SELECT c.*, t.name as template_name, u.username
+            FROM {$prefix}test_certificates c
+            JOIN {$prefix}test_certificate_templates t ON t.id = c.template_id
+            JOIN {$prefix}users u ON u.id = c.user_id
+            WHERE c.verification_code = ?
+            LIMIT 1
+        ");
+        $stmt->execute([$verificationCode]);
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($result && !isset($result['result'])) {
-            // Сертификат валидный - декодируем данные
+        $verificationStatus = 'not_found';
+        $certificateId = null;
+
+        if ($result) {
+            $certificateId = $result['id'];
+
+            if ((int)$result['is_revoked'] === 1) {
+                $verificationStatus = 'revoked';
+            } elseif (!empty($result['expires_at']) && strtotime($result['expires_at']) < time()) {
+                $verificationStatus = 'expired';
+            } else {
+                $verificationStatus = 'valid';
+            }
+        }
+
+        $logStmt = $modx->prepare("
+            INSERT INTO {$prefix}test_certificate_verifications
+            (certificate_id, verification_code, verification_result, ip_address, user_agent)
+            VALUES (?, ?, ?, ?, ?)
+        ");
+        $logStmt->execute([$certificateId, $verificationCode, $verificationStatus, $ipAddress, $userAgent]);
+
+        if ($verificationStatus === 'valid' && $result) {
             if (!empty($result['certificate_data'])) {
                 $result['certificate_data'] = json_decode($result['certificate_data'], true);
             }
@@ -211,11 +251,14 @@ class CertificateService
                 $result['metadata'] = json_decode($result['metadata'], true);
             }
             $result['verification_status'] = 'valid';
-        } else {
-            $result['verification_status'] = $result['result'] ?? 'invalid';
+            return $result;
         }
 
-        return $result;
+        return [
+            'result' => $verificationStatus,
+            'verification_status' => $verificationStatus,
+            'certificate_number' => null
+        ];
     }
 
     /**
@@ -569,11 +612,22 @@ class CertificateService
      */
     public static function getStatistics($modx)
     {
-        $stmt = $modx->query("CALL get_certificate_statistics()");
-        if ($stmt === false) {
-            return [];
-        }
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        $prefix = $modx->getOption('table_prefix');
+        $stmt = $modx->query("
+            SELECT
+                (SELECT COUNT(*) FROM {$prefix}test_certificates) as total_certificates,
+                (SELECT COUNT(*) FROM {$prefix}test_certificates WHERE is_revoked = 0) as active_certificates,
+                (SELECT COUNT(*) FROM {$prefix}test_certificates WHERE is_revoked = 1) as revoked_certificates,
+                (SELECT COUNT(*) FROM {$prefix}test_certificates
+                 WHERE expires_at IS NOT NULL AND expires_at < NOW() AND is_revoked = 0) as expired_certificates,
+                (SELECT COUNT(*) FROM {$prefix}test_certificates
+                 WHERE issued_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)) as issued_last_30_days,
+                (SELECT COUNT(*) FROM {$prefix}test_certificate_verifications
+                 WHERE verified_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)) as verifications_last_30_days,
+                (SELECT COUNT(DISTINCT user_id) FROM {$prefix}test_certificates) as users_with_certificates
+        ");
+
+        return $stmt ? $stmt->fetch(PDO::FETCH_ASSOC) : [];
     }
 
     /**
@@ -584,13 +638,25 @@ class CertificateService
      */
     public static function cleanupExpired($modx)
     {
-        $stmt = $modx->query("CALL cleanup_expired_certificates()");
-        if ($stmt === false) {
-            return 0;
-        }
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        $prefix = $modx->getOption('table_prefix');
 
-        return $result ? (int)$result['expired_files_cleared'] : 0;
+        $stmt = $modx->prepare("
+            UPDATE {$prefix}test_certificates
+            SET file_path = NULL
+            WHERE expires_at IS NOT NULL
+              AND expires_at < DATE_SUB(NOW(), INTERVAL 90 DAY)
+              AND file_path IS NOT NULL
+        ");
+        $stmt->execute();
+        $cleared = $stmt->rowCount();
+
+        $stmt = $modx->prepare("
+            DELETE FROM {$prefix}test_certificate_verifications
+            WHERE verified_at < DATE_SUB(NOW(), INTERVAL 1 YEAR)
+        ");
+        $stmt->execute();
+
+        return $cleared;
     }
 
     /**

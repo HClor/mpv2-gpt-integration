@@ -273,13 +273,15 @@ class GamificationService
             ");
             $stmt->execute([$userId, $xpAmount, $reason, $relatedId, $relatedType]);
 
-            // Обновляем общий XP (триггер автоматически обновит уровень)
+            // Обновляем общий XP и синхронизируем уровень в PHP
             $stmt = $pdo->prepare("
                 UPDATE {$prefix}test_user_experience
                 SET total_xp = total_xp + ?
                 WHERE user_id = ?
             ");
             $stmt->execute([$xpAmount, $userId]);
+
+            DatabaseLogicService::syncUserLevel($modx, $userId);
 
             $pdo->commit();
             return true;
@@ -299,31 +301,7 @@ class GamificationService
      */
     public static function updateUserStreak($modx, $userId)
     {
-        $prefix = $modx->getOption('table_prefix');
-        $pdo = $modx->getPDO();
-
-        // Вызываем stored procedure
-        $stmt = $pdo->prepare("CALL update_user_streak(?)");
-        $stmt->execute([$userId]);
-
-        // Получаем результат
-        $stmt = $pdo->prepare("
-            SELECT current_streak, longest_streak, last_activity_date
-            FROM {$prefix}test_user_streaks
-            WHERE user_id = ?
-        ");
-        $stmt->execute([$userId]);
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if ($result) {
-            return [
-                'current_streak' => (int)$result['current_streak'],
-                'longest_streak' => (int)$result['longest_streak'],
-                'last_activity_date' => $result['last_activity_date']
-            ];
-        }
-
-        return null;
+        return DatabaseLogicService::updateUserStreak($modx, $userId);
     }
 
     /**

@@ -294,6 +294,35 @@ class QuestionTypeService
                                 WHERE er.id = ?");
         $stmt->execute([$reviewId]);
 
+        $stmt = $modx->prepare("
+            SELECT er.user_id, er.question_id, er.score, er.reviewer_comment, LEFT(q.question_text, 100) as question_preview
+            FROM {$prefix}test_essay_reviews er
+            JOIN {$prefix}test_questions q ON q.id = er.question_id
+            WHERE er.id = ?
+        ");
+        $stmt->execute([$reviewId]);
+        $reviewData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($reviewData) {
+            NotificationService::createNotification(
+                $modx,
+                (int)$reviewData['user_id'],
+                NotificationService::TYPE_ESSAY_REVIEWED,
+                'Ваше эссе проверено',
+                'Эссе по вопросу "' . $reviewData['question_preview'] . '..." получило оценку ' . $reviewData['score'] . ' баллов',
+                [
+                    'icon' => 'fa-file-text-o',
+                    'priority' => NotificationService::PRIORITY_NORMAL,
+                    'related_type' => 'essay_review',
+                    'related_id' => $reviewId,
+                    'metadata' => [
+                        'score' => $reviewData['score'],
+                        'has_comment' => !empty($reviewData['reviewer_comment']) ? 1 : 0
+                    ]
+                ]
+            );
+        }
+
         return true;
     }
 

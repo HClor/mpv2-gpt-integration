@@ -49,11 +49,27 @@ class CategoryPermissionService
                     granted_at = NOW(),
                     expires_at = ?";
 
+        $previousRole = self::getUserRole($modx, $categoryId, $userId);
+
         $stmt = $modx->prepare($sql);
-        return $stmt->execute([
+        $success = $stmt->execute([
             $categoryId, $userId, $role, $grantedBy, $expiresAtStr,
             $role, $grantedBy, $expiresAtStr
         ]);
+
+        if ($success) {
+            DatabaseLogicService::logCategoryPermissionChange(
+                $modx,
+                $categoryId,
+                $userId,
+                $previousRole ? 'modified' : 'granted',
+                $previousRole,
+                $role,
+                $grantedBy
+            );
+        }
+
+        return $success;
     }
 
     /**
@@ -69,14 +85,27 @@ class CategoryPermissionService
     {
         $prefix = $modx->getOption('table_prefix', null, 'modx_');
 
-        // Устанавливаем переменную для триггера
-        $modx->exec("SET @performed_by_user_id = {$performedBy}");
+        $previousRole = self::getUserRole($modx, $categoryId, $userId);
 
         $sql = "DELETE FROM {$prefix}test_category_permissions
                 WHERE category_id = ? AND user_id = ?";
 
         $stmt = $modx->prepare($sql);
-        return $stmt->execute([$categoryId, $userId]);
+        $success = $stmt->execute([$categoryId, $userId]);
+
+        if ($success && $stmt->rowCount() > 0) {
+            DatabaseLogicService::logCategoryPermissionChange(
+                $modx,
+                $categoryId,
+                $userId,
+                'revoked',
+                $previousRole,
+                null,
+                $performedBy
+            );
+        }
+
+        return $success;
     }
 
     /**

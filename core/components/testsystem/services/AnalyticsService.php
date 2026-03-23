@@ -42,9 +42,7 @@ class AnalyticsService
             }
         }
 
-        // Обновляем кеш через stored procedure
-        $stmt = $pdo->prepare("CALL update_user_analytics_cache(?, ?)");
-        $stmt->execute([$userId, $period]);
+        self::refreshUserStatisticsCache($modx, $userId, $period);
 
         // Получаем из кеша
         return self::getCachedMetrics($modx, 'user_stats', 'user', $userId, $period);
@@ -72,9 +70,7 @@ class AnalyticsService
             }
         }
 
-        // Обновляем кеш через stored procedure
-        $stmt = $pdo->prepare("CALL update_test_analytics_cache(?, ?)");
-        $stmt->execute([$testId, $period]);
+        self::refreshTestStatisticsCache($modx, $testId, $period);
 
         // Получаем из кеша
         return self::getCachedMetrics($modx, 'test_stats', 'test', $testId, $period);
@@ -143,6 +139,128 @@ class AnalyticsService
     }
 
     /**
+     * Получить границы периода.
+     *
+     * @param string $period
+     * @return array
+     */
+    private static function getPeriodBounds($period)
+    {
+        switch ($period) {
+            case self::PERIOD_DAILY:
+                return [date('Y-m-d'), date('Y-m-d'), date('Y-m-d H:i:s', strtotime('+1 hour'))];
+            case self::PERIOD_WEEKLY:
+                $start = date('Y-m-d', strtotime('-' . (date('N') - 1) . ' days'));
+                $end = date('Y-m-d', strtotime($start . ' +6 days'));
+                return [$start, $end, date('Y-m-d H:i:s', strtotime('+6 hours'))];
+            case self::PERIOD_MONTHLY:
+                return [date('Y-m-01'), date('Y-m-t'), date('Y-m-d H:i:s', strtotime('+12 hours'))];
+            case self::PERIOD_YEARLY:
+                return [date('Y-01-01'), date('Y-12-31'), date('Y-m-d H:i:s', strtotime('+24 hours'))];
+            default:
+                return [null, null, date('Y-m-d H:i:s', strtotime('+24 hours'))];
+        }
+    }
+
+    /**
+     * Обновить кеш статистики пользователя без stored procedure.
+     *
+     * @param modX $modx
+     * @param int $userId
+     * @param string $period
+     * @return void
+     */
+    private static function refreshUserStatisticsCache($modx, $userId, $period)
+    {
+        $prefix = $modx->getOption('table_prefix');
+        $pdo = $modx->getPDO();
+        list($periodStart, $periodEnd, $expiresAt) = self::getPeriodBounds($period);
+
+        $stmt = $pdo->prepare("
+            SELECT
+                COUNT(DISTINCT s.id) as total_tests,
+                COUNT(DISTINCT CASE WHEN s.status = 'completed' THEN s.id END) as completed_tests,
+                COALESCE(AVG(CASE WHEN s.status = 'completed' THEN s.score END), 0) as avg_score,
+                COALESCE(MAX(s.score), 0) as max_score,
+                COUNT(CASE WHEN s.status = 'completed' AND s.score >= 70 THEN 1 END) as tests_passed,
+                COUNT(CASE WHEN s.status = 'completed' AND s.score = 100 THEN 1 END) as perfect_scores,
+                COALESCE(AVG(CASE WHEN s.status = 'completed' THEN s.time_spent END), 0) as avg_time_spent,
+                COALESCE(SUM(CASE WHEN s.status = 'completed' THEN s.time_spent END), 0) as total_time_spent,
+                MAX(s.created_at) as last_activity
+            FROM {$prefix}test_sessions s
+            WHERE s.user_id = ?
+              AND (? IS NULL OR DATE(s.created_at) BETWEEN ? AND ?)
+        ");
+        $stmt->execute([$userId, $periodStart, $periodStart, $periodEnd]);
+        $metrics = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        $payload = json_encode($metrics ?: []);
+
+        $stmt = $pdo->prepare("
+            INSERT INTO {$prefix}test_analytics_cache
+            (metric_type, entity_type, entity_id, period, period_start, period_end, metrics, expires_at)
+            VALUES ('user_stats', 'user', ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                metrics = VALUES(metrics),
+                calculated_at = NOW(),
+                expires_at = VALUES(expires_at)
+        ");
+        $stmt->execute([$userId, $period, $periodStart, $periodEnd, $payload, $expiresAt]);
+    }
+
+    /**
+     * Обновить кеш статистики теста без stored procedure.
+     *
+     * @param modX $modx
+     * @param int $testId
+     * @param string $period
+     * @return void
+     */
+    private static function refreshTestStatisticsCache($modx, $testId, $period)
+    {
+        $prefix = $modx->getOption('table_prefix');
+        $pdo = $modx->getPDO();
+        list($periodStart, $periodEnd, $expiresAt) = self::getPeriodBounds($period);
+
+        $stmt = $pdo->prepare("
+            SELECT
+                COUNT(DISTINCT s.user_id) as unique_users,
+                COUNT(s.id) as total_attempts,
+                COUNT(CASE WHEN s.status = 'completed' THEN 1 END) as completed_attempts,
+                COALESCE(AVG(CASE WHEN s.status = 'completed' THEN s.score END), 0) as avg_score,
+                COALESCE(MAX(s.score), 0) as max_score,
+                COALESCE(MIN(CASE WHEN s.status = 'completed' THEN s.score END), 0) as min_score,
+                COALESCE(STDDEV(s.score), 0) as score_stddev,
+                COUNT(CASE WHEN s.score >= 70 THEN 1 END) as passed_count,
+                COUNT(CASE WHEN s.score < 70 AND s.status = 'completed' THEN 1 END) as failed_count,
+                ROUND(
+                    COUNT(CASE WHEN s.score >= 70 THEN 1 END) * 100.0 /
+                    NULLIF(COUNT(CASE WHEN s.status = 'completed' THEN 1 END), 0), 2
+                ) as pass_rate,
+                COALESCE(AVG(CASE WHEN s.status = 'completed' THEN s.time_spent END), 0) as avg_time_spent,
+                COUNT(CASE WHEN s.score = 100 THEN 1 END) as perfect_scores
+            FROM {$prefix}test_sessions s
+            WHERE s.test_id = ?
+              AND (? IS NULL OR DATE(s.created_at) BETWEEN ? AND ?)
+        ");
+        $stmt->execute([$testId, $periodStart, $periodStart, $periodEnd]);
+        $metrics = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        $payload = json_encode($metrics ?: []);
+
+        $stmt = $pdo->prepare("
+            INSERT INTO {$prefix}test_analytics_cache
+            (metric_type, entity_type, entity_id, period, period_start, period_end, metrics, expires_at)
+            VALUES ('test_stats', 'test', ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                metrics = VALUES(metrics),
+                calculated_at = NOW(),
+                expires_at = VALUES(expires_at)
+        ");
+        $stmt->execute([$testId, $period, $periodStart, $periodEnd, $payload, $expiresAt]);
+    }
+
+    /**
      * Получить топ пользователей по баллам
      *
      * @param modX $modx
@@ -195,9 +313,29 @@ class AnalyticsService
         $pdo = $modx->getPDO();
 
         $stmt = $pdo->prepare("
-            SELECT *
-            FROM {$prefix}test_question_statistics
-            WHERE question_id = ?
+            SELECT
+                q.id as question_id,
+                q.test_id,
+                q.question_text,
+                q.question_type,
+                COUNT(ua.id) as total_answers,
+                SUM(CASE WHEN ua.is_correct = 1 THEN 1 ELSE 0 END) as correct_answers,
+                SUM(CASE WHEN ua.is_correct = 0 THEN 1 ELSE 0 END) as incorrect_answers,
+                ROUND(SUM(CASE WHEN ua.is_correct = 1 THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(ua.id), 0), 2) as correct_rate,
+                AVG(ua.points_earned) as avg_points_earned,
+                q.points as max_points,
+                COUNT(DISTINCT ua.user_id) as unique_users_answered,
+                CASE
+                    WHEN ROUND(SUM(CASE WHEN ua.is_correct = 1 THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(ua.id), 0), 2) < 30 THEN 'very_hard'
+                    WHEN ROUND(SUM(CASE WHEN ua.is_correct = 1 THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(ua.id), 0), 2) < 50 THEN 'hard'
+                    WHEN ROUND(SUM(CASE WHEN ua.is_correct = 1 THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(ua.id), 0), 2) < 70 THEN 'medium'
+                    WHEN ROUND(SUM(CASE WHEN ua.is_correct = 1 THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(ua.id), 0), 2) < 90 THEN 'easy'
+                    ELSE 'very_easy'
+                END as difficulty_level
+            FROM {$prefix}test_questions q
+            LEFT JOIN {$prefix}test_user_answers ua ON ua.question_id = q.id
+            WHERE q.id = ?
+            GROUP BY q.id
         ");
         $stmt->execute([$questionId]);
 
@@ -217,8 +355,26 @@ class AnalyticsService
         $prefix = $modx->getOption('table_prefix');
         $pdo = $modx->getPDO();
 
-        $stmt = $pdo->prepare("CALL get_hardest_questions(?, ?)");
-        $stmt->execute([$limit, $testId]);
+        $stmt = $pdo->prepare("
+            SELECT
+                q.id,
+                q.test_id,
+                t.title as test_title,
+                q.question_text,
+                q.question_type,
+                COUNT(ua.id) as total_answers,
+                SUM(CASE WHEN ua.is_correct = 1 THEN 1 ELSE 0 END) as correct_answers,
+                ROUND(SUM(CASE WHEN ua.is_correct = 1 THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(ua.id), 0), 2) as correct_rate
+            FROM {$prefix}test_questions q
+            JOIN {$prefix}test_tests t ON t.id = q.test_id
+            LEFT JOIN {$prefix}test_user_answers ua ON ua.question_id = q.id
+            WHERE (? IS NULL OR q.test_id = ?)
+            GROUP BY q.id
+            HAVING total_answers >= 5
+            ORDER BY correct_rate ASC, total_answers DESC
+            LIMIT ?
+        ");
+        $stmt->execute([$testId, $testId, (int)$limit]);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -236,9 +392,30 @@ class AnalyticsService
         $pdo = $modx->getPDO();
 
         $stmt = $pdo->prepare("
-            SELECT *
-            FROM {$prefix}test_category_statistics
-            WHERE category_id = ?
+            SELECT
+                c.id as category_id,
+                c.name as category_name,
+                c.parent_id,
+                COUNT(DISTINCT t.id) as tests_count,
+                COUNT(DISTINCT s.user_id) as unique_users,
+                COUNT(DISTINCT s.id) as total_attempts,
+                AVG(CASE WHEN s.status = 'completed' THEN s.score END) as avg_score,
+                COUNT(CASE WHEN s.status = 'completed' AND s.score >= 70 THEN 1 END) as passed_count,
+                ROUND(
+                    COUNT(CASE WHEN s.status = 'completed' AND s.score >= 70 THEN 1 END) * 100.0 /
+                    NULLIF(COUNT(CASE WHEN s.status = 'completed' THEN 1 END), 0), 2
+                ) as pass_rate,
+                (
+                    SELECT COUNT(*)
+                    FROM {$prefix}test_questions q
+                    JOIN {$prefix}test_tests t2 ON t2.id = q.test_id
+                    WHERE t2.category_id = c.id
+                ) as total_questions
+            FROM {$prefix}test_categories c
+            LEFT JOIN {$prefix}test_tests t ON t.category_id = c.id
+            LEFT JOIN {$prefix}test_sessions s ON s.test_id = t.id
+            WHERE c.id = ?
+            GROUP BY c.id
         ");
         $stmt->execute([$categoryId]);
 
@@ -257,8 +434,29 @@ class AnalyticsService
         $pdo = $modx->getPDO();
 
         $stmt = $pdo->query("
-            SELECT *
-            FROM {$prefix}test_category_statistics
+            SELECT
+                c.id as category_id,
+                c.name as category_name,
+                c.parent_id,
+                COUNT(DISTINCT t.id) as tests_count,
+                COUNT(DISTINCT s.user_id) as unique_users,
+                COUNT(DISTINCT s.id) as total_attempts,
+                AVG(CASE WHEN s.status = 'completed' THEN s.score END) as avg_score,
+                COUNT(CASE WHEN s.status = 'completed' AND s.score >= 70 THEN 1 END) as passed_count,
+                ROUND(
+                    COUNT(CASE WHEN s.status = 'completed' AND s.score >= 70 THEN 1 END) * 100.0 /
+                    NULLIF(COUNT(CASE WHEN s.status = 'completed' THEN 1 END), 0), 2
+                ) as pass_rate,
+                (
+                    SELECT COUNT(*)
+                    FROM {$prefix}test_questions q
+                    JOIN {$prefix}test_tests t2 ON t2.id = q.test_id
+                    WHERE t2.category_id = c.id
+                ) as total_questions
+            FROM {$prefix}test_categories c
+            LEFT JOIN {$prefix}test_tests t ON t.category_id = c.id
+            LEFT JOIN {$prefix}test_sessions s ON s.test_id = t.id
+            GROUP BY c.id
             ORDER BY category_name
         ");
 
@@ -278,8 +476,22 @@ class AnalyticsService
         $prefix = $modx->getOption('table_prefix');
         $pdo = $modx->getPDO();
 
-        $stmt = $pdo->prepare("CALL get_cohort_analysis(?, ?)");
-        $stmt->execute([$startDate, $endDate]);
+        $stmt = $pdo->prepare("
+            SELECT
+                DATE_FORMAT(u.createdon, '%Y-%m') as cohort_month,
+                COUNT(DISTINCT u.id) as users_joined,
+                COUNT(DISTINCT CASE WHEN s.created_at IS NOT NULL THEN u.id END) as users_active,
+                COUNT(DISTINCT s.id) as total_tests_taken,
+                AVG(CASE WHEN s.status = 'completed' THEN s.score END) as avg_score,
+                ROUND(COUNT(DISTINCT CASE WHEN s.created_at IS NOT NULL THEN u.id END) * 100.0 / COUNT(DISTINCT u.id), 2) as activation_rate
+            FROM {$prefix}users u
+            LEFT JOIN {$prefix}test_sessions s ON s.user_id = u.id
+                AND DATE(s.created_at) BETWEEN ? AND ?
+            WHERE DATE(u.createdon) BETWEEN ? AND ?
+            GROUP BY cohort_month
+            ORDER BY cohort_month DESC
+        ");
+        $stmt->execute([$startDate, $endDate, $startDate, $endDate]);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -297,7 +509,20 @@ class AnalyticsService
         $prefix = $modx->getOption('table_prefix');
         $pdo = $modx->getPDO();
 
-        $stmt = $pdo->prepare("CALL get_user_activity_summary(?, ?)");
+        $stmt = $pdo->prepare("
+            SELECT
+                DATE(created_at) as activity_date,
+                COUNT(DISTINCT user_id) as active_users,
+                COUNT(DISTINCT CASE WHEN activity_type = 'test_start' THEN user_id END) as users_started_tests,
+                COUNT(DISTINCT CASE WHEN activity_type = 'test_complete' THEN user_id END) as users_completed_tests,
+                COUNT(CASE WHEN activity_type = 'test_start' THEN 1 END) as tests_started,
+                COUNT(CASE WHEN activity_type = 'test_complete' THEN 1 END) as tests_completed,
+                AVG(duration) as avg_session_duration
+            FROM {$prefix}test_user_activity_log
+            WHERE DATE(created_at) BETWEEN ? AND ?
+            GROUP BY DATE(created_at)
+            ORDER BY activity_date DESC
+        ");
         $stmt->execute([$startDate, $endDate]);
 
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -669,9 +894,22 @@ class AnalyticsService
         $prefix = $modx->getOption('table_prefix');
         $pdo = $modx->getPDO();
 
-        $stmt = $pdo->query("CALL cleanup_analytics_cache()");
-        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        $deletedRows = 0;
 
-        return $result ? (int)$result['deleted_rows'] : 0;
+        $stmt = $pdo->prepare("
+            DELETE FROM {$prefix}test_analytics_cache
+            WHERE expires_at IS NOT NULL AND expires_at < NOW()
+        ");
+        $stmt->execute();
+        $deletedRows += $stmt->rowCount();
+
+        $stmt = $pdo->prepare("
+            DELETE FROM {$prefix}test_report_history
+            WHERE expires_at IS NOT NULL AND expires_at < NOW()
+        ");
+        $stmt->execute();
+        $deletedRows += $stmt->rowCount();
+
+        return $deletedRows;
     }
 }
