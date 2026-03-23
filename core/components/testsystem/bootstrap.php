@@ -42,6 +42,15 @@ spl_autoload_register(function ($className) {
         'SessionService' => TESTSYSTEM_PATH . '/services/SessionService.php',
         'AccessService' => TESTSYSTEM_PATH . '/services/AccessService.php',
         'AuthService' => TESTSYSTEM_PATH . '/services/AuthService.php',
+        'DatabaseLogicService' => TESTSYSTEM_PATH . '/services/DatabaseLogicService.php',
+        'AnalyticsService' => TESTSYSTEM_PATH . '/services/AnalyticsService.php',
+        'GamificationService' => TESTSYSTEM_PATH . '/services/GamificationService.php',
+        'NotificationService' => TESTSYSTEM_PATH . '/services/NotificationService.php',
+        'CertificateService' => TESTSYSTEM_PATH . '/services/CertificateService.php',
+        'ReportService' => TESTSYSTEM_PATH . '/services/ReportService.php',
+        'CategoryPermissionService' => TESTSYSTEM_PATH . '/services/CategoryPermissionService.php',
+        'LearningPathService' => TESTSYSTEM_PATH . '/services/LearningPathService.php',
+        'QuestionTypeService' => TESTSYSTEM_PATH . '/services/QuestionTypeService.php',
 
         // Exceptions
         'TestSystemException' => TESTSYSTEM_PATH . '/exceptions/TestSystemException.php',
