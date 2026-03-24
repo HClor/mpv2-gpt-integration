@@ -2512,11 +2512,6 @@ img[style*="width"] {
     background-color: transparent;
 }
 
-/* Кнопка запуска теста в публичной вкладке */
-.ts-mytests-public-start-btn {
-    white-space: nowrap;
-}
-
 /* Стили для модального окна создания теста */
 #createTestModal .modal-header {
     background: linear-gradient(135deg, var(--color-xp) 0%, var(--color-xp-dark) 100%);

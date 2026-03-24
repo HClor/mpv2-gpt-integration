@@ -10,7 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Проверяем наличие контейнера - если его нет, это не страница управления тестами
     const myTestsContainer = document.getElementById('my-tests-container');
     if (!myTestsContainer) {
-        console.log('My tests container not found, skipping initialization');
+        console.log('[myTests] Контейнер не найден, инициализация пропущена');
         return;
     }
 
@@ -832,18 +832,19 @@ function renderPublicTests(tests) {
         html += `<div class="list-group-item test-list-item-minimal">
             <div class="ts-mytests-row">
                 <div class="ts-mytests-main">
-                    <h5 class="mb-1">
-                        <a href="${escapeHtml(testUrl)}" class="text-decoration-none">${escapeHtml(test.title)}</a>
-                    </h5>
+                    <h6 class="mb-2 test-title-clickable" onclick="window.location.href='${escapeHtml(testUrl)}'">
+                        ${escapeHtml(test.title)}
+                    </h6>
                     ${test.description ? `<p class="mb-1 text-muted small">${escapeHtml(test.description)}</p>` : ''}
-                    <div class="text-muted small mt-2">
+                    <div class="test-meta-info">
+                        ${getStatusBadge('public')}
                         <span class="me-3"><i class="bi bi-patch-question"></i> ${questionCount} ${questionsText}</span>
                         ${test.creator_name ? `<span class="me-3"><i class="bi bi-person"></i> ${escapeHtml(test.creator_name)}</span>` : ''}
                     </div>
                 </div>
                 <div class="test-actions-compact">
-                    <a href="${escapeHtml(testUrl)}" class="ts-btn ts-btn-primary ts-btn-sm ts-mytests-public-start-btn">
-                        <i class="bi bi-play-fill"></i> Пройти тест
+                    <a href="${escapeHtml(testUrl)}" class="ts-btn ts-btn-success ts-btn-icon-only btn-test-action" title="Пройти тест">
+                        <i class="bi bi-play-fill"></i>
                     </a>
                 </div>
             </div>
