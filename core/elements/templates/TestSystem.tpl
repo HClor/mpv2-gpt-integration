@@ -5,7 +5,7 @@
 {include 'tsHead'}
 
 <body>
-    [[!$tsHeader]]
+    {include 'tsHeader'}
 
     <main class="py-4">
         <div class="container">
@@ -17,7 +17,7 @@
             ])}
 
             <!-- Основной контент -->
-            {$_modx->resource.content}
+            {$_modx->resource.content | raw}
         </div>
     </main>
 
