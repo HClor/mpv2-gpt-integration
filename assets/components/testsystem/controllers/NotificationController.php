@@ -77,8 +77,11 @@ class NotificationController extends BaseController
             return ResponseHelper::error($e->getMessage(), 403);
         } catch (ValidationException $e) {
             return ResponseHelper::error($e->getMessage(), 400);
-        } catch (Exception $e) {
-            $this->modx->log(modX::LOG_LEVEL_ERROR, 'NotificationController error: ' . $e->getMessage());
+        } catch (Throwable $e) {
+            $this->modx->log(
+                modX::LOG_LEVEL_ERROR,
+                'NotificationController fatal error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine()
+            );
             return ResponseHelper::error('An error occurred while processing your request', 500);
         }
     }
@@ -125,8 +128,15 @@ class NotificationController extends BaseController
     {
         $this->requireAuth();
         $userId = $this->getCurrentUserId();
-
-        $count = NotificationService::getUnreadCount($this->modx, $userId);
+        try {
+            $count = NotificationService::getUnreadCount($this->modx, $userId);
+        } catch (Throwable $e) {
+            $this->modx->log(
+                modX::LOG_LEVEL_ERROR,
+                'NotificationController::getUnreadCount fatal error: ' . $e->getMessage() . ' for user_id=' . (int)$userId
+            );
+            $count = 0;
+        }
 
         return ResponseHelper::success([
             'unread_count' => $count,
