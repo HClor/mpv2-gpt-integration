@@ -576,7 +576,14 @@ class LearningPathService
         $sql = "SELECT lpp.*, lp.name as path_name, lp.passing_score
                 FROM {$prefix}test_learning_path_progress lpp
                 JOIN {$prefix}test_learning_paths lp ON lp.id = lpp.path_id
-                WHERE lpp.path_id = ? AND lpp.user_id = ?";
+                JOIN {$prefix}test_learning_path_enrollments e ON e.id = lpp.enrollment_id
+                WHERE lpp.path_id = ? AND lpp.user_id = ?
+                  AND e.user_id = lpp.user_id
+                  AND e.path_id = lpp.path_id
+                  AND e.is_active = 1
+                  AND (e.expires_at IS NULL OR e.expires_at > NOW())
+                ORDER BY e.enrolled_at DESC, lpp.id DESC
+                LIMIT 1";
 
         $stmt = $modx->prepare($sql);
         $stmt->execute([$pathId, $userId]);
