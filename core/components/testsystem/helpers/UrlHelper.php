@@ -12,51 +12,6 @@
 class UrlHelper
 {
     /**
-     * Построение URL для теста по resource_id
-     *
-     * @param object $modx MODX объект
-     * @param int $resourceId ID ресурса (страницы) теста
-     * @param int|null $testsParentId ID родительской папки (опционально)
-     * @return string URL теста или '#' если не удалось построить
-     */
-    public static function buildTestUrl($modx, $resourceId, $testsParentId = null)
-    {
-        if ($resourceId <= 0) {
-            return '#';
-        }
-
-        $resource = $modx->getObject('modResource', (int)$resourceId);
-
-        if (!$resource) {
-            return '#';
-        }
-
-        $siteUrl = rtrim($modx->getOption('site_url'), '/');
-        $alias = $resource->get('alias');
-
-        // Если не передан родительский ID, получаем из ресурса
-        if ($testsParentId === null) {
-            $testsParentId = (int)$resource->get('parent');
-        }
-
-        // Получаем URI родительской папки
-        $parentUri = '';
-        if ($testsParentId > 0) {
-            $parent = $modx->getObject('modResource', $testsParentId);
-            if ($parent) {
-                $parentUri = trim($parent->get('uri'), '/');
-            }
-        }
-
-        // Строим URL
-        if (!empty($parentUri)) {
-            return $siteUrl . '/' . $parentUri . '/' . $alias;
-        } else {
-            return $siteUrl . '/' . $alias;
-        }
-    }
-
-    /**
      * Добавление URL к массиву тестов
      *
      * @param object $modx MODX объект
@@ -91,30 +46,13 @@ class UrlHelper
 
         // Добавляем URL к каждому тесту
         foreach ($tests as &$test) {
-            $resourceId = (int)($test['resource_id'] ?? 0);
             $testId = (int)($test['id'] ?? 0);
 
-            // Приоритет 1: Если есть resource_id, используем его (старый формат)
-            if ($resourceId > 0) {
-                $resource = $modx->getObject('modResource', $resourceId);
-
-                if ($resource) {
-                    $alias = $resource->get('alias');
-
-                    if (!empty($parentUri)) {
-                        $test['test_url'] = $siteUrl . '/' . $parentUri . '/' . $alias;
-                    } else {
-                        $test['test_url'] = $siteUrl . '/' . $alias;
-                    }
-                } else {
-                    $test['test_url'] = '#';
-                }
-            }
-            // Приоритет 2: Если нет resource_id, но есть системная страница - используем её с testId
-            elseif ($testPageId > 0 && $testId > 0) {
+            // Единый формат: системная страница + testId
+            if ($testPageId > 0 && $testId > 0) {
                 $test['test_url'] = $modx->makeUrl($testPageId, 'web', ['testId' => $testId], 'full');
             }
-            // Приоритет 3: Иначе #
+            // Иначе #
             else {
                 $test['test_url'] = '#';
             }

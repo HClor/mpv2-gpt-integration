@@ -850,15 +850,15 @@ class LearningPathService
             return true;
         }
 
+        // Первый шаг всегда доступен
+        if ($step['step_number'] == 1) {
+            return true;
+        }
+
         // Проверяем условия разблокировки
         if (!empty($step['unlock_condition'])) {
             $condition = json_decode($step['unlock_condition'], true);
             return self::checkUnlockCondition($modx, $progressId, $condition);
-        }
-
-        // Первый шаг всегда доступен
-        if ($step['step_number'] == 1) {
-            return true;
         }
 
         return false;
@@ -876,7 +876,27 @@ class LearningPathService
     {
         $prefix = $modx->getOption('table_prefix', null, 'modx_');
 
-        switch ($condition['type']) {
+        if (!is_array($condition) || empty($condition)) {
+            return true;
+        }
+
+        // Backward/forward compatibility:
+        // 1) старый формат: { "type": "previous_step", ... }
+        // 2) новый формат из UI: { "previous_step": true, "min_score": 70, "require_exam_pass": false }
+        $conditionType = $condition['type'] ?? null;
+        if ($conditionType === null) {
+            if (!empty($condition['unlock_date'])) {
+                $conditionType = 'date';
+            } elseif (!empty($condition['previous_step']) && !empty($condition['min_score'])) {
+                $conditionType = 'previous_step_score';
+            } elseif (!empty($condition['previous_step'])) {
+                $conditionType = 'previous_step';
+            } else {
+                return true;
+            }
+        }
+
+        switch ($conditionType) {
             case 'previous_step':
                 // Предыдущий шаг завершен
                 $sql = "SELECT COUNT(*) FROM {$prefix}test_learning_path_step_completion lpsc
@@ -1837,11 +1857,50 @@ class LearningPathService
 
             case 'test':
             case 'quiz':
-                // Проверяем существование теста
-                $stmt = $modx->prepare("SELECT id, publication_status FROM {$prefix}test_tests WHERE id = ?");
-                $stmt->execute([$itemId]);
-                $test = $stmt->fetch(PDO::FETCH_ASSOC);
-                return $test && $test['publication_status'] === 'public';
+                // Проверяем существование теста с учетом mixed-схемы на production.
+                // ВАЖНО: build SELECT только по реально существующим колонкам.
+                $hasPublicationStatus = false;
+                $hasPublished = false;
+
+                $columnStmt = $modx->prepare("SHOW COLUMNS FROM {$prefix}test_tests");
+                if ($columnStmt && $columnStmt->execute()) {
+                    $columns = $columnStmt->fetchAll(PDO::FETCH_ASSOC);
+                    foreach ($columns as $column) {
+                        if (($column['Field'] ?? '') === 'publication_status') {
+                            $hasPublicationStatus = true;
+                        }
+                        if (($column['Field'] ?? '') === 'published') {
+                            $hasPublished = true;
+                        }
+                    }
+                }
+
+                $selectFields = ['id'];
+                if ($hasPublicationStatus) {
+                    $selectFields[] = 'publication_status';
+                }
+                if ($hasPublished) {
+                    $selectFields[] = 'published';
+                }
+
+                $test = null;
+                $stmt = $modx->prepare("SELECT " . implode(', ', $selectFields) . " FROM {$prefix}test_tests WHERE id = ?");
+                if ($stmt) {
+                    $stmt->execute([(int)$itemId]);
+                    $test = $stmt->fetch(PDO::FETCH_ASSOC);
+                }
+
+                if (!$test) {
+                    return false;
+                }
+
+                $publicationStatus = $hasPublicationStatus && isset($test['publication_status'])
+                    ? (string)$test['publication_status']
+                    : '';
+                $isPublishedFlag = $hasPublished && isset($test['published'])
+                    ? (int)$test['published'] === 1
+                    : false;
+                return in_array($publicationStatus, ['public', 'unlisted'], true) || $isPublishedFlag;
 
             case 'assignment':
                 // Для заданий пока считаем всегда доступным

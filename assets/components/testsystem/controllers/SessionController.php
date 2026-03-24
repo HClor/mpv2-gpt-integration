@@ -323,24 +323,14 @@ class SessionController extends BaseController
      */
     private function updateCategoryStats($testId, $userId, $score, $passed)
     {
-        $stmt = $this->modx->prepare("SELECT resource_id FROM {$this->prefix}test_tests WHERE id = ?");
+        $stmt = $this->modx->prepare("SELECT category_id FROM {$this->prefix}test_tests WHERE id = ?");
         $stmt->execute([$testId]);
         $testData = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$testData || !$testData['resource_id']) {
+        if (!$testData || empty($testData['category_id'])) {
             return;
         }
-
-        // Получаем категорию
-        $stmt = $this->modx->prepare("SELECT parent FROM {$this->prefix}site_content WHERE id = ?");
-        $stmt->execute([$testData['resource_id']]);
-        $resData = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$resData || !$resData['parent']) {
-            return;
-        }
-
-        $categoryId = (int)$resData['parent'];
+        $categoryId = (int)$testData['category_id'];
 
         // Обновляем статистику
         $stmt = $this->modx->prepare("
