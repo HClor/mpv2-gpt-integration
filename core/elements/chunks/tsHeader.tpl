@@ -43,8 +43,9 @@
       <!-- Правая часть меню -->
       <ul class="navbar-nav align-items-center">
         {if $_modx->user.id}
-          {set $rights = $_modx->runSnippet('getUserRights')}
-          {set $isAdminOrExpert = $rights.isAdmin || $rights.isExpert}
+          {set $isAdmin = $_modx->user->isMember('LMS Admins') || $_modx->user.id == 1}
+          {set $isExpert = $_modx->user->isMember('LMS Experts')}
+          {set $isAdminOrExpert = $isAdmin || $isExpert}
 
           <!-- Служебное меню (только для админов и экспертов) -->
           {if $isAdminOrExpert}
