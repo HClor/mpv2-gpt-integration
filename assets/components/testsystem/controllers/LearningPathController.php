@@ -1313,6 +1313,7 @@ class LearningPathController extends BaseController
         if (!$stepType || $stepType === 'test') {
             $sql = "SELECT
                         t.id,
+                        t.resource_id,
                         t.title as name,
                         t.description,
                         c.name as category_name,
@@ -1617,17 +1618,51 @@ class LearningPathController extends BaseController
 
             case 'test':
             case 'quiz':
-                // Проверяем существование теста
-                $stmt = $this->modx->prepare("SELECT id, publication_status FROM {$prefix}test_tests WHERE id = ?");
-                $stmt->execute([$itemId]);
-                $test = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                if (!$test) {
-                    throw new ValidationException('Тест не найден (ID=' . $itemId . '). Возможно, тест был удален. Выберите другой тест.');
+                // Проверяем существование теста.
+                // Совместимость с legacy-схемой: в части инсталляций есть только published (TINYINT),
+                // а publication_status отсутствует или не синхронизирован.
+                $test = null;
+                try {
+                    $stmt = $this->modx->prepare("SELECT id, publication_status, published FROM {$prefix}test_tests WHERE id = ?");
+                    if ($stmt) {
+                        $stmt->execute([$itemId]);
+                        $test = $stmt->fetch(PDO::FETCH_ASSOC);
+                    }
+                } catch (Throwable $e) {
+                    $stmt = $this->modx->prepare("SELECT id, published FROM {$prefix}test_tests WHERE id = ?");
+                    if ($stmt) {
+                        $stmt->execute([$itemId]);
+                        $test = $stmt->fetch(PDO::FETCH_ASSOC);
+                    }
                 }
 
-                // Проверяем, что тест опубликован
-                if ($test['publication_status'] !== 'public') {
+                if (!$test) {
+                    // Диагностика распространенной ошибки:
+                    // пользователь может передать ID ресурса (resource_id), а не ID теста из modx_test_tests.
+                    $resourceHintStmt = $this->modx->prepare("SELECT id, title, publication_status FROM {$prefix}test_tests WHERE resource_id = ?");
+                    if ($resourceHintStmt) {
+                        $resourceHintStmt->execute([$itemId]);
+                        $testByResource = $resourceHintStmt->fetch(PDO::FETCH_ASSOC);
+
+                        if ($testByResource) {
+                            throw new ValidationException(
+                                'Выбран ID ресурса (' . $itemId . '), а не ID теста. ' .
+                                'Для этого теста используйте ID=' . (int)$testByResource['id'] . '.'
+                            );
+                        }
+                    }
+
+                    throw new ValidationException('Тест не найден (ID=' . $itemId . '). Возможно, используется неверный идентификатор (нужен ID из таблицы test_tests).');
+                }
+
+                // Проверяем, что тест опубликован:
+                // - новая схема: publication_status in ('public', 'unlisted')
+                // - legacy-схема: published = 1
+                $publicationStatus = isset($test['publication_status']) ? (string)$test['publication_status'] : '';
+                $isPublishedFlag = isset($test['published']) ? (int)$test['published'] === 1 : false;
+                $isAccessibleStatus = in_array($publicationStatus, ['public', 'unlisted'], true);
+
+                if (!$isAccessibleStatus && !$isPublishedFlag) {
                     throw new ValidationException('Тест не опубликован (ID=' . $itemId . '). Опубликуйте тест или выберите другой.');
                 }
                 break;
