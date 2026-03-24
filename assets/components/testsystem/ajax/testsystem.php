@@ -613,11 +613,14 @@ try {
         // Специализированные исключения с правильными HTTP кодами
         http_response_code($e->getHttpCode());
         $response = $e->toArray();
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         // Обработка неожиданных исключений
         http_response_code(500);
         $response = ResponseHelper::error('Internal server error');
-        $modx->log(modX::LOG_LEVEL_ERROR, '[testsystem.php] Unexpected error: ' . $e->getMessage());
+        $modx->log(
+            modX::LOG_LEVEL_ERROR,
+            '[testsystem.php] Unexpected fatal error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine()
+        );
     }
 
 header('Content-Type: application/json; charset=utf-8');
