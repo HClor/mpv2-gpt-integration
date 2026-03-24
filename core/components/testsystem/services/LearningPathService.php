@@ -436,9 +436,10 @@ class LearningPathService
         $steps = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Создаём записи step_completion для каждого шага
-        foreach ($steps as $step) {
-            // Первый шаг доступен сразу, остальные заблокированы
-            $status = ($step['step_number'] == 1) ? 'available' : 'locked';
+        foreach ($steps as $index => $step) {
+            // Доступным по умолчанию делаем первый шаг в текущем порядке,
+            // даже если нумерация step_number начинается не с 1 (legacy-данные).
+            $status = ($index === 0) ? 'available' : 'locked';
 
             // Если у шага нет условий разблокировки, делаем его доступным
             if (empty($step['unlock_condition']) && $step['step_number'] > 1) {
@@ -814,7 +815,12 @@ class LearningPathService
         $prefix = $modx->getOption('table_prefix', null, 'modx_');
 
         // Получаем статус шага и условия разблокировки
-        $sql = "SELECT lpsc.status, lps.unlock_condition, lps.step_number
+        $sql = "SELECT lpsc.status,
+                       lps.unlock_condition,
+                       lps.step_number,
+                       (SELECT MIN(s2.step_number)
+                        FROM {$prefix}test_learning_path_steps s2
+                        WHERE s2.path_id = lps.path_id) as min_step_number
                 FROM {$prefix}test_learning_path_step_completion lpsc
                 JOIN {$prefix}test_learning_path_steps lps ON lps.id = lpsc.step_id
                 WHERE lpsc.progress_id = ? AND lpsc.step_id = ?";
@@ -828,7 +834,12 @@ class LearningPathService
         // (например, когда запись на траекторию была до добавления шагов).
         if (!$step) {
             // Проверяем, существует ли сам шаг в траектории и получаем user_id прогресса
-            $sql = "SELECT lps.step_number, lps.unlock_condition, lpp.user_id
+            $sql = "SELECT lps.step_number,
+                           lps.unlock_condition,
+                           lpp.user_id,
+                           (SELECT MIN(s2.step_number)
+                            FROM {$prefix}test_learning_path_steps s2
+                            WHERE s2.path_id = lps.path_id) as min_step_number
                     FROM {$prefix}test_learning_path_steps lps
                     JOIN {$prefix}test_learning_path_progress lpp ON lpp.path_id = lps.path_id
                     WHERE lpp.id = ? AND lps.id = ?";
@@ -843,7 +854,10 @@ class LearningPathService
             $isAvailable = false;
 
             // Первый шаг или шаг без условий - разрешаем
-            if ($stepExists['step_number'] == 1 || empty($stepExists['unlock_condition'])) {
+            if (
+                (int)$stepExists['step_number'] === (int)$stepExists['min_step_number']
+                || empty($stepExists['unlock_condition'])
+            ) {
                 $isAvailable = true;
             } else {
                 // Проверяем условия разблокировки
@@ -883,7 +897,7 @@ class LearningPathService
         }
 
         // Первый шаг всегда доступен
-        if ($step['step_number'] == 1) {
+        if ((int)$step['step_number'] === (int)$step['min_step_number']) {
             return true;
         }
 
