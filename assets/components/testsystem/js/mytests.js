@@ -825,22 +825,24 @@ function renderPublicTests(tests) {
 
     tests.forEach(test => {
         const testUrl = test.test_url || '#';
-        const questionsText = test.questions_count === 1 ? 'вопрос' : test.questions_count < 5 ? 'вопроса' : 'вопросов';
+        const questionCountRaw = Number.parseInt(test.questions_count, 10);
+        const questionCount = Number.isFinite(questionCountRaw) && questionCountRaw > 0 ? questionCountRaw : 0;
+        const questionsText = questionCount === 1 ? 'вопрос' : (questionCount >= 2 && questionCount <= 4 ? 'вопроса' : 'вопросов');
 
         html += `<div class="list-group-item test-list-item-minimal">
-            <div class="d-flex justify-content-between align-items-start flex-wrap">
-                <div class="flex-grow-1 mb-2 mb-md-0">
+            <div class="ts-mytests-row">
+                <div class="ts-mytests-main">
                     <h5 class="mb-1">
                         <a href="${escapeHtml(testUrl)}" class="text-decoration-none">${escapeHtml(test.title)}</a>
                     </h5>
                     ${test.description ? `<p class="mb-1 text-muted small">${escapeHtml(test.description)}</p>` : ''}
                     <div class="text-muted small mt-2">
-                        <span class="me-3"><i class="bi bi-patch-question"></i> ${test.questions_count} ${questionsText}</span>
+                        <span class="me-3"><i class="bi bi-patch-question"></i> ${questionCount} ${questionsText}</span>
                         ${test.creator_name ? `<span class="me-3"><i class="bi bi-person"></i> ${escapeHtml(test.creator_name)}</span>` : ''}
                     </div>
                 </div>
-                <div>
-                    <a href="${escapeHtml(testUrl)}" class="btn btn-sm btn-primary">
+                <div class="test-actions-compact">
+                    <a href="${escapeHtml(testUrl)}" class="ts-btn ts-btn-primary ts-btn-sm ts-mytests-public-start-btn">
                         <i class="bi bi-play-fill"></i> Пройти тест
                     </a>
                 </div>
