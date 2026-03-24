@@ -661,8 +661,10 @@ if ($_POST && $mode === 'forgot') {
 
 // ====================== ВОССТАНОВЛЕНИЕ ПАРОЛЯ — УСТАНОВКА ======================
 if ($mode === 'reset') {
-    //$token = (string)($_GET['token'] ?? '');
-    $token = sanitizeInput((string)($_POST['token'] ?? $_GET['token'] ?? ''));
+    // sanitizeInput() в этом сниппете не определён; при открытии reset-ссылки это давало fatal error (HTTP 500)
+    // Разрешаем только hex-токен, который генерируется через bin2hex(random_bytes(32))
+    $rawToken = (string)($_POST['token'] ?? $_GET['token'] ?? '');
+    $token = preg_replace('/[^a-f0-9]/i', '', $rawToken);
 
     if ($_POST && isset($_POST['new_password'])) {
         if (!CsrfProtection::validateRequest($_POST)) {
@@ -701,8 +703,15 @@ if ($mode === 'reset') {
                 if ($foundUser) {
                     $foundUser->set('password', $newPassword);
                     if ($foundUser->save()) {
-                        $success[] = 'Пароль успешно изменён! Теперь можете войти.';
-                        $mode = 'login';
+                        $successMessage = 'Пароль успешно изменён! Теперь можете войти.';
+                        $_SESSION['auth_handler_flash'] = [
+                            'errors' => [],
+                            'success' => [$successMessage],
+                        ];
+
+                        $resourceId = $modx->resource ? (int)$modx->resource->get('id') : (int)$modx->getOption('site_start');
+                        $modx->sendRedirect($modx->makeUrl($resourceId, '', ['mode' => 'login']));
+                        exit;
                     } else {
                         $errors[] = 'Ошибка сохранения пароля';
                     }
