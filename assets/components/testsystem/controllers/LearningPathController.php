@@ -1313,6 +1313,7 @@ class LearningPathController extends BaseController
         if (!$stepType || $stepType === 'test') {
             $sql = "SELECT
                         t.id,
+                        t.resource_id,
                         t.title as name,
                         t.description,
                         c.name as category_name,
@@ -1636,7 +1637,22 @@ class LearningPathController extends BaseController
                 }
 
                 if (!$test) {
-                    throw new ValidationException('Тест не найден (ID=' . $itemId . '). Возможно, тест был удален. Выберите другой тест.');
+                    // Диагностика распространенной ошибки:
+                    // пользователь может передать ID ресурса (resource_id), а не ID теста из modx_test_tests.
+                    $resourceHintStmt = $this->modx->prepare("SELECT id, title, publication_status FROM {$prefix}test_tests WHERE resource_id = ?");
+                    if ($resourceHintStmt) {
+                        $resourceHintStmt->execute([$itemId]);
+                        $testByResource = $resourceHintStmt->fetch(PDO::FETCH_ASSOC);
+
+                        if ($testByResource) {
+                            throw new ValidationException(
+                                'Выбран ID ресурса (' . $itemId . '), а не ID теста. ' .
+                                'Для этого теста используйте ID=' . (int)$testByResource['id'] . '.'
+                            );
+                        }
+                    }
+
+                    throw new ValidationException('Тест не найден (ID=' . $itemId . '). Возможно, используется неверный идентификатор (нужен ID из таблицы test_tests).');
                 }
 
                 // Проверяем, что тест опубликован:

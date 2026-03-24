@@ -1427,9 +1427,7 @@
         document.getElementById('step-require-exam-pass').checked = false;
 
         // Reset content selection
-        selectedContentId = null;
-        selectedContentName = '';
-        document.getElementById('step-content-selected').classList.add('d-none');
+        resetStepContentSelection();
         document.getElementById('step-content-list').innerHTML = `
             <div class="text-muted text-center py-3">
                 <i class="bi bi-arrow-up"></i> Начните поиск или нажмите кнопку для загрузки списка
@@ -1445,6 +1443,7 @@
 
         stepType.onchange = () => {
             updateStepExamRequirementVisibility(stepType.value);
+            resetStepContentSelection();
             loadAvailableContent();
         };
         searchBtn.onclick = () => loadAvailableContent();
@@ -1501,6 +1500,9 @@
         let html = '';
         items.forEach(item => {
             const isSelected = selectedContentId === item.id;
+            const idBadge = stepType === 'test' || stepType === 'quiz'
+                ? `ID теста: ${item.id}${item.resource_id ? ` • Resource ID: ${item.resource_id}` : ''}`
+                : `ID: ${item.id}`;
             const extra = item.questions_count ? `<small class="text-muted">${item.questions_count} вопр.</small>` :
                           item.parent_name ? `<small class="text-muted">${escapeHtml(item.parent_name)}</small>` : '';
 
@@ -1516,7 +1518,7 @@
                     </div>
                     <div>
                         ${extra}
-                        <span class="badge bg-${isSelected ? 'light text-primary' : 'secondary'} ms-2">ID: ${item.id}</span>
+                        <span class="badge bg-${isSelected ? 'light text-primary' : 'secondary'} ms-2">${idBadge}</span>
                     </div>
                 </div>
             `;
@@ -1542,6 +1544,21 @@
         // Обновляем визуальное выделение
         const stepType = document.getElementById('step-type').value;
         renderContentList(stepType);
+    }
+
+    function resetStepContentSelection() {
+        selectedContentId = null;
+        selectedContentName = '';
+
+        const contentIdInput = document.getElementById('step-content-id');
+        if (contentIdInput) {
+            contentIdInput.value = '';
+        }
+
+        const selectedWrap = document.getElementById('step-content-selected');
+        if (selectedWrap) {
+            selectedWrap.classList.add('d-none');
+        }
     }
 
     async function saveStep() {
