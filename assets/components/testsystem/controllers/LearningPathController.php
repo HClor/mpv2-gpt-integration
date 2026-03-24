@@ -1029,9 +1029,12 @@ class LearningPathController extends BaseController
         $currentUserId = $this->getCurrentUserId();
         $pathId = ValidationHelper::requireInt($data, 'path_id', 'Path ID required');
         $stepId = ValidationHelper::requireInt($data, 'step_id', 'Step ID required');
+        $diagContext = "user_id={$currentUserId}, path_id={$pathId}, step_id={$stepId}";
+        error_log('[DIAG-1][LearningPathController::getStepContent] Start: ' . $diagContext);
 
         // Проверяем, записан ли пользователь
         if (!LearningPathService::isUserEnrolled($this->modx, $pathId, $currentUserId)) {
+            error_log('[DIAG-2][LearningPathController::getStepContent] Not enrolled: ' . $diagContext);
             throw new PermissionException('Not enrolled on this path');
         }
 
@@ -1039,23 +1042,53 @@ class LearningPathController extends BaseController
         $progress = LearningPathService::getUserProgress($this->modx, $pathId, $currentUserId);
 
         if (!$progress) {
+            error_log('[DIAG-3][LearningPathController::getStepContent] Progress not found: ' . $diagContext);
             throw new Exception('Progress not found');
         }
+        error_log('[DIAG-4][LearningPathController::getStepContent] Progress loaded: progress_id=' . (int)$progress['id'] . ', status=' . ($progress['status'] ?? 'unknown'));
 
         // Проверяем доступ к шагу
-        if (!LearningPathService::canAccessStep($this->modx, $progress['id'], $stepId)) {
-            throw new PermissionException('Step is not available yet');
+        $canAccess = LearningPathService::canAccessStep($this->modx, $progress['id'], $stepId);
+        error_log('[DIAG-5][LearningPathController::getStepContent] Access check: progress_id=' . (int)$progress['id'] . ', can_access=' . ($canAccess ? '1' : '0'));
+        if (!$canAccess) {
+            $prefix = $this->modx->getOption('table_prefix', null, 'modx_');
+
+            $debugSql = "SELECT lps.id as step_id,
+                                lps.step_number,
+                                lps.unlock_condition,
+                                lpsc.status as completion_status
+                         FROM {$prefix}test_learning_path_steps lps
+                         LEFT JOIN {$prefix}test_learning_path_step_completion lpsc
+                                ON lpsc.step_id = lps.id AND lpsc.progress_id = ?
+                         WHERE lps.id = ? AND lps.path_id = ?";
+            $debugStmt = $this->modx->prepare($debugSql);
+            $debugStmt->execute([(int)$progress['id'], $stepId, $pathId]);
+            $debugRow = $debugStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
+            error_log('[DIAG-6][LearningPathController::getStepContent] Access denied details: progress_id='
+                . (int)$progress['id']
+                . ', step_number=' . ($debugRow['step_number'] ?? 'null')
+                . ', completion_status=' . ($debugRow['completion_status'] ?? 'null')
+                . ', unlock_condition=' . ($debugRow['unlock_condition'] ?? 'null'));
+
+            throw new PermissionException('Step is not available yet. [DIAG progress_id='
+                . (int)$progress['id']
+                . ', step_number=' . ($debugRow['step_number'] ?? 'null')
+                . ', completion_status=' . ($debugRow['completion_status'] ?? 'null')
+                . ']');
         }
 
         // Получаем данные шага
         $step = LearningPathService::getStepById($this->modx, $stepId);
 
         if (!$step) {
+            error_log('[DIAG-7][LearningPathController::getStepContent] Step not found: ' . $diagContext);
             throw new Exception('Step not found');
         }
 
         // Обновляем статус шага на "в процессе"
         LearningPathService::updateStepStatus($this->modx, $progress['id'], $stepId, 'in_progress');
+        error_log('[DIAG-8][LearningPathController::getStepContent] Step marked in_progress: progress_id=' . (int)$progress['id'] . ', step_id=' . $stepId);
 
         // Генерируем URL для контента
         $contentUrl = $this->generateContentUrl($step['step_type'], $step['item_id'], $pathId, $stepId);
