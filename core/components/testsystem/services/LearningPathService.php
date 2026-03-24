@@ -1838,30 +1838,48 @@ class LearningPathService
             case 'test':
             case 'quiz':
                 // Проверяем существование теста с учетом mixed-схемы на production.
-                // В legacy БД доступность хранится в published=1,
-                // в новой схеме — в publication_status.
-                $test = null;
+                // ВАЖНО: build SELECT только по реально существующим колонкам.
+                $hasPublicationStatus = false;
+                $hasPublished = false;
 
-                try {
-                    $stmt = $modx->prepare("SELECT id, publication_status, published FROM {$prefix}test_tests WHERE id = ?");
-                    if ($stmt) {
-                        $stmt->execute([$itemId]);
-                        $test = $stmt->fetch(PDO::FETCH_ASSOC);
+                $columnStmt = $modx->prepare("SHOW COLUMNS FROM {$prefix}test_tests");
+                if ($columnStmt && $columnStmt->execute()) {
+                    $columns = $columnStmt->fetchAll(PDO::FETCH_ASSOC);
+                    foreach ($columns as $column) {
+                        if (($column['Field'] ?? '') === 'publication_status') {
+                            $hasPublicationStatus = true;
+                        }
+                        if (($column['Field'] ?? '') === 'published') {
+                            $hasPublished = true;
+                        }
                     }
-                } catch (Throwable $e) {
-                    $stmt = $modx->prepare("SELECT id, published FROM {$prefix}test_tests WHERE id = ?");
-                    if ($stmt) {
-                        $stmt->execute([$itemId]);
-                        $test = $stmt->fetch(PDO::FETCH_ASSOC);
-                    }
+                }
+
+                $selectFields = ['id'];
+                if ($hasPublicationStatus) {
+                    $selectFields[] = 'publication_status';
+                }
+                if ($hasPublished) {
+                    $selectFields[] = 'published';
+                }
+
+                $test = null;
+                $stmt = $modx->prepare("SELECT " . implode(', ', $selectFields) . " FROM {$prefix}test_tests WHERE id = ?");
+                if ($stmt) {
+                    $stmt->execute([(int)$itemId]);
+                    $test = $stmt->fetch(PDO::FETCH_ASSOC);
                 }
 
                 if (!$test) {
                     return false;
                 }
 
-                $publicationStatus = isset($test['publication_status']) ? (string)$test['publication_status'] : '';
-                $isPublishedFlag = isset($test['published']) ? (int)$test['published'] === 1 : false;
+                $publicationStatus = $hasPublicationStatus && isset($test['publication_status'])
+                    ? (string)$test['publication_status']
+                    : '';
+                $isPublishedFlag = $hasPublished && isset($test['published'])
+                    ? (int)$test['published'] === 1
+                    : false;
                 return in_array($publicationStatus, ['public', 'unlisted'], true) || $isPublishedFlag;
 
             case 'assignment':

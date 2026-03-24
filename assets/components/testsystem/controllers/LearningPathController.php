@@ -1619,29 +1619,53 @@ class LearningPathController extends BaseController
             case 'test':
             case 'quiz':
                 // Проверяем существование теста.
-                // Совместимость с legacy-схемой: в части инсталляций есть только published (TINYINT),
-                // а publication_status отсутствует или не синхронизирован.
+                // ВАЖНО: сначала определяем доступные колонки, затем строим SELECT.
+                // Иначе prepare() может вернуть false без исключения (например, при отсутствии `published`).
+                $hasPublicationStatus = false;
+                $hasPublished = false;
+
+                $columnStmt = $this->modx->prepare("SHOW COLUMNS FROM {$prefix}test_tests");
+                if ($columnStmt && $columnStmt->execute()) {
+                    $columns = $columnStmt->fetchAll(PDO::FETCH_ASSOC);
+                    foreach ($columns as $column) {
+                        if (($column['Field'] ?? '') === 'publication_status') {
+                            $hasPublicationStatus = true;
+                        }
+                        if (($column['Field'] ?? '') === 'published') {
+                            $hasPublished = true;
+                        }
+                    }
+                }
+
+                $selectFields = ['id', 'resource_id'];
+                if ($hasPublicationStatus) {
+                    $selectFields[] = 'publication_status';
+                }
+                if ($hasPublished) {
+                    $selectFields[] = 'published';
+                }
+
                 $test = null;
-                try {
-                    $stmt = $this->modx->prepare("SELECT id, publication_status, published FROM {$prefix}test_tests WHERE id = ?");
-                    if ($stmt) {
-                        $stmt->execute([$itemId]);
-                        $test = $stmt->fetch(PDO::FETCH_ASSOC);
-                    }
-                } catch (Throwable $e) {
-                    $stmt = $this->modx->prepare("SELECT id, published FROM {$prefix}test_tests WHERE id = ?");
-                    if ($stmt) {
-                        $stmt->execute([$itemId]);
-                        $test = $stmt->fetch(PDO::FETCH_ASSOC);
-                    }
+                $testSql = "SELECT " . implode(', ', $selectFields) . " FROM {$prefix}test_tests WHERE id = ?";
+                $stmt = $this->modx->prepare($testSql);
+                if ($stmt) {
+                    $stmt->execute([(int)$itemId]);
+                    $test = $stmt->fetch(PDO::FETCH_ASSOC);
                 }
 
                 if (!$test) {
                     // Диагностика распространенной ошибки:
                     // пользователь может передать ID ресурса (resource_id), а не ID теста из modx_test_tests.
-                    $resourceHintStmt = $this->modx->prepare("SELECT id, title, publication_status FROM {$prefix}test_tests WHERE resource_id = ?");
+                    $resourceHintFields = ['id', 'title'];
+                    if ($hasPublicationStatus) {
+                        $resourceHintFields[] = 'publication_status';
+                    }
+
+                    $resourceHintStmt = $this->modx->prepare(
+                        "SELECT " . implode(', ', $resourceHintFields) . " FROM {$prefix}test_tests WHERE resource_id = ?"
+                    );
                     if ($resourceHintStmt) {
-                        $resourceHintStmt->execute([$itemId]);
+                        $resourceHintStmt->execute([(int)$itemId]);
                         $testByResource = $resourceHintStmt->fetch(PDO::FETCH_ASSOC);
 
                         if ($testByResource) {
@@ -1658,8 +1682,12 @@ class LearningPathController extends BaseController
                 // Проверяем, что тест опубликован:
                 // - новая схема: publication_status in ('public', 'unlisted')
                 // - legacy-схема: published = 1
-                $publicationStatus = isset($test['publication_status']) ? (string)$test['publication_status'] : '';
-                $isPublishedFlag = isset($test['published']) ? (int)$test['published'] === 1 : false;
+                $publicationStatus = $hasPublicationStatus && isset($test['publication_status'])
+                    ? (string)$test['publication_status']
+                    : '';
+                $isPublishedFlag = $hasPublished && isset($test['published'])
+                    ? (int)$test['published'] === 1
+                    : false;
                 $isAccessibleStatus = in_array($publicationStatus, ['public', 'unlisted'], true);
 
                 if (!$isAccessibleStatus && !$isPublishedFlag) {
