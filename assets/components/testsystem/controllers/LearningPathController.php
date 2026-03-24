@@ -1313,6 +1313,7 @@ class LearningPathController extends BaseController
         if (!$stepType || $stepType === 'test') {
             $sql = "SELECT
                         t.id,
+                        t.resource_id,
                         t.title as name,
                         t.description,
                         c.name as category_name,
