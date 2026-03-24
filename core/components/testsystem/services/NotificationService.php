@@ -172,16 +172,23 @@ class NotificationService
         $prefix = $modx->getOption('table_prefix');
 
         try {
+            // Важно для совместимости с MODX 2.x:
+            // используем только DB-API modX (prepare/execute), без getPDO().
             $stmt = $modx->prepare("
                 SELECT COUNT(*) as count
                 FROM {$prefix}test_notifications
                 WHERE user_id = ? AND is_read = 0
             ");
-            $stmt->execute([$userId]);
+
+            if (!$stmt) {
+                throw new RuntimeException('Failed to prepare statement for unread notifications count');
+            }
+
+            $stmt->execute([(int)$userId]);
 
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            return (int)$result['count'];
-        } catch (Exception $e) {
+            return (int)($result['count'] ?? 0);
+        } catch (Throwable $e) {
             $modx->log(modX::LOG_LEVEL_ERROR, 'NotificationService::getUnreadCount error: ' . $e->getMessage());
             return 0;
         }
