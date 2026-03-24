@@ -1617,17 +1617,36 @@ class LearningPathController extends BaseController
 
             case 'test':
             case 'quiz':
-                // Проверяем существование теста
-                $stmt = $this->modx->prepare("SELECT id, publication_status FROM {$prefix}test_tests WHERE id = ?");
-                $stmt->execute([$itemId]);
-                $test = $stmt->fetch(PDO::FETCH_ASSOC);
+                // Проверяем существование теста.
+                // Совместимость с legacy-схемой: в части инсталляций есть только published (TINYINT),
+                // а publication_status отсутствует или не синхронизирован.
+                $test = null;
+                try {
+                    $stmt = $this->modx->prepare("SELECT id, publication_status, published FROM {$prefix}test_tests WHERE id = ?");
+                    if ($stmt) {
+                        $stmt->execute([$itemId]);
+                        $test = $stmt->fetch(PDO::FETCH_ASSOC);
+                    }
+                } catch (Throwable $e) {
+                    $stmt = $this->modx->prepare("SELECT id, published FROM {$prefix}test_tests WHERE id = ?");
+                    if ($stmt) {
+                        $stmt->execute([$itemId]);
+                        $test = $stmt->fetch(PDO::FETCH_ASSOC);
+                    }
+                }
 
                 if (!$test) {
                     throw new ValidationException('Тест не найден (ID=' . $itemId . '). Возможно, тест был удален. Выберите другой тест.');
                 }
 
-                // Проверяем, что тест опубликован
-                if ($test['publication_status'] !== 'public') {
+                // Проверяем, что тест опубликован:
+                // - новая схема: publication_status in ('public', 'unlisted')
+                // - legacy-схема: published = 1
+                $publicationStatus = isset($test['publication_status']) ? (string)$test['publication_status'] : '';
+                $isPublishedFlag = isset($test['published']) ? (int)$test['published'] === 1 : false;
+                $isAccessibleStatus = in_array($publicationStatus, ['public', 'unlisted'], true);
+
+                if (!$isAccessibleStatus && !$isPublishedFlag) {
                     throw new ValidationException('Тест не опубликован (ID=' . $itemId . '). Опубликуйте тест или выберите другой.');
                 }
                 break;

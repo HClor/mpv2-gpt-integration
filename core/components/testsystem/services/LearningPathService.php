@@ -1837,11 +1837,32 @@ class LearningPathService
 
             case 'test':
             case 'quiz':
-                // Проверяем существование теста
-                $stmt = $modx->prepare("SELECT id, publication_status FROM {$prefix}test_tests WHERE id = ?");
-                $stmt->execute([$itemId]);
-                $test = $stmt->fetch(PDO::FETCH_ASSOC);
-                return $test && $test['publication_status'] === 'public';
+                // Проверяем существование теста с учетом mixed-схемы на production.
+                // В legacy БД доступность хранится в published=1,
+                // в новой схеме — в publication_status.
+                $test = null;
+
+                try {
+                    $stmt = $modx->prepare("SELECT id, publication_status, published FROM {$prefix}test_tests WHERE id = ?");
+                    if ($stmt) {
+                        $stmt->execute([$itemId]);
+                        $test = $stmt->fetch(PDO::FETCH_ASSOC);
+                    }
+                } catch (Throwable $e) {
+                    $stmt = $modx->prepare("SELECT id, published FROM {$prefix}test_tests WHERE id = ?");
+                    if ($stmt) {
+                        $stmt->execute([$itemId]);
+                        $test = $stmt->fetch(PDO::FETCH_ASSOC);
+                    }
+                }
+
+                if (!$test) {
+                    return false;
+                }
+
+                $publicationStatus = isset($test['publication_status']) ? (string)$test['publication_status'] : '';
+                $isPublishedFlag = isset($test['published']) ? (int)$test['published'] === 1 : false;
+                return in_array($publicationStatus, ['public', 'unlisted'], true) || $isPublishedFlag;
 
             case 'assignment':
                 // Для заданий пока считаем всегда доступным
