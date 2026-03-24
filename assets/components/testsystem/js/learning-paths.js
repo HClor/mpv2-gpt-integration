@@ -1501,7 +1501,7 @@
         items.forEach(item => {
             const isSelected = selectedContentId === item.id;
             const idBadge = stepType === 'test' || stepType === 'quiz'
-                ? `ID теста: ${item.id}${item.resource_id ? ` • Resource ID: ${item.resource_id}` : ''}`
+                ? `ID теста: ${item.id}`
                 : `ID: ${item.id}`;
             const extra = item.questions_count ? `<small class="text-muted">${item.questions_count} вопр.</small>` :
                           item.parent_name ? `<small class="text-muted">${escapeHtml(item.parent_name)}</small>` : '';

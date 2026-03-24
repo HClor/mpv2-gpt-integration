@@ -19,7 +19,7 @@ class TestService
      * @param string $description Описание теста
      * @param string $publicationStatus Статус публикации (draft, private, unlisted, public)
      * @param int $userId ID пользователя-создателя
-     * @return array ['test_id' => int, 'resource_id' => int, 'test_url' => string]
+     * @return array ['test_id' => int, 'test_url' => string]
      * @throws Exception При ошибках создания
      */
     public static function createTestWithPage($modx, $title, $description, $publicationStatus, $userId)
@@ -35,26 +35,16 @@ class TestService
         // ШАГ 1: Создаём тест
         $testId = self::createTestRecord($modx, $prefix, $title, $description, $publicationStatus, $userId);
 
-        try {
-            // ШАГ 2: Создаём страницу для теста
-            $resourceId = self::createTestPage($modx, $testId, $title, $userId);
+        // Legacy alias: ресурсы MODX для тестов больше не создаем.
+        $testPageId = (int)$modx->getOption('lms.test_page', null, 0);
+        $testUrl = $testPageId > 0
+            ? $modx->makeUrl($testPageId, 'web', ['testId' => $testId], 'full')
+            : '';
 
-            // ШАГ 3: Привязываем тест к странице
-            self::linkTestToPage($modx, $prefix, $testId, $resourceId);
-
-            // ШАГ 4: Очищаем кеш и генерируем URL
-            $testUrl = self::generateTestUrl($modx, $resourceId, $testId, $title);
-
-            return [
-                'test_id' => $testId,
-                'resource_id' => $resourceId,
-                'test_url' => $testUrl
-            ];
-
-        } catch (Exception $e) {
-            $modx->log(modX::LOG_LEVEL_ERROR, '[TestService::createTestWithPage] Error: ' . $e->getMessage());
-            throw new Exception('Failed to create test with page: ' . $e->getMessage());
-        }
+        return [
+            'test_id' => $testId,
+            'test_url' => $testUrl
+        ];
     }
 
     /**
@@ -73,8 +63,8 @@ class TestService
     {
         $insertStmt = $modx->prepare("
             INSERT INTO {$prefix}test_tests
-            (title, description, created_by, created_at, publication_status, is_active, mode, time_limit, pass_score, questions_per_session, resource_id)
-            VALUES (?, ?, ?, NOW(), ?, 1, 'training', 0, 70, 20, 0)
+            (title, description, created_by, created_at, publication_status, is_active, mode, time_limit, pass_score, questions_per_session)
+            VALUES (?, ?, ?, NOW(), ?, 1, 'training', 0, 70, 20)
         ");
 
         if (!$insertStmt) {
@@ -207,28 +197,13 @@ class TestService
     }
 
     /**
-     * Привязка теста к странице
+     * Legacy no-op: связь теста с отдельной MODX-страницей больше не используется.
      *
-     * @param object $modx MODX объект
-     * @param string $prefix Префикс таблиц
-     * @param int $testId ID теста
-     * @param int $resourceId ID ресурса
-     * @throws Exception При ошибке обновления
+     * @deprecated
      */
-    private static function linkTestToPage($modx, $prefix, $testId, $resourceId)
+    private static function linkTestToPage($modx, $prefix, $testId, $legacyPageId)
     {
-        $updateStmt = $modx->prepare("
-            UPDATE {$prefix}test_tests
-            SET resource_id = ?
-            WHERE id = ?
-        ");
-
-        if (!$updateStmt || !$updateStmt->execute([$resourceId, $testId])) {
-            $modx->log(modX::LOG_LEVEL_ERROR, "[TestService] Failed to link test {$testId} to resource {$resourceId}");
-            throw new Exception('Failed to link test to page');
-        }
-
-        $modx->log(modX::LOG_LEVEL_INFO, "[TestService] Test linked to resource");
+        $modx->log(modX::LOG_LEVEL_INFO, "[TestService] linkTestToPage skipped (deprecated)");
     }
 
     /**

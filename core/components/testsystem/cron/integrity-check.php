@@ -72,7 +72,7 @@ if ($report['total_issues'] > 0) {
     if (!empty($report['orphaned_tests'])) {
         echo "Orphaned tests: " . count($report['orphaned_tests']) . "\n";
         foreach ($report['orphaned_tests'] as $test) {
-            echo "  - Test #{$test['id']}: {$test['title']} (resource_id: {$test['resource_id']})\n";
+            echo "  - Test #{$test['id']}: {$test['title']} (created_by: {$test['created_by']})\n";
         }
     }
 

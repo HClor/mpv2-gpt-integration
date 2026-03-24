@@ -1637,7 +1637,7 @@ class LearningPathController extends BaseController
                     }
                 }
 
-                $selectFields = ['id', 'resource_id'];
+                $selectFields = ['id'];
                 if ($hasPublicationStatus) {
                     $selectFields[] = 'publication_status';
                 }
@@ -1654,29 +1654,7 @@ class LearningPathController extends BaseController
                 }
 
                 if (!$test) {
-                    // Диагностика распространенной ошибки:
-                    // пользователь может передать ID ресурса (resource_id), а не ID теста из modx_test_tests.
-                    $resourceHintFields = ['id', 'title'];
-                    if ($hasPublicationStatus) {
-                        $resourceHintFields[] = 'publication_status';
-                    }
-
-                    $resourceHintStmt = $this->modx->prepare(
-                        "SELECT " . implode(', ', $resourceHintFields) . " FROM {$prefix}test_tests WHERE resource_id = ?"
-                    );
-                    if ($resourceHintStmt) {
-                        $resourceHintStmt->execute([(int)$itemId]);
-                        $testByResource = $resourceHintStmt->fetch(PDO::FETCH_ASSOC);
-
-                        if ($testByResource) {
-                            throw new ValidationException(
-                                'Выбран ID ресурса (' . $itemId . '), а не ID теста. ' .
-                                'Для этого теста используйте ID=' . (int)$testByResource['id'] . '.'
-                            );
-                        }
-                    }
-
-                    throw new ValidationException('Тест не найден (ID=' . $itemId . '). Возможно, используется неверный идентификатор (нужен ID из таблицы test_tests).');
+                    throw new ValidationException('Тест не найден (ID=' . $itemId . '). Выберите существующий ID теста.');
                 }
 
                 // Проверяем, что тест опубликован:
