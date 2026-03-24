@@ -1,11 +1,11 @@
 {* Обработка выхода из системы (некэшируемый вызов для обработки POST) *}
-{$_modx->runSnippet('logoutHandler')}
+[[!logoutHandler]]
 <!DOCTYPE html>
 <html lang="ru">
 {include 'tsHead'}
 
 <body>
-    {include 'tsHeader'}
+    [[!$tsHeader]]
 
     <main class="py-4">
         <div class="container">

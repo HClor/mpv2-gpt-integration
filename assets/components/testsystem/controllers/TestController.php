@@ -536,8 +536,14 @@ class TestController extends BaseController
     {
         $stmt = $this->modx->prepare("
             SELECT t.id, t.title, t.description, t.publication_status,
-                   t.created_at, t.mode, t.created_by, t.public_url_slug
-            FROM modx_test_tests t
+                   t.created_at, t.mode, t.created_by, t.public_url_slug,
+                   (SELECT COUNT(*)
+                      FROM {$this->prefix}test_questions q
+                     WHERE q.test_id = t.id AND q.published = 1) as questions_count,
+                   COALESCE(NULLIF(ua.fullname, ''), u.username) as creator_name
+            FROM {$this->prefix}test_tests t
+            LEFT JOIN {$this->prefix}users u ON u.id = t.created_by
+            LEFT JOIN {$this->prefix}user_attributes ua ON ua.internalKey = u.id
             WHERE t.publication_status = 'public' AND t.is_active = 1
             ORDER BY t.created_at DESC
             LIMIT 100
