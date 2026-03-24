@@ -127,8 +127,8 @@ function renderSharedTests(tests) {
         const testUrl = test.test_url || '#';
         
         html += `<div class="list-group-item test-list-item-minimal">
-            <div class="d-flex justify-content-between align-items-start flex-wrap">
-                <div class="flex-grow-1 mb-2 mb-md-0">
+            <div class="ts-mytests-row">
+                <div class="ts-mytests-main">
                     <div class="test-info-block">
                         <h6 class="mb-2 test-title-clickable" onclick="window.location.href='${testUrl}'">
                             ${escapeHtml(test.title)}
@@ -146,13 +146,13 @@ function renderSharedTests(tests) {
                         </div>
                     </div>
                 </div>
-                <div class="test-actions-compact">
+                <div class="test-actions-compact" aria-label="Действия с тестом">
                     ${test.can_edit ? `
-                        <button class="btn btn-outline-primary btn-test-action" onclick="editTest(${test.id}, '${escapeHtml(test.title)}', '${escapeHtml(test.description || '')}', '${test.publication_status}')" title="Редактировать">
+                        <button class="ts-btn ts-btn-secondary ts-btn-icon-only btn-test-action" onclick="editTest(${test.id}, '${escapeHtml(test.title)}', '${escapeHtml(test.description || '')}', '${test.publication_status}')" title="Редактировать">
                             <i class="bi bi-pencil"></i>
                         </button>
                     ` : ''}
-                    <a class="btn btn-success btn-test-action" href="${testUrl}" title="Пройти тест">
+                    <a class="ts-btn ts-btn-success ts-btn-icon-only btn-test-action" href="${testUrl}" title="Пройти тест">
                         <i class="bi bi-play-fill"></i>
                     </a>
                 </div>
@@ -181,22 +181,22 @@ function renderMyTests(tests) {
     };
     
     // Фильтры
-    let html = '<div class="tests-filters-container mb-3">';
-    html += '<div class="btn-group w-100" role="group">';
-    html += `<button type="button" class="btn btn-primary" onclick="filterMyTests('all')">
-        Все <span class="badge bg-light text-dark ms-1">${tests.length}</span>
+    let html = '<div class="tests-filters-container mb-3" role="tablist" aria-label="Фильтр моих тестов">';
+    html += '<div class="ts-mytests-filters">';
+    html += `<button type="button" class="ts-btn ts-btn-secondary ts-mytests-filter-btn is-active" data-filter="all" onclick="filterMyTests('all', this)">
+        Все <span class="ts-mytests-filter-count">${tests.length}</span>
     </button>`;
-    html += `<button type="button" class="btn btn-outline-success" onclick="filterMyTests('public')">
-        🌐 Публичные <span class="badge bg-success ms-1">${groupedTests.public.length}</span>
+    html += `<button type="button" class="ts-btn ts-btn-secondary ts-mytests-filter-btn" data-filter="public" onclick="filterMyTests('public', this)">
+        Публичные <span class="ts-mytests-filter-count">${groupedTests.public.length}</span>
     </button>`;
-    html += `<button type="button" class="btn btn-outline-warning" onclick="filterMyTests('unlisted')">
-        🔗 По ссылке <span class="badge bg-warning ms-1">${groupedTests.unlisted.length}</span>
+    html += `<button type="button" class="ts-btn ts-btn-secondary ts-mytests-filter-btn" data-filter="unlisted" onclick="filterMyTests('unlisted', this)">
+        По ссылке <span class="ts-mytests-filter-count">${groupedTests.unlisted.length}</span>
     </button>`;
-    html += `<button type="button" class="btn btn-outline-danger" onclick="filterMyTests('private')">
-        🔒 Приватные <span class="badge bg-danger ms-1">${groupedTests.private.length}</span>
+    html += `<button type="button" class="ts-btn ts-btn-secondary ts-mytests-filter-btn" data-filter="private" onclick="filterMyTests('private', this)">
+        Приватные <span class="ts-mytests-filter-count">${groupedTests.private.length}</span>
     </button>`;
-    html += `<button type="button" class="btn btn-outline-secondary" onclick="filterMyTests('draft')">
-        📝 Черновики <span class="badge bg-secondary ms-1">${groupedTests.draft.length}</span>
+    html += `<button type="button" class="ts-btn ts-btn-secondary ts-mytests-filter-btn" data-filter="draft" onclick="filterMyTests('draft', this)">
+        Черновики <span class="ts-mytests-filter-count">${groupedTests.draft.length}</span>
     </button>`;
     html += '</div>';
     html += '</div>';
@@ -208,8 +208,8 @@ function renderMyTests(tests) {
         const testUrl = test.test_url || '#';
         
         html += `<div class="list-group-item test-list-item-minimal ${itemClass}" data-status="${test.publication_status}">
-            <div class="d-flex justify-content-between align-items-start flex-wrap">
-                <div class="flex-grow-1 mb-2 mb-md-0">
+            <div class="ts-mytests-row">
+                <div class="ts-mytests-main">
                     <div class="test-info-block">
                         <h6 class="mb-2 test-title-clickable" onclick="window.location.href='${testUrl}'">
                             ${escapeHtml(test.title)}
@@ -226,17 +226,17 @@ function renderMyTests(tests) {
                         </div>
                     </div>
                 </div>
-                <div class="test-actions-compact">
-                    <button class="btn btn-outline-primary btn-test-action" onclick="editTest(${test.id}, '${escapeHtml(test.title)}', '${escapeHtml(test.description || '')}', '${test.publication_status}')" title="Редактировать тест">
+                <div class="test-actions-compact" aria-label="Действия с тестом">
+                    <button class="ts-btn ts-btn-secondary ts-btn-icon-only btn-test-action" onclick="editTest(${test.id}, '${escapeHtml(test.title)}', '${escapeHtml(test.description || '')}', '${test.publication_status}')" title="Редактировать тест">
                         <i class="bi bi-gear"></i>
                     </button>
-                    <button class="btn btn-outline-info btn-test-action" onclick="manageAccess(${test.id})" title="Управление доступом">
+                    <button class="ts-btn ts-btn-secondary ts-btn-icon-only btn-test-action" onclick="manageAccess(${test.id})" title="Управление доступом">
                         <i class="bi bi-people"></i>
                     </button>
-                    <a class="btn btn-success btn-test-action" href="${testUrl}" title="Пройти тест">
+                    <a class="ts-btn ts-btn-success ts-btn-icon-only btn-test-action" href="${testUrl}" title="Пройти тест">
                         <i class="bi bi-play-fill"></i>
                     </a>
-                    <button class="btn btn-outline-danger btn-test-action" onclick="deleteTest(${test.id})" title="Удалить тест">
+                    <button class="ts-btn ts-btn-ghost-danger ts-btn-icon-only btn-test-action" onclick="deleteTest(${test.id})" title="Удалить тест">
                         <i class="bi bi-trash"></i>
                     </button>
                 </div>
@@ -248,34 +248,19 @@ function renderMyTests(tests) {
     container.innerHTML = html;
 }
 
-function filterMyTests(status) {
+function filterMyTests(status, buttonEl = null) {
     const items = document.querySelectorAll('#created .test-list-item-minimal');
-    const buttons = document.querySelectorAll('.tests-filters-container .btn');
-    
-    // Обновляем активную кнопку
-    buttons.forEach(btn => {
-        btn.classList.remove('btn-primary', 'btn-success', 'btn-warning', 'btn-danger', 'btn-secondary');
-        btn.classList.add('btn-outline-' + btn.textContent.toLowerCase().includes('публичн') ? 'success' : 
-                         btn.textContent.toLowerCase().includes('ссылк') ? 'warning' :
-                         btn.textContent.toLowerCase().includes('приватн') ? 'danger' :
-                         btn.textContent.toLowerCase().includes('черновик') ? 'secondary' : 'primary');
-    });
-    
-    event.target.classList.remove('btn-outline-primary', 'btn-outline-success', 'btn-outline-warning', 'btn-outline-danger', 'btn-outline-secondary');
-    
-    if (status === 'all') {
-        event.target.classList.add('btn-primary');
-        items.forEach(item => item.style.display = '');
-    } else {
-        if (status === 'public') event.target.classList.add('btn-success');
-        else if (status === 'unlisted') event.target.classList.add('btn-warning');
-        else if (status === 'private') event.target.classList.add('btn-danger');
-        else if (status === 'draft') event.target.classList.add('btn-secondary');
-        
-        items.forEach(item => {
-            item.style.display = item.dataset.status === status ? '' : 'none';
-        });
+    const buttons = document.querySelectorAll('.ts-mytests-filter-btn');
+    buttons.forEach(btn => btn.classList.remove('is-active'));
+
+    const activeButton = buttonEl || document.querySelector(`.ts-mytests-filter-btn[data-filter="${status}"]`);
+    if (activeButton) {
+        activeButton.classList.add('is-active');
     }
+
+    items.forEach(item => {
+        item.style.display = (status === 'all' || item.dataset.status === status) ? '' : 'none';
+    });
 }
 
 function showCreateTestModal() {
