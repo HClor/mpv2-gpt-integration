@@ -17,7 +17,7 @@
             ])}
 
             <!-- Основной контент -->
-            {$_modx->resource.content | raw}
+            {$_modx->resource.content}
         </div>
     </main>
 
