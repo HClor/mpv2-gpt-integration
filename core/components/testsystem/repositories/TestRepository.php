@@ -24,7 +24,7 @@ class TestRepository
         if (empty($fields)) {
             $fields = [
                 'id', 'title', 'description', 'created_by', 'publication_status',
-                'resource_id', 'mode', 'time_limit', 'pass_score',
+                'mode', 'time_limit', 'pass_score',
                 'questions_per_session', 'is_active', 'created_at'
             ];
         }

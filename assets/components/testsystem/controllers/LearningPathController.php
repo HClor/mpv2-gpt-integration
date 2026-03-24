@@ -1617,17 +1617,57 @@ class LearningPathController extends BaseController
 
             case 'test':
             case 'quiz':
-                // Проверяем существование теста
-                $stmt = $this->modx->prepare("SELECT id, publication_status FROM {$prefix}test_tests WHERE id = ?");
-                $stmt->execute([$itemId]);
-                $test = $stmt->fetch(PDO::FETCH_ASSOC);
+                // Проверяем существование теста.
+                // ВАЖНО: сначала определяем доступные колонки, затем строим SELECT.
+                // Иначе prepare() может вернуть false без исключения (например, при отсутствии `published`).
+                $hasPublicationStatus = false;
+                $hasPublished = false;
 
-                if (!$test) {
-                    throw new ValidationException('Тест не найден (ID=' . $itemId . '). Возможно, тест был удален. Выберите другой тест.');
+                $columnStmt = $this->modx->prepare("SHOW COLUMNS FROM {$prefix}test_tests");
+                if ($columnStmt && $columnStmt->execute()) {
+                    $columns = $columnStmt->fetchAll(PDO::FETCH_ASSOC);
+                    foreach ($columns as $column) {
+                        if (($column['Field'] ?? '') === 'publication_status') {
+                            $hasPublicationStatus = true;
+                        }
+                        if (($column['Field'] ?? '') === 'published') {
+                            $hasPublished = true;
+                        }
+                    }
                 }
 
-                // Проверяем, что тест опубликован
-                if ($test['publication_status'] !== 'public') {
+                $selectFields = ['id'];
+                if ($hasPublicationStatus) {
+                    $selectFields[] = 'publication_status';
+                }
+                if ($hasPublished) {
+                    $selectFields[] = 'published';
+                }
+
+                $test = null;
+                $testSql = "SELECT " . implode(', ', $selectFields) . " FROM {$prefix}test_tests WHERE id = ?";
+                $stmt = $this->modx->prepare($testSql);
+                if ($stmt) {
+                    $stmt->execute([(int)$itemId]);
+                    $test = $stmt->fetch(PDO::FETCH_ASSOC);
+                }
+
+                if (!$test) {
+                    throw new ValidationException('Тест не найден (ID=' . $itemId . '). Выберите существующий ID теста.');
+                }
+
+                // Проверяем, что тест опубликован:
+                // - новая схема: publication_status in ('public', 'unlisted')
+                // - legacy-схема: published = 1
+                $publicationStatus = $hasPublicationStatus && isset($test['publication_status'])
+                    ? (string)$test['publication_status']
+                    : '';
+                $isPublishedFlag = $hasPublished && isset($test['published'])
+                    ? (int)$test['published'] === 1
+                    : false;
+                $isAccessibleStatus = in_array($publicationStatus, ['public', 'unlisted'], true);
+
+                if (!$isAccessibleStatus && !$isPublishedFlag) {
                     throw new ValidationException('Тест не опубликован (ID=' . $itemId . '). Опубликуйте тест или выберите другой.');
                 }
                 break;

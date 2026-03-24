@@ -44,7 +44,7 @@ class DataIntegrityService
     }
 
     /**
-     * Поиск тестов с несуществующими resource_id
+     * Поиск "осиротевших" тестов без валидного автора.
      *
      * @param modX $modx
      * @return array
@@ -54,11 +54,10 @@ class DataIntegrityService
         $prefix = $modx->getOption('table_prefix', null, 'modx_');
 
         $sql = "
-            SELECT t.id, t.title, t.resource_id, t.created_at
+            SELECT t.id, t.title, t.created_at, t.created_by
             FROM {$prefix}test_tests t
-            LEFT JOIN {$prefix}site_content sc ON sc.id = t.resource_id
-            WHERE t.resource_id IS NOT NULL
-              AND sc.id IS NULL
+            LEFT JOIN {$prefix}users u ON u.id = t.created_by
+            WHERE u.id IS NULL
         ";
 
         $stmt = $modx->query($sql);

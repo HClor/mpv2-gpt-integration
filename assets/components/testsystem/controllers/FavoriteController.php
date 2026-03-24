@@ -135,8 +135,7 @@ class FavoriteController extends BaseController
                 q.question_image,
                 q.explanation,
                 q.explanation_image,
-                t.title as test_title,
-                t.resource_id
+                t.title as test_title
             FROM {$this->prefix}test_favorites f
             INNER JOIN {$this->prefix}test_questions q ON q.id = f.question_id
             INNER JOIN {$this->prefix}test_tests t ON t.id = q.test_id

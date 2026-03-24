@@ -281,13 +281,6 @@ class TestController extends BaseController
             throw new Exception('Failed to update test');
         }
 
-        // Обновляем pagetitle страницы если она есть
-        if (!empty($test['resource_id'])) {
-            $resourceId = (int)$test['resource_id'];
-            $stmt = $this->modx->prepare("UPDATE {$this->prefix}site_content SET pagetitle = ? WHERE id = ?");
-            $stmt->execute([$title, $resourceId]);
-        }
-
         return $this->success(null, 'Test updated successfully');
     }
 
@@ -310,12 +303,6 @@ class TestController extends BaseController
 
         if (!$success) {
             throw new Exception('Произошла ошибка при удалении теста');
-        }
-
-        // Удаляем страницу MODX если она существует
-        if (!empty($test['resource_id'])) {
-            $resourceId = (int)$test['resource_id'];
-            $this->modx->exec("DELETE FROM {$this->prefix}site_content WHERE id = {$resourceId}");
         }
 
         return $this->success(null, 'Тест успешно удален');
@@ -471,8 +458,8 @@ class TestController extends BaseController
         $stmt = $this->modx->prepare("
             INSERT INTO modx_test_tests
             (title, description, created_by, created_at, publication_status, is_active,
-             mode, time_limit, pass_score, questions_per_session, resource_id)
-            VALUES (?, ?, ?, NOW(), ?, 1, 'training', 0, 70, 20, 0)
+             mode, time_limit, pass_score, questions_per_session)
+            VALUES (?, ?, ?, NOW(), ?, 1, 'training', 0, 70, 20)
         ");
 
         if (!$stmt || !$stmt->execute(array($title, $description, $userId, $publicationStatus))) {
@@ -489,126 +476,7 @@ class TestController extends BaseController
      */
     private function createTestPage($data)
     {
-        $this->requireAuth();
-        $userId = $this->getCurrentUserId();
-
-        $testId = ValidationHelper::requireTestId($data['test_id'] ?? 0, 'Test ID required');
-
-        // Проверяем владельца теста
-        $test = TestRepository::requireTestOwner($this->modx, $testId, $userId, 'Access denied: not test owner');
-
-        // Если страница уже существует, возвращаем URL
-        if (!empty($test['resource_id']) && (int)$test['resource_id'] > 0) {
-            $resourceId = (int)$test['resource_id'];
-            $siteUrl = rtrim($this->modx->getOption('site_url'), '/');
-            $testsParentId = (int)$this->modx->getOption('lms.user_tests_folder', null, 0);
-
-            $resource = $this->modx->getObject('modResource', $resourceId);
-            if ($resource) {
-                $alias = $resource->get('alias');
-                $parentUri = '';
-                if ($testsParentId > 0) {
-                    $parent = $this->modx->getObject('modResource', $testsParentId);
-                    if ($parent) {
-                        $parentUri = trim($parent->get('uri'), '/');
-                    }
-                }
-                if (!empty($parentUri)) {
-                    $testUrl = $siteUrl . '/' . $parentUri . '/' . $alias;
-                } else {
-                    $testUrl = $siteUrl . '/' . $alias;
-                }
-            } else {
-                $testUrl = $siteUrl . '/?id=' . $resourceId;
-            }
-
-            return $this->success(array(
-                'resource_id' => $resourceId,
-                'test_url' => $testUrl,
-                'already_exists' => true
-            ), 'Page already exists');
-        }
-
-        // Создаём страницу
-        $testsParentId = (int)$this->modx->getOption('lms.user_tests_folder', null, 0);
-
-        // Генерируем alias через UrlHelper
-        $alias = UrlHelper::generateUniqueAlias($this->modx, $test['title'], $testId, $testsParentId);
-
-        // Получаем ID шаблона
-        $templateId = (int)$this->modx->getOption('lms.test_template', null, 0);
-        if ($templateId === 0) {
-            $templateId = (int)$this->modx->getOption('default_template', null, 1);
-        }
-
-        // Создаём ресурс
-        $resource = $this->modx->newObject('modResource');
-
-        if (!$resource) {
-            throw new Exception('Failed to create resource object');
-        }
-
-        $resource->fromArray(array(
-            'pagetitle' => $test['title'],
-            'alias' => $alias,
-            'parent' => $testsParentId,
-            'template' => $templateId,
-            'content' => '[[!testRunner]]',
-            'published' => 1,
-            'richtext' => 0,
-            'searchable' => 1,
-            'cacheable' => 1,
-            'createdby' => $userId,
-            'createdon' => time(),
-            'class_key' => 'modDocument',
-            'context_key' => 'web'
-        ), '', true, true);
-
-        if (!$resource->save()) {
-            throw new Exception('Failed to save resource');
-        }
-
-        $resourceId = (int)$resource->get('id');
-
-        // Привязываем к тесту
-        $stmt = $this->modx->prepare("
-            UPDATE {$this->prefix}test_tests
-            SET resource_id = ?
-            WHERE id = ?
-        ");
-        $stmt->execute(array($resourceId, $testId));
-
-        // Очищаем кеш
-        try {
-            $this->modx->cacheManager->refresh(array(
-                'db' => array(),
-                'auto_publish' => array('contexts' => array('web')),
-                'context_settings' => array('contexts' => array('web')),
-                'resource' => array('contexts' => array('web')),
-            ));
-        } catch (Exception $e) {
-            // Кеш очистить не удалось, но это не критично
-        }
-
-        // Строим URL вручную
-        $siteUrl = rtrim($this->modx->getOption('site_url'), '/');
-        $parentUri = '';
-        if ($testsParentId > 0) {
-            $parent = $this->modx->getObject('modResource', $testsParentId);
-            if ($parent) {
-                $parentUri = trim($parent->get('uri'), '/');
-            }
-        }
-        if (!empty($parentUri)) {
-            $testUrl = $siteUrl . '/' . $parentUri . '/' . $alias;
-        } else {
-            $testUrl = $siteUrl . '/' . $alias;
-        }
-
-        return $this->success(array(
-            'resource_id' => $resourceId,
-            'test_url' => $testUrl
-        ), 'Test page created successfully');
+        throw new ValidationException('createTestPage устарел: тесты больше не привязываются к ресурсам MODX.');
     }
 
     /**
@@ -620,7 +488,7 @@ class TestController extends BaseController
         $userId = $this->getCurrentUserId();
 
         $stmt = $this->modx->prepare("
-            SELECT t.id, t.title, t.description, t.publication_status, t.resource_id,
+            SELECT t.id, t.title, t.description, t.publication_status,
                    t.created_at, t.mode, t.time_limit, t.pass_score,
                    (SELECT COUNT(*) FROM modx_test_questions q WHERE q.test_id = t.id AND q.published = 1) as questions_count,
                    (SELECT COUNT(*) FROM modx_test_permissions p WHERE p.test_id = t.id) as shared_with_count
@@ -645,7 +513,7 @@ class TestController extends BaseController
         $userId = $this->getCurrentUserId();
 
         $stmt = $this->modx->prepare("
-            SELECT t.id, t.title, t.description, t.publication_status, t.resource_id,
+            SELECT t.id, t.title, t.description, t.publication_status,
                    t.created_at, t.mode, t.created_by,
                    p.can_edit, p.granted_at
             FROM modx_test_tests t
@@ -667,7 +535,7 @@ class TestController extends BaseController
     private function getPublicTests($data)
     {
         $stmt = $this->modx->prepare("
-            SELECT t.id, t.title, t.description, t.publication_status, t.resource_id,
+            SELECT t.id, t.title, t.description, t.publication_status,
                    t.created_at, t.mode, t.created_by, t.public_url_slug
             FROM modx_test_tests t
             WHERE t.publication_status = 'public' AND t.is_active = 1
