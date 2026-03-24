@@ -302,7 +302,7 @@ class KnowledgeAreaController extends BaseController
         if (is_array($testIds) && !empty($testIds)) {
             $placeholders = implode(',', array_fill(0, count($testIds), '?'));
             $stmt = $this->modx->prepare("
-                SELECT t.id, t.title, t.resource_id,
+                SELECT t.id, t.title,
                        (SELECT COUNT(*) FROM {$this->prefix}test_questions WHERE test_id = t.id AND published = 1) as questions_count
                 FROM {$this->prefix}test_tests t
                 WHERE t.id IN ($placeholders) AND t.is_active = 1
@@ -329,7 +329,6 @@ class KnowledgeAreaController extends BaseController
             SELECT DISTINCT
                 t.id as test_id,
                 t.title as test_title,
-                t.resource_id,
                 t.publication_status,
                 t.created_by,
                 t.category_id,
