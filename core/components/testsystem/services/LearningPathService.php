@@ -850,15 +850,15 @@ class LearningPathService
             return true;
         }
 
+        // Первый шаг всегда доступен
+        if ($step['step_number'] == 1) {
+            return true;
+        }
+
         // Проверяем условия разблокировки
         if (!empty($step['unlock_condition'])) {
             $condition = json_decode($step['unlock_condition'], true);
             return self::checkUnlockCondition($modx, $progressId, $condition);
-        }
-
-        // Первый шаг всегда доступен
-        if ($step['step_number'] == 1) {
-            return true;
         }
 
         return false;
@@ -876,7 +876,27 @@ class LearningPathService
     {
         $prefix = $modx->getOption('table_prefix', null, 'modx_');
 
-        switch ($condition['type']) {
+        if (!is_array($condition) || empty($condition)) {
+            return true;
+        }
+
+        // Backward/forward compatibility:
+        // 1) старый формат: { "type": "previous_step", ... }
+        // 2) новый формат из UI: { "previous_step": true, "min_score": 70, "require_exam_pass": false }
+        $conditionType = $condition['type'] ?? null;
+        if ($conditionType === null) {
+            if (!empty($condition['unlock_date'])) {
+                $conditionType = 'date';
+            } elseif (!empty($condition['previous_step']) && !empty($condition['min_score'])) {
+                $conditionType = 'previous_step_score';
+            } elseif (!empty($condition['previous_step'])) {
+                $conditionType = 'previous_step';
+            } else {
+                return true;
+            }
+        }
+
+        switch ($conditionType) {
             case 'previous_step':
                 // Предыдущий шаг завершен
                 $sql = "SELECT COUNT(*) FROM {$prefix}test_learning_path_step_completion lpsc
