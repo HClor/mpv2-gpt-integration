@@ -576,7 +576,14 @@ class LearningPathService
         $sql = "SELECT lpp.*, lp.name as path_name, lp.passing_score
                 FROM {$prefix}test_learning_path_progress lpp
                 JOIN {$prefix}test_learning_paths lp ON lp.id = lpp.path_id
-                WHERE lpp.path_id = ? AND lpp.user_id = ?";
+                JOIN {$prefix}test_learning_path_enrollments e ON e.id = lpp.enrollment_id
+                WHERE lpp.path_id = ? AND lpp.user_id = ?
+                  AND e.user_id = lpp.user_id
+                  AND e.path_id = lpp.path_id
+                  AND e.is_active = 1
+                  AND (e.expires_at IS NULL OR e.expires_at > NOW())
+                ORDER BY e.enrolled_at DESC, lpp.id DESC
+                LIMIT 1";
 
         $stmt = $modx->prepare($sql);
         $stmt->execute([$pathId, $userId]);
@@ -817,9 +824,11 @@ class LearningPathService
         $step = $stmt->fetch(PDO::FETCH_ASSOC);
 
         // Если записи нет в step_completion, проверяем существование шага
+        // и самовосстанавливаем step_completion для legacy-прогрессов
+        // (например, когда запись на траекторию была до добавления шагов).
         if (!$step) {
-            // Проверяем, существует ли сам шаг в траектории
-            $sql = "SELECT lps.step_number, lps.unlock_condition
+            // Проверяем, существует ли сам шаг в траектории и получаем user_id прогресса
+            $sql = "SELECT lps.step_number, lps.unlock_condition, lpp.user_id
                     FROM {$prefix}test_learning_path_steps lps
                     JOIN {$prefix}test_learning_path_progress lpp ON lpp.path_id = lps.path_id
                     WHERE lpp.id = ? AND lps.id = ?";
@@ -831,18 +840,41 @@ class LearningPathService
                 return false;
             }
 
+            $isAvailable = false;
+
             // Первый шаг или шаг без условий - разрешаем
             if ($stepExists['step_number'] == 1 || empty($stepExists['unlock_condition'])) {
-                return true;
+                $isAvailable = true;
+            } else {
+                // Проверяем условия разблокировки
+                $condition = json_decode($stepExists['unlock_condition'], true);
+                if ($condition) {
+                    $isAvailable = self::checkUnlockCondition($modx, $progressId, $condition);
+                } else {
+                    // Пустой/битый JSON не должен блокировать шаг намертво
+                    $isAvailable = true;
+                }
             }
 
-            // Проверяем условия разблокировки
-            $condition = json_decode($stepExists['unlock_condition'], true);
-            if ($condition) {
-                return self::checkUnlockCondition($modx, $progressId, $condition);
+            // Пытаемся самовосстановить отсутствующую запись step_completion
+            if (!empty($stepExists['user_id'])) {
+                $status = $isAvailable ? 'available' : 'locked';
+                $insertSql = "INSERT INTO {$prefix}test_learning_path_step_completion
+                              (progress_id, step_id, user_id, status, attempts)
+                              VALUES (?, ?, ?, ?, 0)
+                              ON DUPLICATE KEY UPDATE status = status";
+                $insertStmt = $modx->prepare($insertSql);
+                if ($insertStmt) {
+                    $insertStmt->execute([
+                        $progressId,
+                        $stepId,
+                        (int)$stepExists['user_id'],
+                        $status
+                    ]);
+                }
             }
 
-            return true;
+            return $isAvailable;
         }
 
         // Если шаг уже доступен или завершен
