@@ -703,8 +703,15 @@ if ($mode === 'reset') {
                 if ($foundUser) {
                     $foundUser->set('password', $newPassword);
                     if ($foundUser->save()) {
-                        $success[] = 'Пароль успешно изменён! Теперь можете войти.';
-                        $mode = 'login';
+                        $successMessage = 'Пароль успешно изменён! Теперь можете войти.';
+                        $_SESSION['auth_handler_flash'] = [
+                            'errors' => [],
+                            'success' => [$successMessage],
+                        ];
+
+                        $resourceId = $modx->resource ? (int)$modx->resource->get('id') : (int)$modx->getOption('site_start');
+                        $modx->sendRedirect($modx->makeUrl($resourceId, '', ['mode' => 'login']));
+                        exit;
                     } else {
                         $errors[] = 'Ошибка сохранения пароля';
                     }
