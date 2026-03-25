@@ -43,7 +43,9 @@
       <!-- Правая часть меню -->
       <ul class="navbar-nav align-items-center">
         {if $_modx->user.id}
-          {set $rights = $_modx->runSnippet('getUserRights')}
+          {* ВАЖНО: вызываем сниппет в uncached-режиме (!), иначе при кешированном ресурсе
+             роли могут "залипать" между пользователями. *}
+          {set $rights = $_modx->runSnippet('!getUserRights')}
           {set $isAdminOrExpert = $rights.isAdmin || $rights.isExpert}
 
           <!-- Служебное меню (только для админов и экспертов) -->
