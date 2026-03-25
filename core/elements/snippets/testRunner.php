@@ -747,10 +747,26 @@ $output .= '<div id="result-details" class="mt-3"></div>';
 if ($isGuestRunner) {
     $authId = (int)$modx->getOption('lms.auth_page', null, 0);
     $authUrl = $authId > 0 ? $modx->makeUrl($authId, 'web', '', 'full') : '/auth';
-    $output .= '<div id="guest-register-cta" class="ts-alert ts-alert-info mt-3" style="display:none;">';
-    $output .= '<h4><i class="bi bi-person-plus-fill me-2"></i>Сохраните результат и прогресс</h4>';
-    $output .= '<p class="mb-3">Зарегистрируйтесь, чтобы сохранять результаты, отслеживать прогресс и проходить тесты в полном режиме.</p>';
-    $output .= '<a class="ts-btn ts-btn-primary" href="' . htmlspecialchars($authUrl, ENT_QUOTES, 'UTF-8') . '">Зарегистрироваться</a>';
+    $output .= '<div id="guest-register-cta" class="ts-card ts-guest-register-cta mt-3" style="display:none;">';
+    $output .= '<div class="ts-card-header">';
+    $output .= '<h4 class="mb-0"><i class="bi bi-person-plus-fill me-2"></i>Сохраните результат и прогресс</h4>';
+    $output .= '</div>';
+    $output .= '<div class="ts-card-body">';
+    $output .= '<p class="mb-3">Оставьте email — отправим ссылку для входа. После перехода по ссылке аккаунт активируется автоматически.</p>';
+    $output .= '<form method="POST" action="' . htmlspecialchars($authUrl, ENT_QUOTES, 'UTF-8') . '" class="ts-guest-register-form">';
+    $output .= CsrfProtection::getTokenField();
+    $output .= '<input type="hidden" name="mode" value="register">';
+    $output .= '<div class="row g-2 align-items-end">';
+    $output .= '<div class="col-md-8">';
+    $output .= '<label class="form-label mb-1" for="guest-register-email">Email</label>';
+    $output .= '<input id="guest-register-email" type="email" name="email" class="form-control" required placeholder="you@example.com">';
+    $output .= '</div>';
+    $output .= '<div class="col-md-4">';
+    $output .= '<button type="submit" class="ts-btn ts-btn-primary w-100">Получить ссылку</button>';
+    $output .= '</div>';
+    $output .= '</div>';
+    $output .= '</form>';
+    $output .= '</div>';
     $output .= '</div>';
 }
 
