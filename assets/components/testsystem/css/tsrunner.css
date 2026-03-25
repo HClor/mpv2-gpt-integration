@@ -2619,3 +2619,129 @@ img[style*="width"] {
     padding: 0.6rem 1.5rem;
     font-weight: 600;
 }
+
+/* ===================================================================
+   MY TESTS v2.0 — легковесный и единообразный интерфейс вкладок
+   =================================================================== */
+
+#my-tests-container .ts-mytests-page-header {
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-card);
+}
+
+#my-tests-container .ts-mytests-tabs {
+    border-bottom: 1px solid var(--color-border);
+    gap: 0.25rem;
+}
+
+#my-tests-container .ts-mytests-tabs .nav-link {
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-radius: var(--radius-btn) var(--radius-btn) 0 0;
+    color: var(--color-text-secondary);
+    font-weight: 500;
+    font-size: 0.92rem;
+    padding: 0.5rem 0.8rem;
+    background-color: transparent;
+}
+
+#my-tests-container .ts-mytests-tabs .nav-link:hover {
+    color: var(--color-primary);
+    background-color: var(--color-primary-light);
+    border-color: var(--color-border);
+}
+
+#my-tests-container .ts-mytests-tabs .nav-link.active {
+    color: var(--color-primary-text);
+    background-color: var(--color-bg-card);
+    border-color: var(--color-border);
+}
+
+.ts-mytests-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.ts-mytests-panel-header > div:first-child {
+    min-width: 0;
+}
+
+.ts-mytests-panel-title {
+    color: var(--color-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.ts-mytests-panel-text {
+    color: var(--color-text-secondary);
+    font-size: 0.95rem;
+}
+
+.ts-mytests-panel-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex: 0 0 auto;
+    min-width: 0;
+    overflow-x: auto;
+    padding-bottom: 0.125rem;
+}
+
+.tests-filters-container {
+    margin-bottom: 1rem;
+}
+
+.tests-list-improved .test-list-item-minimal {
+    border-left: none;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    padding: 0.875rem !important;
+    margin-bottom: 0.5rem;
+    border-radius: var(--radius-btn);
+    border: 1px solid var(--color-border);
+}
+
+.tests-list-improved .test-list-item-minimal:hover {
+    background-color: var(--color-bg-page);
+    border-color: var(--color-border-strong);
+    box-shadow: none;
+    transform: none;
+}
+
+.test-meta-info {
+    gap: 0.5rem;
+}
+
+.test-actions-compact .btn-test-action {
+    min-width: 36px;
+    padding: 0.4rem 0.55rem;
+}
+
+.ts-tests-filter-group {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.35rem;
+}
+
+.ts-tests-filter-group .ts-btn {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.85rem;
+    line-height: 1.1;
+    white-space: nowrap;
+}
+
+@media (max-width: 991px) {
+    .ts-mytests-panel-header {
+        gap: 0.65rem;
+    }
+
+    .ts-mytests-panel-controls {
+        justify-content: flex-start;
+    }
+}

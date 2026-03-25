@@ -47,7 +47,7 @@
             return JSON.parse(text);
         } catch (error) {
             console.error('[csrf-helper] Invalid JSON response:', text);
-            throw new Error('Invalid server response');
+            throw new Error('Сервер вернул некорректный ответ');
         }
     }
 
@@ -59,7 +59,7 @@
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(`Ошибка HTTP: ${response.status}`);
         }
 
         const result = await parseJsonResponse(response);
@@ -88,7 +88,7 @@
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(`Ошибка HTTP: ${response.status}`);
         }
 
         const result = await parseJsonResponse(response);
