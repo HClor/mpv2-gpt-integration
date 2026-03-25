@@ -334,3 +334,68 @@
         font-size: 1.2rem;
     }
 }
+
+.ts-guest-register-cta {
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-card);
+}
+
+.ts-guest-register-cta .ts-card-header {
+    background: var(--color-primary-light);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.ts-guest-register-cta .ts-card-header h4 {
+    color: var(--color-primary-text);
+}
+
+.ts-guest-register-cta .ts-card-body {
+    background: var(--color-bg-card);
+}
+
+.ts-guest-register-form .form-control:focus {
+    border-color: var(--color-border-focus);
+    box-shadow: var(--shadow-card);
+}
+
+.ts-guest-register-form-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.5rem;
+    max-width: 520px;
+    margin: 0 auto;
+}
+
+.ts-guest-register-email-wrap {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: left;
+}
+
+.ts-guest-register-button-wrap {
+    flex: 0 0 auto;
+}
+
+.ts-guest-register-submit {
+    white-space: nowrap;
+    min-height: 44px;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+.test-action-buttons .ts-btn.disabled,
+.test-action-buttons .ts-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+@media (max-width: 576px) {
+    .ts-guest-register-form-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .ts-guest-register-submit {
+        width: 100%;
+    }
+}

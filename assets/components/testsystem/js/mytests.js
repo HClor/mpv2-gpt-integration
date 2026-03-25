@@ -1,11 +1,5 @@
 // assets/components/testsystem/js/mytests.js - IMPROVED VERSION
 
-// CSRF Protection: fallback, если helper не подключен
-function getCsrfToken() {
-    const metaTag = document.querySelector('meta[name="csrf-token"]');
-    return metaTag ? metaTag.content : null;
-}
-
 function normalizeUserMessage(message, fallback = 'Произошла ошибка') {
     const rawMessage = (message || '').toString();
     const normalized = rawMessage.trim();
@@ -38,20 +32,7 @@ async function apiCall(action, data = {}) {
     if (window.TestSystemCSRF && typeof window.TestSystemCSRF.apiCall === 'function') {
         return window.TestSystemCSRF.apiCall(action, data);
     }
-
-    const csrfToken = getCsrfToken();
-    const requestData = { ...data };
-    if (csrfToken) {
-        requestData.csrf_token = csrfToken;
-    }
-
-    const response = await fetch('/assets/components/testsystem/ajax/testsystem.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, data: requestData })
-    });
-
-    return response.json();
+    throw new Error('CSRF helper не загружен. Обновите страницу и повторите попытку.');
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -82,6 +63,7 @@ function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
+window.TestSystemEscapeHtml = escapeHtml;
 
 // Построение URL для теста (fallback если API не вернул URL)
 function buildTestUrl(testId) {
@@ -377,33 +359,45 @@ async function createTest() {
 }
 
 async function editTest(testId, title, description, publicationStatus) {
+    let settings = null;
+    try {
+        const settingsResult = await apiCall('getTestSettings', { test_id: testId });
+        if (!settingsResult.success) {
+            throw new Error(settingsResult.message || 'Ошибка загрузки настроек теста');
+        }
+        settings = settingsResult.data;
+    } catch (error) {
+        showNotification('danger', 'Не удалось загрузить настройки: ' + normalizeUserMessage(error.message));
+        return;
+    }
+
+    let settingsFieldsHtml = '';
+    if (window.TestSystemTestSettings && typeof window.TestSystemTestSettings.buildSettingsFields === 'function') {
+        settingsFieldsHtml = window.TestSystemTestSettings.buildSettingsFields(settings);
+    }
+
     // Создаем модальное окно
     const modalHtml = `
         <div class="modal fade" id="editTestModal" tabindex="-1">
-            <div class="modal-dialog">
+            <div class="modal-dialog modal-lg">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title">Редактировать тест</h5>
+                        <h5 class="modal-title"><i class="bi bi-gear me-1"></i>Редактировать тест</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Название теста *</label>
-                            <input type="text" class="form-control" id="edit-test-title" value="${title}" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Описание</label>
-                            <textarea class="form-control" id="edit-test-description" rows="3">${description}</textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Статус публикации</label>
-                            <select class="form-select" id="edit-test-publication-status">
-                                <option value="draft" ${publicationStatus === 'draft' ? 'selected' : ''}>📝 Черновик</option>
-                                <option value="private" ${publicationStatus === 'private' ? 'selected' : ''}>🔒 Приватный</option>
-                                <option value="unlisted" ${publicationStatus === 'unlisted' ? 'selected' : ''}>🔗 По ссылке</option>
-                                <option value="public" ${publicationStatus === 'public' ? 'selected' : ''}>🌐 Публичный</option>
-                            </select>
-                        </div>
+                        <form id="edit-test-settings-form">
+                            ${settingsFieldsHtml}
+                            <div class="mb-3">
+                                <label class="form-label">Статус публикации</label>
+                                <select class="form-select" id="edit-test-publication-status" name="publication_status">
+                                    <option value="draft" ${publicationStatus === 'draft' ? 'selected' : ''}>📝 Черновик</option>
+                                    <option value="private" ${publicationStatus === 'private' ? 'selected' : ''}>🔒 Приватный</option>
+                                    <option value="unlisted" ${publicationStatus === 'unlisted' ? 'selected' : ''}>🔗 По ссылке</option>
+                                    <option value="public" ${publicationStatus === 'public' ? 'selected' : ''}>🌐 Публичный</option>
+                                </select>
+                            </div>
+                        </form>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
@@ -427,11 +421,26 @@ async function editTest(testId, title, description, publicationStatus) {
 }
 
 async function saveTestChanges(testId) {
-    const title = document.getElementById('edit-test-title').value.trim();
-    const description = document.getElementById('edit-test-description').value.trim();
     const publicationStatus = document.getElementById('edit-test-publication-status').value;
-    
-    if (!title) {
+    const settingsForm = document.getElementById('edit-test-settings-form');
+    if (!settingsForm) {
+        showNotification('danger', 'Форма настроек не найдена');
+        return;
+    }
+
+    const formData = new FormData(settingsForm);
+    let settingsPayload = {};
+    if (window.TestSystemTestSettings && typeof window.TestSystemTestSettings.parseSettingsForm === 'function') {
+        settingsPayload = window.TestSystemTestSettings.parseSettingsForm(formData);
+    } else {
+        settingsPayload = {
+            title: formData.get('title') || '',
+            description: formData.get('description') || '',
+            mode: formData.get('mode') || 'training'
+        };
+    }
+
+    if (!settingsPayload.title) {
         alert('Введите название теста');
         return;
     }
@@ -443,11 +452,17 @@ async function saveTestChanges(testId) {
     }
     
     try {
-        const result = await apiCall('updateTest', {
+        const settingsResult = await apiCall('updateTestSettings', Object.assign({
+            test_id: testId
+        }, settingsPayload));
+
+        if (!settingsResult.success) {
+            throw new Error(settingsResult.message || 'Ошибка сохранения настроек');
+        }
+
+        const result = await apiCall('publishTest', {
             test_id: testId,
-            title: title,
-            description: description,
-            publication_status: publicationStatus
+            status: publicationStatus
         });
         
         if (!result.success) {

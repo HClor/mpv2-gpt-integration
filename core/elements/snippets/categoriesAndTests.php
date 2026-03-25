@@ -27,6 +27,9 @@ function renderTestCard($test, $modx, $testPageId, $currentUserId, $isAdmin, $is
     $passScore = (int)$test['pass_score'];
     $testId = (int)$test['id'];
     $isOwner = ($test['created_by'] == $currentUserId);
+    $allowGuestPass = (int)($test['allow_guest_pass'] ?? 0) === 1;
+    $isAuthenticated = $modx->user->hasSessionContext('web');
+    $requiresAuthForStart = !$isAuthenticated && !$allowGuestPass;
 
     // Права доступа
     $canManage = $isAdmin || $isExpert || $isOwner;
@@ -73,6 +76,10 @@ function renderTestCard($test, $modx, $testPageId, $currentUserId, $isAdmin, $is
 
     $output .= '</div>';
 
+    if ($allowGuestPass) {
+        $output .= '<div class="mb-2"><span class="ts-badge ts-badge-success"><i class="bi bi-person-check me-1"></i>Без регистрации</span></div>';
+    }
+
     // Описание
     $description = !empty($test['description']) ? $test['description'] : 'Нет описания';
     $output .= '<p class="test-description">' . htmlspecialchars($description, ENT_QUOTES, 'UTF-8') . '</p>';
@@ -99,22 +106,29 @@ function renderTestCard($test, $modx, $testPageId, $currentUserId, $isAdmin, $is
     $output .= '<hr class="test-divider">';
 
     // Контролы запуска (для Тренировки)
-    $output .= '<div class="test-training-controls">';
-    $output .= '<label for="questions-count-' . $testId . '">Количество вопросов:</label>';
-    $output .= '<div class="questions-input-group">';
-    $output .= '<input type="number" id="questions-count-' . $testId . '" class="questions-count-input" ';
-    $output .= 'min="1" max="' . $questionCount . '" value="' . min(20, $questionCount) . '" data-test-id="' . $testId . '">';
-    $output .= '<button class="btn-all-questions" data-test-id="' . $testId . '" data-max="' . $questionCount . '">Все</button>';
-    $output .= '</div>';
-    $output .= '</div>';
+    if (!$allowGuestPass || $isAuthenticated) {
+        $output .= '<div class="test-training-controls">';
+        $output .= '<label for="questions-count-' . $testId . '">Количество вопросов:</label>';
+        $output .= '<div class="questions-input-group">';
+        $output .= '<input type="number" id="questions-count-' . $testId . '" class="questions-count-input" ';
+        $output .= 'min="1" max="' . $questionCount . '" value="' . min(20, $questionCount) . '" data-test-id="' . $testId . '">';
+        $output .= '<button class="btn-all-questions" data-test-id="' . $testId . '" data-max="' . $questionCount . '">Все</button>';
+        $output .= '</div>';
+        $output .= '</div>';
+    } else {
+        $output .= '<div class="test-training-controls">';
+        $output .= '<span class="text-muted"><i class="bi bi-info-circle me-1"></i>Для гостя будет запущено 10 вопросов</span>';
+        $output .= '</div>';
+    }
 
     // Кнопки запуска
     $output .= '<div class="test-action-buttons">';
-    $output .= '<button class="btn-start-training ts-btn" data-test-id="' . $testId . '">';
+    $disabledAttr = $requiresAuthForStart ? ' disabled title="Войдите, чтобы пройти тест" aria-disabled="true"' : '';
+    $output .= '<button class="btn-start-training ts-btn' . ($requiresAuthForStart ? ' disabled' : '') . '" data-test-id="' . $testId . '"' . $disabledAttr . '>';
     $output .= '<span class="btn-icon">🎓</span>';
     $output .= '<span class="btn-text">Тренировка</span>';
     $output .= '</button>';
-    $output .= '<button class="btn-start-exam ts-btn" data-test-id="' . $testId . '">';
+    $output .= '<button class="btn-start-exam ts-btn' . ($requiresAuthForStart ? ' disabled' : '') . '" data-test-id="' . $testId . '"' . $disabledAttr . '>';
     $output .= '<span class="btn-icon">🎯</span>';
     $output .= '<span class="btn-text">Экзамен</span>';
     $output .= '</button>';
@@ -304,13 +318,14 @@ $sql = "
         t.questions_per_session,
         t.pass_score,
         t.created_by,
+        t.allow_guest_pass,
         c.name as category_name,
         COUNT(DISTINCT q.id) AS question_count
     FROM `{$Ttests}` t
     LEFT JOIN `{$Tquestions}` q ON q.test_id = t.id AND q.published = 1
     LEFT JOIN `{$Tcats}` c ON c.id = t.category_id
     WHERE {$where}
-    GROUP BY t.id, t.title, t.description, t.mode, t.questions_per_session, t.pass_score, t.created_by, c.name
+    GROUP BY t.id, t.title, t.description, t.mode, t.questions_per_session, t.pass_score, t.created_by, t.allow_guest_pass, c.name
     ORDER BY c.name ASC, t.title ASC
     LIMIT {$perPage} OFFSET {$offset}
 ";
@@ -455,6 +470,7 @@ $output .= '<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>';
 
 $modx->regClientScript('/assets/components/testsystem/js/csrf-helper.js');
 $modx->regClientScript('/assets/components/testsystem/js/question-list-shared.js');
+$modx->regClientScript('/assets/components/testsystem/js/test-settings-shared.js');
 $modx->regClientScript('/assets/components/testsystem/js/test-cards.js');
 $modx->regClientScript('/assets/components/testsystem/js/tests-search.js');
 

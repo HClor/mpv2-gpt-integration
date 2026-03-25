@@ -37,6 +37,7 @@
         div.textContent = text;
         return div.innerHTML;
     }
+    window.TestSystemEscapeHtml = escapeHtml;
 
     function htmlspecialchars(str) {
         return String(str)
@@ -172,6 +173,10 @@
     document.addEventListener('click', function(e) {
         var btn = e.target.closest('.btn-start-training');
         if (!btn) return;
+        if (btn.disabled || btn.classList.contains('disabled')) {
+            e.preventDefault();
+            return;
+        }
 
         e.preventDefault();
         var testId = btn.dataset.testId;
@@ -188,6 +193,10 @@
     document.addEventListener('click', function(e) {
         var btn = e.target.closest('.btn-start-exam');
         if (!btn) return;
+        if (btn.disabled || btn.classList.contains('disabled')) {
+            e.preventDefault();
+            return;
+        }
 
         e.preventDefault();
         var testId = btn.dataset.testId;
@@ -216,7 +225,11 @@
 
             if (data.success) {
                 var sessionId = data.data.session_id;
-                window.location.href = '/test-run?sessionId=' + sessionId;
+                var redirectUrl = '/test-run?sessionId=' + sessionId;
+                if (data.data.guest_session_token) {
+                    redirectUrl += '&gst=' + encodeURIComponent(data.data.guest_session_token);
+                }
+                window.location.href = redirectUrl;
             } else {
                 hideLoadingIndicator();
                 alert('Ошибка при запуске теста: ' + (data.message || 'Неизвестная ошибка'));
@@ -1350,32 +1363,9 @@
             modalHtml += '<div class="tab-pane fade show active" id="tc-settings-tab">';
             modalHtml += '<form id="tc-test-settings-form">';
             modalHtml += '<input type="hidden" name="test_id" value="' + testId + '">';
-            modalHtml += '<div class="row">';
-            modalHtml += '<div class="col-md-6 mb-3"><label class="form-label">Название теста</label>';
-            modalHtml += '<input type="text" name="title" class="form-control" value="' + escapeHtml(settings.title) + '" required></div>';
-            modalHtml += '<div class="col-md-6 mb-3"><label class="form-label">Режим теста</label>';
-            modalHtml += '<select name="mode" class="form-select">';
-            modalHtml += '<option value="training"' + (settings.mode === 'training' ? ' selected' : '') + '>Тренировка</option>';
-            modalHtml += '<option value="exam"' + (settings.mode === 'exam' ? ' selected' : '') + '>Экзамен</option>';
-            modalHtml += '</select></div></div>';
-            modalHtml += '<div class="mb-3"><label class="form-label">Описание</label>';
-            modalHtml += '<textarea name="description" class="form-control" rows="3">' + escapeHtml(settings.description || '') + '</textarea></div>';
-            modalHtml += '<div class="row">';
-            modalHtml += '<div class="col-md-4 mb-3"><label class="form-label">Проходной балл (%)</label>';
-            modalHtml += '<input type="number" name="pass_score" class="form-control" value="' + settings.pass_score + '" min="0" max="100"></div>';
-            modalHtml += '<div class="col-md-4 mb-3"><label class="form-label">Время (минут, 0 = без ограничений)</label>';
-            modalHtml += '<input type="number" name="time_limit" class="form-control" value="' + settings.time_limit + '" min="0"></div>';
-            modalHtml += '<div class="col-md-4 mb-3"><label class="form-label">Вопросов за попытку</label>';
-            modalHtml += '<input type="number" name="questions_per_session" class="form-control" value="' + settings.questions_per_session + '" min="1"></div>';
-            modalHtml += '</div>';
-            modalHtml += '<div class="row">';
-            modalHtml += '<div class="col-md-6 mb-3"><div class="form-check form-switch">';
-            modalHtml += '<input class="form-check-input" type="checkbox" name="randomize_questions" id="tc-randomize-q"' + (settings.randomize_questions ? ' checked' : '') + '>';
-            modalHtml += '<label class="form-check-label" for="tc-randomize-q">Перемешивать вопросы</label></div></div>';
-            modalHtml += '<div class="col-md-6 mb-3"><div class="form-check form-switch">';
-            modalHtml += '<input class="form-check-input" type="checkbox" name="randomize_answers" id="tc-randomize-a"' + (settings.randomize_answers ? ' checked' : '') + '>';
-            modalHtml += '<label class="form-check-label" for="tc-randomize-a">Перемешивать ответы</label></div></div>';
-            modalHtml += '</div>';
+            if (window.TestSystemTestSettings && typeof window.TestSystemTestSettings.buildSettingsFields === 'function') {
+                modalHtml += window.TestSystemTestSettings.buildSettingsFields(settings);
+            }
             modalHtml += '<button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Сохранить настройки</button>';
             modalHtml += '</form></div>';
 
@@ -1427,17 +1417,16 @@
             form.addEventListener('submit', async function(e) {
                 e.preventDefault();
                 var formData = new FormData(form);
-                var data = {
-                    test_id: testId,
-                    title: formData.get('title'),
-                    description: formData.get('description'),
-                    mode: formData.get('mode'),
-                    pass_score: parseInt(formData.get('pass_score')),
-                    time_limit: parseInt(formData.get('time_limit')),
-                    questions_per_session: parseInt(formData.get('questions_per_session')),
-                    randomize_questions: formData.get('randomize_questions') ? 1 : 0,
-                    randomize_answers: formData.get('randomize_answers') ? 1 : 0
-                };
+                var data = { test_id: testId };
+                if (window.TestSystemTestSettings && typeof window.TestSystemTestSettings.parseSettingsForm === 'function') {
+                    data = Object.assign(data, window.TestSystemTestSettings.parseSettingsForm(formData));
+                } else {
+                    data = Object.assign(data, {
+                        title: formData.get('title') || '',
+                        description: formData.get('description') || '',
+                        mode: formData.get('mode') || 'training'
+                    });
+                }
 
                 try {
                     var result = await apiCall('updateTestSettings', data);
