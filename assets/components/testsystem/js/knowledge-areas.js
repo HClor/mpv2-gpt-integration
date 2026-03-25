@@ -1,14 +1,6 @@
 /* KNOWLEDGE AREAS MANAGER v1.1 - WITH DISTRIBUTION MODES */
 
 (function() {
-    const API_URL = "/assets/components/testsystem/ajax/testsystem.php";
-
-    // CSRF Protection: получаем токен из meta тега
-    function getCsrfToken() {
-        const metaTag = document.querySelector('meta[name="csrf-token"]');
-        return metaTag ? metaTag.content : null;
-    }
-
     const container = document.getElementById('knowledge-areas-container');
     const testPageUrl = container ? container.dataset.testPageUrl : '/tests/oblast-znanij/';
     const managePageUrl = container ? container.dataset.managePageUrl : '/moi-oblasti-znanij/';
@@ -68,20 +60,18 @@
     // API вызовы
     async function apiCall(action, data = {}) {
         try {
-            // CSRF Protection: добавляем токен в данные
-            const csrfToken = getCsrfToken();
-            if (csrfToken) {
-                data.csrf_token = csrfToken;
+            if (window.TestSystemCSRF && typeof window.TestSystemCSRF.apiCall === 'function') {
+                return await window.TestSystemCSRF.apiCall(action, data);
             }
 
-            const response = await fetch(API_URL, {
+            // Fallback для аварийного режима, если helper не был подключен
+            const response = await fetch('/assets/components/testsystem/ajax/testsystem.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action, data })
             });
-            
-            const result = await response.json();
-            return result;
+
+            return await response.json();
         } catch (error) {
             console.error('API Error:', error);
             showNotification('Ошибка соединения с сервером', 'danger');
