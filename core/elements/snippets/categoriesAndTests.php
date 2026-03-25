@@ -29,6 +29,7 @@ function renderTestCard($test, $modx, $testPageId, $currentUserId, $isAdmin, $is
     $isOwner = ($test['created_by'] == $currentUserId);
     $allowGuestPass = (int)($test['allow_guest_pass'] ?? 0) === 1;
     $isAuthenticated = $modx->user->hasSessionContext('web');
+    $requiresAuthForStart = !$isAuthenticated && !$allowGuestPass;
 
     // Права доступа
     $canManage = $isAdmin || $isExpert || $isOwner;
@@ -122,11 +123,12 @@ function renderTestCard($test, $modx, $testPageId, $currentUserId, $isAdmin, $is
 
     // Кнопки запуска
     $output .= '<div class="test-action-buttons">';
-    $output .= '<button class="btn-start-training ts-btn" data-test-id="' . $testId . '">';
+    $disabledAttr = $requiresAuthForStart ? ' disabled title="Войдите, чтобы пройти тест" aria-disabled="true"' : '';
+    $output .= '<button class="btn-start-training ts-btn' . ($requiresAuthForStart ? ' disabled' : '') . '" data-test-id="' . $testId . '"' . $disabledAttr . '>';
     $output .= '<span class="btn-icon">🎓</span>';
     $output .= '<span class="btn-text">Тренировка</span>';
     $output .= '</button>';
-    $output .= '<button class="btn-start-exam ts-btn" data-test-id="' . $testId . '">';
+    $output .= '<button class="btn-start-exam ts-btn' . ($requiresAuthForStart ? ' disabled' : '') . '" data-test-id="' . $testId . '"' . $disabledAttr . '>';
     $output .= '<span class="btn-icon">🎯</span>';
     $output .= '<span class="btn-text">Экзамен</span>';
     $output .= '</button>';

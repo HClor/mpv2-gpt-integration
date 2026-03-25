@@ -378,6 +378,15 @@
 
 .ts-guest-register-submit {
     white-space: nowrap;
+    min-height: 44px;
+    padding-left: 1rem;
+    padding-right: 1rem;
+}
+
+.test-action-buttons .ts-btn.disabled,
+.test-action-buttons .ts-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
 }
 
 @media (max-width: 576px) {

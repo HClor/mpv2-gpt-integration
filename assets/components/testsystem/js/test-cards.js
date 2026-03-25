@@ -173,6 +173,10 @@
     document.addEventListener('click', function(e) {
         var btn = e.target.closest('.btn-start-training');
         if (!btn) return;
+        if (btn.disabled || btn.classList.contains('disabled')) {
+            e.preventDefault();
+            return;
+        }
 
         e.preventDefault();
         var testId = btn.dataset.testId;
@@ -189,6 +193,10 @@
     document.addEventListener('click', function(e) {
         var btn = e.target.closest('.btn-start-exam');
         if (!btn) return;
+        if (btn.disabled || btn.classList.contains('disabled')) {
+            e.preventDefault();
+            return;
+        }
 
         e.preventDefault();
         var testId = btn.dataset.testId;
