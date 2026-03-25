@@ -217,7 +217,11 @@
 
             if (data.success) {
                 var sessionId = data.data.session_id;
-                window.location.href = '/test-run?sessionId=' + sessionId;
+                var redirectUrl = '/test-run?sessionId=' + sessionId;
+                if (data.data.guest_session_token) {
+                    redirectUrl += '&gst=' + encodeURIComponent(data.data.guest_session_token);
+                }
+                window.location.href = redirectUrl;
             } else {
                 hideLoadingIndicator();
                 alert('Ошибка при запуске теста: ' + (data.message || 'Неизвестная ошибка'));

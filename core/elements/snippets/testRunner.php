@@ -41,8 +41,17 @@ if ($sessionId > 0) {
     }
 
     // Проверка прав доступа к сессии
-    $userId = $modx->user->get('id');
-    if ((int)$session['user_id'] != $userId) {
+    $userId = (int)$modx->user->get('id');
+    $sessionUserId = (int)$session['user_id'];
+    $isGuestSession = $sessionUserId <= 0;
+    if ($isGuestSession) {
+        $providedGuestToken = isset($_GET['gst']) ? (string)$_GET['gst'] : '';
+        $modx->getRequest();
+        $storedGuestToken = isset($_SESSION['ts_guest_session_tokens'][$sessionId]) ? (string)$_SESSION['ts_guest_session_tokens'][$sessionId] : '';
+        if ($providedGuestToken === '' || $storedGuestToken === '' || !hash_equals($storedGuestToken, $providedGuestToken)) {
+            return '<div class="ts-alert ts-alert-danger">Некорректный токен гостевой сессии</div>';
+        }
+    } elseif ($sessionUserId !== $userId) {
         return '<div class="ts-alert ts-alert-danger">Нет доступа к этой сессии</div>';
     }
 
@@ -54,7 +63,8 @@ if ($sessionId > 0) {
     $sessionData = [
         'session_id' => $sessionId,
         'mode' => $session['mode'],
-        'status' => $session['status']
+        'status' => $session['status'],
+        'guest_token' => $isGuestSession ? (string)($_GET['gst'] ?? '') : ''
     ];
 } else {
     // ИСПРАВЛЕНО: Получаем testId из GET-параметра или ID текущего ресурса
@@ -843,7 +853,7 @@ if ($skipModeSelection && isset($sessionData)) {
 
         // Запускаем тест через существующую функцию из tsrunner.js
         if (typeof window.continueExistingSession === "function") {
-            window.continueExistingSession(window.existingSession.session_id, window.existingSession.mode);
+            window.continueExistingSession(window.existingSession.session_id, window.existingSession.mode, window.existingSession.guest_token || null);
         } else {
             console.error("continueExistingSession function not found in tsrunner.js");
         }

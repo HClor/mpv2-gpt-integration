@@ -5,6 +5,7 @@
     const API_URL = "/assets/components/testsystem/ajax/testsystem.php";
     
     let currentSessionId = null;
+    let guestSessionToken = null;
     let currentQuestionId = null;
     let currentQuestionType = null;
     let totalQuestions = 0;
@@ -31,6 +32,7 @@
     const learningPathId = urlParams.get('path');
     const learningPathStepId = urlParams.get('step');
     const requiresExamPassForPath = urlParams.get('lp_exam_required') === '1';
+    guestSessionToken = urlParams.get('gst');
 
     const container = document.getElementById("test-container");
     const testId = container ? container.dataset.testId : null;
@@ -135,17 +137,24 @@
      * Продолжить существующую сессию теста
      * Вызывается когда пользователь переходит по прямой ссылке с sessionId
      */
-    window.continueExistingSession = async function(sessionId, mode) {
+    window.continueExistingSession = async function(sessionId, mode, guestToken) {
         console.log("=== continueExistingSession CALLED ===");
         console.log("Session ID:", sessionId);
         console.log("Mode:", mode);
 
         currentSessionId = sessionId;
         testMode = mode;
+        if (guestToken) {
+            guestSessionToken = guestToken;
+        }
 
         try {
             // Получаем информацию о сессии
-            const result = await apiCall("getSessionInfo", { session_id: sessionId });
+            const sessionInfoPayload = { session_id: sessionId };
+            if (guestSessionToken) {
+                sessionInfoPayload.guest_token = guestSessionToken;
+            }
+            const result = await apiCall("getSessionInfo", sessionInfoPayload);
 
             if (result.success) {
                 totalQuestions = result.data.total_questions || 0;
@@ -1558,6 +1567,9 @@ async function addFavoritesViewToggle(questionId) {
                 
                 if (result.success) {
                     currentSessionId = result.data.session_id;
+                    if (result.data.guest_session_token) {
+                        guestSessionToken = result.data.guest_session_token;
+                    }
                     totalQuestions = result.data.total_questions;
                     currentQuestionNumber = 0;
                     
@@ -1597,7 +1609,8 @@ async function addFavoritesViewToggle(questionId) {
         console.log("📞 loadNextQuestion() called");
         try {
             const result = await apiCall("getNextQuestion", {
-                session_id: currentSessionId
+                session_id: currentSessionId,
+                guest_token: guestSessionToken || undefined
             });
 
             console.log("📥 getNextQuestion response:", result);
@@ -2221,7 +2234,8 @@ async function addFavoritesViewToggle(questionId) {
             const result = await apiCall("submitAnswer", {
                 session_id: currentSessionId,
                 question_id: currentQuestionId,
-                answer_ids: selectedAnswers
+                answer_ids: selectedAnswers,
+                guest_token: guestSessionToken || undefined
             });
 
             if (result.success) {
@@ -2369,7 +2383,8 @@ async function addFavoritesViewToggle(questionId) {
         try {
             console.log("📞 Calling API: finishTest");
             const result = await apiCall("finishTest", {
-                session_id: currentSessionId
+                session_id: currentSessionId,
+                guest_token: guestSessionToken || undefined
             });
 
             console.log("📥 finishTest API response:", result);
@@ -3336,7 +3351,11 @@ async function addFavoritesViewToggle(questionId) {
 
             if (result.success) {
                 // Редирект на страницу теста с sessionId
-                window.location.href = '/test-run?sessionId=' + result.data.session_id;
+                let redirectUrl = '/test-run?sessionId=' + result.data.session_id;
+                if (result.data.guest_session_token) {
+                    redirectUrl += '&gst=' + encodeURIComponent(result.data.guest_session_token);
+                }
+                window.location.href = redirectUrl;
             } else {
                 document.body.removeChild(overlay);
                 alert('Ошибка при запуске теста: ' + (result.message || 'Неизвестная ошибка'));
