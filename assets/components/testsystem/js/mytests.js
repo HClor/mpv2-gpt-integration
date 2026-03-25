@@ -1,9 +1,57 @@
 // assets/components/testsystem/js/mytests.js - IMPROVED VERSION
 
-// CSRF Protection: получаем токен из meta тега
+// CSRF Protection: fallback, если helper не подключен
 function getCsrfToken() {
     const metaTag = document.querySelector('meta[name="csrf-token"]');
     return metaTag ? metaTag.content : null;
+}
+
+function normalizeUserMessage(message, fallback = 'Произошла ошибка') {
+    const rawMessage = (message || '').toString();
+    const normalized = rawMessage.trim();
+
+    if (!normalized) {
+        return fallback;
+    }
+
+    const lower = normalized.toLowerCase();
+    if (lower.includes('csrf token validation failed')) {
+        return 'Сессия безопасности истекла. Обновите страницу и повторите попытку.';
+    }
+
+    if (lower.includes('please refresh the page and try again')) {
+        return 'Обновите страницу и повторите попытку.';
+    }
+
+    if (lower.includes('invalid server response')) {
+        return 'Сервер вернул некорректный ответ.';
+    }
+
+    if (lower.includes('http error')) {
+        return 'Ошибка соединения с сервером.';
+    }
+
+    return normalized;
+}
+
+async function apiCall(action, data = {}) {
+    if (window.TestSystemCSRF && typeof window.TestSystemCSRF.apiCall === 'function') {
+        return window.TestSystemCSRF.apiCall(action, data);
+    }
+
+    const csrfToken = getCsrfToken();
+    const requestData = { ...data };
+    if (csrfToken) {
+        requestData.csrf_token = csrfToken;
+    }
+
+    const response = await fetch('/assets/components/testsystem/ajax/testsystem.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, data: requestData })
+    });
+
+    return response.json();
 }
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -48,17 +96,7 @@ function buildTestUrl(testId) {
 
 async function loadMyTests() {
     try {
-        const csrfToken = getCsrfToken();
-        const response = await fetch('/assets/components/testsystem/ajax/testsystem.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'getMyTests',
-                data: { csrf_token: csrfToken }
-            })
-        });
-
-        const result = await response.json();
+        const result = await apiCall('getMyTests', {});
 
         if (result.success) {
             // Добавляем fallback для test_url
@@ -76,17 +114,7 @@ async function loadMyTests() {
 
 async function loadSharedTests() {
     try {
-        const csrfToken = getCsrfToken();
-        const response = await fetch('/assets/components/testsystem/ajax/testsystem.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'getSharedWithMe',
-                data: { csrf_token: csrfToken }
-            })
-        });
-
-        const result = await response.json();
+        const result = await apiCall('getSharedWithMe', {});
 
         if (result.success) {
             // Добавляем fallback для test_url
@@ -100,7 +128,7 @@ async function loadSharedTests() {
             console.error('Error loading shared tests:', result.message);
             // XSS Protection: экранируем сообщение об ошибке
             document.getElementById('shared').innerHTML =
-                '<div class="alert alert-danger">Ошибка загрузки: ' + escapeHtml(result.message) + '</div>';
+                '<div class="alert alert-danger">Ошибка загрузки: ' + escapeHtml(normalizeUserMessage(result.message, 'Не удалось загрузить данные')) + '</div>';
         }
     } catch (error) {
         console.error('Error loading shared tests:', error);
@@ -312,31 +340,18 @@ async function createTest() {
     }
     
     try {
-        const csrfToken = getCsrfToken();
-        const response = await fetch('/assets/components/testsystem/ajax/testsystem.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'createTestWithPage',
-                data: {
-                    title,
-                    description,
-                    publication_status: publicationStatus,
-                    csrf_token: csrfToken
-                }
-            })
+        const result = await apiCall('createTestWithPage', {
+            title,
+            description,
+            publication_status: publicationStatus
         });
-        
-        const result = await response.json();
         
         if (!result.success) {
             throw new Error(result.message || 'Ошибка создания теста');
         }
         
         const testId = result.test_id;
-        const testUrl = result.test_url;
-        
-        showNotification('success', `✅ Тест "${title}" успешно создан!`);
+        showNotification('success', `Тест "${title}" успешно создан.`);
         
         const modal = bootstrap.Modal.getInstance(document.getElementById('createTestModal'));
         if (modal) {
@@ -352,7 +367,7 @@ async function createTest() {
         
     } catch (error) {
         console.error('Error creating test:', error);
-        showNotification('danger', 'Ошибка при создании теста: ' + error.message);
+        showNotification('danger', 'Ошибка при создании теста: ' + normalizeUserMessage(error.message));
         
         if (createBtn) {
             createBtn.disabled = false;
@@ -428,29 +443,18 @@ async function saveTestChanges(testId) {
     }
     
     try {
-        const csrfToken = getCsrfToken();
-        const response = await fetch('/assets/components/testsystem/ajax/testsystem.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'updateTest',
-                data: {
-                    test_id: testId,
-                    title: title,
-                    description: description,
-                    publication_status: publicationStatus,
-                    csrf_token: csrfToken
-                }
-            })
+        const result = await apiCall('updateTest', {
+            test_id: testId,
+            title: title,
+            description: description,
+            publication_status: publicationStatus
         });
-        
-        const result = await response.json();
         
         if (!result.success) {
             throw new Error(result.message || 'Ошибка сохранения');
         }
         
-        showNotification('success', '✅ Тест обновлен!');
+        showNotification('success', 'Тест обновлён.');
         
         const modal = bootstrap.Modal.getInstance(document.getElementById('editTestModal'));
         if (modal) {
@@ -461,7 +465,7 @@ async function saveTestChanges(testId) {
         
     } catch (error) {
         console.error('Error updating test:', error);
-        showNotification('danger', 'Ошибка при сохранении: ' + error.message);
+        showNotification('danger', 'Ошибка при сохранении: ' + normalizeUserMessage(error.message));
         
         if (saveBtn) {
             saveBtn.disabled = false;
@@ -476,26 +480,13 @@ async function deleteTest(testId) {
     }
     
     try {
-        const csrfToken = getCsrfToken();
-        const response = await fetch('/assets/components/testsystem/ajax/testsystem.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'deleteTest',
-                data: {
-                    test_id: testId,
-                    csrf_token: csrfToken
-                }
-            })
-        });
-        
-        const result = await response.json();
+        const result = await apiCall('deleteTest', { test_id: testId });
         
         if (result.success) {
-            showNotification('success', '✅ Тест удален');
+            showNotification('success', 'Тест удалён.');
             loadMyTests();
         } else {
-            showNotification('danger', 'Ошибка: ' + result.message);
+            showNotification('danger', 'Ошибка: ' + normalizeUserMessage(result.message));
         }
     } catch (error) {
         console.error('Error deleting test:', error);
@@ -504,23 +495,10 @@ async function deleteTest(testId) {
 }
 
 async function manageAccess(testId) {
-    const csrfToken = getCsrfToken();
-    const permsResponse = await fetch('/assets/components/testsystem/ajax/testsystem.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            action: 'getTestPermissions',
-            data: {
-                test_id: testId,
-                csrf_token: csrfToken
-            }
-        })
-    });
-    
-    const permsResult = await permsResponse.json();
+    const permsResult = await apiCall('getTestPermissions', { test_id: testId });
 
     if (!permsResult.success) {
-        alert('Ошибка загрузки разрешений: ' + (permsResult.message || 'Неизвестная ошибка'));
+        alert('Ошибка загрузки разрешений: ' + normalizeUserMessage(permsResult.message, 'Неизвестная ошибка'));
         return;
     }
 
@@ -635,26 +613,15 @@ async function searchUsers(testId) {
     }
     
     try {
-        const csrfToken = getCsrfToken();
-        const response = await fetch('/assets/components/testsystem/ajax/testsystem.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'searchUsers',
-                data: {
-                    query: query,
-                    test_id: testId,
-                    csrf_token: csrfToken
-                }
-            })
+        const result = await apiCall('searchUsers', {
+            query: query,
+            test_id: testId
         });
-        
-        const result = await response.json();
         
         if (result.success) {
             renderSearchResults(result.data, testId);
         } else {
-            alert('Ошибка поиска: ' + result.message);
+            alert('Ошибка поиска: ' + normalizeUserMessage(result.message));
         }
     } catch (error) {
         console.error('Error searching users:', error);
@@ -716,30 +683,19 @@ function renderSearchResults(users, testId) {
 
 async function grantAccessToUser(testId, userId, canEdit) {
     try {
-        const csrfToken = getCsrfToken();
-        const response = await fetch('/assets/components/testsystem/ajax/testsystem.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'grantTestAccess',
-                data: {
-                    test_id: testId,
-                    user_id: userId,
-                    can_view: true,
-                    can_edit: canEdit
-                },
-                csrf_token: csrfToken
-            })
+        const result = await apiCall('grantTestAccess', {
+            test_id: testId,
+            user_id: userId,
+            can_view: true,
+            can_edit: canEdit
         });
         
-        const result = await response.json();
-        
         if (result.success) {
-            showNotification('success', '✅ Доступ предоставлен!');
+            showNotification('success', 'Доступ предоставлен.');
             bootstrap.Modal.getInstance(document.getElementById('manageAccessModal')).hide();
             manageAccess(testId);
         } else {
-            showNotification('danger', 'Ошибка: ' + result.message);
+            showNotification('danger', 'Ошибка: ' + normalizeUserMessage(result.message));
         }
     } catch (error) {
         console.error('Error granting access:', error);
@@ -761,28 +717,17 @@ async function revokeAccess(testId, userId) {
     }
 
     try {
-        const csrfToken = getCsrfToken();
-        const response = await fetch('/assets/components/testsystem/ajax/testsystem.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'revokeTestAccess',
-                data: {
-                    test_id: testId,
-                    user_id: userId
-                },
-                csrf_token: csrfToken
-            })
+        const result = await apiCall('revokeTestAccess', {
+            test_id: testId,
+            user_id: userId
         });
         
-        const result = await response.json();
-        
         if (result.success) {
-            showNotification('success', '✅ Доступ отозван');
+            showNotification('success', 'Доступ отозван.');
             bootstrap.Modal.getInstance(document.getElementById('manageAccessModal')).hide();
             manageAccess(testId);
         } else {
-            showNotification('danger', 'Ошибка: ' + result.message);
+            showNotification('danger', 'Ошибка: ' + normalizeUserMessage(result.message));
         }
     } catch (error) {
         console.error('Error revoking access:', error);
@@ -808,17 +753,7 @@ function showNotification(type, message) {
 // Загрузка публичных тестов
 async function loadPublicTests() {
     try {
-        const csrfToken = getCsrfToken();
-        const response = await fetch('/assets/components/testsystem/ajax/testsystem.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'getPublicTests',
-                data: { csrf_token: csrfToken }
-            })
-        });
-
-        const result = await response.json();
+        const result = await apiCall('getPublicTests', {});
 
         if (result.success) {
             // Добавляем fallback для test_url
@@ -831,7 +766,7 @@ async function loadPublicTests() {
         } else {
             console.error('Error loading public tests:', result.message);
             document.getElementById('public').innerHTML =
-                '<div class="alert alert-danger">Ошибка загрузки: ' + escapeHtml(result.message) + '</div>';
+                '<div class="alert alert-danger">Ошибка загрузки: ' + escapeHtml(normalizeUserMessage(result.message, 'Не удалось загрузить данные')) + '</div>';
         }
     } catch (error) {
         console.error('Error loading public tests:', error);

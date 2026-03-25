@@ -17,6 +17,7 @@ try {
 }
 
 $assetsUrl = rtrim($modx->getOption('assets_url', null, MODX_ASSETS_URL), '/') . '/';
+$csrfHelperPath = $assetsUrl . 'components/testsystem/js/csrf-helper.js';
 $jsPath = $assetsUrl . 'components/testsystem/js/mytests.js';
 
 // Получаем ID страницы создания теста
@@ -102,6 +103,7 @@ $output .= '<button type="button" class="ts-btn ts-btn-primary" onclick="createT
 $output .= '</div>';
 $output .= '</div></div></div>';
 
+$output .= '<script src="' . htmlspecialchars($csrfHelperPath, ENT_QUOTES, 'UTF-8') . '"></script>';
 $output .= '<script src="' . htmlspecialchars($jsPath, ENT_QUOTES, 'UTF-8') . '"></script>';
 
 return $output;
