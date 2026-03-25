@@ -2640,7 +2640,8 @@ img[style*="width"] {
     border-radius: var(--radius-btn) var(--radius-btn) 0 0;
     color: var(--color-text-secondary);
     font-weight: 500;
-    padding: 0.65rem 1rem;
+    font-size: 0.92rem;
+    padding: 0.5rem 0.8rem;
     background-color: transparent;
 }
 
@@ -2659,15 +2660,23 @@ img[style*="width"] {
 .ts-mytests-panel-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
+    flex-wrap: nowrap;
     gap: 1rem;
     margin-bottom: 1rem;
     padding-bottom: 0.75rem;
     border-bottom: 1px solid var(--color-border);
 }
 
+.ts-mytests-panel-header > div:first-child {
+    min-width: 0;
+}
+
 .ts-mytests-panel-title {
     color: var(--color-text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .ts-mytests-panel-text {
@@ -2679,6 +2688,10 @@ img[style*="width"] {
     display: flex;
     align-items: center;
     justify-content: flex-end;
+    flex: 0 0 auto;
+    min-width: 0;
+    overflow-x: auto;
+    padding-bottom: 0.125rem;
 }
 
 .tests-filters-container {
@@ -2706,17 +2719,29 @@ img[style*="width"] {
 }
 
 .test-actions-compact .btn-test-action {
-    min-width: 40px;
-    padding: 0.5rem 0.65rem;
+    min-width: 36px;
+    padding: 0.4rem 0.55rem;
+}
+
+.ts-tests-filter-group {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 0.35rem;
+}
+
+.ts-tests-filter-group .ts-btn {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.85rem;
+    line-height: 1.1;
+    white-space: nowrap;
 }
 
 @media (max-width: 991px) {
     .ts-mytests-panel-header {
-        flex-direction: column;
+        gap: 0.65rem;
     }
 
     .ts-mytests-panel-controls {
-        width: 100%;
         justify-content: flex-start;
     }
 }

@@ -791,7 +791,14 @@ function renderPublicTests(tests) {
 
     tests.forEach(test => {
         const testUrl = escapeHtml(test.test_url || '#');
-        const questionsText = test.questions_count === 1 ? 'вопрос' : test.questions_count < 5 ? 'вопроса' : 'вопросов';
+        const questionsCount = Number(
+            test.questions_count ??
+            test.question_count ??
+            test.total_questions ??
+            0
+        );
+        const safeQuestionsCount = Number.isFinite(questionsCount) ? questionsCount : 0;
+        const questionsText = safeQuestionsCount === 1 ? 'вопрос' : safeQuestionsCount < 5 ? 'вопроса' : 'вопросов';
 
         html += `<div class="list-group-item test-list-item-minimal">
             <div class="d-flex justify-content-between align-items-start flex-wrap">
@@ -800,7 +807,7 @@ function renderPublicTests(tests) {
                     ${test.description ? `<p class="mb-2 text-muted small">${escapeHtml(test.description)}</p>` : ''}
                     <div class="test-meta-info">
                         <span class="badge text-bg-success">Публичный</span>
-                        <span class="text-muted"><i class="bi bi-patch-question"></i> ${test.questions_count} ${questionsText}</span>
+                        <span class="text-muted"><i class="bi bi-patch-question"></i> ${safeQuestionsCount} ${questionsText}</span>
                         ${test.creator_name ? `<span class="text-muted"><i class="bi bi-person"></i> ${escapeHtml(test.creator_name)}</span>` : ''}
                     </div>
                 </div>
