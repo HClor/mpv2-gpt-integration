@@ -41,10 +41,10 @@ if (!empty($testPageUrl)) {
     $output .= '<meta name="test-page-url" content="' . htmlspecialchars($testPageUrl, ENT_QUOTES, 'UTF-8') . '">';
 }
 $output .= '<div id="my-tests-container">';
-$output .= '<div class="ts-card mb-4 p-3 p-md-4">';
+$output .= '<div class="ts-card ts-mytests-page-header mb-4 p-3 p-md-4">';
 $output .= '<div class="d-flex justify-content-between align-items-start align-items-md-center gap-3 flex-column flex-md-row">';
 $output .= '<div>';
-$output .= '<h2 class="h4 mb-1"><i class="bi bi-journal-check me-2 text-primary"></i>Мои тесты</h2>';
+$output .= '<h2 class="h4 mb-1"><i class="bi bi-journal-check me-2"></i>Мои тесты</h2>';
 $output .= '<p class="text-muted mb-0">Создавайте, редактируйте и публикуйте тесты в одном месте</p>';
 $output .= '</div>';
 if ($createTestPageId > 0) {
@@ -56,8 +56,8 @@ if ($createTestPageId > 0) {
 $output .= '</div>';
 $output .= '</div>';
 
-$output .= '<ul class="nav nav-tabs mb-3 flex-nowrap overflow-auto" role="tablist">';
-$output .= '<li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#created"><i class="bi bi-person-check me-1"></i>Созданные мной</a></li>';
+$output .= '<ul class="nav nav-tabs ts-mytests-tabs mb-3 flex-nowrap overflow-auto" role="tablist">';
+$output .= '<li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#created"><i class="bi bi-person-check me-1"></i>Мои тесты</a></li>';
 $output .= '<li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#shared"><i class="bi bi-people me-1"></i>Доступны мне</a></li>';
 $output .= '<li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#public"><i class="bi bi-globe2 me-1"></i>Публичные</a></li>';
 $output .= '</ul>';
