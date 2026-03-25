@@ -271,15 +271,10 @@ $registerUser = static function (modX $modx, array $post) use ($authLog): array 
 
     $authLog($modx, 'REGISTER STEP 1: start registration flow', modX::LOG_LEVEL_INFO);
 
-    $username = trim((string)($post['username'] ?? ''));
     $email = trim((string)($post['email'] ?? ''));
-    $password = (string)($post['password'] ?? '');
-    $passwordConfirm = (string)($post['password_confirm'] ?? '');
-
-    if ($username === '') $errors[] = 'Введите логин';
-    if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Неверный формат email';
-    if ($password === '' || strlen($password) < 6) $errors[] = 'Пароль минимум 6 символов';
-    if ($password !== $passwordConfirm) $errors[] = 'Пароли не совпадают';
+    if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $errors[] = 'Неверный формат email';
+    }
 
     if (!empty($errors)) {
         $authLog($modx, 'REGISTER STEP 2 FAILED: input validation', modX::LOG_LEVEL_WARN);
@@ -287,13 +282,25 @@ $registerUser = static function (modX $modx, array $post) use ($authLog): array 
     }
     $authLog($modx, 'REGISTER STEP 2 OK: input validation', modX::LOG_LEVEL_INFO);
 
-    $existingUserByUsername = $modx->getObject('modUser', ['username' => $username]);
-    if ($existingUserByUsername) {
-        $existingProfile = $existingUserByUsername->getOne('Profile');
-        $existingEmail = $existingProfile ? trim((string)$existingProfile->get('email')) : '';
-        if ((int)$existingUserByUsername->get('active') !== 1 && $existingEmail !== '' && strcasecmp($existingEmail, $email) === 0) {
-            $authLog($modx, 'REGISTER STEP 3 IDEMPOTENT: inactive user exists with same username/email=' . $username, modX::LOG_LEVEL_WARN);
+    $prefix = $modx->getOption('table_prefix');
+    $stmt = $modx->prepare("SELECT internalKey FROM {$prefix}user_attributes WHERE email = :email LIMIT 1");
+    if ($stmt === false) {
+        $authLog($modx, 'REGISTER STEP 4 FAILED: SQL prepare user_attributes by email');
+        $errors[] = 'Ошибка проверки email';
+        return ['errors' => $errors, 'success' => $success];
+    }
+    $stmt->bindValue(':email', $email, PDO::PARAM_STR);
+    if (!$stmt->execute()) {
+        $authLog($modx, 'REGISTER STEP 4 FAILED: SQL execute user_attributes by email ' . implode(' ', $stmt->errorInfo()));
+        $errors[] = 'Ошибка проверки email';
+        return ['errors' => $errors, 'success' => $success];
+    }
+    $existingUserId = (int)$stmt->fetchColumn();
+    if ($existingUserId > 0) {
+        $existingUser = $modx->getObject('modUser', $existingUserId);
+        $existingProfile = $existingUser ? $existingUser->getOne('Profile') : null;
 
+        if ($existingUser && $existingProfile && (int)$existingUser->get('active') !== 1) {
             $activationToken = bin2hex(random_bytes(32));
             $existingExtended = $existingProfile->get('extended') ?: [];
             $existingExtended['activation_token'] = $activationToken;
@@ -302,7 +309,8 @@ $registerUser = static function (modX $modx, array $post) use ($authLog): array 
             $existingProfile->set('extended', $existingExtended);
             $existingProfile->save();
 
-            $success[] = 'Аккаунт уже создан и ожидает активации. Отправим письмо с активацией повторно.';
+            $username = (string)$existingUser->get('username');
+            $success[] = 'Мы уже создали аккаунт для этого email. Отправили новую ссылку для входа.';
             return [
                 'errors' => $errors,
                 'success' => $success,
@@ -315,28 +323,8 @@ $registerUser = static function (modX $modx, array $post) use ($authLog): array 
             ];
         }
 
-        $authLog($modx, 'REGISTER STEP 3 FAILED: username exists=' . $username, modX::LOG_LEVEL_WARN);
-        $errors[] = 'Логин уже занят';
-        return ['errors' => $errors, 'success' => $success];
-    }
-    $authLog($modx, 'REGISTER STEP 3 OK: username available=' . $username, modX::LOG_LEVEL_INFO);
-
-    $prefix = $modx->getOption('table_prefix');
-    $stmt = $modx->prepare("SELECT COUNT(*) FROM {$prefix}user_attributes WHERE email = :email");
-    if ($stmt === false) {
-        $authLog($modx, 'REGISTER STEP 4 FAILED: SQL prepare user_attributes by email');
-        $errors[] = 'Ошибка проверки email';
-        return ['errors' => $errors, 'success' => $success];
-    }
-    $stmt->bindValue(':email', $email, PDO::PARAM_STR);
-    if (!$stmt->execute()) {
-        $authLog($modx, 'REGISTER STEP 4 FAILED: SQL execute user_attributes by email ' . implode(' ', $stmt->errorInfo()));
-        $errors[] = 'Ошибка проверки email';
-        return ['errors' => $errors, 'success' => $success];
-    }
-    if ((int)$stmt->fetchColumn() > 0) {
         $authLog($modx, 'REGISTER STEP 4 FAILED: email already used=' . $email, modX::LOG_LEVEL_WARN);
-        $errors[] = 'Email уже используется';
+        $errors[] = 'Email уже используется. Войдите в аккаунт или восстановите доступ.';
         return ['errors' => $errors, 'success' => $success];
     }
     $authLog($modx, 'REGISTER STEP 4 OK: email available=' . $email, modX::LOG_LEVEL_INFO);
@@ -344,9 +332,27 @@ $registerUser = static function (modX $modx, array $post) use ($authLog): array 
     $activationToken = bin2hex(random_bytes(32));
     $expiresAt = date('Y-m-d H:i:s', strtotime('+24 hours'));
 
+    $baseUsername = trim((string)($post['username'] ?? ''));
+    if ($baseUsername === '') {
+        $baseUsername = strtolower((string)strtok($email, '@'));
+    }
+    $baseUsername = preg_replace('/[^a-z0-9_.-]/i', '', $baseUsername);
+    if ($baseUsername === '') {
+        $baseUsername = 'user';
+    }
+
+    $username = $baseUsername;
+    $counter = 1;
+    while ($modx->getObject('modUser', ['username' => $username])) {
+        $counter++;
+        $username = $baseUsername . $counter;
+    }
+
+    $generatedPassword = bin2hex(random_bytes(12));
+
     $user = $modx->newObject('modUser');
     $user->set('username', $username);
-    $user->set('password', $password);
+    $user->set('password', $generatedPassword);
     $user->set('active', 0);
 
     $profile = $modx->newObject('modUserProfile');
@@ -368,8 +374,21 @@ $registerUser = static function (modX $modx, array $post) use ($authLog): array 
         }
         $authLog($modx, 'REGISTER STEP 6: user saved id=' . (int)$user->id, modX::LOG_LEVEL_INFO);
 
-        // Compatibility mode: skip auto-membership to avoid modAccess/modUserGroup failures on some legacy installs.
-        $authLog($modx, 'REGISTER STEP 7: skip LMS Students auto-membership for compatibility', modX::LOG_LEVEL_WARN);
+        $studentsGroupName = (string)Config::getGroup('students', 'LMS Students');
+        if ($studentsGroupName === '') {
+            throw new RuntimeException('students group is not configured');
+        }
+
+        $studentsGroup = $modx->getObject('modUserGroup', ['name' => $studentsGroupName]);
+        if (!$studentsGroup) {
+            throw new RuntimeException('students group not found: ' . $studentsGroupName);
+        }
+
+        $joined = $user->joinGroup((int)$studentsGroup->get('id'), 1);
+        if (!$joined) {
+            throw new RuntimeException('failed to add user to students group');
+        }
+        $authLog($modx, 'REGISTER STEP 7: added to students group=' . $studentsGroupName, modX::LOG_LEVEL_INFO);
 
         $modx->commit();
         $authLog($modx, 'REGISTER STEP 8: transaction commit', modX::LOG_LEVEL_INFO);
@@ -381,7 +400,7 @@ $registerUser = static function (modX $modx, array $post) use ($authLog): array 
     }
 
     $authLog($modx, 'REGISTER STEP 9: registration done, activation email prepared', modX::LOG_LEVEL_INFO);
-    $success[] = '✅ Аккаунт создан. Проверьте почту и перейдите по ссылке активации. Если письмо не придёт в течение нескольких минут, воспользуйтесь повторной отправкой.';
+    $success[] = '✅ Ссылка для входа отправлена на email. Перейдите по ней — аккаунт активируется и вы войдёте автоматически.';
 
     return [
         'errors' => $errors,
@@ -442,7 +461,12 @@ $activateUserByToken = static function (modX $modx, string $activationToken): ar
     $user->set('active', 1);
 
     if ($profile->save() && $user->save()) {
-        $success[] = '✅ Email подтверждён. Аккаунт активирован, теперь можете войти.';
+        // Привязываем активированного пользователя к текущему запросу
+        // и открываем web-контекст, чтобы на следующем запросе хедер/виджеты
+        // корректно определили авторизацию.
+        $modx->user = $user;
+        $modx->user->addSessionContext('web');
+        $success[] = '✅ Email подтверждён. Аккаунт активирован, вы автоматически вошли в систему.';
     } else {
         $errors[] = 'Ошибка активации аккаунта. Попробуйте запросить письмо повторно.';
     }
@@ -532,10 +556,29 @@ $loginUser = static function (modX $modx, array $post): array {
 
 // ====================== ОБРАБОТКА ДЕЙСТВИЙ ======================
 
+$isWebAuthenticated = $modx->user instanceof modUser
+    && ($modx->user->hasSessionContext('web') || $modx->user->isAuthenticated('web'));
+
 if ($mode === 'activate') {
     $result = $activateUserByToken($modx, trim((string)($_GET['token'] ?? '')));
     $errors = array_merge($errors, $result['errors']);
     $success = array_merge($success, $result['success']);
+
+    // PRG: после авто-логина по ссылке активации делаем redirect,
+    // чтобы на новом запросе корректно отрисовался хедер авторизованного пользователя.
+    $isWebAuthenticated = $modx->user instanceof modUser
+        && ($modx->user->hasSessionContext('web') || $modx->user->isAuthenticated('web'));
+
+    if (empty($result['errors']) && !empty($result['success']) && $isWebAuthenticated) {
+        $_SESSION['auth_handler_flash'] = [
+            'errors' => [],
+            'success' => $result['success']
+        ];
+        $redirectUrl = $modx->makeUrl((int)$modx->resource->id);
+        $modx->sendRedirect($redirectUrl);
+        exit;
+    }
+
     $mode = 'login';
 }
 
@@ -724,6 +767,15 @@ foreach ($success as $msg) {
     $output .= '<div class="alert alert-success">' . htmlspecialchars((string)$msg, ENT_QUOTES, 'UTF-8') . '</div>';
 }
 
+if ($isWebAuthenticated) {
+    $testsPageId = (int)$modx->getOption('lms.tests_root', null, 35);
+    $testsUrl = $modx->makeUrl($testsPageId, 'web', [], 'full');
+    $output .= '<div class="alert alert-info">Вы уже вошли в систему.</div>';
+    $output .= '<a href="' . htmlspecialchars($testsUrl, ENT_QUOTES, 'UTF-8') . '" class="btn btn-primary">Перейти к тестам</a>';
+    $output .= '</div>';
+    return $output;
+}
+
 // Форма установки нового пароля
 if ($mode === 'reset' && empty($success)) {
     $output .= '<h4 class="mb-4">Установка нового пароля</h4>';
@@ -803,12 +855,9 @@ $output .= '<div class="tab-pane fade ' . ($activeTab === 'register' ? 'show act
 $output .= '<form method="POST">';
 $output .= CsrfProtection::getTokenField();
 $output .= '<input type="hidden" name="mode" value="register">';
-$output .= '<div class="mb-3"><label class="form-label">Логин *</label><input type="text" name="username" class="form-control" required></div>';
 $output .= '<div class="mb-3"><label class="form-label">Email *</label><input type="email" name="email" class="form-control" required></div>';
-$output .= '<div class="mb-3"><label class="form-label">Пароль * (минимум 6 символов)</label><input type="password" name="password" class="form-control" required></div>';
-$output .= '<div class="mb-3"><label class="form-label">Подтверждение пароля *</label><input type="password" name="password_confirm" class="form-control" required></div>';
-$output .= '<button type="submit" class="btn btn-success">Зарегистрироваться</button>';
-$output .= '<p class="text-muted small mt-3 mb-0">После регистрации нужно подтвердить email по ссылке из письма.</p>';
+$output .= '<button type="submit" class="btn btn-success">Получить ссылку для входа</button>';
+$output .= '<p class="text-muted small mt-3 mb-0">Мы отправим ссылку на email. По ней вы автоматически войдёте в аккаунт.</p>';
 $output .= '</form>';
 $output .= '</div>';
 
