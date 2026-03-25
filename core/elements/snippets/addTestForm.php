@@ -63,6 +63,7 @@ if ($_POST && isset($_POST["add_test"])) {
     $passScore = (int)($_POST["pass_score"] ?? 70);
     $questionsPerSession = (int)($_POST["questions_per_session"] ?? 20);
     $uploadFile = isset($_POST["upload_file"]) && $_POST["upload_file"] === "1";
+    $allowGuestPass = isset($_POST["allow_guest_pass"]) && $_POST["allow_guest_pass"] === "1" ? 1 : 0;
 
     // Определяем приватность теста
     $isPrivate = isset($_POST["is_private"]) && $_POST["is_private"] === "1";
@@ -127,8 +128,8 @@ if ($_POST && isset($_POST["add_test"])) {
             $stmt = $modx->prepare("
                 INSERT INTO `{$prefix}test_tests`
                 (resource_id, title, description, created_by, mode, time_limit, pass_score,
-                 questions_per_session, randomize_questions, randomize_answers, is_active, publication_status, created_at, category_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 1, ?, NOW(), ?)
+                 questions_per_session, randomize_questions, randomize_answers, is_active, publication_status, allow_guest_pass, created_at, category_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 1, 1, ?, ?, NOW(), ?)
             ");
 
             // resource_id = category_id (НЕ ID страницы MODX!)
@@ -142,6 +143,7 @@ if ($_POST && isset($_POST["add_test"])) {
                 $passScore,
                 $questionsPerSession,
                 $publicationStatus,  // 'public' или 'private'
+                $allowGuestPass,
                 $parentId  // category_id
                 ])) {
                 $newTestId = $modx->lastInsertId();
@@ -259,6 +261,16 @@ $output .= "<input class=\"form-check-input\" type=\"checkbox\" id=\"is_private\
 $output .= "<label class=\"form-check-label\" for=\"is_private\">";
 $output .= "<i class=\"bi bi-lock\"></i> <strong>Приватный тест</strong> ";
 $output .= "<small class=\"text-muted\">(доступен только вам, но вы можете предоставить доступ другим пользователям)</small>";
+$output .= "</label>";
+$output .= "</div>";
+$output .= "</div>";
+
+$output .= "<div class=\"mb-4\">";
+$output .= "<div class=\"form-check form-switch\">";
+$output .= "<input class=\"form-check-input\" type=\"checkbox\" id=\"allow_guest_pass\" name=\"allow_guest_pass\" value=\"1\" " . (isset($_POST["allow_guest_pass"]) && $_POST["allow_guest_pass"] === "1" ? "checked" : "") . ">";
+$output .= "<label class=\"form-check-label\" for=\"allow_guest_pass\">";
+$output .= "<i class=\"bi bi-person-check\"></i> <strong>Разрешить гостевое прохождение</strong> ";
+$output .= "<small class=\"text-muted\">(без регистрации, с фиксированными 10 вопросами)</small>";
 $output .= "</label>";
 $output .= "</div>";
 $output .= "</div>";
