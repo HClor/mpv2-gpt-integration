@@ -41,8 +41,17 @@ if ($sessionId > 0) {
     }
 
     // Проверка прав доступа к сессии
-    $userId = $modx->user->get('id');
-    if ((int)$session['user_id'] != $userId) {
+    $userId = (int)$modx->user->get('id');
+    $sessionUserId = (int)$session['user_id'];
+    $isGuestSession = $sessionUserId <= 0;
+    if ($isGuestSession) {
+        $providedGuestToken = isset($_GET['gst']) ? (string)$_GET['gst'] : '';
+        $modx->getRequest();
+        $storedGuestToken = isset($_SESSION['ts_guest_session_tokens'][$sessionId]) ? (string)$_SESSION['ts_guest_session_tokens'][$sessionId] : '';
+        if ($providedGuestToken === '' || $storedGuestToken === '' || !hash_equals($storedGuestToken, $providedGuestToken)) {
+            return '<div class="ts-alert ts-alert-danger">Некорректный токен гостевой сессии</div>';
+        }
+    } elseif ($sessionUserId !== $userId) {
         return '<div class="ts-alert ts-alert-danger">Нет доступа к этой сессии</div>';
     }
 
@@ -54,7 +63,8 @@ if ($sessionId > 0) {
     $sessionData = [
         'session_id' => $sessionId,
         'mode' => $session['mode'],
-        'status' => $session['status']
+        'status' => $session['status'],
+        'guest_token' => $isGuestSession ? (string)($_GET['gst'] ?? '') : ''
     ];
 } else {
     // ИСПРАВЛЕНО: Получаем testId из GET-параметра или ID текущего ресурса
@@ -322,14 +332,14 @@ $output .= '<div id="test-container" data-test-id="0" data-knowledge-area-id="' 
 // ИСПРАВЛЕНО: Ищем тест либо по ID из URL, либо привязанный к этому ресурсу
 if ($testIdFromUrl > 0) {
     // Загружаем тест по ID из GET-параметра
-    $sql = "SELECT `id`, `resource_id`, `title`, `description`, `mode`, `time_limit`, `pass_score`, `questions_per_session`
+    $sql = "SELECT `id`, `resource_id`, `title`, `description`, `mode`, `time_limit`, `pass_score`, `questions_per_session`, `allow_guest_pass`
         FROM {$tableTests}
         WHERE `is_active` = 1 AND `id` = ?
         LIMIT 1";
     $queryParam = $testIdFromUrl;
 } else {
     // Загружаем тест по resource_id (старое поведение)
-    $sql = "SELECT `id`, `resource_id`, `title`, `description`, `mode`, `time_limit`, `pass_score`, `questions_per_session`
+    $sql = "SELECT `id`, `resource_id`, `title`, `description`, `mode`, `time_limit`, `pass_score`, `questions_per_session`, `allow_guest_pass`
         FROM {$tableTests}
         WHERE `is_active` = 1 AND `resource_id` = ?
         LIMIT 1";
@@ -384,6 +394,9 @@ if (!$test) {
 
 
 $testId = (int)$test['id'];
+$allowGuestPass = (int)($test['allow_guest_pass'] ?? 0) === 1;
+$isAuthenticated = $modx->user->hasSessionContext('web');
+$isGuestRunner = !$isAuthenticated && $allowGuestPass;
 
 // ДОБАВЛЕНО: Загружаем расширенную информацию о тесте для проверки доступа
 $stmt = $modx->prepare("
@@ -395,13 +408,13 @@ $stmt->execute([$testId]);
 $testAccess = $stmt->fetch(PDO::FETCH_ASSOC);
 
 // Проверка авторизации
-if (!$modx->user->hasSessionContext('web')) {
+if (!$isAuthenticated && !$allowGuestPass) {
     $authId = (int)$modx->getOption('lms.auth_page', null, 0);
     $authUrl = $authId > 0 ? $modx->makeUrl($authId, 'web', '', 'full') : $modx->makeUrl($modx->resource->get('id'), 'web', '', 'full');
     return '<div class="ts-alert ts-alert-warning"><p>Для прохождения теста необходимо <a href="' . htmlspecialchars($authUrl, ENT_QUOTES, 'UTF-8') . '">войти в систему</a>.</p></div>';
 }
 
-$userId = (int)$modx->user->get('id');
+$userId = $isAuthenticated ? (int)$modx->user->get('id') : 0;
 
 // ДОБАВЛЕНО: Проверка доступа к тесту на основе publication_status
 $hasAccess = false;
@@ -428,7 +441,9 @@ if ($roleStmt && $roleStmt->execute([':uid' => $userId, ':group1' => $groupAdmin
 }
 
 // Проверяем доступ
-if ($isAdminOrExpert) {
+if ($isGuestRunner) {
+    $hasAccess = true;
+} elseif ($isAdminOrExpert) {
     // Админы и эксперты видят все
     $hasAccess = true;
 } elseif ($createdBy === $userId) {
@@ -535,7 +550,7 @@ if ($questionsPerSession <= 0 || $questionsPerSession > $totalQuestions) {
 }
 
 // Определение прав на управление тестом (как в categoriesAndTests)
-$isOwner = ($createdBy === $userId);
+$isOwner = $isAuthenticated && ($createdBy === $userId);
 $canManage = $isAdmin || $isExpert || $isOwner;
 $canDelete = $isAdmin || $isOwner;
 
@@ -604,7 +619,7 @@ if (!empty($importUrl)) {
 }
 
 $output = $csrfMeta;
-$output .= '<div id="test-container" data-test-id="' . (int)$testId . '" data-can-edit="' . ($canEditTest ? '1' : '0') . '" data-can-delete="' . ($canDelete ? '1' : '0') . '" data-test-mode="' . htmlspecialchars($testMode, ENT_QUOTES, 'UTF-8') . '"' . $importUrlAttr . $viewDataAttr . '>';
+$output .= '<div id="test-container" data-test-id="' . (int)$testId . '" data-can-edit="' . ($canEditTest ? '1' : '0') . '" data-can-delete="' . ($canDelete ? '1' : '0') . '" data-test-mode="' . htmlspecialchars($testMode, ENT_QUOTES, 'UTF-8') . '" data-is-guest-runner="' . ($isGuestRunner ? '1' : '0') . '" data-allow-guest-pass="' . ($allowGuestPass ? '1' : '0') . '"' . $importUrlAttr . $viewDataAttr . '>';
 $output .= '<div class="tests-grid test-runner-launch-grid">';
 
 // Скрываем test-info если view=questions или view=manage (для быстрой загрузки)
@@ -614,6 +629,9 @@ $output .= '<div class="test-card-header">';
 $output .= '<h3 class="test-title">' . htmlspecialchars($test['title'], ENT_QUOTES, 'UTF-8') . '</h3>';
 $output .= $testCardMenu;
 $output .= '</div>';
+if ($allowGuestPass) {
+    $output .= '<div class="mb-2"><span class="ts-badge ts-badge-success"><i class="bi bi-person-check me-1"></i>Без регистрации</span></div>';
+}
 
 $description = !empty($test['description']) ? $test['description'] : 'Нет описания';
 $output .= '<p class="test-description">' . nl2br(htmlspecialchars($description, ENT_QUOTES, 'UTF-8')) . '</p>';
@@ -629,13 +647,19 @@ $output .= '</div>';
 
 if (!$skipModeSelection && $testMode === 'both') {
     $output .= '<hr class="test-divider">';
-    $output .= '<div class="test-training-controls">';
-    $output .= '<label for="training-questions-count">Количество вопросов:</label>';
-    $output .= '<div class="questions-input-group">';
-    $output .= '<input type="number" id="training-questions-count" class="questions-count-input" min="1" max="' . (int)$totalQuestions . '" value="' . min(20, (int)$totalQuestions) . '" data-max="' . (int)$totalQuestions . '">';
-    $output .= '<button class="btn-all-questions" type="button" id="training-all-questions" data-total="' . (int)$totalQuestions . '">Все</button>';
-    $output .= '</div>';
-    $output .= '</div>';
+    if ($isGuestRunner) {
+        $output .= '<div class="test-training-controls">';
+        $output .= '<span class="text-muted"><i class="bi bi-info-circle me-1"></i>Гостевой режим: количество вопросов фиксировано — 10</span>';
+        $output .= '</div>';
+    } else {
+        $output .= '<div class="test-training-controls">';
+        $output .= '<label for="training-questions-count">Количество вопросов:</label>';
+        $output .= '<div class="questions-input-group">';
+        $output .= '<input type="number" id="training-questions-count" class="questions-count-input" min="1" max="' . (int)$totalQuestions . '" value="' . min(20, (int)$totalQuestions) . '" data-max="' . (int)$totalQuestions . '">';
+        $output .= '<button class="btn-all-questions" type="button" id="training-all-questions" data-total="' . (int)$totalQuestions . '">Все</button>';
+        $output .= '</div>';
+        $output .= '</div>';
+    }
 
     $output .= '<div class="test-action-buttons">';
     $output .= '<button class="btn-start-training ts-btn start-test-btn" data-mode="training">';
@@ -720,6 +744,15 @@ $output .= '<div class="card-body text-center">';
 $output .= '<h3 id="final-score" class="mb-3"></h3>';
 $output .= '<p id="result-message" class="lead"></p>';
 $output .= '<div id="result-details" class="mt-3"></div>';
+if ($isGuestRunner) {
+    $authId = (int)$modx->getOption('lms.auth_page', null, 0);
+    $authUrl = $authId > 0 ? $modx->makeUrl($authId, 'web', '', 'full') : '/auth';
+    $output .= '<div id="guest-register-cta" class="ts-alert ts-alert-info mt-3" style="display:none;">';
+    $output .= '<h4><i class="bi bi-person-plus-fill me-2"></i>Сохраните результат и прогресс</h4>';
+    $output .= '<p class="mb-3">Зарегистрируйтесь, чтобы сохранять результаты, отслеживать прогресс и проходить тесты в полном режиме.</p>';
+    $output .= '<a class="ts-btn ts-btn-primary" href="' . htmlspecialchars($authUrl, ENT_QUOTES, 'UTF-8') . '">Зарегистрироваться</a>';
+    $output .= '</div>';
+}
 
 $retryUrl = $modx->makeUrl($modx->resource->get('id'), 'web', '', 'full');
 $output .= '<a href="' . htmlspecialchars($retryUrl, ENT_QUOTES, 'UTF-8') . '" class="ts-btn ts-btn-primary mt-3 me-2">Пройти еще раз</a>';
@@ -820,7 +853,7 @@ if ($skipModeSelection && isset($sessionData)) {
 
         // Запускаем тест через существующую функцию из tsrunner.js
         if (typeof window.continueExistingSession === "function") {
-            window.continueExistingSession(window.existingSession.session_id, window.existingSession.mode);
+            window.continueExistingSession(window.existingSession.session_id, window.existingSession.mode, window.existingSession.guest_token || null);
         } else {
             console.error("continueExistingSession function not found in tsrunner.js");
         }
