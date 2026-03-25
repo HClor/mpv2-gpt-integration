@@ -21,12 +21,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function getStatusBadge(status) {
     const badges = {
-        'draft': '<span class="badge bg-secondary">📝 Черновик</span>',
-        'private': '<span class="badge bg-danger">🔒 Приватный</span>',
-        'unlisted': '<span class="badge bg-warning text-dark">🔗 По ссылке</span>',
-        'public': '<span class="badge bg-success">🌐 Публичный</span>'
+        draft: '<span class="badge text-bg-secondary">Черновик</span>',
+        private: '<span class="badge text-bg-danger">Приватный</span>',
+        unlisted: '<span class="badge text-bg-warning">По ссылке</span>',
+        public: '<span class="badge text-bg-success">Публичный</span>'
     };
-    return badges[status] || `<span class="badge bg-secondary">${status}</span>`;
+    return badges[status] || `<span class="badge text-bg-secondary">${escapeHtml(status || 'Неизвестно')}</span>`;
 }
 
 function escapeHtml(text) {
@@ -109,22 +109,56 @@ async function loadSharedTests() {
     }
 }
 
+
+function getMyTestsTabConfig(tab) {
+    const config = {
+        created: {
+            icon: 'bi-person-check',
+            title: 'Мои тесты',
+            description: 'Ваши тесты и управление публикацией'
+        },
+        shared: {
+            icon: 'bi-people',
+            title: 'Доступны мне',
+            description: 'Тесты, к которым вам выдан доступ'
+        },
+        public: {
+            icon: 'bi-globe2',
+            title: 'Публичные',
+            description: 'Открытые тесты для всех пользователей'
+        }
+    };
+
+    return config[tab];
+}
+
+function renderTabSectionStart(tab, controlsHtml = '') {
+    const cfg = getMyTestsTabConfig(tab);
+    return `
+        <div class="ts-card ts-mytests-panel">
+            <div class="ts-card-body">
+                <div class="ts-mytests-panel-header">
+                    <div>
+                        <h3 class="ts-mytests-panel-title h5 mb-1"><i class="bi ${cfg.icon} me-2"></i>${cfg.title}</h3>
+                        <p class="ts-mytests-panel-text mb-0">${cfg.description}</p>
+                    </div>
+                    ${controlsHtml ? `<div class="ts-mytests-panel-controls">${controlsHtml}</div>` : ''}
+                </div>
+    `;
+}
+
+function renderTabSectionEnd() {
+    return '</div></div>';
+}
+
 function renderSharedTests(tests) {
     const container = document.getElementById('shared');
 
-    let html = `
-        <div class="ts-card">
-            <div class="ts-card-body">
-                <div class="ts-section-header ts-section-header-compact">
-                    <div>
-                        <h3 class="ts-section-title h5 mb-1"><i class="bi bi-people me-2"></i>Доступны мне</h3>
-                        <p class="ts-section-text mb-0">Тесты, к которым вам выдан доступ владельцами</p>
-                    </div>
-                </div>
-    `;
+    let html = renderTabSectionStart('shared');
 
     if (tests.length === 0) {
-        html += '<div class="ts-empty-state"><div class="ts-empty-state-title">Пока нет доступных тестов</div><div class="ts-empty-state-text">Вам ещё не выдали доступ к тестам других пользователей.</div></div></div></div>';
+        html += '<div class="ts-empty-state"><div class="ts-empty-state-title">Пока нет доступных тестов</div><div class="ts-empty-state-text">Когда вам выдадут доступ, тесты появятся в этом разделе.</div></div>';
+        html += renderTabSectionEnd();
         container.innerHTML = html;
         return;
     }
@@ -133,10 +167,10 @@ function renderSharedTests(tests) {
 
     tests.forEach(test => {
         const accessBadge = test.can_edit
-            ? '<span class="badge bg-warning text-dark">Редактирование</span>'
-            : '<span class="badge bg-info">Просмотр</span>';
+            ? '<span class="badge text-bg-warning">Редактирование</span>'
+            : '<span class="badge text-bg-info">Просмотр</span>';
 
-        const testUrl = test.test_url || '#';
+        const testUrl = escapeHtml(test.test_url || '#');
 
         html += `<div class="list-group-item test-list-item-minimal">
             <div class="d-flex justify-content-between align-items-start flex-wrap">
@@ -149,12 +183,8 @@ function renderSharedTests(tests) {
                         <div class="test-meta-info">
                             ${getStatusBadge(test.publication_status)}
                             ${accessBadge}
-                            <span class="text-muted ms-2">
-                                <i class="bi bi-person-circle"></i> ${escapeHtml(test.owner_name || 'N/A')}
-                            </span>
-                            <span class="text-muted ms-2">
-                                <i class="bi bi-question-circle"></i> ${test.questions_count}
-                            </span>
+                            <span class="text-muted"><i class="bi bi-person-circle"></i> ${escapeHtml(test.owner_name || 'N/A')}</span>
+                            <span class="text-muted"><i class="bi bi-question-circle"></i> ${test.questions_count}</span>
                         </div>
                     </div>
                 </div>
@@ -172,7 +202,8 @@ function renderSharedTests(tests) {
         </div>`;
     });
 
-    html += '</div></div></div>';
+    html += '</div>';
+    html += renderTabSectionEnd();
     container.innerHTML = html;
 }
 
@@ -180,26 +211,13 @@ function renderMyTests(tests) {
     const container = document.getElementById('created');
 
     if (tests.length === 0) {
-        container.innerHTML = `
-            <div class="ts-card">
-                <div class="ts-card-body">
-                    <div class="ts-section-header ts-section-header-compact">
-                        <div>
-                            <h3 class="ts-section-title h5 mb-1"><i class="bi bi-person-check me-2"></i>Созданные мной</h3>
-                            <p class="ts-section-text mb-0">Ваши тесты и их статусы публикации</p>
-                        </div>
-                    </div>
-                    <div class="ts-empty-state">
-                        <div class="ts-empty-state-title">У вас пока нет созданных тестов</div>
-                        <div class="ts-empty-state-text">Создайте первый тест, чтобы начать формировать собственную базу заданий.</div>
-                    </div>
-                </div>
-            </div>
-        `;
+        let emptyHtml = renderTabSectionStart('created');
+        emptyHtml += '<div class="ts-empty-state"><div class="ts-empty-state-title">Пока нет созданных тестов</div><div class="ts-empty-state-text">Создайте первый тест, чтобы начать формировать собственную базу заданий.</div></div>';
+        emptyHtml += renderTabSectionEnd();
+        container.innerHTML = emptyHtml;
         return;
     }
 
-    // Группируем тесты по статусу публикации
     const groupedTests = {
         public: tests.filter(t => t.publication_status === 'public'),
         unlisted: tests.filter(t => t.publication_status === 'unlisted'),
@@ -207,51 +225,31 @@ function renderMyTests(tests) {
         draft: tests.filter(t => t.publication_status === 'draft')
     };
 
-    // Фильтры
-    let html = '<div class="ts-card"><div class="ts-card-body">';
-    html += '<div class="ts-section-header ts-section-header-compact"><div><h3 class="ts-section-title h5 mb-1"><i class="bi bi-person-check me-2"></i>Созданные мной</h3><p class="ts-section-text mb-0">Управляйте публикацией и доступом к своим тестам</p></div></div>';
-    html += '<div class="tests-filters-container mb-3">';
-    html += '<div class="ts-tests-filter-group" role="group" aria-label="Фильтр по статусу публикации">';
-    html += `<button type="button" class="ts-btn ts-btn-primary is-active" onclick="filterMyTests(event, 'all')">
-        Все <span class="badge bg-light text-dark ms-1">${tests.length}</span>
-    </button>`;
-    html += `<button type="button" class="ts-btn ts-btn-ghost-success" onclick="filterMyTests(event, 'public')">
-        🌐 Публичные <span class="badge bg-success ms-1">${groupedTests.public.length}</span>
-    </button>`;
-    html += `<button type="button" class="ts-btn ts-btn-ghost-warning" onclick="filterMyTests(event, 'unlisted')">
-        🔗 По ссылке <span class="badge bg-warning ms-1">${groupedTests.unlisted.length}</span>
-    </button>`;
-    html += `<button type="button" class="ts-btn ts-btn-ghost-danger" onclick="filterMyTests(event, 'private')">
-        🔒 Приватные <span class="badge bg-danger ms-1">${groupedTests.private.length}</span>
-    </button>`;
-    html += `<button type="button" class="ts-btn ts-btn-ghost" onclick="filterMyTests(event, 'draft')">
-        📝 Черновики <span class="badge bg-secondary ms-1">${groupedTests.draft.length}</span>
-    </button>`;
-    html += '</div>';
-    html += '</div>';
-    
+    let controlsHtml = '<div class="ts-tests-filter-group" role="group" aria-label="Фильтр по статусу публикации">';
+    controlsHtml += `<button type="button" class="ts-btn ts-btn-primary is-active" onclick="filterMyTests(event, 'all')">Все <span class="badge text-bg-light ms-1">${tests.length}</span></button>`;
+    controlsHtml += `<button type="button" class="ts-btn ts-btn-ghost-success" onclick="filterMyTests(event, 'public')">Публичные <span class="badge text-bg-success ms-1">${groupedTests.public.length}</span></button>`;
+    controlsHtml += `<button type="button" class="ts-btn ts-btn-ghost-warning" onclick="filterMyTests(event, 'unlisted')">По ссылке <span class="badge text-bg-warning ms-1">${groupedTests.unlisted.length}</span></button>`;
+    controlsHtml += `<button type="button" class="ts-btn ts-btn-ghost-danger" onclick="filterMyTests(event, 'private')">Приватные <span class="badge text-bg-danger ms-1">${groupedTests.private.length}</span></button>`;
+    controlsHtml += `<button type="button" class="ts-btn ts-btn-ghost" onclick="filterMyTests(event, 'draft')">Черновики <span class="badge text-bg-secondary ms-1">${groupedTests.draft.length}</span></button>`;
+    controlsHtml += '</div>';
+
+    let html = renderTabSectionStart('created', controlsHtml);
     html += '<div class="list-group tests-list-improved">';
-    
+
     tests.forEach(test => {
         const itemClass = test.publication_status === 'draft' ? 'list-group-item-secondary' : '';
-        const testUrl = test.test_url || '#';
-        
+        const testUrl = escapeHtml(test.test_url || '#');
+
         html += `<div class="list-group-item test-list-item-minimal ${itemClass}" data-status="${test.publication_status}">
             <div class="d-flex justify-content-between align-items-start flex-wrap">
                 <div class="flex-grow-1 mb-2 mb-md-0">
                     <div class="test-info-block">
-                        <h6 class="mb-2 test-title-clickable" onclick="window.location.href='${testUrl}'">
-                            ${escapeHtml(test.title)}
-                        </h6>
+                        <h6 class="mb-2 test-title-clickable" onclick="window.location.href='${testUrl}'">${escapeHtml(test.title)}</h6>
                         <p class="mb-2 text-muted small">${escapeHtml(test.description || 'Нет описания')}</p>
                         <div class="test-meta-info">
                             ${getStatusBadge(test.publication_status)}
-                            <span class="text-muted ms-2">
-                                <i class="bi bi-question-circle"></i> Вопросов: ${test.questions_count}
-                            </span>
-                            <span class="text-muted ms-2">
-                                <i class="bi bi-people"></i> Доступ: ${test.shared_with_count} чел.
-                            </span>
+                            <span class="text-muted"><i class="bi bi-question-circle"></i> Вопросов: ${test.questions_count}</span>
+                            <span class="text-muted"><i class="bi bi-people"></i> Доступ: ${test.shared_with_count} чел.</span>
                         </div>
                     </div>
                 </div>
@@ -273,13 +271,14 @@ function renderMyTests(tests) {
         </div>`;
     });
 
-    html += '</div></div></div>';
+    html += '</div>';
+    html += renderTabSectionEnd();
     container.innerHTML = html;
 }
 
 function filterMyTests(event, status) {
     const items = document.querySelectorAll('#created .test-list-item-minimal');
-    const buttons = document.querySelectorAll('.tests-filters-container .ts-btn');
+    const buttons = document.querySelectorAll('#created .ts-tests-filter-group .ts-btn');
 
     buttons.forEach(btn => btn.classList.remove('is-active'));
     if (event && event.currentTarget) {
@@ -844,19 +843,11 @@ async function loadPublicTests() {
 function renderPublicTests(tests) {
     const container = document.getElementById('public');
 
-    let html = `
-        <div class="ts-card">
-            <div class="ts-card-body">
-                <div class="ts-section-header ts-section-header-compact">
-                    <div>
-                        <h3 class="ts-section-title h5 mb-1"><i class="bi bi-globe2 me-2"></i>Публичные</h3>
-                        <p class="ts-section-text mb-0">Открытые тесты, доступные всем пользователям</p>
-                    </div>
-                </div>
-    `;
+    let html = renderTabSectionStart('public');
 
     if (tests.length === 0) {
-        html += '<div class="ts-empty-state"><div class="ts-empty-state-title">Публичных тестов пока нет</div><div class="ts-empty-state-text">Опубликованные тесты появятся здесь автоматически.</div></div></div></div>';
+        html += '<div class="ts-empty-state"><div class="ts-empty-state-title">Публичных тестов пока нет</div><div class="ts-empty-state-text">Опубликованные тесты появятся здесь автоматически.</div></div>';
+        html += renderTabSectionEnd();
         container.innerHTML = html;
         return;
     }
@@ -864,30 +855,30 @@ function renderPublicTests(tests) {
     html += '<div class="list-group tests-list-improved">';
 
     tests.forEach(test => {
-        const testUrl = test.test_url || '#';
+        const testUrl = escapeHtml(test.test_url || '#');
         const questionsText = test.questions_count === 1 ? 'вопрос' : test.questions_count < 5 ? 'вопроса' : 'вопросов';
 
         html += `<div class="list-group-item test-list-item-minimal">
             <div class="d-flex justify-content-between align-items-start flex-wrap">
                 <div class="flex-grow-1 mb-2 mb-md-0">
-                    <h5 class="mb-1">
-                        <a href="${escapeHtml(testUrl)}" class="text-decoration-none">${escapeHtml(test.title)}</a>
-                    </h5>
-                    ${test.description ? `<p class="mb-1 text-muted small">${escapeHtml(test.description)}</p>` : ''}
-                    <div class="text-muted small mt-2">
-                        <span class="me-3"><i class="bi bi-patch-question"></i> ${test.questions_count} ${questionsText}</span>
-                        ${test.creator_name ? `<span class="me-3"><i class="bi bi-person"></i> ${escapeHtml(test.creator_name)}</span>` : ''}
+                    <h6 class="mb-2 test-title-clickable" onclick="window.location.href='${testUrl}'">${escapeHtml(test.title)}</h6>
+                    ${test.description ? `<p class="mb-2 text-muted small">${escapeHtml(test.description)}</p>` : ''}
+                    <div class="test-meta-info">
+                        <span class="badge text-bg-success">Публичный</span>
+                        <span class="text-muted"><i class="bi bi-patch-question"></i> ${test.questions_count} ${questionsText}</span>
+                        ${test.creator_name ? `<span class="text-muted"><i class="bi bi-person"></i> ${escapeHtml(test.creator_name)}</span>` : ''}
                     </div>
                 </div>
-                <div>
-                    <a href="${escapeHtml(testUrl)}" class="ts-btn ts-btn-success btn-test-action">
-                        <i class="bi bi-play-fill"></i> Пройти тест
+                <div class="test-actions-compact">
+                    <a href="${testUrl}" class="ts-btn ts-btn-success btn-test-action">
+                        <i class="bi bi-play-fill"></i>
                     </a>
                 </div>
             </div>
         </div>`;
     });
 
-    html += '</div></div></div>';
+    html += '</div>';
+    html += renderTabSectionEnd();
     container.innerHTML = html;
 }
