@@ -468,6 +468,7 @@ $output .= '<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>';
 
 $modx->regClientScript('/assets/components/testsystem/js/csrf-helper.js');
 $modx->regClientScript('/assets/components/testsystem/js/question-list-shared.js');
+$modx->regClientScript('/assets/components/testsystem/js/test-settings-shared.js');
 $modx->regClientScript('/assets/components/testsystem/js/test-cards.js');
 $modx->regClientScript('/assets/components/testsystem/js/tests-search.js');
 
