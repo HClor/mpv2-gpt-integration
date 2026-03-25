@@ -374,8 +374,21 @@ $registerUser = static function (modX $modx, array $post) use ($authLog): array 
         }
         $authLog($modx, 'REGISTER STEP 6: user saved id=' . (int)$user->id, modX::LOG_LEVEL_INFO);
 
-        // Compatibility mode: skip auto-membership to avoid modAccess/modUserGroup failures on some legacy installs.
-        $authLog($modx, 'REGISTER STEP 7: skip LMS Students auto-membership for compatibility', modX::LOG_LEVEL_WARN);
+        $studentsGroupName = (string)Config::getGroup('students', 'LMS Students');
+        if ($studentsGroupName === '') {
+            throw new RuntimeException('students group is not configured');
+        }
+
+        $studentsGroup = $modx->getObject('modUserGroup', ['name' => $studentsGroupName]);
+        if (!$studentsGroup) {
+            throw new RuntimeException('students group not found: ' . $studentsGroupName);
+        }
+
+        $joined = $user->joinGroup((int)$studentsGroup->get('id'), 1);
+        if (!$joined) {
+            throw new RuntimeException('failed to add user to students group');
+        }
+        $authLog($modx, 'REGISTER STEP 7: added to students group=' . $studentsGroupName, modX::LOG_LEVEL_INFO);
 
         $modx->commit();
         $authLog($modx, 'REGISTER STEP 8: transaction commit', modX::LOG_LEVEL_INFO);
