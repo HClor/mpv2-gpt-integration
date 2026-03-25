@@ -448,7 +448,11 @@ $activateUserByToken = static function (modX $modx, string $activationToken): ar
     $user->set('active', 1);
 
     if ($profile->save() && $user->save()) {
-        $user->addSessionContext('web');
+        // Привязываем активированного пользователя к текущему запросу
+        // и открываем web-контекст, чтобы на следующем запросе хедер/виджеты
+        // корректно определили авторизацию.
+        $modx->user = $user;
+        $modx->user->addSessionContext('web');
         $success[] = '✅ Email подтверждён. Аккаунт активирован, вы автоматически вошли в систему.';
     } else {
         $errors[] = 'Ошибка активации аккаунта. Попробуйте запросить письмо повторно.';
@@ -539,10 +543,29 @@ $loginUser = static function (modX $modx, array $post): array {
 
 // ====================== ОБРАБОТКА ДЕЙСТВИЙ ======================
 
+$isWebAuthenticated = $modx->user instanceof modUser
+    && ($modx->user->hasSessionContext('web') || $modx->user->isAuthenticated('web'));
+
 if ($mode === 'activate') {
     $result = $activateUserByToken($modx, trim((string)($_GET['token'] ?? '')));
     $errors = array_merge($errors, $result['errors']);
     $success = array_merge($success, $result['success']);
+
+    // PRG: после авто-логина по ссылке активации делаем redirect,
+    // чтобы на новом запросе корректно отрисовался хедер авторизованного пользователя.
+    $isWebAuthenticated = $modx->user instanceof modUser
+        && ($modx->user->hasSessionContext('web') || $modx->user->isAuthenticated('web'));
+
+    if (empty($result['errors']) && !empty($result['success']) && $isWebAuthenticated) {
+        $_SESSION['auth_handler_flash'] = [
+            'errors' => [],
+            'success' => $result['success']
+        ];
+        $redirectUrl = $modx->makeUrl((int)$modx->resource->id);
+        $modx->sendRedirect($redirectUrl);
+        exit;
+    }
+
     $mode = 'login';
 }
 
@@ -729,6 +752,15 @@ foreach ($errors as $error) {
 }
 foreach ($success as $msg) {
     $output .= '<div class="alert alert-success">' . htmlspecialchars((string)$msg, ENT_QUOTES, 'UTF-8') . '</div>';
+}
+
+if ($isWebAuthenticated) {
+    $testsPageId = (int)$modx->getOption('lms.tests_root', null, 35);
+    $testsUrl = $modx->makeUrl($testsPageId, 'web', [], 'full');
+    $output .= '<div class="alert alert-info">Вы уже вошли в систему.</div>';
+    $output .= '<a href="' . htmlspecialchars($testsUrl, ENT_QUOTES, 'UTF-8') . '" class="btn btn-primary">Перейти к тестам</a>';
+    $output .= '</div>';
+    return $output;
 }
 
 // Форма установки нового пароля
