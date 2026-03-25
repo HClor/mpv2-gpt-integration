@@ -756,13 +756,13 @@ if ($isGuestRunner) {
     $output .= '<form method="POST" action="' . htmlspecialchars($authUrl, ENT_QUOTES, 'UTF-8') . '" class="ts-guest-register-form">';
     $output .= CsrfProtection::getTokenField();
     $output .= '<input type="hidden" name="mode" value="register">';
-    $output .= '<div class="row g-2 align-items-end">';
-    $output .= '<div class="col-md-8">';
+    $output .= '<div class="ts-guest-register-form-row">';
+    $output .= '<div class="ts-guest-register-email-wrap">';
     $output .= '<label class="form-label mb-1" for="guest-register-email">Email</label>';
     $output .= '<input id="guest-register-email" type="email" name="email" class="form-control" required placeholder="you@example.com">';
     $output .= '</div>';
-    $output .= '<div class="col-md-4">';
-    $output .= '<button type="submit" class="ts-btn ts-btn-primary w-100">Получить ссылку</button>';
+    $output .= '<div class="ts-guest-register-button-wrap">';
+    $output .= '<button type="submit" class="ts-btn ts-btn-primary ts-btn-sm ts-guest-register-submit">Зарегистрироваться</button>';
     $output .= '</div>';
     $output .= '</div>';
     $output .= '</form>';
@@ -771,7 +771,7 @@ if ($isGuestRunner) {
 }
 
 $retryUrl = $modx->makeUrl($modx->resource->get('id'), 'web', '', 'full');
-$output .= '<a href="' . htmlspecialchars($retryUrl, ENT_QUOTES, 'UTF-8') . '" class="ts-btn ts-btn-primary mt-3 me-2">Пройти еще раз</a>';
+$output .= '<a href="' . htmlspecialchars($retryUrl, ENT_QUOTES, 'UTF-8') . '" class="ts-btn ts-btn-primary mt-3 me-2">Пройти еще раз с другими вопросами</a>';
 
 // Страница со списком тестов - жёсткий URL /tests (id 35)
 $output .= '<a href="/tests" class="ts-btn ts-btn-secondary mt-3">К списку тестов</a>';

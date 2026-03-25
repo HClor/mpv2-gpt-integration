@@ -2415,7 +2415,7 @@ async function addFavoritesViewToggle(questionId) {
                                 : '<span class="text-danger">❌ Тест не пройден. Попробуйте еще раз.</span>';
                         }
                     } else {
-                        messageElement.innerHTML = '<span class="text-info">📚 Режим обучения завершен</span>';
+                        messageElement.innerHTML = '<span class="text-info"><i class="bi bi-journal-check me-1"></i>Тренировка завершена</span>';
                     }
                 }
 
