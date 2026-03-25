@@ -35,6 +35,7 @@
     const container = document.getElementById("test-container");
     const testId = container ? container.dataset.testId : null;
     const importQuestionsUrl = container ? (container.dataset.importUrl || '') : '';
+    const isGuestRunner = container ? container.dataset.isGuestRunner === '1' : false;
     canEdit = container ? container.dataset.canEdit === '1' : false;
     canDelete = container ? container.dataset.canDelete === '1' : false;
 
@@ -1380,7 +1381,7 @@ async function addFavoritesViewToggle(questionId) {
                 const mode = this.dataset.mode || "training";
                 let questionsCount = null;
 
-                if (mode === "training" && !isKnowledgeArea) {
+                if (mode === "training" && !isKnowledgeArea && !isGuestRunner) {
                     const input = document.getElementById("training-questions-count");
                     if (input) {
                         questionsCount = parseInt(input.value, 10);
@@ -1545,7 +1546,9 @@ async function addFavoritesViewToggle(questionId) {
                 console.log("Starting regular test session...");
                 data.test_id = testId;
                 
-                if (questionsCount !== null) {
+                if (isGuestRunner) {
+                    data.questions_count = 10;
+                } else if (questionsCount !== null) {
                     data.questions_count = questionsCount;
                 }
                 
@@ -2407,6 +2410,11 @@ async function addFavoritesViewToggle(questionId) {
                     <p><strong>Неправильных ответов:</strong> ${data.incorrect_count}</p>
                     <p><strong>Проходной балл:</strong> ${data.pass_score}%</p>
                 `;
+
+                const guestCta = document.getElementById("guest-register-cta");
+                if (guestCta) {
+                    guestCta.style.display = isGuestRunner ? "block" : "none";
+                }
             } else {
                 console.error("❌ finishTest failed:", result.message);
             }
@@ -2497,6 +2505,18 @@ async function addFavoritesViewToggle(questionId) {
                                             Тест будет отображаться в разделе "Обучение" как учебный материал для самостоятельного изучения
                                         </div>
                                     </div>
+
+                                    <div class="mt-3 form-check">
+                                        <input type="checkbox" class="form-check-input"
+                                               id="test-allow-guest-pass" value="1"
+                                               ${test.allow_guest_pass == 1 ? "checked" : ""}>
+                                        <label class="form-check-label" for="test-allow-guest-pass">
+                                            <strong>👤 Разрешить гостевое прохождение</strong>
+                                        </label>
+                                        <div class="form-text">
+                                            Для неавторизованных пользователей будет доступен запуск только с 10 вопросами.
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -2545,6 +2565,7 @@ async function addFavoritesViewToggle(questionId) {
         const description = document.getElementById("test-description").value.trim();
         const isActive = document.getElementById("test-is-active").checked ? 1 : 0;
         const isLearningMaterial = document.getElementById("test-is-learning").checked ? 1 : 0;
+        const allowGuestPass = document.getElementById("test-allow-guest-pass").checked ? 1 : 0;
         
         if (!title) {
             alert("Название теста не может быть пустым");
@@ -2557,7 +2578,8 @@ async function addFavoritesViewToggle(questionId) {
                 title: title,
                 description: description,
                 is_active: isActive,
-                is_learning_material: isLearningMaterial
+                is_learning_material: isLearningMaterial,
+                allow_guest_pass: allowGuestPass
             });
             
             if (result.success) {
