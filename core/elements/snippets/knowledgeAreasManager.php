@@ -35,6 +35,7 @@ $manageAreasPageUrl = rtrim($modx->makeUrl($manageAreasPageId, 'web', []), '/');
 
 $assetsUrl = rtrim($modx->getOption('assets_url', null, MODX_ASSETS_URL), '/') . '/';
 $cssPath = $assetsUrl . 'components/testsystem/css/tsrunner.css';
+$csrfHelperJsPath = $assetsUrl . 'components/testsystem/js/csrf-helper.js';
 $jsPath = $assetsUrl . 'components/testsystem/js/knowledge-areas.js';
 
 // CSRF Protection: добавляем meta тег с токеном для JavaScript
@@ -242,6 +243,9 @@ $output .= '
         </div>
     </div>
 </div>';
+
+// Подключаем общий CSRF helper (должен быть раньше модуля, использующего apiCall)
+$output .= '<script src="' . htmlspecialchars($csrfHelperJsPath, ENT_QUOTES, 'UTF-8') . '"></script>';
 
 // Подключаем JS
 $output .= '<script src="' . htmlspecialchars($jsPath, ENT_QUOTES, 'UTF-8') . '"></script>';
