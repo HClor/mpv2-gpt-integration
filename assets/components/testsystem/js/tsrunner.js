@@ -5,6 +5,7 @@
     const API_URL = "/assets/components/testsystem/ajax/testsystem.php";
     
     let currentSessionId = null;
+    let guestSessionToken = null;
     let currentQuestionId = null;
     let currentQuestionType = null;
     let totalQuestions = 0;
@@ -31,10 +32,12 @@
     const learningPathId = urlParams.get('path');
     const learningPathStepId = urlParams.get('step');
     const requiresExamPassForPath = urlParams.get('lp_exam_required') === '1';
+    guestSessionToken = urlParams.get('gst');
 
     const container = document.getElementById("test-container");
     const testId = container ? container.dataset.testId : null;
     const importQuestionsUrl = container ? (container.dataset.importUrl || '') : '';
+    const isGuestRunner = container ? container.dataset.isGuestRunner === '1' : false;
     canEdit = container ? container.dataset.canEdit === '1' : false;
     canDelete = container ? container.dataset.canDelete === '1' : false;
 
@@ -134,17 +137,24 @@
      * Продолжить существующую сессию теста
      * Вызывается когда пользователь переходит по прямой ссылке с sessionId
      */
-    window.continueExistingSession = async function(sessionId, mode) {
+    window.continueExistingSession = async function(sessionId, mode, guestToken) {
         console.log("=== continueExistingSession CALLED ===");
         console.log("Session ID:", sessionId);
         console.log("Mode:", mode);
 
         currentSessionId = sessionId;
         testMode = mode;
+        if (guestToken) {
+            guestSessionToken = guestToken;
+        }
 
         try {
             // Получаем информацию о сессии
-            const result = await apiCall("getSessionInfo", { session_id: sessionId });
+            const sessionInfoPayload = { session_id: sessionId };
+            if (guestSessionToken) {
+                sessionInfoPayload.guest_token = guestSessionToken;
+            }
+            const result = await apiCall("getSessionInfo", sessionInfoPayload);
 
             if (result.success) {
                 totalQuestions = result.data.total_questions || 0;
@@ -1380,7 +1390,7 @@ async function addFavoritesViewToggle(questionId) {
                 const mode = this.dataset.mode || "training";
                 let questionsCount = null;
 
-                if (mode === "training" && !isKnowledgeArea) {
+                if (mode === "training" && !isKnowledgeArea && !isGuestRunner) {
                     const input = document.getElementById("training-questions-count");
                     if (input) {
                         questionsCount = parseInt(input.value, 10);
@@ -1545,7 +1555,9 @@ async function addFavoritesViewToggle(questionId) {
                 console.log("Starting regular test session...");
                 data.test_id = testId;
                 
-                if (questionsCount !== null) {
+                if (isGuestRunner) {
+                    data.questions_count = 10;
+                } else if (questionsCount !== null) {
                     data.questions_count = questionsCount;
                 }
                 
@@ -1555,6 +1567,9 @@ async function addFavoritesViewToggle(questionId) {
                 
                 if (result.success) {
                     currentSessionId = result.data.session_id;
+                    if (result.data.guest_session_token) {
+                        guestSessionToken = result.data.guest_session_token;
+                    }
                     totalQuestions = result.data.total_questions;
                     currentQuestionNumber = 0;
                     
@@ -1594,7 +1609,8 @@ async function addFavoritesViewToggle(questionId) {
         console.log("📞 loadNextQuestion() called");
         try {
             const result = await apiCall("getNextQuestion", {
-                session_id: currentSessionId
+                session_id: currentSessionId,
+                guest_token: guestSessionToken || undefined
             });
 
             console.log("📥 getNextQuestion response:", result);
@@ -2218,7 +2234,8 @@ async function addFavoritesViewToggle(questionId) {
             const result = await apiCall("submitAnswer", {
                 session_id: currentSessionId,
                 question_id: currentQuestionId,
-                answer_ids: selectedAnswers
+                answer_ids: selectedAnswers,
+                guest_token: guestSessionToken || undefined
             });
 
             if (result.success) {
@@ -2366,7 +2383,8 @@ async function addFavoritesViewToggle(questionId) {
         try {
             console.log("📞 Calling API: finishTest");
             const result = await apiCall("finishTest", {
-                session_id: currentSessionId
+                session_id: currentSessionId,
+                guest_token: guestSessionToken || undefined
             });
 
             console.log("📥 finishTest API response:", result);
@@ -2407,6 +2425,11 @@ async function addFavoritesViewToggle(questionId) {
                     <p><strong>Неправильных ответов:</strong> ${data.incorrect_count}</p>
                     <p><strong>Проходной балл:</strong> ${data.pass_score}%</p>
                 `;
+
+                const guestCta = document.getElementById("guest-register-cta");
+                if (guestCta) {
+                    guestCta.style.display = isGuestRunner ? "block" : "none";
+                }
             } else {
                 console.error("❌ finishTest failed:", result.message);
             }
@@ -2497,6 +2520,18 @@ async function addFavoritesViewToggle(questionId) {
                                             Тест будет отображаться в разделе "Обучение" как учебный материал для самостоятельного изучения
                                         </div>
                                     </div>
+
+                                    <div class="mt-3 form-check">
+                                        <input type="checkbox" class="form-check-input"
+                                               id="test-allow-guest-pass" value="1"
+                                               ${test.allow_guest_pass == 1 ? "checked" : ""}>
+                                        <label class="form-check-label" for="test-allow-guest-pass">
+                                            <strong>👤 Разрешить гостевое прохождение</strong>
+                                        </label>
+                                        <div class="form-text">
+                                            Для неавторизованных пользователей будет доступен запуск только с 10 вопросами.
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -2545,6 +2580,7 @@ async function addFavoritesViewToggle(questionId) {
         const description = document.getElementById("test-description").value.trim();
         const isActive = document.getElementById("test-is-active").checked ? 1 : 0;
         const isLearningMaterial = document.getElementById("test-is-learning").checked ? 1 : 0;
+        const allowGuestPass = document.getElementById("test-allow-guest-pass").checked ? 1 : 0;
         
         if (!title) {
             alert("Название теста не может быть пустым");
@@ -2557,7 +2593,8 @@ async function addFavoritesViewToggle(questionId) {
                 title: title,
                 description: description,
                 is_active: isActive,
-                is_learning_material: isLearningMaterial
+                is_learning_material: isLearningMaterial,
+                allow_guest_pass: allowGuestPass
             });
             
             if (result.success) {
@@ -3314,7 +3351,11 @@ async function addFavoritesViewToggle(questionId) {
 
             if (result.success) {
                 // Редирект на страницу теста с sessionId
-                window.location.href = '/test-run?sessionId=' + result.data.session_id;
+                let redirectUrl = '/test-run?sessionId=' + result.data.session_id;
+                if (result.data.guest_session_token) {
+                    redirectUrl += '&gst=' + encodeURIComponent(result.data.guest_session_token);
+                }
+                window.location.href = redirectUrl;
             } else {
                 document.body.removeChild(overlay);
                 alert('Ошибка при запуске теста: ' + (result.message || 'Неизвестная ошибка'));

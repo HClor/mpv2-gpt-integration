@@ -77,6 +77,10 @@ class SessionService
      */
     private static function closeUserActiveSessions($modx, $prefix, $testId, $userId)
     {
+        if ((int)$userId <= 0) {
+            return;
+        }
+
         $stmt = $modx->prepare("
             UPDATE {$prefix}test_sessions
             SET status = 'abandoned'

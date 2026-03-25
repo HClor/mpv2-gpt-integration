@@ -11,6 +11,7 @@
 
 class SessionController extends BaseController
 {
+    private const GUEST_TOKEN_SESSION_KEY = 'ts_guest_session_tokens';
     /**
      * Список доступных действий
      */
@@ -79,11 +80,37 @@ class SessionController extends BaseController
             ? ValidationHelper::requireInt($data, 'questions_count', null, false, 1)
             : null;
 
-        $this->requireAuth();
-        $userId = $this->getCurrentUserId();
+        $stmt = $this->modx->prepare("
+            SELECT allow_guest_pass
+            FROM {$this->prefix}test_tests
+            WHERE id = ? AND is_active = 1
+            LIMIT 1
+        ");
+        $stmt->execute([$testId]);
+        $test = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$test) {
+            throw new Exception('Test not found');
+        }
+
+        $isAuthenticated = $this->modx->user->hasSessionContext('web');
+        $allowGuestPass = (int)($test['allow_guest_pass'] ?? 0) === 1;
+        $isGuestSession = !$isAuthenticated && $allowGuestPass;
+
+        if (!$isAuthenticated && !$allowGuestPass) {
+            $this->requireAuth();
+        }
+
+        $userId = $isAuthenticated ? $this->getCurrentUserId() : 0;
+        if ($isGuestSession) {
+            $requestedCount = 10;
+        }
 
         // Используем SessionService
         $sessionData = SessionService::startSession($this->modx, $testId, $userId, $mode, $requestedCount);
+        $sessionData['is_guest_session'] = $isGuestSession;
+        if ($isGuestSession) {
+            $sessionData['guest_session_token'] = $this->issueGuestSessionToken((int)$sessionData['session_id']);
+        }
 
         return $this->success($sessionData);
     }
@@ -112,7 +139,7 @@ class SessionController extends BaseController
 
         // Получаем сессию
         $stmt = $this->modx->prepare("
-            SELECT s.test_id, s.mode, s.status, s.question_order,
+            SELECT s.test_id, s.mode, s.status, s.question_order, s.user_id,
                    COALESCE(t.randomize_answers, 1) as randomize_answers
             FROM {$this->prefix}test_sessions s
             LEFT JOIN {$this->prefix}test_tests t ON t.id = s.test_id
@@ -124,6 +151,7 @@ class SessionController extends BaseController
         if (!$session || $session['status'] !== 'active') {
             throw new Exception('Invalid or completed session');
         }
+        $this->assertGuestSessionTokenIfNeeded($sessionId, (int)$session['user_id'], $data);
 
         $questionOrder = json_decode($session['question_order'], true);
 
@@ -237,6 +265,11 @@ class SessionController extends BaseController
         $questionId = ValidationHelper::requireInt($data, 'question_id', 'Question ID required');
         $answerIds = $data['answer_ids'] ?? [];
 
+        $stmt = $this->modx->prepare("SELECT user_id FROM {$this->prefix}test_sessions WHERE id = ?");
+        $stmt->execute([$sessionId]);
+        $sessionUserId = (int)$stmt->fetchColumn();
+        $this->assertGuestSessionTokenIfNeeded($sessionId, $sessionUserId, $data);
+
         // Используем SessionService
         $responseData = SessionService::submitAnswer($this->modx, $sessionId, $questionId, $answerIds);
 
@@ -265,6 +298,7 @@ class SessionController extends BaseController
         if (!$session) {
             throw new Exception('Session not found');
         }
+        $this->assertGuestSessionTokenIfNeeded($sessionId, (int)$session['user_id'], $data);
 
         // Подсчитываем статистику
         $stmt = $this->modx->prepare("
@@ -297,15 +331,18 @@ class SessionController extends BaseController
         $rowCount = $stmt->rowCount();
         error_log("UPDATE executed: " . ($result ? "SUCCESS" : "FAILED") . ", rows affected: $rowCount");
 
-        // Обновляем статистику по категориям
-        $this->updateCategoryStats($session['test_id'], $session['user_id'], $score, $passed);
+        $isGuestSession = (int)$session['user_id'] <= 0;
+        if (!$isGuestSession) {
+            // Обновляем статистику по категориям
+            $this->updateCategoryStats($session['test_id'], $session['user_id'], $score, $passed);
 
-        // Начисляем XP (раньше это делал триггер)
-        $this->awardXpForCompletion($session['user_id'], $sessionId, $score);
+            // Начисляем XP (раньше это делал триггер)
+            $this->awardXpForCompletion($session['user_id'], $sessionId, $score);
 
-        // Выдаём сертификат если тест пройден
-        if ($passed) {
-            $this->issueCertificateForTest($session['user_id'], $session['test_id'], $sessionId, $score);
+            // Выдаём сертификат если тест пройден
+            if ($passed) {
+                $this->issueCertificateForTest($session['user_id'], $session['test_id'], $sessionId, $score);
+            }
         }
 
         return $this->success([
@@ -314,7 +351,8 @@ class SessionController extends BaseController
             'correct_count' => $correct,
             'incorrect_count' => $total - $correct,
             'total_count' => $total,
-            'pass_score' => (int)$session['pass_score']
+            'pass_score' => (int)$session['pass_score'],
+            'is_guest_session' => $isGuestSession
         ]);
     }
 
@@ -478,9 +516,6 @@ class SessionController extends BaseController
     {
         $sessionId = ValidationHelper::requireInt($data, 'session_id', 'Session ID required');
 
-        $this->requireAuth();
-        $userId = $this->getCurrentUserId();
-
         // Получаем данные сессии через raw SQL (xPDO-модель TestSession не зарегистрирована)
         $stmt = $this->modx->prepare("
             SELECT s.id, s.user_id, s.test_id, s.mode, s.status, s.question_order,
@@ -500,9 +535,19 @@ class SessionController extends BaseController
             return $this->error('Session not found', 404);
         }
 
-        // Проверяем права доступа
-        if ((int)$session['user_id'] !== $userId) {
-            return $this->error('Access denied to this session', 403);
+        $sessionUserId = (int)$session['user_id'];
+        $isGuestSession = $sessionUserId <= 0;
+
+        // Для пользовательских сессий сохраняем старое поведение с обязательной авторизацией
+        if (!$isGuestSession) {
+            $this->requireAuth();
+            $userId = $this->getCurrentUserId();
+
+            if ($sessionUserId !== $userId) {
+                return $this->error('Access denied to this session', 403);
+            }
+        } else {
+            $this->assertGuestSessionTokenIfNeeded($sessionId, $sessionUserId, $data);
         }
 
         if (!$session['test_title']) {
@@ -530,7 +575,41 @@ class SessionController extends BaseController
             'status' => $session['status'],
             'total_questions' => $totalQuestions,
             'current_question_number' => $currentQuestionNumber,
-            'test_title' => $session['test_title']
+            'test_title' => $session['test_title'],
+            'is_guest_session' => $isGuestSession
         ));
+    }
+
+    private function issueGuestSessionToken($sessionId)
+    {
+        $this->modx->getRequest();
+        if (!isset($_SESSION[self::GUEST_TOKEN_SESSION_KEY]) || !is_array($_SESSION[self::GUEST_TOKEN_SESSION_KEY])) {
+            $_SESSION[self::GUEST_TOKEN_SESSION_KEY] = [];
+        }
+
+        $token = bin2hex(random_bytes(16));
+        $_SESSION[self::GUEST_TOKEN_SESSION_KEY][$sessionId] = $token;
+
+        return $token;
+    }
+
+    private function assertGuestSessionTokenIfNeeded($sessionId, $sessionUserId, $data)
+    {
+        if ((int)$sessionUserId > 0) {
+            return;
+        }
+
+        $providedToken = '';
+        if (isset($data['guest_token'])) {
+            $providedToken = (string)$data['guest_token'];
+        } elseif (isset($_GET['gst'])) {
+            $providedToken = (string)$_GET['gst'];
+        }
+
+        $this->modx->getRequest();
+        $expectedToken = $_SESSION[self::GUEST_TOKEN_SESSION_KEY][$sessionId] ?? '';
+        if ($expectedToken === '' || $providedToken === '' || !hash_equals((string)$expectedToken, $providedToken)) {
+            throw new Exception('Invalid guest session token');
+        }
     }
 }
