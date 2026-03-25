@@ -79,11 +79,34 @@ class SessionController extends BaseController
             ? ValidationHelper::requireInt($data, 'questions_count', null, false, 1)
             : null;
 
-        $this->requireAuth();
-        $userId = $this->getCurrentUserId();
+        $stmt = $this->modx->prepare("
+            SELECT allow_guest_pass
+            FROM {$this->prefix}test_tests
+            WHERE id = ? AND is_active = 1
+            LIMIT 1
+        ");
+        $stmt->execute([$testId]);
+        $test = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$test) {
+            throw new Exception('Test not found');
+        }
+
+        $isAuthenticated = $this->modx->user->hasSessionContext('web');
+        $allowGuestPass = (int)($test['allow_guest_pass'] ?? 0) === 1;
+        $isGuestSession = !$isAuthenticated && $allowGuestPass;
+
+        if (!$isAuthenticated && !$allowGuestPass) {
+            $this->requireAuth();
+        }
+
+        $userId = $isAuthenticated ? $this->getCurrentUserId() : 0;
+        if ($isGuestSession) {
+            $requestedCount = 10;
+        }
 
         // Используем SessionService
         $sessionData = SessionService::startSession($this->modx, $testId, $userId, $mode, $requestedCount);
+        $sessionData['is_guest_session'] = $isGuestSession;
 
         return $this->success($sessionData);
     }
@@ -297,15 +320,18 @@ class SessionController extends BaseController
         $rowCount = $stmt->rowCount();
         error_log("UPDATE executed: " . ($result ? "SUCCESS" : "FAILED") . ", rows affected: $rowCount");
 
-        // Обновляем статистику по категориям
-        $this->updateCategoryStats($session['test_id'], $session['user_id'], $score, $passed);
+        $isGuestSession = (int)$session['user_id'] <= 0;
+        if (!$isGuestSession) {
+            // Обновляем статистику по категориям
+            $this->updateCategoryStats($session['test_id'], $session['user_id'], $score, $passed);
 
-        // Начисляем XP (раньше это делал триггер)
-        $this->awardXpForCompletion($session['user_id'], $sessionId, $score);
+            // Начисляем XP (раньше это делал триггер)
+            $this->awardXpForCompletion($session['user_id'], $sessionId, $score);
 
-        // Выдаём сертификат если тест пройден
-        if ($passed) {
-            $this->issueCertificateForTest($session['user_id'], $session['test_id'], $sessionId, $score);
+            // Выдаём сертификат если тест пройден
+            if ($passed) {
+                $this->issueCertificateForTest($session['user_id'], $session['test_id'], $sessionId, $score);
+            }
         }
 
         return $this->success([
@@ -314,7 +340,8 @@ class SessionController extends BaseController
             'correct_count' => $correct,
             'incorrect_count' => $total - $correct,
             'total_count' => $total,
-            'pass_score' => (int)$session['pass_score']
+            'pass_score' => (int)$session['pass_score'],
+            'is_guest_session' => $isGuestSession
         ]);
     }
 
