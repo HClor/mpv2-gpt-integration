@@ -2341,6 +2341,7 @@ img[style*="width"] {
     gap: 0.5rem;
     flex-wrap: nowrap;
     align-items: flex-start;
+    flex: 0 0 auto;
 }
 
 .test-actions-compact .btn-test-action {
@@ -2719,8 +2720,22 @@ img[style*="width"] {
 }
 
 .test-actions-compact .btn-test-action {
-    min-width: 36px;
-    padding: 0.4rem 0.55rem;
+    min-width: 32px;
+    min-height: 32px;
+    padding: 0.3rem 0.45rem;
+    font-size: 0.9rem;
+}
+
+.test-actions-compact .btn-test-action i {
+    font-size: 0.95rem;
+}
+
+.tests-list-improved .test-list-item-minimal > .d-flex {
+    flex-wrap: nowrap !important;
+}
+
+.tests-list-improved .test-list-item-minimal .flex-grow-1 {
+    min-width: 0;
 }
 
 .ts-tests-filter-group {
@@ -2743,5 +2758,11 @@ img[style*="width"] {
 
     .ts-mytests-panel-controls {
         justify-content: flex-start;
+    }
+}
+
+@media (max-width: 767px) {
+    .tests-list-improved .test-list-item-minimal > .d-flex {
+        flex-wrap: wrap !important;
     }
 }
