@@ -67,7 +67,8 @@ if ((int)$debugValue !== 1 && isset($_SERVER['REQUEST_URI']) && strpos((string)$
 
 $context = [
     'section' => (string)$valueFromSources('section', ''),
-    'mode' => (string)$valueFromSources('mode', ''),
+    // ВАЖНО: поддерживаем оба параметра: mode и view (например: ?view=learning)
+    'mode' => (string)$valueFromSources('mode', $valueFromSources('view', '')),
     'action' => (string)$valueFromSources('action', ''),
     'category_id' => (int)$valueFromSources('category_id', $valueFromSources('category', 0)),
     'test_id' => (int)$valueFromSources('test_id', $valueFromSources('testId', 0)),
