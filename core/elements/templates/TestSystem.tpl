@@ -9,12 +9,8 @@
 
     <main class="py-4">
         <div class="container">
-            <!-- Хлебные крошки -->
-            {$_modx->runSnippet('pdoCrumbs', [
-                'showHome' => 1,
-                'showCurrent' => 1,
-                'tplWrapper' => '@INLINE <nav aria-label="breadcrumb"><ol class="breadcrumb">[[+output]]</ol></nav>'
-            ])}
+            <!-- LMS breadcrumbs: uncached, чтобы учитывать текущий GET/action контекст -->
+            [[!lmsBreadcrumbs]]
 
             <!-- Основной контент -->
             {$_modx->resource.content}
