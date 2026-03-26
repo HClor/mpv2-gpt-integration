@@ -399,15 +399,11 @@ class LmsBreadcrumbsBuilder
 
     private function getKnowledgeAreaRootUrl(): ?string
     {
-        if ($this->modx->resource instanceof modResource) {
-            $resourceAlias = (string)$this->modx->resource->get('alias');
-            if (in_array($resourceAlias, ['oblast-znanij', 'knowledge-area', 'moi-oblasti-znanij'], true)) {
-                $resourceId = (int)$this->modx->resource->get('id');
-                return $this->modx->makeUrl($resourceId, 'web', [], 'full');
-            }
-        }
-
         $pageId = Config::getPageId('manage_areas', 0);
+        if ($pageId <= 0) {
+            $listPage = $this->modx->getObject('modResource', ['alias' => 'moi-oblasti-znanij']);
+            $pageId = $listPage ? (int)$listPage->get('id') : 0;
+        }
         if ($pageId <= 0) {
             $pageId = Config::getPageId('knowledge_area', 0);
         }
