@@ -14,14 +14,22 @@ $categoryId = (int)($_GET['category'] ?? 0);
 $prefix = $modx->getOption('table_prefix');
 $tableTests = $prefix . 'test_tests';
 $tableQuestions = $prefix . 'test_questions';
+$tableCategories = $prefix . 'test_categories';
 
-// ИСПРАВЛЕНИЕ: Получаем тесты с вопросами is_learning = 1 (test_id + resource_id)
+// Получаем тесты с обучающими вопросами
+// ВАЖНО: не ограничиваемся resource_id, чтобы показывать тесты,
+// созданные только в интерфейсе categoriesAndTests (без привязанной страницы-ресурса).
 $stmt = $modx->prepare("
-    SELECT DISTINCT t.id AS test_id, t.resource_id, t.title
+    SELECT DISTINCT
+        t.id AS test_id,
+        t.resource_id,
+        t.title,
+        t.description,
+        c.name AS category_name
     FROM {$tableTests} t
     INNER JOIN {$tableQuestions} q ON q.test_id = t.id
+    LEFT JOIN {$tableCategories} c ON c.id = t.category_id
     WHERE t.is_active = 1
-    AND t.resource_id IS NOT NULL
     AND q.is_learning = 1
     AND q.published = 1
 ");
@@ -38,15 +46,15 @@ if (empty($learningTests)) {
 // Начинаем вывод
 $output = '';
 
-// Группируем по родителям (категориям)
+// Группируем по категориям
 $byParent = [];
 foreach ($learningTests as $test) {
-    $res = $modx->getObject('modResource', $test['resource_id']);
-    if (!$res) continue;
+    $res = null;
+    if (!empty($test['resource_id'])) {
+        $res = $modx->getObject('modResource', (int)$test['resource_id']);
+    }
 
-    $parentId = $res->get('parent');
-    $parent = $modx->getObject('modResource', $parentId);
-    $parentName = $parent ? $parent->get('pagetitle') : 'Без категории';
+    $parentName = !empty($test['category_name']) ? $test['category_name'] : 'Без категории';
 
     if (!isset($byParent[$parentName])) {
         $byParent[$parentName] = ['resources' => []];
@@ -69,8 +77,8 @@ foreach ($learningTests as $test) {
     $byParent[$parentName]['resources'][] = [
         'test_id' => $test['test_id'],
         'resource_id' => $test['resource_id'],
-        'title' => $test['title'] ?: $res->get('pagetitle'),
-        'description' => $res->get('introtext'),
+        'title' => $test['title'] ?: ($res ? $res->get('pagetitle') : ''),
+        'description' => $test['description'] ?: ($res ? $res->get('introtext') : ''),
         'questions_count' => $questionsCount
     ];
 }

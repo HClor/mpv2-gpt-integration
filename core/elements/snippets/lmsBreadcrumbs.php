@@ -122,13 +122,19 @@ $output .= '</nav>';
 
 if (!empty($context['debug'])) {
     $diagnostics = $builder->getDiagnostics();
+    $output .= '<details class="ts-alert ts-alert-info mt-2"><summary>LMS Breadcrumbs DIAG</summary>';
+    $output .= '<div class="small text-muted mb-2">Добавьте <code>?lms_bc_diag=1</code> в URL для диагностики.</div>';
+    $output .= '<div class="mb-2"><strong>Context:</strong><pre class="mb-0"><code>' . htmlspecialchars(json_encode($context, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8') . '</code></pre></div>';
+    $output .= '<div class="mb-2"><strong>GET:</strong><pre class="mb-0"><code>' . htmlspecialchars(json_encode($_GET ?? [], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8') . '</code></pre></div>';
+    $output .= '<div class="mb-2"><strong>Items:</strong><pre class="mb-0"><code>' . htmlspecialchars(json_encode($items, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8') . '</code></pre></div>';
     if (!empty($diagnostics)) {
-        $output .= '<details class="ts-alert ts-alert-info mt-2"><summary>LMS Breadcrumbs DIAG</summary><ul class="mb-0 mt-2">';
+        $output .= '<ul class="mb-0 mt-2">';
         foreach ($diagnostics as $diagLine) {
             $output .= '<li><code>' . htmlspecialchars($diagLine, ENT_QUOTES, 'UTF-8') . '</code></li>';
         }
-        $output .= '</ul></details>';
+        $output .= '</ul>';
     }
+    $output .= '</details>';
 }
 
 return $output;
