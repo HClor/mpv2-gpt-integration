@@ -25,10 +25,17 @@ class LmsBreadcrumbsBuilder
     /** @var array<string, callable> */
     private $resolvers = [];
 
+    /** @var bool */
+    private $debug = false;
+
+    /** @var array<int, string> */
+    private $diagnostics = [];
+
     public function __construct(modX $modx, array $context = [], array $preloadedEntities = [])
     {
         $this->modx = $modx;
         $this->context = $this->normalizeContext($context);
+        $this->debug = !empty($this->context['debug']);
         $this->entityCache = $preloadedEntities;
 
         $this->resolvers = [
@@ -43,10 +50,14 @@ class LmsBreadcrumbsBuilder
     {
         $section = $this->context['section'] ?: $this->detectSection();
         $this->context['resolved_section'] = $section;
+        $this->diag('DIAG-1', 'Resolved section=' . $section . '; mode=' . $this->context['mode']);
         $resolver = $this->resolvers[$section] ?? $this->resolvers['lms'];
         $items = call_user_func($resolver);
 
-        return $this->sanitizeItems($items);
+        $result = $this->sanitizeItems($items);
+        $this->diag('DIAG-2', 'Breadcrumb items count=' . count($result));
+
+        return $result;
     }
 
     private function resolveTestsBreadcrumbs(): array
@@ -183,6 +194,7 @@ class LmsBreadcrumbsBuilder
             'step_id' => (int)($context['step_id'] ?? ($query['step_id'] ?? ($query['stepId'] ?? 0))),
             'handbook_section_id' => (int)($context['handbook_section_id'] ?? ($query['handbook_section_id'] ?? ($query['section_id'] ?? 0))),
             'session_id' => (int)($context['session_id'] ?? ($query['sessionId'] ?? 0)),
+            'debug' => (int)($context['debug'] ?? ($query['lms_bc_diag'] ?? 0)) === 1,
         ];
 
         return $ctx;
@@ -195,17 +207,21 @@ class LmsBreadcrumbsBuilder
         }
 
         if ($this->context['path_id'] > 0 || $this->context['step_id'] > 0 || in_array($this->context['mode'], ['view', 'edit', 'my'], true)) {
+            $this->diag('DIAG-4', 'detectSection => learning_paths');
             return 'learning_paths';
         }
 
         if ($this->context['handbook_section_id'] > 0 || in_array($this->context['mode'], ['study', 'learning'], true)) {
+            $this->diag('DIAG-5', 'detectSection => handbook');
             return 'handbook';
         }
 
         if ($this->context['test_id'] > 0 || $this->context['category_id'] > 0 || $this->context['session_id'] > 0) {
+            $this->diag('DIAG-6', 'detectSection => tests');
             return 'tests';
         }
 
+        $this->diag('DIAG-7', 'detectSection => lms (fallback)');
         return 'lms';
     }
 
@@ -307,6 +323,7 @@ class LmsBreadcrumbsBuilder
         $prefix = (string)$this->modx->getOption('table_prefix');
         $stmt = $this->modx->prepare("SELECT id, name FROM {$prefix}test_categories WHERE id = :id LIMIT 1");
         if (!$stmt) {
+            $this->diag('DIAG-3', 'Failed to prepare SQL in getCategory for category_id=' . $categoryId);
             return null;
         }
 
@@ -317,6 +334,7 @@ class LmsBreadcrumbsBuilder
 
         $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
         $this->entityCache[$cacheKey] = $row;
+        $this->diag('DIAG-8', 'getCategory category_id=' . $categoryId . '; found=' . ($row ? '1' : '0'));
 
         return $row;
     }
@@ -348,6 +366,7 @@ class LmsBreadcrumbsBuilder
 
         $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
         $this->entityCache[$cacheKey] = $row;
+        $this->diag('DIAG-9', 'getTest test_id=' . $testId . '; found=' . ($row ? '1' : '0'));
 
         return $row;
     }
@@ -376,6 +395,7 @@ class LmsBreadcrumbsBuilder
 
         $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
         $this->entityCache[$cacheKey] = $row;
+        $this->diag('DIAG-11', 'getSession session_id=' . $sessionId . '; found=' . ($row ? '1' : '0'));
 
         return $row;
     }
@@ -478,6 +498,23 @@ class LmsBreadcrumbsBuilder
         return null;
     }
 
+
+    public function getDiagnostics(): array
+    {
+        return $this->diagnostics;
+    }
+
+    private function diag(string $code, string $message): void
+    {
+        if (!$this->debug) {
+            return;
+        }
+
+        $line = '[' . $code . '] ' . $message;
+        $this->diagnostics[] = $line;
+        $this->modx->log(modX::LOG_LEVEL_ERROR, '[lmsBreadcrumbs] ' . $line);
+    }
+
     private function tableHasColumn(string $table, string $column): bool
     {
         $cacheKey = $table . ':' . $column;
@@ -499,6 +536,7 @@ class LmsBreadcrumbsBuilder
 
         $exists = (bool)$stmt->fetch(PDO::FETCH_ASSOC);
         $this->schemaCache[$cacheKey] = $exists;
+        $this->diag('DIAG-10', 'tableHasColumn ' . $table . '.' . $column . '=' . ($exists ? '1' : '0'));
 
         return $exists;
     }

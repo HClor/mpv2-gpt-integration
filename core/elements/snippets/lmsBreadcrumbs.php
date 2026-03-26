@@ -16,6 +16,7 @@
  *   &path_id=`4`
  *   &step_id=`15`
  *   &handbook_section_id=`81`
+ *   &debug=`1`                     // включает DIAG-логирование и debug-блок
  * ]]
  *
  * Поддержка preloaded сущностей (чтобы не делать повторные SQL):
@@ -43,6 +44,7 @@ $context = [
     'step_id' => (int)$modx->getOption('step_id', $scriptProperties, 0),
     'handbook_section_id' => (int)$modx->getOption('handbook_section_id', $scriptProperties, 0),
     'session_id' => (int)$modx->getOption('session_id', $scriptProperties, 0),
+    'debug' => (int)$modx->getOption('debug', $scriptProperties, (int)($_GET['lms_bc_diag'] ?? 0)),
 ];
 
 $preloaded = [];
@@ -84,5 +86,17 @@ foreach ($items as $item) {
 
 $output .= '</ol>';
 $output .= '</nav>';
+
+
+if (!empty($context['debug'])) {
+    $diagnostics = $builder->getDiagnostics();
+    if (!empty($diagnostics)) {
+        $output .= '<details class="ts-alert ts-alert-info mt-2"><summary>LMS Breadcrumbs DIAG</summary><ul class="mb-0 mt-2">';
+        foreach ($diagnostics as $diagLine) {
+            $output .= '<li><code>' . htmlspecialchars($diagLine, ENT_QUOTES, 'UTF-8') . '</code></li>';
+        }
+        $output .= '</ul></details>';
+    }
+}
 
 return $output;
