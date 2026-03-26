@@ -42,15 +42,6 @@ if (PermissionHelper::isAuthenticated($modx) || $modx->user->isAuthenticated('mg
     );
 }
 
-// Генерация CSRF токена для всех режимов
-require_once MODX_CORE_PATH . 'components/testsystem/security/CsrfProtection.php';
-try {
-    $csrfToken = CsrfProtection::getToken();
-} catch (Exception $e) {
-    $csrfToken = '';
-    $modx->log(modX::LOG_LEVEL_ERROR, '[learningMaterialsTemplate] Failed to generate CSRF token: ' . $e->getMessage());
-}
-
 // РЕЖИМ 1: Редирект на редактирование (через старый параметр ?edit=1)
 if ($isEdit && $canEdit) {
     $redirectUrl = $modx->makeUrl($materialId) . '?edit_material=' . $materialId;
@@ -96,11 +87,6 @@ if ($parentId > 0) {
         // Quill editor
         $output .= '<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">';
         $output .= '<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>';
-
-        // CSRF Token meta tag
-        if ($csrfToken) {
-            $output .= '<meta name="csrf-token" content="' . htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') . '">';
-        }
 
         // Константы
         $output .= '<script>const MATERIAL_PAGE_ID = ' . $rootPageId . ';</script>';
@@ -333,11 +319,6 @@ $output .= '</div></div></div>';
 // Подключение Quill
 $output .= '<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">';
 $output .= '<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>';
-
-// CSRF Token meta tag
-if ($csrfToken) {
-    $output .= '<meta name="csrf-token" content="' . htmlspecialchars($csrfToken, ENT_QUOTES, 'UTF-8') . '">';
-}
 
 // ВАЖНО: Определяем ID корневой страницы ДО загрузки скрипта
 $output .= '<script>const MATERIAL_PAGE_ID = ' . $rootPageId . ';</script>';

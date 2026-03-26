@@ -180,9 +180,10 @@ $groupAdmins = Config::getGroup('admins');
 $groupExperts = Config::getGroup('experts');
 $isAdmin = $modx->user->isMember($groupAdmins);
 $isExpert = $modx->user->isMember($groupExperts);
+$hasManageableTests = false;
 
-// CSRF Protection: добавляем meta тег с токеном для JavaScript
-$output = CsrfProtection::getTokenMeta();
+// CSRF meta уже рендерится в tsHead.tpl
+$output = '';
 $importPageId = Config::getPageId('import_csv', 29);
 $importBaseUrl = $importPageId > 0 ? $modx->makeUrl($importPageId, 'web', []) : '';
 $testsContainerImportAttr = '';
@@ -366,6 +367,10 @@ if (!$tests) {
             $output .= '<div class="tests-grid">';
 
             foreach ($categoryTests as $test) {
+                $isOwner = ((int)$test['created_by'] === (int)$currentUserId);
+                if ($isAdmin || $isExpert || $isOwner) {
+                    $hasManageableTests = true;
+                }
                 $output .= renderTestCard($test, $modx, $testPageId, $currentUserId, $isAdmin, $isExpert);
             }
 
@@ -390,6 +395,10 @@ if (!$tests) {
         // Отображаем тесты без группировки
         $output .= '<div class="tests-grid">';
         foreach ($tests as $test) {
+            $isOwner = ((int)$test['created_by'] === (int)$currentUserId);
+            if ($isAdmin || $isExpert || $isOwner) {
+                $hasManageableTests = true;
+            }
             $output .= renderTestCard($test, $modx, $testPageId, $currentUserId, $isAdmin, $isExpert);
         }
         $output .= '</div>';
@@ -435,42 +444,44 @@ $output .= '</div>'; // row
 $output .= '</div>'; // container-fluid
 $output .= '</div>'; // #categories-tests-view
 
-// Вид редактирования вопросов (скрыт по умолчанию)
-$output .= '<div id="questions-editor-view" style="display: none;">';
-$output .= '<div class="container-fluid">';
-$output .= '<div class="card">';
-$output .= '<div class="card-header bg-light">';
-$output .= '<div id="questions-editor-header-content">';
-$output .= '<div class="text-center py-2">';
-$output .= '<div class="spinner-border text-primary spinner-border-sm" role="status"></div>';
-$output .= '<span class="ms-2">Подготовка интерфейса вопросов...</span>';
-$output .= '</div>';
-$output .= '</div>';
-$output .= '</div>'; // card-header
-$output .= '<div class="card-body p-2 p-md-3">';
-$output .= '<div id="questions-list-content">'; // заполняется через JS
-$output .= '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Загрузка вопросов...</p></div>';
-$output .= '</div>';
-$output .= '</div>'; // card-body
-$output .= '</div>'; // card
-$output .= '</div>'; // container-fluid
-$output .= '</div>'; // #questions-editor-view
+if ($hasManageableTests) {
+    // Вид редактирования вопросов (скрыт по умолчанию)
+    $output .= '<div id="questions-editor-view" style="display: none;">';
+    $output .= '<div class="container-fluid">';
+    $output .= '<div class="card">';
+    $output .= '<div class="card-header bg-light">';
+    $output .= '<div id="questions-editor-header-content">';
+    $output .= '<div class="text-center py-2">';
+    $output .= '<div class="spinner-border text-primary spinner-border-sm" role="status"></div>';
+    $output .= '<span class="ms-2">Подготовка интерфейса вопросов...</span>';
+    $output .= '</div>';
+    $output .= '</div>';
+    $output .= '</div>'; // card-header
+    $output .= '<div class="card-body p-2 p-md-3">';
+    $output .= '<div id="questions-list-content">'; // заполняется через JS
+    $output .= '<div class="text-center p-4"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Загрузка вопросов...</p></div>';
+    $output .= '</div>';
+    $output .= '</div>'; // card-body
+    $output .= '</div>'; // card
+    $output .= '</div>'; // container-fluid
+    $output .= '</div>'; // #questions-editor-view
+}
 
 $output .= '</div>'; // #tests-page-container
 
 // Подключение внешних ресурсов
 $modx->regClientCSS('/assets/components/testsystem/css/categories-and-tests.css');
 
-// DOMPurify для безопасности
-$output .= '<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>';
+if ($hasManageableTests) {
+    // DOMPurify и Quill нужны только для режима управления вопросами/настройками
+    $output .= '<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>';
+    $output .= '<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">';
+    $output .= '<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>';
 
-// Quill для редактирования вопросов (нужен для модальных окон)
-$output .= '<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">';
-$output .= '<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>';
+    $modx->regClientScript('/assets/components/testsystem/js/question-list-shared.js');
+    $modx->regClientScript('/assets/components/testsystem/js/test-settings-shared.js');
+}
 
-$modx->regClientScript('/assets/components/testsystem/js/csrf-helper.js');
-$modx->regClientScript('/assets/components/testsystem/js/question-list-shared.js');
-$modx->regClientScript('/assets/components/testsystem/js/test-settings-shared.js');
 $modx->regClientScript('/assets/components/testsystem/js/test-cards.js');
 $modx->regClientScript('/assets/components/testsystem/js/tests-search.js');
 

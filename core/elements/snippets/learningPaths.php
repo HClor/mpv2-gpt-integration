@@ -19,7 +19,6 @@ require_once MODX_CORE_PATH . 'components/testsystem/bootstrap.php';
 
 // ВАЖНО: активируем request/session для корректной CSRF-защиты
 $modx->getRequest();
-$csrfMeta = CsrfProtection::getTokenMeta();
 
 // Подключаем сервисы
 require_once MODX_CORE_PATH . 'components/testsystem/services/LearningPathService.php';
@@ -107,7 +106,7 @@ switch ($mode) {
         $output = '<div class="ts-alert ts-alert-warning">Неизвестный режим</div>';
 }
 
-return $csrfMeta . $output;
+return $output;
 
 // ============================================
 // ФУНКЦИИ РЕНДЕРИНГА
@@ -185,8 +184,10 @@ function renderPathsList($modx, $prefix, $userId, $canCreate) {
     </div>
     ';
 
-    // Модальное окно создания траектории
-    $html .= renderPathModal();
+    // Модальное окно создания траектории нужно только пользователям с правом создания
+    if ($canCreate) {
+        $html .= renderPathModal();
+    }
 
     return $html;
 }

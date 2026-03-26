@@ -71,6 +71,8 @@
     // ==================== INITIALIZATION ====================
 
     document.addEventListener('DOMContentLoaded', function() {
+        initLearningPathStepPanel();
+
         // Страница списка траекторий
         const pathsContainer = document.getElementById('learning-paths-container');
         if (pathsContainer) {
@@ -93,6 +95,110 @@
             initPathEditor(pathId);
         }
     });
+
+    // ==================== STEP CONTENT PANEL ====================
+
+    function initLearningPathStepPanel() {
+        if (!window.TS_USER_ID || Number(window.TS_USER_ID) <= 0) {
+            return;
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const pathId = urlParams.get('path');
+        const stepId = urlParams.get('step');
+        const currentPath = window.location.pathname || '';
+        const isLearningPathsPage = /\/learning-paths\/?$/.test(currentPath);
+        const hasStepContentContext = !document.getElementById('learning-paths-container')
+            && !document.getElementById('path-view-container');
+        const requiresExamPass = urlParams.get('lp_exam_required') === '1';
+
+        if (!pathId || !stepId || isLearningPathsPage || !hasStepContentContext) {
+            return;
+        }
+
+        if (document.getElementById('learning-path-step-panel')) {
+            return;
+        }
+
+        const panel = document.createElement('div');
+        const panelMessage = requiresExamPass
+            ? 'Следующий шаг откроется только после успешного завершения теста в режиме экзамена.'
+            : 'Вы изучаете этот материал в рамках траектории обучения.';
+        const completeButtonHtml = requiresExamPass
+            ? ''
+            : '<button class="ts-btn ts-btn-success" id="lp-complete-step">' +
+                '<i class="bi bi-check-circle me-1"></i> Завершить и продолжить' +
+              '</button>';
+
+        panel.id = 'learning-path-step-panel';
+        panel.className = 'lp-step-panel-wrapper';
+        panel.innerHTML = '' +
+            '<div class="lp-step-panel ts-card shadow-sm border-0 rounded-0">' +
+                '<div class="lp-step-body px-4 py-3 d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">' +
+                    '<div>' +
+                        '<div class="d-flex align-items-center gap-2 mb-1">' +
+                            '<i class="bi bi-signpost-2"></i>' +
+                            '<strong>Шаг траектории</strong>' +
+                        '</div>' +
+                        '<p class="mb-0 text-muted">' + panelMessage + '</p>' +
+                    '</div>' +
+                    '<div class="d-flex flex-wrap gap-2">' +
+                        completeButtonHtml +
+                        '<button class="ts-btn ts-btn-secondary ts-btn-sm" id="lp-back-to-path">' +
+                            '<i class="bi bi-arrow-left me-1"></i> Вернуться к траектории' +
+                        '</button>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+
+        document.body.appendChild(panel);
+
+        const completeStepButton = document.getElementById('lp-complete-step');
+        if (completeStepButton) {
+            completeStepButton.addEventListener('click', async function() {
+                const isConfirmed = window.confirm('Вы подтверждаете, что изучили материал?');
+                if (!isConfirmed) {
+                    return;
+                }
+
+                const btn = this;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Сохранение...';
+
+                try {
+                    const result = await apiCall('completePathStep', {
+                        path_id: parseInt(pathId, 10),
+                        step_id: parseInt(stepId, 10)
+                    });
+
+                    if (!result.success) {
+                        throw new Error(result.message || 'Ошибка завершения шага');
+                    }
+
+                    btn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Готово!';
+                    btn.classList.remove('ts-btn-success');
+                    btn.classList.add('ts-btn-secondary');
+                    showNotification('Шаг успешно завершён!', 'success');
+
+                    setTimeout(function() {
+                        window.location.href = '/learning-paths?mode=view&id=' + encodeURIComponent(pathId);
+                    }, 1000);
+                } catch (error) {
+                    console.error('Complete step error:', error);
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Завершить и продолжить';
+                    showNotification('Ошибка: ' + (error.message || 'не удалось завершить шаг'), 'danger');
+                }
+            });
+        }
+
+        const backToPathButton = document.getElementById('lp-back-to-path');
+        if (backToPathButton) {
+            backToPathButton.addEventListener('click', function() {
+                window.location.href = '/learning-paths?mode=view&id=' + encodeURIComponent(pathId);
+            });
+        }
+    }
 
     // ==================== PATHS LIST ====================
 
