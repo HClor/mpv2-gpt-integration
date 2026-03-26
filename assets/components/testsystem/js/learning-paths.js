@@ -99,6 +99,10 @@
     // ==================== STEP CONTENT PANEL ====================
 
     function initLearningPathStepPanel() {
+        if (!window.TS_USER_ID || Number(window.TS_USER_ID) <= 0) {
+            return;
+        }
+
         const urlParams = new URLSearchParams(window.location.search);
         const pathId = urlParams.get('path');
         const stepId = urlParams.get('step');

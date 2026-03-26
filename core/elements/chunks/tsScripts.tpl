@@ -21,12 +21,13 @@
 <script src="/assets/components/testsystem/js/certificates.js"></script>
 {/if}
 
-{if $resourceAlias == 'learning-paths' || $resourceAlias == 'learning-articles' || $resourceAlias == 'tests'}
+{if $resourceAlias == 'learning-paths' || $resourceAlias == 'learning-articles' || $resourceAlias == 'tests' || $resourceAlias == 'test-run'}
 <script src="/assets/components/testsystem/js/learning-paths.js"></script>
 {/if}
 <script>
 // ========== ГЛОБАЛЬНЫЙ ХЕЛПЕР ДЛЯ API ЗАПРОСОВ С CSRF ==========
 window.TS_API_URL = '/assets/components/testsystem/ajax/testsystem.php';
+window.TS_USER_ID = {$_modx->user.id ?: 0};
 
 // Получить CSRF токен из meta тега
 function getCSRFToken() {
@@ -58,9 +59,6 @@ async function tsApiRequest(action, data = {}) {
 
 // Инициализация Test System
 document.addEventListener('DOMContentLoaded', function() {
-    // ID текущего пользователя
-    window.TS_USER_ID = {$_modx->user.id ?: 0};
-
     // Автообновление уведомлений каждые 30 секунд
     {if $_modx->user.id > 0}
     setInterval(function() {
