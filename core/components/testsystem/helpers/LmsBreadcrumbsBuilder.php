@@ -359,7 +359,11 @@ class LmsBreadcrumbsBuilder
             }
         }
 
-        $pageId = (int)$this->modx->getOption('lms.test_page', null, Config::getPageId('tests_root', 155));
+        $pageId = (int)$this->modx->getOption('lms.tests_catalog_page', null, Config::getPageId('tests_root', 0));
+        if ($pageId <= 0) {
+            $testsResource = $this->modx->getObject('modResource', ['alias' => 'tests']);
+            $pageId = $testsResource ? (int)$testsResource->get('id') : 0;
+        }
         if ($pageId <= 0) {
             return null;
         }

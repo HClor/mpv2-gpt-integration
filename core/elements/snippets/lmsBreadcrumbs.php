@@ -61,6 +61,9 @@ $debugValue = $valueFromSources('debug', null);
 if ($debugValue === null || $debugValue === '') {
     $debugValue = $valueFromSources('lms_bc_diag', 0);
 }
+if ((int)$debugValue !== 1 && isset($_SERVER['REQUEST_URI']) && strpos((string)$_SERVER['REQUEST_URI'], 'lms_bc_diag=1') !== false) {
+    $debugValue = 1;
+}
 
 $context = [
     'section' => (string)$valueFromSources('section', ''),
