@@ -65,7 +65,7 @@ class LmsBreadcrumbsBuilder
     {
         $items = $this->baseItems();
         $testsUrl = $this->getTestsRootUrl();
-        $items[] = $this->item('Саморазвитие', $testsUrl);
+        $items[] = $this->item('Тесты', $testsUrl);
 
         $mode = $this->context['mode'];
         $categoryId = $this->context['category_id'];
@@ -87,9 +87,7 @@ class LmsBreadcrumbsBuilder
                     $category = $this->getCategory($categoryId);
                     if (!empty($category['name'])) {
                         $categoryTitle = trim((string)$category['name']);
-                        if (mb_strtolower($categoryTitle) !== mb_strtolower('Саморазвитие')) {
-                            $items[] = $this->item($categoryTitle, $this->getTestsRootUrl(['category' => $categoryId]));
-                        }
+                        $items[] = $this->item($categoryTitle, $this->getTestsRootUrl(['category' => $categoryId]));
                     }
                 }
 
@@ -102,9 +100,7 @@ class LmsBreadcrumbsBuilder
             $category = $this->getCategory($categoryId);
             if (!empty($category['name'])) {
                 $categoryTitle = trim((string)$category['name']);
-                if (mb_strtolower($categoryTitle) !== mb_strtolower('Саморазвитие')) {
-                    $items[] = $this->item($categoryTitle, null, true);
-                }
+                $items[] = $this->item($categoryTitle, null, true);
             }
         }
 
@@ -279,9 +275,13 @@ class LmsBreadcrumbsBuilder
                 $this->diag('DIAG-16', 'detectSection => tests (resource alias match)');
                 return 'tests';
             }
-            if (in_array($alias, ['oblast-znanij', 'knowledge-area'], true)) {
+            if (in_array($alias, ['oblast-znanij', 'knowledge-area', 'moi-oblasti-znanij'], true)) {
                 $this->diag('DIAG-18', 'detectSection => knowledge_areas (resource alias match)');
                 return 'knowledge_areas';
+            }
+            if (in_array($alias, ['learning-articles', 'learning-materials', 'handbook'], true)) {
+                $this->diag('DIAG-19', 'detectSection => handbook (resource alias match)');
+                return 'handbook';
             }
 
             $pathsRootId = (int)$this->modx->getOption('lms.learning_paths_page', null, 0);
@@ -401,13 +401,16 @@ class LmsBreadcrumbsBuilder
     {
         if ($this->modx->resource instanceof modResource) {
             $resourceAlias = (string)$this->modx->resource->get('alias');
-            if (in_array($resourceAlias, ['oblast-znanij', 'knowledge-area'], true)) {
+            if (in_array($resourceAlias, ['oblast-znanij', 'knowledge-area', 'moi-oblasti-znanij'], true)) {
                 $resourceId = (int)$this->modx->resource->get('id');
                 return $this->modx->makeUrl($resourceId, 'web', [], 'full');
             }
         }
 
-        $pageId = Config::getPageId('knowledge_area', 0);
+        $pageId = Config::getPageId('manage_areas', 0);
+        if ($pageId <= 0) {
+            $pageId = Config::getPageId('knowledge_area', 0);
+        }
         return $pageId > 0 ? $this->modx->makeUrl($pageId, 'web', [], 'full') : null;
     }
 
@@ -658,9 +661,13 @@ class LmsBreadcrumbsBuilder
         }
 
         $chain = array_reverse($chain);
-        $items = [];
+        $items = [$this->item('Главная', $this->getHomeUrl())];
+        $siteStart = Config::getPageId('site_start', 1);
         foreach ($chain as $index => $node) {
             $isLast = $index === count($chain) - 1;
+            if ((int)$node['id'] === $siteStart) {
+                continue;
+            }
             $items[] = $this->item(
                 $node['title'],
                 $isLast ? null : $this->modx->makeUrl((int)$node['id'], 'web', [], 'full'),
