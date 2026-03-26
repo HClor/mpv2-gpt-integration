@@ -584,20 +584,22 @@ async function addFavoritesViewToggle(questionId) {
             }
             
             // Получаем название теста
-            const testTitle = testInfo ? 
-                (testInfo.querySelector('h2')?.textContent || testInfo.querySelector('h1')?.textContent || 'Обучающий материал') : 
+            const testTitle = testInfo ?
+                (testInfo.querySelector('h2')?.textContent || testInfo.querySelector('h1')?.textContent || 'Обучающий материал') :
                 'Обучающий материал';
             
             // Добавляем заголовок и прогресс-бар
             const headerAndProgressHtml = `
                 <div class="learning-header-block mb-3">
-                    <h3 class="mb-3">
-                        <i class="bi bi-book-half text-primary"></i> ${testTitle}
-                    </h3>
+                    <div class="learning-header-eyebrow">
+                        <i class="bi bi-book-half"></i>
+                        <span>Режим изучения</span>
+                    </div>
+                    <h3 class="learning-header-title mb-0">${testTitle}</h3>
                 </div>
                 <div class="learning-progress-container mb-3">
-                    <div class="progress" style="height: 10px; border-radius: 10px;">
-                        <div id="learning-progress-bar" class="progress-bar bg-info progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+                    <div class="progress ts-learning-progress" role="progressbar" aria-label="Прогресс изучения">
+                        <div id="learning-progress-bar" class="progress-bar ts-learning-progress-bar" style="width: 0%"></div>
                     </div>
                 </div>
             `;
@@ -615,11 +617,17 @@ async function addFavoritesViewToggle(questionId) {
             if (cardFooter) {
                 cardFooter.innerHTML = `
                     <div class="d-flex justify-content-between align-items-center mb-2 learning-but">
-                        <button id="prev-card-btn" class="btn btn-secondary btn-sm">← Назад</button>
+                        <button id="prev-card-btn" class="ts-btn ts-btn-secondary ts-btn-lg">
+                            <i class="bi bi-arrow-left"></i>
+                            <span>Назад</span>
+                        </button>
                         <span id="card-counter" class="text-muted fw-bold"></span>
-                        <button id="next-card-btn" class="btn btn-secondary btn-sm">Вперед →</button>
+                        <button id="next-card-btn" class="ts-btn ts-btn-secondary ts-btn-lg">
+                            <span>Вперёд</span>
+                            <i class="bi bi-arrow-right"></i>
+                        </button>
                     </div>
-                    <div id="learning-edit-controls-row" class="border-top pt-2" style="display: none;"></div>
+                    <div id="learning-edit-controls-row" class="border-top pt-2 d-none"></div>
                 `;
             }
     
@@ -783,6 +791,7 @@ async function addFavoritesViewToggle(questionId) {
         if (!editRow) return;
         
         editRow.innerHTML = '';
+        editRow.classList.remove('d-none');
         editRow.style.display = 'block';
         
         const btnGroup = document.createElement("div");
