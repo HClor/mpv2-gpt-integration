@@ -145,7 +145,11 @@ class LmsBreadcrumbsBuilder
 
     private function resolveHandbookBreadcrumbs(): array
     {
-        if ($this->context['handbook_section_id'] <= 0 && $this->context['path_id'] <= 0) {
+        $mode = (string)$this->context['mode'];
+        $isLearningTestMode = in_array($mode, ['study', 'learning'], true)
+            && ($this->context['test_id'] > 0 || $this->context['session_id'] > 0);
+
+        if (!$isLearningTestMode && $this->context['handbook_section_id'] <= 0 && $this->context['path_id'] <= 0) {
             $resourceItems = $this->buildResourceHierarchyItems();
             if (!empty($resourceItems)) {
                 return $resourceItems;
@@ -165,6 +169,33 @@ class LmsBreadcrumbsBuilder
             }
         } else {
             $items[] = $this->item('Учебник', $this->getHandbookRootUrl());
+        }
+
+        if ($isLearningTestMode) {
+            $items[] = $this->item('Вопросы из тестов', $this->getHandbookRootUrl());
+
+            $testId = (int)$this->context['test_id'];
+            if ($testId <= 0 && (int)$this->context['session_id'] > 0) {
+                $session = $this->getSession((int)$this->context['session_id']);
+                $testId = (int)($session['test_id'] ?? 0);
+            }
+
+            if ($testId > 0) {
+                $test = $this->getTest($testId);
+                if (!empty($test)) {
+                    $categoryId = (int)($test['category_id'] ?? 0);
+                    if ($categoryId > 0) {
+                        $category = $this->getCategory($categoryId);
+                        if (!empty($category['name'])) {
+                            $items[] = $this->item((string)$category['name'], $this->getHandbookRootUrl());
+                        }
+                    }
+
+                    if (!empty($test['title'])) {
+                        $items[] = $this->item((string)$test['title'], null, true);
+                    }
+                }
+            }
         }
 
         if ($sectionId > 0) {
