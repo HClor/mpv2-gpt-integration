@@ -185,7 +185,7 @@ class LearningMaterialService
     }
 
     /**
-     * Получение списка материалов (MODX ресурсы с template=6)
+     * Получение списка материалов (MODX ресурсы с template=9)
      *
      * @param modX $modx
      * @param array $filters
@@ -195,7 +195,7 @@ class LearningMaterialService
     {
         $prefix = $modx->getOption('table_prefix', null, 'modx_');
 
-        $templateId = 6; // Template "LMS Bootstrap 5 - учебные материалы"
+        $templateId = 9; // Template "LMS Bootstrap 5 - учебные материалы"
         $parentId = $filters['parent_id'] ?? 0;
 
         $sql = "

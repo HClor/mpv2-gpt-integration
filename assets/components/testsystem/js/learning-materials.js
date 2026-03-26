@@ -480,7 +480,7 @@ async function saveMaterialFromModal() {
             introtext,
             content,
             published,
-            template: 6,
+            template: 9,
             parent: MATERIAL_PAGE_ID,
             category_id: categoryId
         };
