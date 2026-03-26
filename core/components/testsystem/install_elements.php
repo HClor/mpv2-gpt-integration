@@ -175,7 +175,8 @@ $snippets = array(
     'manageUsersRoleDetector' => 'manageUsersRoleDetector.php',
     'phpthumbon' => 'phpthumbon.php',
     'categoriesList' => 'categoriesList.php',
-    'getUserRights' => 'getUserRights.php'
+    'getUserRights' => 'getUserRights.php',
+    'lmsBreadcrumbs' => 'lmsBreadcrumbs.php'
 );
 
 $successCount = 0;

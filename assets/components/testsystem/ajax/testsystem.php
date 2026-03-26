@@ -64,6 +64,7 @@ require_once dirname(__DIR__) . '/controllers/NotificationController.php';
 require_once dirname(__DIR__) . '/controllers/AnalyticsController.php';
 require_once dirname(__DIR__) . '/controllers/CertificateController.php';
 require_once dirname(__DIR__) . '/controllers/KnowledgeAreaController.php';
+require_once dirname(__DIR__) . '/controllers/UploadController.php';
 require_once dirname(__DIR__) . '/controllers/ControllerFactory.php';
 
 $prefix = $modx->getOption('table_prefix', null, 'modx_');
@@ -333,10 +334,10 @@ try {
         // ============================================
 
         case 'getMaterialsList':
-            // Получить список учебных материалов (ресурсы MODX с template_id = 6)
+            // Получить список учебных материалов (ресурсы MODX с template_id = 9)
             // Доступен всем, авторизация не требуется
 
-            $templateId = 6; // Template "LMS Bootstrap 5 - учебные материалы"
+            $templateId = 9; // Template "LMS Bootstrap 5 - учебные материалы"
             $parentId = ValidationHelper::optionalInt($data, 'parent_id', 0);
 
             $sql = "
@@ -440,7 +441,7 @@ try {
             $introtext = ValidationHelper::optionalString($data, 'introtext', '');
             $parentId = ValidationHelper::optionalInt($data, 'parent', 0);
             $published = ValidationHelper::optionalInt($data, 'published', 1);
-            $template = ValidationHelper::optionalInt($data, 'template', 6);
+            $template = ValidationHelper::optionalInt($data, 'template', 9);
             $categoryId = ValidationHelper::optionalString($data, 'category_id', '');
 
             if ($materialId > 0) {

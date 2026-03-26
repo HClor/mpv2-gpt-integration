@@ -318,3 +318,30 @@
     border-left-color: var(--color-primary);
     color: var(--color-primary-text);
 }
+
+/* ============================================================
+   LMS BREADCRUMBS
+   ============================================================ */
+
+.ts-lms-breadcrumb .breadcrumb {
+    --bs-breadcrumb-divider: '/';
+}
+
+.ts-lms-breadcrumb .breadcrumb-item,
+.ts-lms-breadcrumb .breadcrumb-item + .breadcrumb-item::before {
+    color: var(--color-text-secondary);
+}
+
+.ts-lms-breadcrumb .breadcrumb-item a {
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.ts-lms-breadcrumb .breadcrumb-item a:hover {
+    color: var(--color-primary-dark);
+    text-decoration: underline;
+}
+
+.ts-lms-breadcrumb .breadcrumb-item.active {
+    color: var(--color-text-primary);
+}
