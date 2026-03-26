@@ -49,7 +49,7 @@ class LmsBreadcrumbsBuilder
 
     public function build(): array
     {
-        $section = $this->context['section'] ?: $this->detectSection();
+        $section = $this->resolveSection();
         $this->context['resolved_section'] = $section;
         $this->diag('DIAG-1', 'Resolved section=' . $section . '; mode=' . $this->context['mode']);
         $resolver = $this->resolvers[$section] ?? $this->resolvers['lms'];
@@ -59,6 +59,25 @@ class LmsBreadcrumbsBuilder
         $this->diag('DIAG-2', 'Breadcrumb items count=' . count($result));
 
         return $result;
+    }
+
+    private function resolveSection(): string
+    {
+        $explicitSection = trim((string)$this->context['section']);
+        if ($explicitSection !== '') {
+            if (
+                $explicitSection === 'tests'
+                && in_array($this->context['mode'], ['study', 'learning'], true)
+                && ($this->context['test_id'] > 0 || $this->context['session_id'] > 0)
+            ) {
+                $this->diag('DIAG-20', 'resolveSection override tests=>handbook for learning test mode');
+                return 'handbook';
+            }
+
+            return $explicitSection;
+        }
+
+        return $this->detectSection();
     }
 
     private function resolveTestsBreadcrumbs(): array
@@ -268,18 +287,6 @@ class LmsBreadcrumbsBuilder
 
     private function detectSection(): string
     {
-        if ($this->context['section'] !== '') {
-            if (
-                $this->context['section'] === 'tests'
-                && in_array($this->context['mode'], ['study', 'learning'], true)
-                && ($this->context['test_id'] > 0 || $this->context['session_id'] > 0)
-            ) {
-                $this->diag('DIAG-20', 'detectSection override tests=>handbook for learning test mode');
-                return 'handbook';
-            }
-            return $this->context['section'];
-        }
-
         if ($this->context['path_id'] > 0 || $this->context['step_id'] > 0 || in_array($this->context['mode'], ['view', 'edit', 'my'], true)) {
             $this->diag('DIAG-4', 'detectSection => learning_paths');
             return 'learning_paths';
