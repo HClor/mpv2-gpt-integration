@@ -221,6 +221,31 @@ class LmsBreadcrumbsBuilder
             return 'tests';
         }
 
+        $resource = $this->modx->resource;
+        if ($resource instanceof modResource) {
+            $resourceId = (int)$resource->get('id');
+            $alias = (string)$resource->get('alias');
+            $this->diag('DIAG-12', 'detectSection resource probe: id=' . $resourceId . '; alias=' . $alias);
+
+            $testsRootId = (int)$this->modx->getOption('lms.test_page', null, Config::getPageId('tests_root', 155));
+            if ($testsRootId > 0 && $resourceId === $testsRootId) {
+                $this->diag('DIAG-13', 'detectSection => tests (resource id match)');
+                return 'tests';
+            }
+
+            $pathsRootId = (int)$this->modx->getOption('lms.learning_paths_page', null, 0);
+            if (($pathsRootId > 0 && $resourceId === $pathsRootId) || $alias === 'learning-paths') {
+                $this->diag('DIAG-14', 'detectSection => learning_paths (resource)');
+                return 'learning_paths';
+            }
+
+            $handbookRootId = (int)$this->modx->getOption('lms.handbook_page', null, 0);
+            if (($handbookRootId > 0 && $resourceId === $handbookRootId) || in_array($alias, ['learning-materials', 'handbook'], true)) {
+                $this->diag('DIAG-15', 'detectSection => handbook (resource)');
+                return 'handbook';
+            }
+        }
+
         $this->diag('DIAG-7', 'detectSection => lms (fallback)');
         return 'lms';
     }
