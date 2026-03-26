@@ -49,7 +49,7 @@ class LmsBreadcrumbsBuilder
 
     public function build(): array
     {
-        $section = $this->context['section'] ?: $this->detectSection();
+        $section = $this->resolveSection();
         $this->context['resolved_section'] = $section;
         $this->diag('DIAG-1', 'Resolved section=' . $section . '; mode=' . $this->context['mode']);
         $resolver = $this->resolvers[$section] ?? $this->resolvers['lms'];
@@ -59,6 +59,25 @@ class LmsBreadcrumbsBuilder
         $this->diag('DIAG-2', 'Breadcrumb items count=' . count($result));
 
         return $result;
+    }
+
+    private function resolveSection(): string
+    {
+        $explicitSection = trim((string)$this->context['section']);
+        if ($explicitSection !== '') {
+            if (
+                $explicitSection === 'tests'
+                && in_array($this->context['mode'], ['study', 'learning'], true)
+                && ($this->context['test_id'] > 0 || $this->context['session_id'] > 0)
+            ) {
+                $this->diag('DIAG-20', 'resolveSection override tests=>handbook for learning test mode');
+                return 'handbook';
+            }
+
+            return $explicitSection;
+        }
+
+        return $this->detectSection();
     }
 
     private function resolveTestsBreadcrumbs(): array
@@ -145,7 +164,11 @@ class LmsBreadcrumbsBuilder
 
     private function resolveHandbookBreadcrumbs(): array
     {
-        if ($this->context['handbook_section_id'] <= 0 && $this->context['path_id'] <= 0) {
+        $mode = (string)$this->context['mode'];
+        $isLearningTestMode = in_array($mode, ['study', 'learning'], true)
+            && ($this->context['test_id'] > 0 || $this->context['session_id'] > 0);
+
+        if (!$isLearningTestMode && $this->context['handbook_section_id'] <= 0 && $this->context['path_id'] <= 0) {
             $resourceItems = $this->buildResourceHierarchyItems();
             if (!empty($resourceItems)) {
                 return $resourceItems;
@@ -165,6 +188,33 @@ class LmsBreadcrumbsBuilder
             }
         } else {
             $items[] = $this->item('Учебник', $this->getHandbookRootUrl());
+        }
+
+        if ($isLearningTestMode) {
+            $items[] = $this->item('Вопросы из тестов', $this->getHandbookRootUrl());
+
+            $testId = (int)$this->context['test_id'];
+            if ($testId <= 0 && (int)$this->context['session_id'] > 0) {
+                $session = $this->getSession((int)$this->context['session_id']);
+                $testId = (int)($session['test_id'] ?? 0);
+            }
+
+            if ($testId > 0) {
+                $test = $this->getTest($testId);
+                if (!empty($test)) {
+                    $categoryId = (int)($test['category_id'] ?? 0);
+                    if ($categoryId > 0) {
+                        $category = $this->getCategory($categoryId);
+                        if (!empty($category['name'])) {
+                            $items[] = $this->item((string)$category['name'], $this->getHandbookRootUrl());
+                        }
+                    }
+
+                    if (!empty($test['title'])) {
+                        $items[] = $this->item((string)$test['title'], null, true);
+                    }
+                }
+            }
         }
 
         if ($sectionId > 0) {
@@ -237,10 +287,6 @@ class LmsBreadcrumbsBuilder
 
     private function detectSection(): string
     {
-        if ($this->context['section'] !== '') {
-            return $this->context['section'];
-        }
-
         if ($this->context['path_id'] > 0 || $this->context['step_id'] > 0 || in_array($this->context['mode'], ['view', 'edit', 'my'], true)) {
             $this->diag('DIAG-4', 'detectSection => learning_paths');
             return 'learning_paths';

@@ -1477,14 +1477,37 @@ input:checked ~ .favorite-toggle-label-text {
 
 /* Стили для просмотра избранного */
 .learning-header-block {
-    background: linear-gradient(135deg, var(--color-warning-light) 0%, var(--color-bg-card) 100%);
-    padding: 15px;
-    border-radius: var(--radius-btn);
-    border-left: 4px solid var(--color-warning);
+    background: var(--color-bg-card);
+    padding: 1rem 1.25rem;
+    border-radius: var(--radius-card);
+    border: 1px solid var(--color-border);
 }
 
-.learning-progress-container .progress-bar.bg-warning {
-    background: linear-gradient(90deg, var(--color-warning) 0%, var(--color-warning-dark) 100%);
+.learning-header-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-sm);
+}
+
+.learning-header-title {
+    font-size: clamp(1.125rem, 1.6vw, 1.5rem);
+    font-weight: var(--font-weight-semibold);
+    color: var(--color-text-primary);
+}
+
+.ts-learning-progress {
+    height: 0.625rem;
+    border-radius: var(--radius-pill);
+    background-color: var(--color-bg-hover);
+    box-shadow: none;
+}
+
+.ts-learning-progress-bar {
+    background: var(--color-primary-light);
+    transition: none;
 }
 
 /* Улучшенные кнопки навигации */
@@ -1494,14 +1517,9 @@ input:checked ~ .favorite-toggle-label-text {
     cursor: not-allowed;
 }
 
-#prev-card-btn:not(:disabled):hover {
-    transform: translateX(-2px);
-    transition: transform 0.2s;
-}
-
+#prev-card-btn:not(:disabled):hover,
 #next-card-btn:not(:disabled):hover {
-    transform: translateX(2px);
-    transition: transform 0.2s;
+    transform: none;
 }
 
 /* Адаптивность - скрываем текст на маленьких экранах */
@@ -2765,4 +2783,18 @@ img[style*="width"] {
     .tests-list-improved .test-list-item-minimal > .d-flex {
         flex-wrap: wrap !important;
     }
+}
+
+/* Learning mode controls: calmer style, larger navigation buttons */
+#question-container .learning-but #prev-card-btn.ts-btn,
+#question-container .learning-but #next-card-btn.ts-btn {
+    min-width: 8.5rem;
+    min-height: 2.75rem;
+    font-weight: var(--font-weight-medium);
+    box-shadow: none;
+}
+
+#question-container .learning-but #prev-card-btn.ts-btn:hover:not(:disabled),
+#question-container .learning-but #next-card-btn.ts-btn:hover:not(:disabled) {
+    box-shadow: none;
 }
