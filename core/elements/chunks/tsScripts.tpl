@@ -6,34 +6,24 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="/assets/components/testsystem/js/csrf-helper.js"></script>
 
-<!-- Test System JS -->
+{set $resourceAlias = $_modx->resource.alias|default:''}
+
+<!-- Test System JS: feature bundle (page/role driven) -->
 <!-- ПРИМЕЧАНИЕ: tsrunner.js подключается в сниппете testRunner.php, не подключать здесь! -->
+{if $_modx->user.id > 0}
 <script src="/assets/components/testsystem/js/mytests.js"></script>
 <script src="/assets/components/testsystem/js/knowledge-areas.js"></script>
-
-<!-- Sprint 9: Учебные материалы -->
-<!-- learning-materials.js подключается в learningMaterialsTemplate.php, не подключать здесь! -->
-
-<!-- Sprint 10: Права доступа -->
 <script src="/assets/components/testsystem/js/category-permissions.js"></script>
-
-<!-- Sprint 11: Траектории обучения -->
-<script src="/assets/components/testsystem/js/learning-paths.js"></script>
-
-<!-- Sprint 12: Расширенные типы вопросов -->
 <script src="/assets/components/testsystem/js/special-question-types.js"></script>
-
-<!-- Sprint 13: Геймификация -->
 <script src="/assets/components/testsystem/js/gamification.js"></script>
-
-<!-- Sprint 14: Уведомления -->
 <script src="/assets/components/testsystem/js/notifications.js"></script>
-
-<!-- Sprint 15: Аналитика -->
 <script src="/assets/components/testsystem/js/analytics.js"></script>
-
-<!-- Sprint 16: Сертификаты -->
 <script src="/assets/components/testsystem/js/certificates.js"></script>
+{/if}
+
+{if $resourceAlias == 'learning-paths' || $resourceAlias == 'learning-articles' || $resourceAlias == 'tests'}
+<script src="/assets/components/testsystem/js/learning-paths.js"></script>
+{/if}
 <script>
 // ========== ГЛОБАЛЬНЫЙ ХЕЛПЕР ДЛЯ API ЗАПРОСОВ С CSRF ==========
 window.TS_API_URL = '/assets/components/testsystem/ajax/testsystem.php';
@@ -181,128 +171,5 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     console.log('Test System initialized successfully');
-
-    // ========== LEARNING PATH STEP COMPLETION ==========
-    // Fallback-панель нужна только на страницах контента шага, не на /learning-paths
-    initLearningPathStepPanel();
 });
-
-// Панель завершения шага траектории
-function initLearningPathStepPanel() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const pathId = urlParams.get('path');
-    const stepId = urlParams.get('step');
-    const currentPath = window.location.pathname || '';
-    const isLearningPathsPage = /\/learning-paths\/?$/.test(currentPath);
-    const hasStepContentContext = !document.getElementById('learning-paths-container')
-        && !document.getElementById('path-view-container');
-    const requiresExamPass = urlParams.get('lp_exam_required') === '1';
-
-    // Если нет параметров траектории или это не страница контента шага - выходим
-    if (!pathId || !stepId || isLearningPathsPage || !hasStepContentContext) return;
-
-    // Создаём fallback-панель внизу страницы
-    const panel = document.createElement('div');
-    const panelMessage = requiresExamPass
-        ? 'Следующий шаг откроется только после успешного завершения теста в режиме экзамена.'
-        : 'Вы изучаете этот материал в рамках траектории обучения.';
-    const completeButtonHtml = requiresExamPass
-        ? ''
-        : '<button class="ts-btn ts-btn-success" id="lp-complete-step">' +
-            '<i class="bi bi-check-circle me-1"></i> Завершить и продолжить' +
-          '</button>';
-
-    panel.id = 'learning-path-step-panel';
-    panel.className = 'lp-step-panel-wrapper';
-    panel.innerHTML = '' +
-        '<div class="lp-step-panel ts-card shadow-sm border-0 rounded-0">' +
-            '<div class="lp-step-body px-4 py-3 d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3">' +
-                '<div>' +
-                    '<div class="d-flex align-items-center gap-2 mb-1">' +
-                        '<i class="bi bi-signpost-2"></i>' +
-                        '<strong>Шаг траектории</strong>' +
-                    '</div>' +
-                    '<p class="mb-0 text-muted">' + panelMessage + '</p>' +
-                '</div>' +
-                '<div class="d-flex flex-wrap gap-2">' +
-                    completeButtonHtml +
-                    '<button class="ts-btn ts-btn-secondary ts-btn-sm" id="lp-back-to-path">' +
-                        '<i class="bi bi-arrow-left me-1"></i> Вернуться к траектории' +
-                    '</button>' +
-                '</div>' +
-            '</div>' +
-        '</div>';
-
-    document.body.appendChild(panel);
-
-    const completeStepButton = document.getElementById('lp-complete-step');
-
-    if (completeStepButton) {
-        completeStepButton.addEventListener('click', async function() {
-        const isConfirmed = window.confirm('Вы подтверждаете, что изучили материал?');
-        if (!isConfirmed) {
-            return;
-        }
-
-        const btn = this;
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Сохранение...';
-
-        try {
-            // Получаем CSRF токен
-            var csrfToken = document.querySelector('meta[name="csrf-token"]');
-            csrfToken = csrfToken ? csrfToken.content : '';
-
-            const response = await fetch(window.TS_API_URL || '/assets/components/testsystem/ajax/testsystem.php', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'completePathStep',
-                    data: {
-                        path_id: parseInt(pathId),
-                        step_id: parseInt(stepId),
-                        csrf_token: csrfToken
-                    }
-                })
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                btn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Готово!';
-                btn.classList.remove('ts-btn-success');
-                btn.classList.add('ts-btn-secondary');
-
-                // Показываем уведомление
-                showLpNotification('Шаг успешно завершён!', 'success');
-
-                // Переходим к следующему шагу или обратно к траектории
-                setTimeout(function() {
-                    window.location.href = '/learning-paths?mode=view&id=' + pathId;
-                }, 1000);
-            } else {
-                throw new Error(result.message || 'Ошибка завершения шага');
-            }
-        } catch (error) {
-            console.error('Complete step error:', error);
-            btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Завершить и продолжить';
-            showLpNotification('Ошибка: ' + error.message, 'danger');
-        }
-        });
-    }
-
-    document.getElementById('lp-back-to-path').addEventListener('click', function() {
-        window.location.href = '/learning-paths?mode=view&id=' + pathId;
-    });
-}
-
-function showLpNotification(message, type) {
-    const notification = document.createElement('div');
-    notification.className = 'alert alert-' + type + ' position-fixed top-0 start-50 translate-middle-x mt-3 shadow';
-    notification.style.zIndex = '10000';
-    notification.textContent = message;
-    document.body.appendChild(notification);
-    setTimeout(function() { notification.remove(); }, 3000);
-}
 </script>
