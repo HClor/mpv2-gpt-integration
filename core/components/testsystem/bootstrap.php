@@ -32,6 +32,7 @@ spl_autoload_register(function ($className) {
         'ValidationHelper' => TESTSYSTEM_PATH . '/helpers/ValidationHelper.php',
         'PermissionHelper' => TESTSYSTEM_PATH . '/helpers/PermissionHelper.php',
         'UrlHelper' => TESTSYSTEM_PATH . '/helpers/UrlHelper.php',
+        'LmsBreadcrumbsBuilder' => TESTSYSTEM_PATH . '/helpers/LmsBreadcrumbsBuilder.php',
 
         // Repositories
         'TestRepository' => TESTSYSTEM_PATH . '/repositories/TestRepository.php',
