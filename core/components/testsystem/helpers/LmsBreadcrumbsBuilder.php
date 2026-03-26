@@ -232,6 +232,10 @@ class LmsBreadcrumbsBuilder
                 $this->diag('DIAG-13', 'detectSection => tests (resource id match)');
                 return 'tests';
             }
+            if (in_array($alias, ['tests', 'test-run'], true)) {
+                $this->diag('DIAG-16', 'detectSection => tests (resource alias match)');
+                return 'tests';
+            }
 
             $pathsRootId = (int)$this->modx->getOption('lms.learning_paths_page', null, 0);
             if (($pathsRootId > 0 && $resourceId === $pathsRootId) || $alias === 'learning-paths') {

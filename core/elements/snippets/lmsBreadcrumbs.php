@@ -34,17 +34,45 @@ if (!$modx instanceof modX) {
     return '';
 }
 
+$urlParams = [];
+if (!empty($_SERVER['QUERY_STRING'])) {
+    parse_str((string)$_SERVER['QUERY_STRING'], $urlParams);
+}
+
+$valueFromSources = static function (string $key, $default = '') use ($modx, $scriptProperties, $urlParams) {
+    $snippetValue = $modx->getOption($key, $scriptProperties, null);
+    if ($snippetValue !== null && $snippetValue !== '') {
+        return $snippetValue;
+    }
+    if (isset($_GET[$key]) && $_GET[$key] !== '') {
+        return $_GET[$key];
+    }
+    if (isset($urlParams[$key]) && $urlParams[$key] !== '') {
+        return $urlParams[$key];
+    }
+    if (isset($_REQUEST[$key]) && $_REQUEST[$key] !== '') {
+        return $_REQUEST[$key];
+    }
+
+    return $default;
+};
+
+$debugValue = $valueFromSources('debug', null);
+if ($debugValue === null || $debugValue === '') {
+    $debugValue = $valueFromSources('lms_bc_diag', 0);
+}
+
 $context = [
-    'section' => $modx->getOption('section', $scriptProperties, ''),
-    'mode' => $modx->getOption('mode', $scriptProperties, ''),
-    'action' => $modx->getOption('action', $scriptProperties, ''),
-    'category_id' => (int)$modx->getOption('category_id', $scriptProperties, 0),
-    'test_id' => (int)$modx->getOption('test_id', $scriptProperties, 0),
-    'path_id' => (int)$modx->getOption('path_id', $scriptProperties, 0),
-    'step_id' => (int)$modx->getOption('step_id', $scriptProperties, 0),
-    'handbook_section_id' => (int)$modx->getOption('handbook_section_id', $scriptProperties, 0),
-    'session_id' => (int)$modx->getOption('session_id', $scriptProperties, 0),
-    'debug' => (int)$modx->getOption('debug', $scriptProperties, (int)($_GET['lms_bc_diag'] ?? 0)),
+    'section' => (string)$valueFromSources('section', ''),
+    'mode' => (string)$valueFromSources('mode', ''),
+    'action' => (string)$valueFromSources('action', ''),
+    'category_id' => (int)$valueFromSources('category_id', $valueFromSources('category', 0)),
+    'test_id' => (int)$valueFromSources('test_id', $valueFromSources('testId', 0)),
+    'path_id' => (int)$valueFromSources('path_id', $valueFromSources('id', 0)),
+    'step_id' => (int)$valueFromSources('step_id', $valueFromSources('stepId', 0)),
+    'handbook_section_id' => (int)$valueFromSources('handbook_section_id', $valueFromSources('section_id', 0)),
+    'session_id' => (int)$valueFromSources('session_id', $valueFromSources('sessionId', 0)),
+    'debug' => (int)$debugValue,
 ];
 
 $preloaded = [];
