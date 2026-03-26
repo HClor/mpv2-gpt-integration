@@ -21,7 +21,7 @@
 <script src="/assets/components/testsystem/js/certificates.js"></script>
 {/if}
 
-{if $resourceAlias == 'learning-paths' || $resourceAlias == 'learning-articles'}
+{if $resourceAlias == 'learning-paths' || $resourceAlias == 'learning-articles' || $resourceAlias == 'tests'}
 <script src="/assets/components/testsystem/js/learning-paths.js"></script>
 {/if}
 <script>
