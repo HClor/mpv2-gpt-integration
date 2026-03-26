@@ -269,6 +269,14 @@ class LmsBreadcrumbsBuilder
     private function detectSection(): string
     {
         if ($this->context['section'] !== '') {
+            if (
+                $this->context['section'] === 'tests'
+                && in_array($this->context['mode'], ['study', 'learning'], true)
+                && ($this->context['test_id'] > 0 || $this->context['session_id'] > 0)
+            ) {
+                $this->diag('DIAG-20', 'detectSection override tests=>handbook for learning test mode');
+                return 'handbook';
+            }
             return $this->context['section'];
         }
 
