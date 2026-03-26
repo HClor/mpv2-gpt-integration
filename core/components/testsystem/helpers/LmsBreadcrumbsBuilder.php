@@ -40,6 +40,7 @@ class LmsBreadcrumbsBuilder
 
         $this->resolvers = [
             'tests' => [$this, 'resolveTestsBreadcrumbs'],
+            'knowledge_areas' => [$this, 'resolveKnowledgeAreasBreadcrumbs'],
             'learning_paths' => [$this, 'resolveLearningPathsBreadcrumbs'],
             'handbook' => [$this, 'resolveHandbookBreadcrumbs'],
             'lms' => [$this, 'resolveGenericLmsBreadcrumbs'],
@@ -148,6 +149,13 @@ class LmsBreadcrumbsBuilder
 
     private function resolveHandbookBreadcrumbs(): array
     {
+        if ($this->context['handbook_section_id'] <= 0 && $this->context['path_id'] <= 0) {
+            $resourceItems = $this->buildResourceHierarchyItems();
+            if (!empty($resourceItems)) {
+                return $resourceItems;
+            }
+        }
+
         $items = $this->baseItems();
 
         $pathId = $this->context['path_id'];
@@ -178,12 +186,36 @@ class LmsBreadcrumbsBuilder
         return $items;
     }
 
+    private function resolveKnowledgeAreasBreadcrumbs(): array
+    {
+        $items = $this->baseItems();
+        $knowledgeAreaUrl = $this->getKnowledgeAreaRootUrl();
+        $items[] = $this->item('Области знаний', $knowledgeAreaUrl);
+
+        $areaId = (int)($this->context['knowledge_area_id'] ?? 0);
+        if ($areaId > 0) {
+            $area = $this->getKnowledgeArea($areaId);
+            if (!empty($area['name'])) {
+                $items[] = $this->item((string)$area['name'], null, true);
+            }
+        }
+
+        if (count($items) === 2) {
+            $items[count($items) - 1]['current'] = true;
+            $items[count($items) - 1]['url'] = null;
+        }
+
+        return $items;
+    }
+
     private function resolveGenericLmsBreadcrumbs(): array
     {
-        return [
-            $this->item('Главная', $this->getHomeUrl()),
-            $this->item('LMS', null, true),
-        ];
+        $resourceItems = $this->buildResourceHierarchyItems();
+        if (!empty($resourceItems)) {
+            return $resourceItems;
+        }
+
+        return [$this->item('Главная', $this->getHomeUrl()), $this->item('LMS', null, true)];
     }
 
     private function normalizeContext(array $context): array
@@ -200,6 +232,7 @@ class LmsBreadcrumbsBuilder
             'step_id' => (int)($context['step_id'] ?? ($query['step_id'] ?? ($query['stepId'] ?? 0))),
             'handbook_section_id' => (int)($context['handbook_section_id'] ?? ($query['handbook_section_id'] ?? ($query['section_id'] ?? 0))),
             'session_id' => (int)($context['session_id'] ?? ($query['sessionId'] ?? 0)),
+            'knowledge_area_id' => (int)($context['knowledge_area_id'] ?? ($query['knowledge_area_id'] ?? ($query['knowledge_area'] ?? 0))),
             'debug' => (int)($context['debug'] ?? ($query['lms_bc_diag'] ?? 0)) === 1,
         ];
 
@@ -226,6 +259,10 @@ class LmsBreadcrumbsBuilder
             $this->diag('DIAG-6', 'detectSection => tests');
             return 'tests';
         }
+        if ($this->context['knowledge_area_id'] > 0) {
+            $this->diag('DIAG-17', 'detectSection => knowledge_areas');
+            return 'knowledge_areas';
+        }
 
         $resource = $this->modx->resource;
         if ($resource instanceof modResource) {
@@ -238,9 +275,13 @@ class LmsBreadcrumbsBuilder
                 $this->diag('DIAG-13', 'detectSection => tests (resource id match)');
                 return 'tests';
             }
-            if (in_array($alias, ['tests', 'test-run'], true)) {
+            if ($alias === 'tests') {
                 $this->diag('DIAG-16', 'detectSection => tests (resource alias match)');
                 return 'tests';
+            }
+            if (in_array($alias, ['oblast-znanij', 'knowledge-area'], true)) {
+                $this->diag('DIAG-18', 'detectSection => knowledge_areas (resource alias match)');
+                return 'knowledge_areas';
             }
 
             $pathsRootId = (int)$this->modx->getOption('lms.learning_paths_page', null, 0);
@@ -312,7 +353,7 @@ class LmsBreadcrumbsBuilder
     {
         if ($this->modx->resource instanceof modResource) {
             $resourceAlias = (string)$this->modx->resource->get('alias');
-            if (in_array($resourceAlias, ['tests', 'test-run'], true)) {
+            if ($resourceAlias === 'tests') {
                 $resourceId = (int)$this->modx->resource->get('id');
                 return $this->modx->makeUrl($resourceId, 'web', $params, 'full');
             }
@@ -349,6 +390,20 @@ class LmsBreadcrumbsBuilder
             $pageId = $resource ? (int)$resource->get('id') : 0;
         }
 
+        return $pageId > 0 ? $this->modx->makeUrl($pageId, 'web', [], 'full') : null;
+    }
+
+    private function getKnowledgeAreaRootUrl(): ?string
+    {
+        if ($this->modx->resource instanceof modResource) {
+            $resourceAlias = (string)$this->modx->resource->get('alias');
+            if (in_array($resourceAlias, ['oblast-znanij', 'knowledge-area'], true)) {
+                $resourceId = (int)$this->modx->resource->get('id');
+                return $this->modx->makeUrl($resourceId, 'web', [], 'full');
+            }
+        }
+
+        $pageId = Config::getPageId('knowledge_area', 0);
         return $pageId > 0 ? $this->modx->makeUrl($pageId, 'web', [], 'full') : null;
     }
 
@@ -539,6 +594,77 @@ class LmsBreadcrumbsBuilder
         }
 
         return null;
+    }
+
+    private function getKnowledgeArea(int $areaId): ?array
+    {
+        if ($areaId <= 0) {
+            return null;
+        }
+
+        $cacheKey = 'knowledge_area:' . $areaId;
+        if (isset($this->entityCache[$cacheKey])) {
+            return $this->entityCache[$cacheKey];
+        }
+
+        $prefix = (string)$this->modx->getOption('table_prefix');
+        $stmt = $this->modx->prepare("SELECT id, name FROM {$prefix}test_knowledge_areas WHERE id = :id LIMIT 1");
+        if (!$stmt) {
+            return null;
+        }
+
+        $stmt->bindValue(':id', $areaId, PDO::PARAM_INT);
+        if (!$stmt->execute()) {
+            return null;
+        }
+
+        $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        $this->entityCache[$cacheKey] = $row;
+
+        return $row;
+    }
+
+    private function buildResourceHierarchyItems(): array
+    {
+        if (!$this->modx->resource instanceof modResource) {
+            return [];
+        }
+
+        $chain = [];
+        $currentId = (int)$this->modx->resource->get('id');
+        $guard = 0;
+
+        while ($currentId > 0 && $guard < 30) {
+            $guard++;
+            $resource = $this->modx->getObject('modResource', $currentId);
+            if (!$resource) {
+                break;
+            }
+
+            $chain[] = [
+                'id' => (int)$resource->get('id'),
+                'title' => (string)$resource->get('pagetitle'),
+                'parent' => (int)$resource->get('parent'),
+            ];
+            $currentId = (int)$resource->get('parent');
+        }
+
+        if (empty($chain)) {
+            return [];
+        }
+
+        $chain = array_reverse($chain);
+        $items = [];
+        foreach ($chain as $index => $node) {
+            $isLast = $index === count($chain) - 1;
+            $items[] = $this->item(
+                $node['title'],
+                $isLast ? null : $this->modx->makeUrl((int)$node['id'], 'web', [], 'full'),
+                $isLast
+            );
+        }
+
+        return $items;
     }
 
 

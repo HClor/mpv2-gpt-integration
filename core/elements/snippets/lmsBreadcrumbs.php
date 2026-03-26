@@ -72,6 +72,7 @@ $context = [
     'step_id' => (int)$valueFromSources('step_id', $valueFromSources('stepId', 0)),
     'handbook_section_id' => (int)$valueFromSources('handbook_section_id', $valueFromSources('section_id', 0)),
     'session_id' => (int)$valueFromSources('session_id', $valueFromSources('sessionId', 0)),
+    'knowledge_area_id' => (int)$valueFromSources('knowledge_area_id', $valueFromSources('knowledge_area', 0)),
     'debug' => (int)$debugValue,
 ];
 
