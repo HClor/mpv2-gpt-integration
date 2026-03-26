@@ -85,7 +85,10 @@ class LmsBreadcrumbsBuilder
                 if ($categoryId > 0) {
                     $category = $this->getCategory($categoryId);
                     if (!empty($category['name'])) {
-                        $items[] = $this->item((string)$category['name'], $this->getTestsRootUrl(['category' => $categoryId]));
+                        $categoryTitle = trim((string)$category['name']);
+                        if (mb_strtolower($categoryTitle) !== mb_strtolower('Саморазвитие')) {
+                            $items[] = $this->item($categoryTitle, $this->getTestsRootUrl(['category' => $categoryId]));
+                        }
                     }
                 }
 
@@ -97,7 +100,10 @@ class LmsBreadcrumbsBuilder
         } elseif ($categoryId > 0) {
             $category = $this->getCategory($categoryId);
             if (!empty($category['name'])) {
-                $items[] = $this->item((string)$category['name'], null, true);
+                $categoryTitle = trim((string)$category['name']);
+                if (mb_strtolower($categoryTitle) !== mb_strtolower('Саморазвитие')) {
+                    $items[] = $this->item($categoryTitle, null, true);
+                }
             }
         }
 
@@ -304,6 +310,14 @@ class LmsBreadcrumbsBuilder
 
     private function getTestsRootUrl(array $params = []): ?string
     {
+        if ($this->modx->resource instanceof modResource) {
+            $resourceAlias = (string)$this->modx->resource->get('alias');
+            if (in_array($resourceAlias, ['tests', 'test-run'], true)) {
+                $resourceId = (int)$this->modx->resource->get('id');
+                return $this->modx->makeUrl($resourceId, 'web', $params, 'full');
+            }
+        }
+
         $pageId = (int)$this->modx->getOption('lms.test_page', null, Config::getPageId('tests_root', 155));
         if ($pageId <= 0) {
             return null;
