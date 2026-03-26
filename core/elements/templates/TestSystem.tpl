@@ -9,8 +9,8 @@
 
     <main class="py-4">
         <div class="container">
-            <!-- LMS breadcrumbs: отдельный контекстный builder -->
-            {$_modx->runSnippet('lmsBreadcrumbs')}
+            <!-- LMS breadcrumbs: uncached, чтобы учитывать текущий GET/action контекст -->
+            [[!lmsBreadcrumbs]]
 
             <!-- Основной контент -->
             {$_modx->resource.content}
