@@ -135,6 +135,11 @@
             : '<button class="ts-btn ts-btn-success" id="lp-complete-step">' +
                 '<i class="bi bi-check-circle me-1"></i> Завершить и продолжить' +
               '</button>';
+        const retryExamButtonHtml = requiresExamPass
+            ? '<button class="ts-btn ts-btn-warning ts-btn-sm" id="lp-retry-exam-btn" style="display:none;">' +
+                '<i class="bi bi-arrow-repeat me-1"></i> Повторить экзамен' +
+              '</button>'
+            : '';
 
         panel.id = 'learning-path-step-panel';
         panel.className = 'lp-step-panel-wrapper';
@@ -146,10 +151,11 @@
                             '<i class="bi bi-signpost-2"></i>' +
                             '<strong>Шаг траектории</strong>' +
                         '</div>' +
-                        '<p class="mb-0 text-muted">' + panelMessage + '</p>' +
+                        '<p class="mb-0 text-muted" id="lp-step-panel-message">' + panelMessage + '</p>' +
                     '</div>' +
-                    '<div class="d-flex flex-wrap gap-2">' +
+                    '<div class="d-flex flex-wrap gap-2" id="lp-step-panel-actions">' +
                         completeButtonHtml +
+                        retryExamButtonHtml +
                         '<button class="ts-btn ts-btn-secondary ts-btn-sm" id="lp-back-to-path">' +
                             '<i class="bi bi-arrow-left me-1"></i> Вернуться к траектории' +
                         '</button>' +
@@ -202,6 +208,42 @@
         if (backToPathButton) {
             backToPathButton.addEventListener('click', function() {
                 window.location.href = '/learning-paths?mode=view&id=' + encodeURIComponent(pathId);
+            });
+        }
+
+        const retryExamButton = document.getElementById('lp-retry-exam-btn');
+        if (retryExamButton) {
+            retryExamButton.addEventListener('click', function() {
+                window.location.reload();
+            });
+        }
+
+        if (requiresExamPass) {
+            window.addEventListener('lpExamStepResult', function(event) {
+                const detail = event?.detail || {};
+                if (parseInt(detail.pathId, 10) !== parseInt(pathId, 10) ||
+                    parseInt(detail.stepId, 10) !== parseInt(stepId, 10)) {
+                    return;
+                }
+
+                const panelMessageEl = document.getElementById('lp-step-panel-message');
+                if (!panelMessageEl) {
+                    return;
+                }
+
+                if (detail.passed) {
+                    panelMessageEl.className = 'mb-0 text-success fw-semibold';
+                    panelMessageEl.textContent = 'Поздравляем, вы сдали экзамен! Шаг траектории автоматически завершён.';
+                    if (retryExamButton) {
+                        retryExamButton.style.display = 'none';
+                    }
+                } else {
+                    panelMessageEl.className = 'mb-0 text-danger';
+                    panelMessageEl.textContent = 'Экзамен пока не сдан. Шаг не завершён — вы можете повторить экзамен или вернуться к траектории.';
+                    if (retryExamButton) {
+                        retryExamButton.style.display = 'inline-flex';
+                    }
+                }
             });
         }
     }
