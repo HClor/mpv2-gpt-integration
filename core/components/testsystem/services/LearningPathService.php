@@ -596,7 +596,43 @@ class LearningPathService
 
         // Получаем завершение отдельных шагов
         $sql = "SELECT lpsc.*, lps.step_number, lps.name, lps.step_type,
-                       lps.is_required, lps.min_score
+                       lps.is_required, lps.min_score,
+                       CASE
+                           WHEN lps.step_type IN ('test', 'quiz') THEN (
+                               SELECT COUNT(*)
+                               FROM {$prefix}test_sessions s
+                               WHERE s.user_id = lpsc.user_id
+                                 AND s.test_id = lps.item_id
+                                 AND s.mode = 'exam'
+                                 AND s.status = 'completed'
+                           )
+                           ELSE NULL
+                       END AS exam_attempts_count,
+                       CASE
+                           WHEN lps.step_type IN ('test', 'quiz') THEN (
+                               SELECT MAX(s.score)
+                               FROM {$prefix}test_sessions s
+                               WHERE s.user_id = lpsc.user_id
+                                 AND s.test_id = lps.item_id
+                                 AND s.mode = 'exam'
+                                 AND s.status = 'completed'
+                           )
+                           ELSE NULL
+                       END AS exam_best_score,
+                       CASE
+                           WHEN lps.step_type IN ('test', 'quiz') THEN (
+                               SELECT s2.score
+                               FROM {$prefix}test_sessions s2
+                               WHERE s2.user_id = lpsc.user_id
+                                 AND s2.test_id = lps.item_id
+                                 AND s2.mode = 'exam'
+                                 AND s2.status = 'completed'
+                                 AND s2.passed = 1
+                               ORDER BY s2.finished_at DESC, s2.id DESC
+                               LIMIT 1
+                           )
+                           ELSE NULL
+                       END AS exam_last_passed_score
                 FROM {$prefix}test_learning_path_step_completion lpsc
                 JOIN {$prefix}test_learning_path_steps lps ON lps.id = lpsc.step_id
                 WHERE lpsc.progress_id = ?
