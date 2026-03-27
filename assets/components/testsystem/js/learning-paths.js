@@ -1151,7 +1151,7 @@
         const typeLabel = STEP_TYPE_LABELS[step.step_type] || step.step_type;
 
         let unlockRequirements = '';
-        if (step.unlock_condition?.require_exam_pass) {
+        if (!isCompleted && step.unlock_condition?.require_exam_pass) {
             unlockRequirements += `
                 <div class="alert alert-warning small mb-2">
                     <i class="bi bi-clipboard2-check"></i>
