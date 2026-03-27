@@ -70,7 +70,7 @@
 
     // ==================== INITIALIZATION ====================
 
-    document.addEventListener('DOMContentLoaded', function() {
+    function bootstrapLearningPaths() {
         initLearningPathStepPanel();
 
         // Страница списка траекторий
@@ -94,7 +94,13 @@
             const pathId = pathEditorContainer.dataset.pathId;
             initPathEditor(pathId);
         }
-    });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bootstrapLearningPaths);
+    } else {
+        bootstrapLearningPaths();
+    }
 
     // ==================== STEP CONTENT PANEL ====================
 
@@ -1103,6 +1109,18 @@
             `;
         }
 
+        let completionMetaHtml = '';
+        if (isCompleted) {
+            const numericScore = Number(step.score);
+            const hasNumericScore = Number.isFinite(numericScore);
+
+            if (step.step_type === 'material') {
+                completionMetaHtml = '<span class="ms-3 text-muted">Вы подтвердили изучение материала.</span>';
+            } else if (hasNumericScore) {
+                completionMetaHtml = `<span class="ms-3 text-muted">Ваш результат: <strong>${numericScore}%</strong></span>`;
+            }
+        }
+
         return `
             <div class="step-card card mb-3 ${cardClass}" data-step-id="${step.id}">
                 <div class="card-body">
@@ -1145,11 +1163,7 @@
                                         <i class="bi bi-${isCompleted ? 'arrow-repeat' : 'play-fill'}"></i>
                                         ${isCompleted ? 'Пройти снова' : 'Начать шаг'}
                                     </button>
-                                    ${isCompleted && step.score !== null ? `
-                                        <span class="ms-3 text-muted">
-                                            Ваш результат: <strong>${step.score}%</strong>
-                                        </span>
-                                    ` : ''}
+                                    ${completionMetaHtml}
                                 </div>
                             ` : ''}
                         </div>

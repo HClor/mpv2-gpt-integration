@@ -65,6 +65,17 @@ $output .= '<div class="d-flex justify-content-between align-items-center mb-4">
 $output .= '<span class="ts-badge ts-badge-warning fs-5">' . count($favorites) . '</span>';
 $output .= '</div>';
 
+// URL запуска теста: resource_id у теста хранит category_id, поэтому строим ссылку через test-run.
+$testRunPageId = (int) Config::getPageId('test_run', 155);
+$testRunBaseUrl = '';
+if ($testRunPageId > 0) {
+    $testRunBaseUrl = $modx->makeUrl($testRunPageId, '', '', 'full');
+}
+if (empty($testRunBaseUrl)) {
+    $siteUrl = rtrim($modx->getOption('site_url'), '/');
+    $testRunBaseUrl = $siteUrl . '/test-run';
+}
+
 // Группируем по категориям
 $byCategory = [];
 foreach ($favorites as $fav) {
@@ -98,7 +109,8 @@ foreach ($byCategory as $categoryName => $categoryData) {
     
     // Выводим по тестам
     foreach ($categoryData['tests'] as $testTitle => $testData) {
-        $testUrl = $testData['resource_id'] ? $modx->makeUrl($testData['resource_id']) : '#';
+        $separator = strpos($testRunBaseUrl, '?') !== false ? '&' : '?';
+        $testUrl = $testRunBaseUrl . $separator . 'testId=' . (int)$testData['questions'][0]['test_id'];
         
         $output .= '<div class="card mb-3">';
         $output .= '<div class="card-header bg-light">';
