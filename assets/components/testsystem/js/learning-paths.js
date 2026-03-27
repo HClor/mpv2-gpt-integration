@@ -70,7 +70,7 @@
 
     // ==================== INITIALIZATION ====================
 
-    document.addEventListener('DOMContentLoaded', function() {
+    function bootstrapLearningPaths() {
         initLearningPathStepPanel();
 
         // Страница списка траекторий
@@ -94,7 +94,13 @@
             const pathId = pathEditorContainer.dataset.pathId;
             initPathEditor(pathId);
         }
-    });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bootstrapLearningPaths);
+    } else {
+        bootstrapLearningPaths();
+    }
 
     // ==================== STEP CONTENT PANEL ====================
 

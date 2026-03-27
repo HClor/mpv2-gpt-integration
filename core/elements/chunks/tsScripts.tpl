@@ -29,6 +29,31 @@
 window.TS_API_URL = '/assets/components/testsystem/ajax/testsystem.php';
 window.TS_USER_ID = {$_modx->user.id ?: 0};
 
+// На страницах контента шага траектории (path+step) модуль learning-paths.js
+// должен быть доступен даже если alias страницы не входит в whitelist.
+(function ensureLearningPathStepModule() {
+    if (!window.TS_USER_ID || Number(window.TS_USER_ID) <= 0) {
+        return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const hasStepContext = params.has('path') && params.has('step');
+    if (!hasStepContext) {
+        return;
+    }
+
+    const alreadyLoaded = !!document.querySelector('script[src*="/assets/components/testsystem/js/learning-paths.js"]');
+    if (alreadyLoaded) {
+        return;
+    }
+
+    const script = document.createElement('script');
+    script.src = '/assets/components/testsystem/js/learning-paths.js';
+    script.defer = true;
+    script.dataset.lpStepAutoload = '1';
+    document.head.appendChild(script);
+})();
+
 // Получить CSRF токен из meta тега
 function getCSRFToken() {
     const meta = document.querySelector('meta[name="csrf-token"]');
