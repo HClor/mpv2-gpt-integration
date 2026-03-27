@@ -70,7 +70,7 @@
 
     // ==================== INITIALIZATION ====================
 
-    document.addEventListener('DOMContentLoaded', function() {
+    function bootstrapLearningPaths() {
         initLearningPathStepPanel();
 
         // Страница списка траекторий
@@ -94,7 +94,13 @@
             const pathId = pathEditorContainer.dataset.pathId;
             initPathEditor(pathId);
         }
-    });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bootstrapLearningPaths);
+    } else {
+        bootstrapLearningPaths();
+    }
 
     // ==================== STEP CONTENT PANEL ====================
 
@@ -129,6 +135,11 @@
             : '<button class="ts-btn ts-btn-success" id="lp-complete-step">' +
                 '<i class="bi bi-check-circle me-1"></i> Завершить и продолжить' +
               '</button>';
+        const retryExamButtonHtml = requiresExamPass
+            ? '<button class="ts-btn ts-btn-warning ts-btn-sm" id="lp-retry-exam-btn" style="display:none;">' +
+                '<i class="bi bi-arrow-repeat me-1"></i> Повторить экзамен' +
+              '</button>'
+            : '';
 
         panel.id = 'learning-path-step-panel';
         panel.className = 'lp-step-panel-wrapper';
@@ -140,10 +151,11 @@
                             '<i class="bi bi-signpost-2"></i>' +
                             '<strong>Шаг траектории</strong>' +
                         '</div>' +
-                        '<p class="mb-0 text-muted">' + panelMessage + '</p>' +
+                        '<p class="mb-0 text-muted" id="lp-step-panel-message">' + panelMessage + '</p>' +
                     '</div>' +
-                    '<div class="d-flex flex-wrap gap-2">' +
+                    '<div class="d-flex flex-wrap gap-2" id="lp-step-panel-actions">' +
                         completeButtonHtml +
+                        retryExamButtonHtml +
                         '<button class="ts-btn ts-btn-secondary ts-btn-sm" id="lp-back-to-path">' +
                             '<i class="bi bi-arrow-left me-1"></i> Вернуться к траектории' +
                         '</button>' +
@@ -196,6 +208,42 @@
         if (backToPathButton) {
             backToPathButton.addEventListener('click', function() {
                 window.location.href = '/learning-paths?mode=view&id=' + encodeURIComponent(pathId);
+            });
+        }
+
+        const retryExamButton = document.getElementById('lp-retry-exam-btn');
+        if (retryExamButton) {
+            retryExamButton.addEventListener('click', function() {
+                window.location.reload();
+            });
+        }
+
+        if (requiresExamPass) {
+            window.addEventListener('lpExamStepResult', function(event) {
+                const detail = event?.detail || {};
+                if (parseInt(detail.pathId, 10) !== parseInt(pathId, 10) ||
+                    parseInt(detail.stepId, 10) !== parseInt(stepId, 10)) {
+                    return;
+                }
+
+                const panelMessageEl = document.getElementById('lp-step-panel-message');
+                if (!panelMessageEl) {
+                    return;
+                }
+
+                if (detail.passed) {
+                    panelMessageEl.className = 'mb-0 text-success fw-semibold';
+                    panelMessageEl.textContent = 'Поздравляем, вы сдали экзамен! Шаг траектории автоматически завершён.';
+                    if (retryExamButton) {
+                        retryExamButton.style.display = 'none';
+                    }
+                } else {
+                    panelMessageEl.className = 'mb-0 text-danger';
+                    panelMessageEl.textContent = 'Экзамен пока не сдан. Шаг не завершён — вы можете повторить экзамен или вернуться к траектории.';
+                    if (retryExamButton) {
+                        retryExamButton.style.display = 'inline-flex';
+                    }
+                }
             });
         }
     }
@@ -896,6 +944,31 @@
                 isEnrolled = result.data.is_enrolled || false;
                 userProgress = result.data.user_progress || {};
 
+                const progressStepMap = new Map(
+                    (userProgress.steps || []).map(step => [Number(step.step_id), step])
+                );
+
+                pathSteps = pathSteps.map(step => {
+                    const progressStep = progressStepMap.get(Number(step.id));
+                    if (!progressStep) {
+                        return step;
+                    }
+
+                    return {
+                        ...step,
+                        progress_step_completion_id: progressStep.id || null,
+                        step_completion_status: progressStep.status || null,
+                        attempts: progressStep.attempts ?? null,
+                        score: progressStep.score ?? null,
+                        session_id: progressStep.session_id ?? null,
+                        material_progress_id: progressStep.material_progress_id ?? null,
+                        completion_date: progressStep.completed_at || step.completion_date || null,
+                        exam_attempts_count: progressStep.exam_attempts_count ?? null,
+                        exam_best_score: progressStep.exam_best_score ?? null,
+                        exam_last_passed_score: progressStep.exam_last_passed_score ?? null
+                    };
+                });
+
                 renderPathView(result.data);
             } else {
                 throw new Error(result.message);
@@ -1054,6 +1127,15 @@
         const isLocked = step.is_locked && !isCompleted;
         const isCurrent = !isCompleted && !isLocked;
         const isContentUnavailable = step.content_available === false;
+        const completionDateTimeLabel = step.completion_date
+            ? new Date(step.completion_date).toLocaleString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            })
+            : '';
 
         const statusIcon = isCompleted ? '<i class="bi bi-check-circle-fill text-success fs-4"></i>' :
                           isLocked ? '<i class="bi bi-lock-fill text-muted fs-4"></i>' :
@@ -1103,6 +1185,39 @@
             `;
         }
 
+        let completionMetaHtml = '';
+        if (isCompleted) {
+            const numericScore = Number(step.score);
+            const hasNumericScore = Number.isFinite(numericScore);
+
+            if (step.step_type === 'material') {
+                completionMetaHtml = '<span class="ms-3 text-muted">Вы подтвердили изучение материала.</span>';
+            } else if (hasNumericScore) {
+                completionMetaHtml = `<span class="ms-3 text-muted">Ваш результат: <strong>${numericScore}%</strong></span>`;
+            }
+        }
+
+        let examStatsHtml = '';
+        if (step.step_type === 'test' || step.step_type === 'quiz') {
+            const attempts = Number(step.exam_attempts_count);
+            const bestScore = Number(step.exam_best_score);
+            const lastPassedScore = Number(step.exam_last_passed_score);
+
+            const hasAttempts = Number.isFinite(attempts) && attempts > 0;
+            const hasBestScore = Number.isFinite(bestScore);
+            const hasLastPassedScore = Number.isFinite(lastPassedScore);
+
+            if (hasAttempts || hasBestScore || hasLastPassedScore) {
+                examStatsHtml = `
+                    <div class="small text-muted mt-2">
+                        ${hasAttempts ? `<div><strong>Попыток (экзамен):</strong> ${attempts}</div>` : ''}
+                        ${hasBestScore ? `<div><strong>Лучший балл:</strong> ${bestScore}%</div>` : ''}
+                        ${hasLastPassedScore ? `<div><strong>Последний успешный результат:</strong> ${lastPassedScore}%</div>` : ''}
+                    </div>
+                `;
+            }
+        }
+
         return `
             <div class="step-card card mb-3 ${cardClass}" data-step-id="${step.id}">
                 <div class="card-body">
@@ -1126,7 +1241,7 @@
                                 <div>
                                     ${isCompleted ? `
                                         <span class="badge bg-success">Завершено</span>
-                                        ${step.completion_date ? `<br><small class="text-muted">${new Date(step.completion_date).toLocaleDateString('ru-RU')}</small>` : ''}
+                                        ${completionDateTimeLabel ? `<br><small class="text-muted"><i class="bi bi-clock-history me-1"></i>${completionDateTimeLabel}</small>` : ''}
                                     ` : isLocked ? `
                                         <span class="badge bg-secondary">Заблокировано</span>
                                     ` : `
@@ -1145,11 +1260,8 @@
                                         <i class="bi bi-${isCompleted ? 'arrow-repeat' : 'play-fill'}"></i>
                                         ${isCompleted ? 'Пройти снова' : 'Начать шаг'}
                                     </button>
-                                    ${isCompleted && step.score !== null ? `
-                                        <span class="ms-3 text-muted">
-                                            Ваш результат: <strong>${step.score}%</strong>
-                                        </span>
-                                    ` : ''}
+                                    ${completionMetaHtml}
+                                    ${examStatsHtml}
                                 </div>
                             ` : ''}
                         </div>

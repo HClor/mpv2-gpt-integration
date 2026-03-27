@@ -2416,16 +2416,28 @@ async function addFavoritesViewToggle(questionId) {
                     if (testMode === "exam") {
                         if (data.passed) {
                             messageElement.innerHTML = requiresExamPassForPath
-                                ? '<span class="text-success">✅ Тест пройден успешно! Шаг траектории засчитан.</span>'
-                                : '<span class="text-success">✅ Тест пройден успешно!</span>';
+                                ? '<span class="text-success">🎉 Поздравляем, вы сдали экзамен! Шаг траектории автоматически засчитан.</span>'
+                                : '<span class="text-success">🎉 Поздравляем, вы сдали экзамен!</span>';
                         } else {
                             messageElement.innerHTML = requiresExamPassForPath
-                                ? '<span class="text-danger">❌ Экзамен не пройден. Следующий шаг траектории останется заблокирован.</span>'
+                                ? '<span class="text-danger">❌ Экзамен не пройден. Шаг траектории не засчитан. Вы можете пройти экзамен повторно или вернуться к траектории.</span>'
                                 : '<span class="text-danger">❌ Тест не пройден. Попробуйте еще раз.</span>';
                         }
                     } else {
                         messageElement.innerHTML = '<span class="text-info"><i class="bi bi-journal-check me-1"></i>Тренировка завершена</span>';
                     }
+                }
+
+                if (learningPathId && learningPathStepId && testMode === "exam") {
+                    window.dispatchEvent(new CustomEvent('lpExamStepResult', {
+                        detail: {
+                            pathId: parseInt(learningPathId, 10),
+                            stepId: parseInt(learningPathStepId, 10),
+                            passed: !!data.passed,
+                            score: Number(data.score),
+                            examRequired: !!requiresExamPassForPath
+                        }
+                    }));
                 }
 
                 const details = document.getElementById("result-details");
