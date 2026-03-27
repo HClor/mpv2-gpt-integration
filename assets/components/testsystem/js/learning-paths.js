@@ -956,8 +956,16 @@
 
                     return {
                         ...step,
-                        ...progressStep,
-                        completion_date: progressStep.completed_at || step.completion_date || null
+                        progress_step_completion_id: progressStep.id || null,
+                        step_completion_status: progressStep.status || null,
+                        attempts: progressStep.attempts ?? null,
+                        score: progressStep.score ?? null,
+                        session_id: progressStep.session_id ?? null,
+                        material_progress_id: progressStep.material_progress_id ?? null,
+                        completion_date: progressStep.completed_at || step.completion_date || null,
+                        exam_attempts_count: progressStep.exam_attempts_count ?? null,
+                        exam_best_score: progressStep.exam_best_score ?? null,
+                        exam_last_passed_score: progressStep.exam_last_passed_score ?? null
                     };
                 });
 
@@ -1119,6 +1127,15 @@
         const isLocked = step.is_locked && !isCompleted;
         const isCurrent = !isCompleted && !isLocked;
         const isContentUnavailable = step.content_available === false;
+        const completionDateTimeLabel = step.completion_date
+            ? new Date(step.completion_date).toLocaleString('ru-RU', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            })
+            : '';
 
         const statusIcon = isCompleted ? '<i class="bi bi-check-circle-fill text-success fs-4"></i>' :
                           isLocked ? '<i class="bi bi-lock-fill text-muted fs-4"></i>' :
@@ -1224,7 +1241,7 @@
                                 <div>
                                     ${isCompleted ? `
                                         <span class="badge bg-success">Завершено</span>
-                                        ${step.completion_date ? `<br><small class="text-muted">${new Date(step.completion_date).toLocaleDateString('ru-RU')}</small>` : ''}
+                                        ${completionDateTimeLabel ? `<br><small class="text-muted"><i class="bi bi-clock-history me-1"></i>${completionDateTimeLabel}</small>` : ''}
                                     ` : isLocked ? `
                                         <span class="badge bg-secondary">Заблокировано</span>
                                     ` : `
