@@ -944,6 +944,23 @@
                 isEnrolled = result.data.is_enrolled || false;
                 userProgress = result.data.user_progress || {};
 
+                const progressStepMap = new Map(
+                    (userProgress.steps || []).map(step => [Number(step.step_id), step])
+                );
+
+                pathSteps = pathSteps.map(step => {
+                    const progressStep = progressStepMap.get(Number(step.id));
+                    if (!progressStep) {
+                        return step;
+                    }
+
+                    return {
+                        ...step,
+                        ...progressStep,
+                        completion_date: progressStep.completed_at || step.completion_date || null
+                    };
+                });
+
                 renderPathView(result.data);
             } else {
                 throw new Error(result.message);
@@ -1163,6 +1180,27 @@
             }
         }
 
+        let examStatsHtml = '';
+        if (step.step_type === 'test' || step.step_type === 'quiz') {
+            const attempts = Number(step.exam_attempts_count);
+            const bestScore = Number(step.exam_best_score);
+            const lastPassedScore = Number(step.exam_last_passed_score);
+
+            const hasAttempts = Number.isFinite(attempts) && attempts > 0;
+            const hasBestScore = Number.isFinite(bestScore);
+            const hasLastPassedScore = Number.isFinite(lastPassedScore);
+
+            if (hasAttempts || hasBestScore || hasLastPassedScore) {
+                examStatsHtml = `
+                    <div class="small text-muted mt-2">
+                        ${hasAttempts ? `<div><strong>Попыток (экзамен):</strong> ${attempts}</div>` : ''}
+                        ${hasBestScore ? `<div><strong>Лучший балл:</strong> ${bestScore}%</div>` : ''}
+                        ${hasLastPassedScore ? `<div><strong>Последний успешный результат:</strong> ${lastPassedScore}%</div>` : ''}
+                    </div>
+                `;
+            }
+        }
+
         return `
             <div class="step-card card mb-3 ${cardClass}" data-step-id="${step.id}">
                 <div class="card-body">
@@ -1206,6 +1244,7 @@
                                         ${isCompleted ? 'Пройти снова' : 'Начать шаг'}
                                     </button>
                                     ${completionMetaHtml}
+                                    ${examStatsHtml}
                                 </div>
                             ` : ''}
                         </div>
