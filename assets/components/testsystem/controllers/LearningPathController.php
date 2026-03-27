@@ -1124,7 +1124,20 @@ class LearningPathController extends BaseController
                 if (!$resource) {
                     throw new Exception('Материал не найден (ресурс ID=' . $itemId . ' не существует). Обратитесь к администратору.');
                 }
-                $url = $this->modx->makeUrl($itemId);
+
+                $url = $this->modx->makeUrl($itemId, '', '', 'full');
+
+                // Fallback: в некоторых окружениях makeUrl() может вернуть пустую строку
+                // (например, при несогласованной конфигурации контекста/маршрутов).
+                // Тогда строим URL напрямую из uri ресурса.
+                if (!is_string($url) || trim($url) === '') {
+                    $uri = ltrim((string)$resource->get('uri'), '/');
+                    if ($uri === '') {
+                        throw new Exception('Не удалось сформировать URL материала (пустой URI ресурса ID=' . $itemId . ').');
+                    }
+                    $url = $siteUrl . '/' . $uri;
+                }
+
                 // Добавляем параметры траектории
                 $separator = strpos($url, '?') !== false ? '&' : '?';
                 return $url . $separator . 'path=' . $pathId . '&step=' . $stepId;
