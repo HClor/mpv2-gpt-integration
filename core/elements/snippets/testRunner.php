@@ -258,16 +258,16 @@ $output .= '<div id="test-container" data-test-id="0" data-knowledge-area-id="' 
     $output .= '</div>';
     
     $output .= '<div class="card-footer">';
-    $output .= '<div class="d-flex justify-content-between align-items-center mb-2">';
-    $output .= '<div class="d-flex align-items-center">';
+    $output .= '<div class="test-runner-actions-row d-flex align-items-center mb-2">';
+    $output .= '<div class="test-runner-primary-actions d-flex align-items-center">';
     $output .= '<button id="submit-answer-btn" class="ts-btn ts-btn-primary" disabled>Ответить</button>';
     $output .= '<button id="next-question-btn" class="ts-btn ts-btn-success" style="display:none;">Следующий вопрос</button>';
     $output .= '</div>';
-    $output .= '<div class="d-flex align-items-center gap-2">';
+    $output .= '</div>';
+    $output .= '<div class="test-runner-secondary-actions d-flex align-items-center gap-2">';
     $output .= '<button id="restart-test-btn" class="ts-btn ts-btn-secondary ts-btn-sm" style="display: none;">';
     $output .= '<i class="bi bi-arrow-counterclockwise"></i> Начать сначала';
     $output .= '</button>';
-    $output .= '</div>';
     $output .= '</div>';
     $output .= '<div id="edit-buttons-row" class="border-top pt-2" style="display: none;"></div>';
     $output .= '</div></div></div>';
@@ -716,18 +716,16 @@ $output .= '</div>';
 
 // СТРОКА 1: Навигационные кнопки
 $output .= '<div class="card-footer">';
-$output .= '<div class="d-flex justify-content-between align-items-center mb-2">';
-// СЛЕВА - кнопки навигации
-$output .= '<div class="d-flex align-items-center">';
+$output .= '<div class="test-runner-actions-row d-flex align-items-center mb-2">';
+$output .= '<div class="test-runner-primary-actions d-flex align-items-center">';
 $output .= '<button id="submit-answer-btn" class="ts-btn ts-btn-primary" disabled>Ответить</button>';
 $output .= '<button id="next-question-btn" class="ts-btn ts-btn-success" style="display:none;">Следующий вопрос</button>';
 $output .= '</div>';
-// СПРАВА - кнопка "К началу"
-$output .= '<div class="d-flex align-items-center  gap-2">';
+$output .= '</div>';
+$output .= '<div class="test-runner-secondary-actions d-flex align-items-center  gap-2">';
 $output .= '<button id="restart-test-btn" class="ts-btn ts-btn-secondary ts-btn-sm" style="display: none;">';
 $output .= '<i class="bi bi-arrow-counterclockwise"></i> Начать сначала';
 $output .= '</button>';
-$output .= '</div>';
 $output .= '</div>';
 
 
